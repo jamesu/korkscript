@@ -18,8 +18,8 @@ static char scriptFilenameBuffer[1024];
 ConsoleFunction(expandFilename, const char*, 2, 2, "(string filename)")
 {
    argc;
-   char* ret = Con::getReturnBuffer( 1024 );
-   Con::expandScriptFilename(ret, 1024, argv[1]);
+   char* ret = con->getReturnBuffer( 1024 );
+   con->expandScriptFilename(ret, 1024, argv[1]);
    return ret;
 }
 
@@ -100,7 +100,7 @@ ConsoleFunction(rtrim, const char *,2,2,"(string value)")
          firstWhitespace = pos + 1;
       pos++;
    }
-   char *ret = Con::getReturnBuffer(firstWhitespace + 1);
+   char *ret = con->getReturnBuffer(firstWhitespace + 1);
    dStrncpy(ret, argv[1], firstWhitespace);
    ret[firstWhitespace] = 0;
    return ret;
@@ -121,7 +121,7 @@ ConsoleFunction(trim, const char *,2,2,"(string)")
          firstWhitespace = pos + 1;
       pos++;
    }
-   char *ret = Con::getReturnBuffer(firstWhitespace + 1);
+   char *ret = con->getReturnBuffer(firstWhitespace + 1);
    dStrncpy(ret, ptr, firstWhitespace);
    ret[firstWhitespace] = 0;
    return ret;
@@ -131,7 +131,7 @@ ConsoleFunction(stripChars, const char*, 3, 3, "(string value, string chars) "
                 "Remove all the characters in chars from value." )
 {
    argc;
-   char* ret = Con::getReturnBuffer( dStrlen( argv[1] ) + 1 );
+   char* ret = con->getReturnBuffer( dStrlen( argv[1] ) + 1 );
    dStrcpy( ret, argv[1] );
    U32 pos = dStrcspn( ret, argv[2] );
    while ( pos < dStrlen( ret ) )
@@ -145,9 +145,9 @@ ConsoleFunction(stripChars, const char*, 3, 3, "(string value, string chars) "
 ConsoleFunction(stripColorCodes, const char*, 2,2,  "(stringtoStrip) - "
                 "remove TorqueML color codes from the string.")
 {
-   char* ret = Con::getReturnBuffer( dStrlen( argv[1] ) + 1 );
+   char* ret = con->getReturnBuffer( dStrlen( argv[1] ) + 1 );
    dStrcpy(ret, argv[1]);
-   Con::stripColorChars(ret);
+   con->stripColorChars(ret);
    return ret;
 }
 
@@ -155,7 +155,7 @@ ConsoleFunction(strlwr,const char *,2,2,"(string) "
                 "Convert string to lower case.")
 {
    argc;
-   char *ret = Con::getReturnBuffer(dStrlen(argv[1]) + 1);
+   char *ret = con->getReturnBuffer(dStrlen(argv[1]) + 1);
    dStrcpy(ret, argv[1]);
    return dStrlwr(ret);
 }
@@ -164,7 +164,7 @@ ConsoleFunction(strupr,const char *,2,2,"(string) "
                 "Convert string to upper case.")
 {
    argc;
-   char *ret = Con::getReturnBuffer(dStrlen(argv[1]) + 1);
+   char *ret = con->getReturnBuffer(dStrlen(argv[1]) + 1);
    dStrcpy(ret, argv[1]);
    return dStrupr(ret);
 }
@@ -195,7 +195,7 @@ ConsoleFunction(strreplace, const char *, 4, 4, "(string source, string from, st
          count++;
       }
    }
-   char *ret = Con::getReturnBuffer(dStrlen(argv[1]) + 1 + (toLen - fromLen) * count);
+   char *ret = con->getReturnBuffer(dStrlen(argv[1]) + 1 + (toLen - fromLen) * count);
    U32 scanp = 0;
    U32 dstp = 0;
    for(;;)
@@ -229,7 +229,7 @@ ConsoleFunction(getSubStr, const char *, 4, 4, "getSubStr(string str, int start,
    S32 startPos   = dAtoi(argv[2]);
    S32 desiredLen = dAtoi(argv[3]);
    if (startPos < 0 || desiredLen < 0) {
-      Con::errorf(ConsoleLogEntry::Script, "getSubStr(...): error, starting position and desired length must be >= 0: (%d, %d)", startPos, desiredLen);
+      con->errorf(ConsoleLogEntry::Script, "getSubStr(...): error, starting position and desired length must be >= 0: (%d, %d)", startPos, desiredLen);
 
       return "";
    }
@@ -242,7 +242,7 @@ ConsoleFunction(getSubStr, const char *, 4, 4, "getSubStr(string str, int start,
    if (startPos + desiredLen > baseLen)
       actualLen = baseLen - startPos;
 
-   char *ret = Con::getReturnBuffer(actualLen + 1);
+   char *ret = con->getReturnBuffer(actualLen + 1);
    dStrncpy(ret, argv[1] + startPos, actualLen);
    ret[actualLen] = '\0';
 
@@ -261,7 +261,7 @@ ConsoleFunction( stripTrailingSpaces, const char*, 2, 2, "stripTrailingSpaces( s
 
       if ( temp )
       {
-         char* returnString = Con::getReturnBuffer( temp + 1 );
+         char* returnString = con->getReturnBuffer( temp + 1 );
          dStrncpy( returnString, argv[1], U32(temp) );
          returnString[temp] = '\0';
          return( returnString );			
@@ -274,163 +274,7 @@ ConsoleFunction( stripTrailingSpaces, const char*, 2, 2, "stripTrailingSpaces( s
 ConsoleFunctionGroupEnd(StringFunctions);
 
 //--------------------------------------
-
-static const char *getUnit(const char *string, U32 index, const char *set)
-{
-   U32 sz;
-   while(index--)
-   {
-      if(!*string)
-         return "";
-      sz = dStrcspn(string, set);
-      if (string[sz] == 0)
-         return "";
-      string += (sz + 1);
-   }
-   sz = dStrcspn(string, set);
-   if (sz == 0)
-      return "";
-   char *ret = Con::getReturnBuffer(sz+1);
-   dStrncpy(ret, string, sz);
-   ret[sz] = '\0';
-   return ret;
-}
-
-static const char *getUnits(const char *string, S32 startIndex, S32 endIndex, const char *set)
-{
-   S32 sz;
-   S32 index = startIndex;
-   while(index--)
-   {
-      if(!*string)
-         return "";
-      sz = dStrcspn(string, set);
-      if (string[sz] == 0)
-         return "";
-      string += (sz + 1);
-   }
-   const char *startString = string;
-   while(startIndex <= endIndex--)
-   {
-      sz = dStrcspn(string, set);
-      string += sz;
-      if (*string == 0)
-         break;
-      string++;
-   }
-   if(!*string)
-      string++;
-   U32 totalSize = (U32(string - startString));
-   char *ret = Con::getReturnBuffer(totalSize);
-   dStrncpy(ret, startString, totalSize - 1);
-   ret[totalSize-1] = '\0';
-   return ret;
-}
-
-static U32 getUnitCount(const char *string, const char *set)
-{
-   U32 count = 0;
-   U8 last = 0;
-   while(*string)
-   {
-      last = *string++;
-
-      for(U32 i =0; set[i]; i++)
-      {
-         if(last == set[i])
-         {
-            count++;
-            last = 0;
-            break;
-         }
-      }
-   }
-   if(last)
-      count++;
-   return count;
-}
-
-
-static const char* setUnit(const char *string, U32 index, const char *replace, const char *set)
-{
-   U32 sz;
-   const char *start = string;
-   char *ret = Con::getReturnBuffer(dStrlen(string) + dStrlen(replace) + 1);
-   ret[0] = '\0';
-   U32 padCount = 0;
-
-   while(index--)
-   {
-      sz = dStrcspn(string, set);
-      if(string[sz] == 0)
-      {
-         string += sz;
-         padCount = index + 1;
-         break;
-      }
-      else
-         string += (sz + 1);
-   }
-   // copy first chunk
-   sz = string-start;
-   dStrncpy(ret, start, sz);
-   for(U32 i = 0; i < padCount; i++)
-      ret[sz++] = set[0];
-
-   // replace this unit
-   ret[sz] = '\0';
-   dStrcat(ret, replace);
-
-   // copy remaining chunks
-   sz = dStrcspn(string, set);         // skip chunk we're replacing
-   if(!sz && !string[sz])
-      return ret;
-
-   string += sz;
-   dStrcat(ret, string);
-   return ret;
-}
-
-
-static const char* removeUnit(const char *string, U32 index, const char *set)
-{
-   U32 sz;
-   const char *start = string;
-   char *ret = Con::getReturnBuffer(dStrlen(string) + 1);
-   ret[0] = '\0';
-   U32 padCount = 0;
-
-   while(index--)
-   {
-      sz = dStrcspn(string, set);
-      // if there was no unit out there... return the original string
-      if(string[sz] == 0)
-         return start;
-      else
-         string += (sz + 1);
-   }
-   // copy first chunk
-   sz = string-start;
-   dStrncpy(ret, start, sz);
-   ret[sz] = 0;
-
-   // copy remaining chunks
-   sz = dStrcspn(string, set);         // skip chunk we're removing
-
-   if(string[sz] == 0) {               // if that was the last...
-      if(string != start) {
-         ret[string - start - 1] = 0;  // then kill any trailing delimiter
-      }
-      return ret;                      // and bail
-   }
-
-   string += sz + 1; // skip the extra field delimiter
-   dStrcat(ret, string);
-   return ret;
-}
-
-
-//--------------------------------------
+#ifdef TOFIX
 ConsoleFunctionGroupBegin( FieldManipulators, "Functions to manipulate data returned in the form of \"x y z\".");
 
 ConsoleFunction(getWord, const char *, 3, 3, "(string text, int index)")
@@ -536,6 +380,8 @@ ConsoleFunction(getRecordCount, S32, 2, 2, "getRecordCount(text)")
    argc;
    return getUnitCount(argv[1], "\n");
 }
+
+#endif
 //--------------------------------------
 ConsoleFunction(firstWord, const char *, 2, 2, "firstWord(text)")
 {
@@ -546,7 +392,7 @@ ConsoleFunction(firstWord, const char *, 2, 2, "firstWord(text)")
       len = dStrlen(argv[1]);
    else
       len = word - argv[1];
-   char *ret = Con::getReturnBuffer(len + 1);
+   char *ret = con->getReturnBuffer(len + 1);
    dStrncpy(ret, argv[1], len);
    ret[len] = 0;
    return ret;
@@ -558,7 +404,7 @@ ConsoleFunction(restWords, const char *, 2, 2, "restWords(text)")
    const char *word = dStrchr(argv[1], ' ');
    if(word == NULL)
       return "";
-   char *ret = Con::getReturnBuffer(dStrlen(word + 1) + 1);
+   char *ret = con->getReturnBuffer(dStrlen(word + 1) + 1);
    dStrcpy(ret, word + 1);
    return ret;
 }
@@ -599,11 +445,11 @@ ConsoleFunction(NextToken,const char *,4,4,"nextToken(str,token,delim)")
          *str++ = 0;
 
       // set local variable if inside a function
-      if (gEvalState.stack.size() && 
-         gEvalState.stack.last()->scopeName)
-         Con::setLocalVariable(token,tmp);
+      if (con->gEvalState->stack.size() && 
+         con->gEvalState->stack.last()->scopeName)
+         con->setLocalVariable(token,tmp);
       else
-         Con::setVariable(token,tmp);
+         con->setVariable(token,tmp);
 
       // advance str past the 'delim space'
       while (isInSet(*str, delim))
@@ -626,7 +472,7 @@ ConsoleFunction(detag, const char *, 2, 2, "detag(textTagString)")
       const char *word = dStrchr(argv[1], ' ');
       if(word == NULL)
          return "";
-      char *ret = Con::getReturnBuffer(dStrlen(word + 1) + 1);
+      char *ret = con->getReturnBuffer(dStrlen(word + 1) + 1);
       dStrcpy(ret, word + 1);
       return ret;
    }
@@ -647,7 +493,7 @@ ConsoleFunction(getTag, const char *, 2, 2, "getTag(textTagString)")
       else
          len = dStrlen(argv[1]) + 1;
 
-      char * ret = Con::getReturnBuffer(len);
+      char * ret = con->getReturnBuffer(len);
       dStrncpy(ret, argv[1] + 1, len - 1);
       ret[len - 1] = 0;
 
@@ -670,12 +516,12 @@ ConsoleFunction(echo, void, 2, 0, "echo(text [, ... ])")
    for(i = 1; i < argc; i++)
       len += dStrlen(argv[i]);
 
-   char *ret = Con::getReturnBuffer(len + 1);
+   char *ret = con->getReturnBuffer(len + 1);
    ret[0] = 0;
    for(i = 1; i < argc; i++)
       dStrcat(ret, argv[i]);
 
-   Con::printf("%s", ret);
+   con->printf("%s", ret);
    ret[0] = 0;
 }
 
@@ -686,12 +532,12 @@ ConsoleFunction(warn, void, 2, 0, "warn(text [, ... ])")
    for(i = 1; i < argc; i++)
       len += dStrlen(argv[i]);
 
-   char *ret = Con::getReturnBuffer(len + 1);
+   char *ret = con->getReturnBuffer(len + 1);
    ret[0] = 0;
    for(i = 1; i < argc; i++)
       dStrcat(ret, argv[i]);
 
-   Con::warnf(ConsoleLogEntry::General, "%s", ret);
+   con->warnf(ConsoleLogEntry::General, "%s", ret);
    ret[0] = 0;
 }
 
@@ -702,19 +548,19 @@ ConsoleFunction(error, void, 2, 0, "error(text [, ... ])")
    for(i = 1; i < argc; i++)
       len += dStrlen(argv[i]);
 
-   char *ret = Con::getReturnBuffer(len + 1);
+   char *ret = con->getReturnBuffer(len + 1);
    ret[0] = 0;
    for(i = 1; i < argc; i++)
       dStrcat(ret, argv[i]);
 
-   Con::errorf(ConsoleLogEntry::General, "%s", ret);
+   con->errorf(ConsoleLogEntry::General, "%s", ret);
    ret[0] = 0;
 }
 
 ConsoleFunction(expandEscape, const char *, 2, 2, "expandEscape(text)")
 {
    argc;
-   char *ret = Con::getReturnBuffer(dStrlen(argv[1])*2 + 1);  // worst case situation
+   char *ret = con->getReturnBuffer(dStrlen(argv[1])*2 + 1);  // worst case situation
    expandEscape(ret, argv[1]);
    return ret;
 }
@@ -722,7 +568,7 @@ ConsoleFunction(expandEscape, const char *, 2, 2, "expandEscape(text)")
 ConsoleFunction(collapseEscape, const char *, 2, 2, "collapseEscape(text)")
 {
    argc;
-   char *ret = Con::getReturnBuffer(dStrlen(argv[1]) + 1);  // worst case situation
+   char *ret = con->getReturnBuffer(dStrlen(argv[1]) + 1);  // worst case situation
    dStrcpy( ret, argv[1] );
    collapseEscape( ret );
    return ret;
@@ -731,7 +577,7 @@ ConsoleFunction(collapseEscape, const char *, 2, 2, "collapseEscape(text)")
 ConsoleFunction(setLogMode, void, 2, 2, "setLogMode(mode);")
 {
    argc;
-   Con::setLogMode(dAtoi(argv[1]));
+   con->setLogMode(dAtoi(argv[1]));
 }
 
 ConsoleFunctionGroupEnd( Output );
@@ -757,7 +603,7 @@ ConsoleFunctionGroupBegin(MetaScripting, "Functions that let you manipulate the 
 
 ConsoleFunction(call, const char *, 2, 0, "call(funcName [,args ...])")
 {
-   return Con::execute(argc - 1, argv + 1);
+   return con->execute(argc - 1, argv + 1);
 }
 
 static U32 execDepth = 0;
@@ -786,14 +632,14 @@ ConsoleFunction(exec, bool, 2, 4, "exec(fileName [, nocalls [,journalScript]])")
    }
 
    // Determine the filename we actually want...
-   Con::expandScriptFilename(scriptFilenameBuffer, sizeof(scriptFilenameBuffer), argv[1]);
+   con->expandScriptFilename(scriptFilenameBuffer, sizeof(scriptFilenameBuffer), argv[1]);
 
    const char *ext = dStrrchr(scriptFilenameBuffer, '.');
 
    if(!ext)
    {
       // We need an extension!
-      Con::errorf(ConsoleLogEntry::Script, "exec: invalid script file name %s.", scriptFilenameBuffer);
+      con->errorf(ConsoleLogEntry::Script, "exec: invalid script file name %s.", scriptFilenameBuffer);
       execDepth--;
       return false;
    }
@@ -802,7 +648,7 @@ ConsoleFunction(exec, bool, 2, 4, "exec(fileName [, nocalls [,journalScript]])")
    StringTableEntry compiledScriptFileName = NULL;
 
    // Is this a file we should compile?
-   bool compiled = dStricmp(ext, ".mis") && !journal && !Con::getBoolVariable("Scripts::ignoreDSOs");
+   bool compiled = dStricmp(ext, ".mis") && !journal && !con->getBoolVariable("Scripts::ignoreDSOs");
 
    // Ok, we let's try to load and compile the script.
    bool scriptExists = Platform::isFile(scriptFileName);
@@ -838,7 +684,7 @@ ConsoleFunction(exec, bool, 2, 4, "exec(fileName [, nocalls [,journalScript]])")
          compiledStream.read(&version);
          if(version != Con::DSOVersion)
          {
-            Con::warnf("exec: Found an old DSO (%s, ver %d < %d), ignoring.", nameBuffer, version, Con::DSOVersion);
+            con->warnf("exec: Found an old DSO (%s, ver %d < %d), ignoring.", nameBuffer, version, Con::DSOVersion);
             compiledStream.close();
          }
       }
@@ -864,7 +710,7 @@ ConsoleFunction(exec, bool, 2, 4, "exec(fileName [, nocalls [,journalScript]])")
       if (!scriptSize || !script)
       {
          delete [] script;
-         Con::errorf(ConsoleLogEntry::Script, "exec: invalid script file %s.", scriptFileName);
+         con->errorf(ConsoleLogEntry::Script, "exec: invalid script file %s.", scriptFileName);
          execDepth--;
          return false;
       }
@@ -872,8 +718,8 @@ ConsoleFunction(exec, bool, 2, 4, "exec(fileName [, nocalls [,journalScript]])")
       if(compiled)
       {
          // compile this baddie.
-         Con::printf("Compiling %s...", scriptFileName);
-         CodeBlock *code = new CodeBlock();
+         con->printf("Compiling %s...", scriptFileName);
+         CodeBlock *code = new CodeBlock(con);
          code->compile(nameBuffer, scriptFileName, script);
          delete code;
          code = NULL;
@@ -900,8 +746,8 @@ ConsoleFunction(exec, bool, 2, 4, "exec(fileName [, nocalls [,journalScript]])")
       script = 0;
 
       // We're all compiled, so let's run it.
-      Con::printf("Loading compiled script %s.", scriptFileName);
-      CodeBlock *code = new CodeBlock;
+      con->printf("Loading compiled script %s.", scriptFileName);
+      CodeBlock *code = new CodeBlock(con);
       code->read(scriptFileName, compiledStream);
       compiledStream.close();
       code->exec(0, scriptFileName, NULL, 0, NULL, noCalls, NULL, 0);
@@ -912,8 +758,8 @@ ConsoleFunction(exec, bool, 2, 4, "exec(fileName [, nocalls [,journalScript]])")
       // No compiled script,  let's just try executing it
       // directly... this is either a mission file, or maybe
       // we're on a readonly volume.
-      Con::printf("Executing %s.", scriptFileName);
-      CodeBlock *newCodeBlock = new CodeBlock();
+      con->printf("Executing %s.", scriptFileName);
+      CodeBlock *newCodeBlock = new CodeBlock(con);
       StringTableEntry name = StringTable->insert(scriptFileName);
 
       newCodeBlock->compileExec(name, script, noCalls, 0);
@@ -922,7 +768,7 @@ ConsoleFunction(exec, bool, 2, 4, "exec(fileName [, nocalls [,journalScript]])")
    else
    {
       // Don't have anything.
-      Con::warnf(ConsoleLogEntry::Script, "Missing file: %s!", scriptFileName);
+      con->warnf(ConsoleLogEntry::Script, "Missing file: %s!", scriptFileName);
       ret = false;
    }
 
@@ -934,17 +780,17 @@ ConsoleFunction(exec, bool, 2, 4, "exec(fileName [, nocalls [,journalScript]])")
 ConsoleFunction(eval, const char *, 2, 2, "eval(consoleString)")
 {
    argc;
-   return Con::evaluate(argv[1], false, NULL);
+   return con->evaluate(argv[1], false, NULL);
 }
 
 ConsoleFunction(getVariable, const char *, 2, 2, "(string varName)")
 {
-   return Con::getVariable(argv[1]);
+   return con->getVariable(argv[1]);
 }
 
 ConsoleFunction(isFunction, bool, 2, 2, "(string funcName)")
 {
-   return Con::isFunction(argv[1]);
+   return con->isFunction(argv[1]);
 }
 
 //----------------------------------------------------------------
@@ -955,16 +801,16 @@ ConsoleFunction(export, void, 2, 4, "export(searchString [, fileName [,append]])
    bool append = (argc == 4) ? dAtob(argv[3]) : false;
 
    if (argc >= 3)
-      if (Con::expandScriptFilename(scriptFilenameBuffer, sizeof(scriptFilenameBuffer), argv[2]))
+      if (con->expandScriptFilename(scriptFilenameBuffer, sizeof(scriptFilenameBuffer), argv[2]))
          filename = scriptFilenameBuffer;
 
-   gEvalState.globalVars.exportVariables(argv[1], filename, append);
+   con->gEvalState->globalVars.exportVariables(argv[1], filename, append);
 }
 
 ConsoleFunction(deleteVariables, void, 2, 2, "deleteVariables(wildCard)")
 {
    argc;
-   gEvalState.globalVars.deleteVariables(argv[1]);
+   con->gEvalState->globalVars.deleteVariables(argv[1]);
 }
 
 //----------------------------------------------------------------
@@ -972,8 +818,8 @@ ConsoleFunction(deleteVariables, void, 2, 2, "deleteVariables(wildCard)")
 ConsoleFunction(trace, void, 2, 2, "trace(bool)")
 {
    argc;
-   gEvalState.traceOn = dAtob(argv[1]);
-   Con::printf("Console trace is %s", gEvalState.traceOn ? "on." : "off.");
+   con->gEvalState->traceOn = dAtob(argv[1]);
+   con->printf("Console trace is %s", con->gEvalState->traceOn ? "on." : "off.");
 }
 
 //----------------------------------------------------------------
@@ -1007,7 +853,7 @@ ConsoleFunction(fileBase, const char *, 2, 2, "fileBase(fileName)")
       path = argv[1];
    else
       path++;
-   char *ret = Con::getReturnBuffer(dStrlen(path) + 1);
+   char *ret = con->getReturnBuffer(dStrlen(path) + 1);
    dStrcpy(ret, path);
    char *ext = dStrrchr(ret, '.');
    if(ext)
@@ -1023,7 +869,7 @@ ConsoleFunction(fileName, const char *, 2, 2, "fileName(filePathName)")
       name = argv[1];
    else
       name++;
-   char *ret = Con::getReturnBuffer(dStrlen(name));
+   char *ret = con->getReturnBuffer(dStrlen(name));
    dStrcpy(ret, name);
    return ret;
 }
@@ -1035,7 +881,7 @@ ConsoleFunction(filePath, const char *, 2, 2, "filePath(fileName)")
    if(!path)
       return "";
    U32 len = path - argv[1];
-   char *ret = Con::getReturnBuffer(len + 1);
+   char *ret = con->getReturnBuffer(len + 1);
    dStrncpy(ret, argv[1], len);
    ret[len] = 0;
    return ret;
@@ -1054,8 +900,8 @@ ConsoleFunction(pathCopy, bool, 3, 4, "pathCopy(fromFile, toFile [, nooverwrite 
    static char qualifiedFromFile[1024];
    static char qualifiedToFile[1024];
 
-   Con::expandScriptFilename( fromFile, sizeof( fromFile ), argv[1] );
-   Con::expandScriptFilename( toFile, sizeof( toFile ), argv[2] );
+   con->expandScriptFilename( fromFile, sizeof( fromFile ), argv[1] );
+   con->expandScriptFilename( toFile, sizeof( toFile ), argv[2] );
 
    dSprintf( qualifiedFromFile, 1024, "%s/%s", Platform::getCurrentDirectory(), fromFile );
    dSprintf( qualifiedToFile, 1024, "%s/%s", Platform::getCurrentDirectory(), toFile );
@@ -1093,7 +939,7 @@ ConsoleFunction(getDirectoryList, const char*, 2, 3, "getDirectoryList(%path, %d
       length += dStrlen(directories[i]) + 1;
 
    // Get a return buffer.
-   char* buffer = Con::getReturnBuffer(length);
+   char* buffer = con->getReturnBuffer(length);
    char* p = buffer;
 
    // Copy the directory names to the buffer.
@@ -1114,7 +960,7 @@ ConsoleFunction(getDirectoryList, const char*, 2, 3, "getDirectoryList(%path, %d
 ConsoleFunction(fileSize, S32, 2, 2, "fileSize(fileName) returns filesize or -1 if no file")
 {
    argc;
-   Con::expandScriptFilename(scriptFilenameBuffer, sizeof(scriptFilenameBuffer), argv[1]);
+   con->expandScriptFilename(scriptFilenameBuffer, sizeof(scriptFilenameBuffer), argv[1]);
    return Platform::getFileSize( scriptFilenameBuffer );
 }
 
@@ -1133,7 +979,7 @@ ConsoleFunction( createPath, bool, 2,2, "createPath(\"file name or path name\");
    static char fileName[1024];
    static char sandboxFileName[1024];
 
-   Con::expandScriptFilename( fileName, sizeof( fileName ), argv[1] );
+   con->expandScriptFilename( fileName, sizeof( fileName ), argv[1] );
    dSprintf( sandboxFileName, 1024, "%s/%s", Platform::getCurrentDirectory(), fileName );
    
    return Platform::createPath(sandboxFileName);
@@ -1144,7 +990,7 @@ ConsoleFunction(fileDelete, bool, 2,2, "fileDelete('path')")
    static char fileName[1024];
    static char sandboxFileName[1024];
 
-   Con::expandScriptFilename( fileName, sizeof( fileName ), argv[1] );
+   con->expandScriptFilename( fileName, sizeof( fileName ), argv[1] );
    dSprintf( sandboxFileName, 1024, "%s/%s", Platform::getCurrentDirectory(), fileName );
    
    return Platform::fileDelete(sandboxFileName);

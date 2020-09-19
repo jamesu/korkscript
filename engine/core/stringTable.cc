@@ -123,9 +123,11 @@ StringTableEntry _StringTable::insert(const char* val, const bool  caseSens)
    if ( val == NULL )
       return StringTable->EmptyString;
    
+#ifdef TORQUE_MULTITHREAD
    MutexHandle mutex;
    mutex.lock(&mMutex, true);
-   
+#endif
+
    Node **walk, *temp;
    U32 key = hashString(val);
    walk = &buckets[key % numBuckets];
@@ -157,9 +159,11 @@ StringTableEntry _StringTable::insertn(const char* src, S32 len, const bool  cas
    if ( src == NULL )
       return StringTable->EmptyString;
    
+#ifdef TORQUE_MULTITHREAD
    MutexHandle mutex;
    mutex.lock(&mMutex, true);
-   
+#endif
+
    char val[1024];
    AssertFatal(len < sizeof(val), "Invalid string to insertn");
    dStrncpy(val, src, len);
@@ -173,9 +177,11 @@ StringTableEntry _StringTable::lookup(const char* val, const bool  caseSens)
    if ( val == NULL )
       return StringTable->EmptyString;
    
+#ifdef TORQUE_MULTITHREAD
    MutexHandle mutex;
    mutex.lock(&mMutex, true);
-   
+#endif
+
    Node **walk, *temp;
    U32 key = hashString(val);
    walk = &buckets[key % numBuckets];
@@ -195,9 +201,11 @@ StringTableEntry _StringTable::lookupn(const char* val, S32 len, const bool  cas
    if ( val == NULL )
       return StringTable->EmptyString;
    
+#ifdef TORQUE_MULTITHREAD
    MutexHandle mutex;
    mutex.lock(&mMutex, true);
-   
+#endif
+
    Node **walk, *temp;
    U32 key = hashStringn(val, len);
    walk = &buckets[key % numBuckets];

@@ -22,7 +22,6 @@
 
 #include "core/torqueConfig.h"
 #include "platform/platformNetwork.h"
-#include "platform/threads/mutex.h"
 #include "core/hashFunction.h"
 #include "console/console.h"
 #include "core/fileStream.h"
@@ -172,20 +171,32 @@ public:
    };
    
    Vector<EntryType> mSocketList;
+
+   #ifdef TORQUE_MULTITHREADED
    Mutex *mMutex;
+   #endif
    
    ReservedSocketList()
    {
+   #ifdef TORQUE_MULTITHREADED
       mMutex = new Mutex;
+   #endif
    }
    
    ~ReservedSocketList()
    {
+   #ifdef TORQUE_MULTITHREADED
       delete mMutex;
+   #endif
    }
    
+   #ifdef TORQUE_MULTITHREADED
    inline void modify() { Mutex::lockMutex(mMutex); }
    inline void endModify() { Mutex::unlockMutex(mMutex); }
+   inline void modify() { }
+   inline void endModify() { }
+   #else
+   #endif
    
    NetSocket reserve(SOCKET reserveId = -1, bool doLock = true);
    void remove(NetSocket socketToRemove, bool doLock = true);
@@ -398,11 +409,13 @@ namespace PlatformNetState
 
 template<class T> NetSocket ReservedSocketList<T>::reserve(SOCKET reserveId, bool doLock)
 {
+   #ifdef TORQUE_MULTITHREADED
    MutexHandle handle;
    if (doLock)
    {
       handle.lock(mMutex, true);
    }
+   #endif
    
    S32 idx = mSocketList.find_next(EntryType());
    if (idx == -1)
@@ -425,11 +438,13 @@ template<class T> NetSocket ReservedSocketList<T>::reserve(SOCKET reserveId, boo
 
 template<class T> void ReservedSocketList<T>::remove(NetSocket socketToRemove, bool doLock)
 {
+   #ifdef TORQUE_MULTITHREADED
    MutexHandle handle;
    if (doLock)
    {
       handle.lock(mMutex, true);
    }
+   #endif
    
    if ((U32)socketToRemove.getHandle() >= (U32)mSocketList.size())
       return;
@@ -439,8 +454,10 @@ template<class T> void ReservedSocketList<T>::remove(NetSocket socketToRemove, b
 
 template<class T> T ReservedSocketList<T>::activate(NetSocket socketToActivate, int family, bool useUDP, bool clearOnFail)
 {
+   #ifdef TORQUE_MULTITHREADED
    MutexHandle h;
    h.lock(mMutex, true);
+   #endif
    
    int typeID = useUDP ? SOCK_DGRAM : SOCK_STREAM;
    int protocol = useUDP ? PlatformNetState::getDefaultGameProtocol() : 0;
@@ -478,8 +495,10 @@ template<class T> T ReservedSocketList<T>::activate(NetSocket socketToActivate, 
 
 template<class T> T ReservedSocketList<T>::resolve(NetSocket socketToResolve)
 {
+   #ifdef TORQUE_MULTITHREADED
    MutexHandle h;
    h.lock(mMutex, true);
+   #endif
    
    if ((U32)socketToResolve.getHandle() >= (U32)mSocketList.size())
       return -1;
@@ -572,7 +591,7 @@ bool Net::init()
       AssertISV( !WSAStartup( 0x0101, &stWSAData ), "Net::init - failed to init WinSock!" );
       //logprintf("Winsock initialization %s", success ? "succeeded." : "failed!");
 #endif
-      NetAsync::startAsync();
+      //NetAsync::startAsync();
    }
    PlatformNetState::initCount++;
    
@@ -591,7 +610,7 @@ void Net::shutdown()
    }
    
    closePort();
-   NetAsync::stopAsync();
+   //NetAsync::stopAsync();
    PlatformNetState::initCount--;
    
    
@@ -692,7 +711,7 @@ NetSocket Net::openListenPort(U16 port, NetAddress::Type addressType)
    
    if (error == NoError && (handleFd == NetSocket::INVALID || sockId == InvalidSocketHandle))
    {
-      Con::errorf("Unable to open listen socket: %s", strerror(errno));
+      //Con::errorf("Unable to open listen socket: %s", strerror(errno));
       error = NotASocket;
       handleFd = NetSocket::INVALID;
    }
@@ -703,7 +722,7 @@ NetSocket Net::openListenPort(U16 port, NetAddress::Type addressType)
       error = bindAddress(address, handleFd, false);
       if (error != NoError)
       {
-         Con::errorf("Unable to bind port %d: %s", port, strerror(errno));
+         //Con::errorf("Unable to bind port %d: %s", port, strerror(errno));
          closeSocket(handleFd);
          handleFd = NetSocket::INVALID;
       }
@@ -714,7 +733,7 @@ NetSocket Net::openListenPort(U16 port, NetAddress::Type addressType)
       error = listen(handleFd, 4);
       if (error != NoError)
       {
-         Con::errorf("Unable to listen on port %d: %s", port, strerror(errno));
+         //Con::errorf("Unable to listen on port %d: %s", port, strerror(errno));
          closeSocket(handleFd);
          handleFd = NetSocket::INVALID;
       }
@@ -774,8 +793,8 @@ NetSocket Net::openConnectTo(const char *addressString)
             Net::Error err = PlatformNetState::getLastError();
             if (err != Net::WouldBlock)
             {
-               Con::errorf("Error connecting to %s: %u",
-                           addressString, err);
+               //Con::errorf("Error connecting to %s: %u",
+               //            addressString, err);
                closeSocket(handleFd);
                handleFd = NetSocket::INVALID;
             }
@@ -806,8 +825,8 @@ NetSocket Net::openConnectTo(const char *addressString)
             Net::Error err = PlatformNetState::getLastError();
             if (err != Net::WouldBlock)
             {
-               Con::errorf("Error connecting to %s: %u",
-                           addressString, err);
+               //Con::errorf("Error connecting to %s: %u",
+               //            addressString, err);
                closeSocket(handleFd);
                handleFd = NetSocket::INVALID;
             }
@@ -834,9 +853,11 @@ NetSocket Net::openConnectTo(const char *addressString)
       int actualFamily = AF_UNSPEC;
       if (PlatformNetState::extractAddressParts(addressString, addr, port, actualFamily))
       {
+         #ifdef USING_NETASYNC
          addPolledSocket(handleFd, InvalidSocketHandle, PolledSocket::NameLookupRequired, addr, port);
          // queue the lookup
          gNetAsync.queueLookup(addressString, handleFd);
+         #endif
       }
       else
       {
@@ -920,9 +941,9 @@ bool Net::openPort(S32 port, bool doBind)
    }
    
    // Update prefs
-   Net::smMulticastEnabled = Con::getBoolVariable("pref::Net::Multicast6Enabled", true);
-   Net::smIpv4Enabled = Con::getBoolVariable("pref::Net::IPV4Enabled", true);
-   Net::smIpv6Enabled = Con::getBoolVariable("pref::Net::IPV6Enabled", false);
+   Net::smMulticastEnabled = false;//Con::getBoolVariable("pref::Net::Multicast6Enabled", true);
+   Net::smIpv4Enabled = true;//Con::getBoolVariable("pref::Net::IPV4Enabled", true);
+   Net::smIpv6Enabled = false;//Con::getBoolVariable("pref::Net::IPV6Enabled", false);
    
    // we turn off VDP in non-release builds because VDP does not support broadcast packets
    // which are required for LAN queries (PC->Xbox connectivity).  The wire protocol still
@@ -967,7 +988,7 @@ bool Net::openPort(S32 port, bool doBind)
                if (error == NoError)
                {
                   Net::addressToString(&listenAddress, listenAddressStr);
-                  Con::printf("UDP initialized on ipv4 %s", listenAddressStr);
+                  //Con::printf("UDP initialized on ipv4 %s", listenAddressStr);
                }
             }
             
@@ -975,13 +996,13 @@ bool Net::openPort(S32 port, bool doBind)
             {
                closeSocket(PlatformNetState::udpSocket);
                PlatformNetState::udpSocket = NetSocket::INVALID;
-               Con::printf("Unable to initialize UDP on ipv4 - error %d", error);
+               //Con::printf("Unable to initialize UDP on ipv4 - error %d", error);
             }
          }
       }
       else
       {
-         Con::errorf("Unable to initialize UDP on ipv4 - invalid address.");
+         //Con::errorf("Unable to initialize UDP on ipv4 - invalid address.");
          PlatformNetState::udpSocket = NetSocket::INVALID;
       }
    }
@@ -1020,7 +1041,7 @@ bool Net::openPort(S32 port, bool doBind)
                if (error == NoError)
                {
                   Net::addressToString(&listenAddress, listenAddressStr);
-                  Con::printf("UDP initialized on ipv6 %s", listenAddressStr);
+                  //Con::printf("UDP initialized on ipv6 %s", listenAddressStr);
                }
             }
             
@@ -1028,7 +1049,7 @@ bool Net::openPort(S32 port, bool doBind)
             {
                closeSocket(PlatformNetState::udp6Socket);
                PlatformNetState::udp6Socket = NetSocket::INVALID;
-               Con::printf("Unable to initialize UDP on ipv6 - error %d", error);
+               //Con::printf("Unable to initialize UDP on ipv6 - error %d", error);
             }
             
             if (Net::smMulticastEnabled && doBind)
@@ -1597,7 +1618,7 @@ Net::Error Net::getListenAddress(const NetAddress::Type type, NetAddress *addres
 {
    if (type == NetAddress::IPAddress)
    {
-      const char* serverIP = forceDefaults ? NULL : Con::getVariable("pref::Net::BindAddress");
+      const char* serverIP = NULL;//forceDefaults ? NULL : Con::getVariable("pref::Net::BindAddress");
       if (!serverIP || serverIP[0] == '\0')
       {
          address->type = type;
@@ -1619,7 +1640,7 @@ Net::Error Net::getListenAddress(const NetAddress::Type type, NetAddress *addres
    }
    else if (type == NetAddress::IPV6Address)
    {
-      const char* serverIP6 = forceDefaults ? NULL : Con::getVariable("pref::Net::BindAddress6");
+      const char* serverIP6 = NULL;//forceDefaults ? NULL : Con::getVariable("pref::Net::BindAddress6");
       if (!serverIP6 || serverIP6[0] == '\0')
       {
          sockaddr_in6 addr;
@@ -1638,7 +1659,7 @@ Net::Error Net::getListenAddress(const NetAddress::Type type, NetAddress *addres
    }
    else if (type == NetAddress::IPV6MulticastAddress)
    {
-      const char* multicastAddressValue = forceDefaults ? NULL : Con::getVariable("pref::Net::Multicast6Address");
+      const char* multicastAddressValue = NULL;//forceDefaults ? NULL : Con::getVariable("pref::Net::Multicast6Address");
       if (!multicastAddressValue || multicastAddressValue[0] == '\0')
       {
          multicastAddressValue = TORQUE_NET_DEFAULT_MULTICAST_ADDRESS;
@@ -1926,7 +1947,7 @@ void Net::enableMulticast()
          NetAddress multicastAddress;
          sockaddr_in6 multicastSocketAddress;
          
-         const char *multicastAddressValue = Con::getVariable("pref::Net::Multicast6Address");
+         const char *multicastAddressValue = NULL;//Con::getVariable("pref::Net::Multicast6Address");
          if (!multicastAddressValue || multicastAddressValue[0] == '\0')
          {
             multicastAddressValue = TORQUE_NET_DEFAULT_MULTICAST_ADDRESS;
@@ -1945,7 +1966,7 @@ void Net::enableMulticast()
          
          if (error == NoError)
          {
-            const char *multicastInterface = Con::getVariable("pref::Net::Multicast6Interface");
+            const char *multicastInterface = NULL;//Con::getVariable("pref::Net::Multicast6Interface");
             
             if (multicastInterface && multicastInterface[0] != '\0')
             {
@@ -1980,13 +2001,13 @@ void Net::enableMulticast()
             NetAddress listenAddress;
             char listenAddressStr[256];
             Net::addressToString(&multicastAddress, listenAddressStr);
-            Con::printf("Multicast initialized on %s", listenAddressStr);
+            //Con::printf("Multicast initialized on %s", listenAddressStr);
          }
          
          if (error != NoError)
          {
             PlatformNetState::multicast6Socket = NetSocket::INVALID;
-            Con::printf("Unable to multicast UDP - error %d", error);
+            //Con::printf("Unable to multicast UDP - error %d", error);
          }
       }
    }

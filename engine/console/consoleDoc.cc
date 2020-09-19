@@ -62,7 +62,7 @@ ConsoleFunction(dumpConsoleClasses, void, 1, 3, "bool dumpScript = true, bool du
    if( argc > 2 )
       dumpEngine = dAtob( argv[2] );
 
-   Namespace::dumpClasses( dumpScript, dumpEngine );
+   con->dumpClasses( dumpScript, dumpEngine );
 }
 
 /*! Dumps all declared console functions to the console.
@@ -81,7 +81,7 @@ ConsoleFunction(dumpConsoleFunctions, void, 1, 3, "bool dumpScript = true, bool 
    if( argc > 2 )
       dumpEngine = dAtob( argv[2] );
 
-   Namespace::dumpFunctions( dumpScript, dumpEngine );
+   con->dumpFunctions( dumpScript, dumpEngine );
 }
 
 ConsoleFunctionGroupEnd(ConsoleDoc);
@@ -105,6 +105,7 @@ const char *typeNames[] =
 
 void printClassHeader(const char* usage, const char * className, const char * superClassName, const bool stub)
 {
+   #if 0
    if(stub) 
    {
       Con::printf("/// Stub class");
@@ -186,18 +187,22 @@ void printClassHeader(const char* usage, const char * className, const char * su
 
    if(className)
       Con::printf("  public:");
+      #endif
 
 }
 
 void printClassMethod(const bool isVirtual, const char *retType, const char *methodName, const char* args, const char*usage)
 {
+   #if 0
    if(usage && usage[0] != ';' && usage[0] != 0)
       Con::printf("   /*! %s */", usage);
    Con::printf("   %s%s %s(%s) {}", isVirtual ? "virtual " : "", retType, methodName, args);
+   #endif
 }
 
 void printGroupStart(const char * aName, const char * aDocs)
 {
+   #if 0
    Con::printf("");
    Con::printf("   /*! @name %s", aName);
 
@@ -208,10 +213,12 @@ void printGroupStart(const char * aName, const char * aDocs)
    }
 
    Con::printf("   @{ */");
+   #endif
 }
 
 void printClassMember(const bool isDeprec, const char * aType, const char * aName, const char * aDocs)
 {
+   #if 0
    Con::printf("   /*!");
 
    if(aDocs)
@@ -226,49 +233,54 @@ void printClassMember(const bool isDeprec, const char * aType, const char * aNam
    Con::printf("    */");
 
    Con::printf("   %s %s;", isDeprec ? "deprecated" : aType, aName);
+   #endif
 }
 
 void printGroupEnd()
 {
+   #if 0
    Con::printf("   /// @}");
    Con::printf("");
+   #endif
 }
 
 void printClassFooter()
 {
+   #if 0
    Con::printf("};");
    Con::printf("");
+   #endif
 }
 
-void Namespace::printNamespaceEntries(Namespace * g, bool dumpScript, bool dumpEngine )
+void CodeBlockWorld::printNamespaceEntries(Namespace * g, bool dumpScript, bool dumpEngine )
 {
    static bool inGroup = false;
 
    // Go through all the entries.
    // Iterate through the methods of the namespace...
-   for(Entry *ewalk = g->mEntryList; ewalk; ewalk = ewalk->mNext)
+   for(Namespace::Entry *ewalk = g->mEntryList; ewalk; ewalk = ewalk->mNext)
    {
       char buffer[1024]; //< This will bite you in the butt someday.
       int eType = ewalk->mType;
       const char * funcName = ewalk->mFunctionName;
 
-      if( ( eType == Entry::ScriptFunctionType ) && !dumpScript )
+      if( ( eType == Namespace::Entry::ScriptFunctionType ) && !dumpScript )
          continue;
 
-      if( ( eType != Entry::ScriptFunctionType ) && !dumpEngine )
+      if( ( eType != Namespace::Entry::ScriptFunctionType ) && !dumpEngine )
          continue;
 
       // If it's a function
-      if(eType >= Entry::ScriptFunctionType || eType == Entry::OverloadMarker)
+      if(eType >= Namespace::Entry::ScriptFunctionType || eType == Namespace::Entry::OverloadMarker)
       {
-         if(eType==Entry::OverloadMarker) 
+         if(eType==Namespace::Entry::OverloadMarker) 
          {
             // Deal with crap from the OverloadMarker case.
             // It has no type information so we have to "correct" its type.
 
             // Find the original
             eType = 8;
-            for(Entry *eseek = g->mEntryList; eseek; eseek = eseek->mNext)
+            for(Namespace::Entry *eseek = g->mEntryList; eseek; eseek = eseek->mNext)
             {
                if(!dStrcmp(eseek->mFunctionName, ewalk->cb.mGroupName))
                {
@@ -340,7 +352,7 @@ void Namespace::printNamespaceEntries(Namespace * g, bool dumpScript, bool dumpE
          // Default...
          printClassMethod(true, typeNames[eType], funcName, "", ewalk->mUsage);
       }
-      else if(ewalk->mType == Entry::GroupMarker)
+      else if(ewalk->mType == Namespace::Entry::GroupMarker)
       {
          if(!inGroup)
             printGroupStart(ewalk->cb.mGroupName, ewalk->mUsage);
@@ -356,16 +368,16 @@ void Namespace::printNamespaceEntries(Namespace * g, bool dumpScript, bool dumpE
       }
       else
       {
-         Con::printf("   // got an unknown thing?? %d", ewalk->mType );
+         printf("   // got an unknown thing?? %d", ewalk->mType );
       }
    }
 
 }
 
-void Namespace::dumpClasses( bool dumpScript, bool dumpEngine )
+void CodeBlockWorld::dumpClasses( bool dumpScript, bool dumpEngine )
 {
    VectorPtr<Namespace*> vec;
-   trashCache();
+   trashNSCache();
    vec.reserve( 1024 );
 
    // We use mHashSequence to mark if we have traversed...
@@ -416,9 +428,9 @@ void Namespace::dumpClasses( bool dumpScript, bool dumpEngine )
       if( !dumpScript )
       {
          bool found = false;
-         for(Entry *ewalk = vec[i]->mEntryList; ewalk; ewalk = ewalk->mNext)
+         for(Namespace::Entry *ewalk = vec[i]->mEntryList; ewalk; ewalk = ewalk->mNext)
          {
-            if( ewalk->mType != Entry::ScriptFunctionType )
+            if( ewalk->mType != Namespace::Entry::ScriptFunctionType )
             {
                found = true;
                break;
@@ -432,9 +444,9 @@ void Namespace::dumpClasses( bool dumpScript, bool dumpEngine )
       if( !dumpEngine )
       {
          bool found = false;
-         for(Entry *ewalk = vec[i]->mEntryList; ewalk; ewalk = ewalk->mNext)
+         for(Namespace::Entry *ewalk = vec[i]->mEntryList; ewalk; ewalk = ewalk->mNext)
          {
-            if( ewalk->mType == Entry::ScriptFunctionType )
+            if( ewalk->mType == Namespace::Entry::ScriptFunctionType )
             {
                found = true;
                break;
@@ -596,10 +608,10 @@ void Namespace::dumpClasses( bool dumpScript, bool dumpEngine )
             field += docLen;
 
             // Print
-            Con::printf( "   /*!" );
-            Con::printf( "   %s", fieldDoc );
-            Con::printf( "    */" );
-            Con::printf( "   %s;", fieldName );
+            printf( "   /*!" );
+            printf( "   %s", fieldDoc );
+            printf( "    */" );
+            printf( "   %s;", fieldName );
          }
       }
 
@@ -608,7 +620,7 @@ void Namespace::dumpClasses( bool dumpScript, bool dumpEngine )
    }
 }
 
-void Namespace::dumpFunctions( bool dumpScript, bool dumpEngine )
+void CodeBlockWorld::dumpFunctions( bool dumpScript, bool dumpEngine )
 {
    // Get the global namespace.
    Namespace* g = find(NULL); //->mParent;

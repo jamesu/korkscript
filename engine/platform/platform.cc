@@ -23,7 +23,6 @@
 #include "platform/platform.h"
 #include "console/console.h"
 #include "console/consoleTypes.h"
-#include "platform/threads/mutex.h"
 
 //Added for the cprintf below
 #include <stdarg.h>
@@ -35,8 +34,8 @@ S32 sgTimeManagerProcessInterval = 0;
 
 void Platform::initConsole()
 {
-   Con::addVariable("Pref::backgroundSleepTime", TypeS32, &sgBackgroundProcessSleepTime);
-   Con::addVariable("Pref::timeManagerProcessInterval", TypeS32, &sgTimeManagerProcessInterval);
+   //Con::addVariable("Pref::backgroundSleepTime", TypeS32, &sgBackgroundProcessSleepTime);
+   //Con::addVariable("Pref::timeManagerProcessInterval", TypeS32, &sgTimeManagerProcessInterval);
 }
 
 S32 Platform::getBackgroundSleepTime()
@@ -81,7 +80,7 @@ bool Platform::hasExtension(const char* pFilename, const char* pExtension)
  */
 ConsoleFunction( getLocalTime, const char*, 1, 1, "")
 {
-   char* buf = Con::getReturnBuffer(128);
+   char* buf = con->getReturnBuffer(128);
    
    Platform::LocalTime lt;
    Platform::getLocalTime(lt);

@@ -33,8 +33,6 @@
 #include "core/fileStream.h"
 #include "console/compiler.h"
 
-#include "console/simBase.h"
-
 template< typename T >
 struct Token
 {
@@ -176,7 +174,7 @@ U32 BreakStmtNode::compileStmt(CodeStream &codeStream, U32 ip)
    }
    else
    {
-      Con::warnf(ConsoleLogEntry::General, "%s (%d): break outside of loop... ignoring.", dbgFileName, dbgLineNumber);
+      printf("%s (%d): break outside of loop... ignoring.", dbgFileName, dbgLineNumber);
    }
    return codeStream.tell();
 }
@@ -193,7 +191,7 @@ U32 ContinueStmtNode::compileStmt(CodeStream &codeStream, U32 ip)
    }
    else
    {
-      Con::warnf(ConsoleLogEntry::General, "%s (%d): continue outside of loop... ignoring.", dbgFileName, dbgLineNumber);
+      printf("%s (%d): continue outside of loop... ignoring.", dbgFileName, dbgLineNumber);
    }
    return codeStream.tell();
 }
@@ -636,7 +634,7 @@ U32 CommaCatExprNode::compile(CodeStream &codeStream, U32 ip, TypeReq type)
 
    // But we're paranoid, so accept (but whine) if we get an oddity...
    if(type == TypeReqUInt || type == TypeReqFloat)
-      Con::warnf(ConsoleLogEntry::General, "%s (%d): converting comma string to a number... probably wrong.", dbgFileName, dbgLineNumber);
+      printf("%s (%d): converting comma string to a number... probably wrong.", dbgFileName, dbgLineNumber);
    if(type == TypeReqUInt)
       codeStream.emit(OP_STR_TO_UINT);
    else if(type == TypeReqFloat)

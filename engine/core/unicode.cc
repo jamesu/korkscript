@@ -655,7 +655,7 @@ bool isValidUTF8BOM( U8 bom[4] )
       // Could be UTF32BE
       if( bom[1] == 0 && bom[2] == 0xFE && bom[3] == 0xFF )
       {
-         Con::warnf( "Encountered a UTF32 BE BOM in this file; Torque does NOT support this file encoding. Use UTF8!" );
+         //Con::warnf( "Encountered a UTF32 BE BOM in this file; Torque does NOT support this file encoding. Use UTF8!" );
          return false;
       }
 
@@ -666,17 +666,17 @@ bool isValidUTF8BOM( U8 bom[4] )
       // It's little endian, either UTF16 or UTF32
       if( bom[1] == 0xFE )
       {
-         if( bom[2] == 0 && bom[3] == 0 )
+         /*if( bom[2] == 0 && bom[3] == 0 )
             Con::warnf( "Encountered a UTF32 LE BOM in this file; Torque does NOT support this file encoding. Use UTF8!" );
          else
             Con::warnf( "Encountered a UTF16 LE BOM in this file; Torque does NOT support this file encoding. Use UTF8!" );
-      }
+      */}
 
       return false;
    }
    else if( bom[0] == 0xFE && bom[1] == 0xFF )
    {
-      Con::warnf( "Encountered a UTF16 BE BOM in this file; Torque does NOT support this file encoding. Use UTF8!" );
+      //Con::warnf( "Encountered a UTF16 BE BOM in this file; Torque does NOT support this file encoding. Use UTF8!" );
       return false;
    }
    else if( bom[0] == 0xEF && bom[1] == 0xBB && bom[2] == 0xBF )

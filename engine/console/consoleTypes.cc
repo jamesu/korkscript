@@ -23,7 +23,6 @@
 #include "console/console.h"
 #include "console/consoleTypes.h"
 #include "core/stringTable.h"
-#include "console/simBase.h"
 #include "core/stringUnit.h"
 
 //////////////////////////////////////////////////////////////////////////
@@ -41,7 +40,7 @@ ConsoleSetType( TypeString )
    if(argc == 1)
       *((const char **) dptr) = StringTable->insert(argv[0]);
    else
-      Con::printf("(TypeString) Cannot set multiple args to a single string.");
+      con->printf("(TypeString) Cannot set multiple args to a single string.");
 }
 
 /////////////////////////////////////////////////////////////////////////
@@ -52,7 +51,7 @@ ConsoleType( string, TypeStringTableEntryVector, sizeof(Vector<StringTableEntry>
 ConsoleGetType( TypeStringTableEntryVector )
 {
    Vector<StringTableEntry> *vec = (Vector<StringTableEntry>*)dptr;
-   char* returnBuffer = Con::getReturnBuffer(1024);
+   char* returnBuffer = con->getReturnBuffer(1024);
    S32 maxReturn = 1024;
    returnBuffer[0] = '\0';
    S32 returnLeng = 0;
@@ -94,7 +93,7 @@ ConsoleSetType( TypeStringTableEntryVector )
       }
    }
    else
-      Con::printf("Vector<String> must be set as { a, b, c, ... } or \"a,b,c, ...\"");
+      con->printf("Vector<String> must be set as { a, b, c, ... } or \"a,b,c, ...\"");
 }
 
 
@@ -108,7 +107,7 @@ ConsoleSetType( TypeCaseString )
    if(argc == 1)
       *((const char **) dptr) = StringTable->insert(argv[0], true);
    else
-      Con::printf("(TypeCaseString) Cannot set multiple args to a single string.");
+      con->printf("(TypeCaseString) Cannot set multiple args to a single string.");
 }
 
 ConsoleGetType( TypeCaseString )
@@ -126,13 +125,13 @@ ConsoleSetType( TypeFilename )
    if(argc == 1)
    {
       char buffer[1024];
-      if (Con::expandScriptFilename(buffer, 1024, argv[0]))//(Con::expandPath(buffer, 1024, argv[0]))
+      if (con->expandScriptFilename(buffer, 1024, argv[0]))//(con->expandPath(buffer, 1024, argv[0]))
          *((const char **) dptr) = StringTable->insert(buffer);
       else
-         Con::warnf("(TypeFilename) illegal filename detected: %s", argv[0]);
+         con->warnf("(TypeFilename) illegal filename detected: %s", argv[0]);
    }
    else
-      Con::printf("(TypeFilename) Cannot set multiple args to a single filename.");
+      con->printf("(TypeFilename) Cannot set multiple args to a single filename.");
 }
 
 ConsoleGetType( TypeFilename )
@@ -142,11 +141,11 @@ ConsoleGetType( TypeFilename )
 
 ConsolePrepData( TypeFilename )
 {
-   if( Con::expandScriptFilename( buffer, bufferSize, data ) ) // if( Con::expandPath( buffer, bufferSize, data ) )
+   if( con->expandScriptFilename( buffer, bufferSize, data ) ) // if( con->expandPath( buffer, bufferSize, data ) )
       return buffer;
    else
    {
-      Con::warnf("(TypeFilename) illegal filename detected: %s", data);
+      con->warnf("(TypeFilename) illegal filename detected: %s", data);
       return data;
    }
 }
@@ -158,7 +157,7 @@ ConsoleType( char, TypeS8, sizeof(U8), "" )
 
 ConsoleGetType( TypeS8 )
 {
-   char* returnBuffer = Con::getReturnBuffer(256);
+   char* returnBuffer = con->getReturnBuffer(256);
    dSprintf(returnBuffer, 256, "%d", *((U8 *) dptr) );
    return returnBuffer;
 }
@@ -168,7 +167,7 @@ ConsoleSetType( TypeS8 )
    if(argc == 1)
       *((U8 *) dptr) = dAtoi(argv[0]);
    else
-      Con::printf("(TypeU8) Cannot set multiple args to a single S32.");
+      con->printf("(TypeU8) Cannot set multiple args to a single S32.");
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -178,7 +177,7 @@ ConsoleType( int, TypeS32, sizeof(S32), "" )
 
 ConsoleGetType( TypeS32 )
 {
-   char* returnBuffer = Con::getReturnBuffer(256);
+   char* returnBuffer = con->getReturnBuffer(256);
    dSprintf(returnBuffer, 256, "%d", *((S32 *) dptr) );
    return returnBuffer;
 }
@@ -188,7 +187,7 @@ ConsoleSetType( TypeS32 )
    if(argc == 1)
       *((S32 *) dptr) = dAtoi(argv[0]);
    else
-      Con::printf("(TypeS32) Cannot set multiple args to a single S32.");
+      con->printf("(TypeS32) Cannot set multiple args to a single S32.");
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -200,7 +199,7 @@ ConsoleGetType( TypeS32Vector )
 {
    Vector<S32> *vec = (Vector<S32> *)dptr;
    S32 buffSize = ( vec->size() * 15 ) + 16 ;
-   char* returnBuffer = Con::getReturnBuffer( buffSize );
+   char* returnBuffer = con->getReturnBuffer( buffSize );
    S32 maxReturn = buffSize;
    returnBuffer[0] = '\0';
    S32 returnLeng = 0;
@@ -244,7 +243,7 @@ ConsoleSetType( TypeS32Vector )
          vec->push_back(dAtoi(argv[i]));
    }
    else
-      Con::printf("Vector<S32> must be set as { a, b, c, ... } or \"a b c ...\"");
+      con->printf("Vector<S32> must be set as { a, b, c, ... } or \"a b c ...\"");
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -254,7 +253,7 @@ ConsoleType( float, TypeF32, sizeof(F32), "" )
 
 ConsoleGetType( TypeF32 )
 {
-   char* returnBuffer = Con::getReturnBuffer(256);
+   char* returnBuffer = con->getReturnBuffer(256);
    dSprintf(returnBuffer, 256, "%.9g", *((F32 *) dptr) );
    return returnBuffer;
 }
@@ -263,7 +262,7 @@ ConsoleSetType( TypeF32 )
    if(argc == 1)
       *((F32 *) dptr) = dAtof(argv[0]);
    else
-      Con::printf("(TypeF32) Cannot set multiple args to a single F32.");
+      con->printf("(TypeF32) Cannot set multiple args to a single F32.");
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -275,7 +274,7 @@ ConsoleGetType( TypeF32Vector )
 {
    Vector<F32> *vec = (Vector<F32> *)dptr;
    S32 buffSize = ( vec->size() * 15 ) + 16 ;
-   char* returnBuffer = Con::getReturnBuffer( buffSize );
+   char* returnBuffer = con->getReturnBuffer( buffSize );
    S32 maxReturn = buffSize;
    returnBuffer[0] = '\0';
    S32 returnLeng = 0;
@@ -319,7 +318,7 @@ ConsoleSetType( TypeF32Vector )
          vec->push_back(dAtof(argv[i]));
    }
    else
-      Con::printf("Vector<F32> must be set as { a, b, c, ... } or \"a b c ...\"");
+      con->printf("Vector<F32> must be set as { a, b, c, ... } or \"a b c ...\"");
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -337,7 +336,7 @@ ConsoleSetType( TypeBool )
    if(argc == 1)
       *((bool *) dptr) = dAtob(argv[0]);
    else
-      Con::printf("(TypeBool) Cannot set multiple args to a single bool.");
+      con->printf("(TypeBool) Cannot set multiple args to a single bool.");
 }
 
 
@@ -349,7 +348,7 @@ ConsoleType( boolList, TypeBoolVector, sizeof(Vector<bool>), "" )
 ConsoleGetType( TypeBoolVector )
 {
    Vector<bool> *vec = (Vector<bool>*)dptr;
-   char* returnBuffer = Con::getReturnBuffer(1024);
+   char* returnBuffer = con->getReturnBuffer(1024);
    S32 maxReturn = 1024;
    returnBuffer[0] = '\0';
    S32 returnLeng = 0;
@@ -392,7 +391,7 @@ ConsoleSetType( TypeBoolVector )
          vec->push_back(dAtob(argv[i]));
    }
    else
-      Con::printf("Vector<bool> must be set as { a, b, c, ... } or \"a b c ...\"");
+      con->printf("Vector<bool> must be set as { a, b, c, ... } or \"a b c ...\"");
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -433,7 +432,7 @@ ConsoleSetType( TypeEnum )
    *((S32 *) dptr) = val;
 }
 
-
+#if 0
 //////////////////////////////////////////////////////////////////////////
 // TypeSimObjectPtr
 //////////////////////////////////////////////////////////////////////////
@@ -447,13 +446,13 @@ ConsoleSetType( TypeSimObjectPtr )
       *obj = Sim::findObject(argv[0]);
    }
    else
-      Con::printf("(TypeSimObjectPtr) Cannot set multiple args to a single S32.");
+      con->printf("(TypeSimObjectPtr) Cannot set multiple args to a single S32.");
 }
 
 ConsoleGetType( TypeSimObjectPtr )
 {
    SimObject **obj = (SimObject**)dptr;
-   char* returnBuffer = Con::getReturnBuffer(256);
+   char* returnBuffer = con->getReturnBuffer(256);
    const char* Id =  *obj ? (*obj)->getName() ? (*obj)->getName() : (*obj)->getIdString() : StringTable->EmptyString;
    dSprintf(returnBuffer, 256, "%s", Id);
    return returnBuffer;
@@ -472,13 +471,13 @@ ConsoleSetType( TypeSimObjectName )
       *obj = Sim::findObject(argv[0]);
    }
    else
-      Con::printf("(TypeSimObjectName) Cannot set multiple args to a single S32.");
+      con->printf("(TypeSimObjectName) Cannot set multiple args to a single S32.");
 }
 
 ConsoleGetType( TypeSimObjectName )
 {
    SimObject **obj = (SimObject**)dptr;
-   char* returnBuffer = Con::getReturnBuffer(128);
+   char* returnBuffer = con->getReturnBuffer(128);
    dSprintf(returnBuffer, 128, "%s", *obj && (*obj)->getName() ? (*obj)->getName() : "");
    return returnBuffer;
 }
@@ -497,14 +496,16 @@ ConsoleSetType( TypeSimObjectId )
       *obj = Sim::findObject(argv[0]);
    }
    else
-      Con::printf("(TypeSimObjectId) Cannot set multiple args to a single S32.");
+      con->printf("(TypeSimObjectId) Cannot set multiple args to a single S32.");
 }
 
 ConsoleGetType( TypeSimObjectId )
 {
    SimObject **obj = (SimObject**)dptr;
-   char* returnBuffer = Con::getReturnBuffer(128);
+   char* returnBuffer = con->getReturnBuffer(128);
    dSprintf(returnBuffer, 128, "%s", *obj ? (*obj)->getIdString() : StringTable->EmptyString );
    return returnBuffer;
 }
 
+
+#endif

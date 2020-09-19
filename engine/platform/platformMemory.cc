@@ -22,7 +22,6 @@
 
 #include "platform/platform.h"
 #include "console/console.h"
-#include "platform/threads/mutex.h"
 #include <stdlib.h>
 
 //-----------------------------------------------------------------------------

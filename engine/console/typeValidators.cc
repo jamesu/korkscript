@@ -24,10 +24,9 @@
 #include "console/console.h"
 #include "console/consoleObject.h"
 #include "console/typeValidators.h"
-#include "console/simBase.h"
 #include <stdarg.h>
 
-void TypeValidator::consoleError(SimObject *object, const char *format, ...)
+void TypeValidator::consoleError(ConsoleObject *object, const char *format, ...)
 {
    char buffer[1024];
    va_list argptr;
@@ -42,11 +41,11 @@ void TypeValidator::consoleError(SimObject *object, const char *format, ...)
       objectName = "unnamed";
 
 
-   Con::warnf("%s - %s(%d) - invalid value for %s: %s",
+   object->mWorld->warnf("%s - %s(%d) - invalid value for %s: %s",
       rep->getClassName(), objectName, object->getId(), fld.pFieldname, buffer);
 }
 
-void FRangeValidator::validateType(SimObject *object, void *typePtr)
+void FRangeValidator::validateType(ConsoleObject *object, void *typePtr)
 {
     F32 *v = (F32 *) typePtr;
     if(*v < minV || *v > maxV)
@@ -59,7 +58,7 @@ void FRangeValidator::validateType(SimObject *object, void *typePtr)
     }
 }
 
-void IRangeValidator::validateType(SimObject *object, void *typePtr)
+void IRangeValidator::validateType(ConsoleObject *object, void *typePtr)
 {
     S32 *v = (S32 *) typePtr;
     if(*v < minV || *v > maxV)
@@ -72,7 +71,7 @@ void IRangeValidator::validateType(SimObject *object, void *typePtr)
     }
 }
 
-void IRangeValidatorScaled::validateType(SimObject *object, void *typePtr)
+void IRangeValidatorScaled::validateType(ConsoleObject *object, void *typePtr)
 {
     S32 *v = (S32 *) typePtr;
     *v /= factor;

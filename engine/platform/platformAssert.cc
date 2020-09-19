@@ -115,20 +115,20 @@ bool PlatformAssert::process(Type         assertType,
    bool ret = true;
 
    // always dump to the Assert to the Console
-   if (Con::isActive())
+   /*if (Con::isActive())
    {
       if (assertType == Warning)
           Con::warnf(ConsoleLogEntry::Assert, "%s: (%s @ %ld) %s", typeName[assertType], filename, lineNumber, message);
       else
           Con::errorf(ConsoleLogEntry::Assert, "%s: (%s @ %ld) %s", typeName[assertType], filename, lineNumber, message);
-   }
+   }*/
 
    // if not a WARNING pop-up a dialog box
    if (assertType != Warning)
    {
       // used for processing navGraphs (an assert won't botch the whole build)
-      if(Con::getBoolVariable("$FP::DisableAsserts", false) == true)
-         Platform::forceShutdown(1);
+      //if(Con::getBoolVariable("$FP::DisableAsserts", false) == true)
+      //   Platform::forceShutdown(1);
 
       char buffer[2048];
       dSprintf(buffer, 2048, "%s: (%s @ %ld)", typeName[assertType], filename, lineNumber);

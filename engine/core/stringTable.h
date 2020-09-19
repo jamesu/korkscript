@@ -26,9 +26,6 @@
 #ifndef _PLATFORM_H_
 #include "platform/platform.h"
 #endif
-#ifndef _PLATFORM_THREADS_MUTEX_H_
-#include "platform/threads/mutex.h"
-#endif
 #ifndef _DATACHUNKER_H_
 #include "core/dataChunker.h"
 #endif
@@ -93,7 +90,9 @@ private:
    U32         itemCount;
    DataChunker mempool;
    
+#ifdef TORQUE_MULTITHREAD
    Mutex mMutex;
+#endif
    
 protected:
    static const U32 csm_stInitSize;

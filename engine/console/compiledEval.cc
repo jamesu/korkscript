@@ -31,8 +31,9 @@
 #include "console/consoleInternal.h"
 #include "core/fileStream.h"
 #include "console/compiler.h"
+#include "console/consoleObject.h"
 
-#include "console/simBase.h"
+// #include "console/simBase.h"
 #include "console/telnetDebugger.h"
 // TOFIX #include "sim/netStringTable.h"
 
@@ -40,87 +41,7 @@
 
 using namespace Compiler;
 
-enum EvalConstants {
-   MaxStackSize = 1024,
-   MethodOnComponent = -2
-};
-
-namespace Con
-{
-   // Current script file name and root, these are registered as
-   // console variables.
-   extern StringTableEntry gCurrentFile;
-   extern StringTableEntry gCurrentRoot;
-}
-
-/// Frame data for a foreach/foreach$ loop.
-struct IterStackRecord
-{
-   /// If true, this is a foreach$ loop; if not, it's a foreach loop.
-   bool mIsStringIter;
-   
-   /// The iterator variable.
-   Dictionary::Entry* mVariable;
-   
-   /// Information for an object iterator loop.
-   struct ObjectPos
-   {
-      /// The set being iterated over.
-      SimSet* mSet;
-
-      /// Current index in the set.
-      U32 mIndex;
-   };
-   
-   /// Information for a string iterator loop.
-   struct StringPos
-   {
-      /// The raw string data on the string stack.
-      const char* mString;
-      
-      /// Current parsing position.
-      U32 mIndex;
-   };
-   union
-   {
-      ObjectPos mObj;
-      StringPos mStr;
-   } mData;
-};
-
-IterStackRecord iterStack[ MaxStackSize ];
-
-F64 floatStack[MaxStackSize];
-S64 intStack[MaxStackSize];
-
-StringStack STR;
-
-U32 _FLT = 0;
-U32 _UINT = 0;
-U32 _ITER = 0;    ///< Stack pointer for iterStack.
-
-namespace Con
-{
-   const char *getNamespaceList(Namespace *ns)
-   {
-      U32 size = 1;
-      Namespace * walk;
-      for(walk = ns; walk; walk = walk->mParent)
-         size += dStrlen(walk->mName) + 4;
-      char *ret = Con::getReturnBuffer(size);
-      ret[0] = 0;
-      for(walk = ns; walk; walk = walk->mParent)
-      {
-         dStrcat(ret, walk->mName);
-         if(walk->mParent)
-            dStrcat(ret, " -> ");
-      }
-      return ret;
-   }
-}
-
-
-//------------------------------------------------------------
+//---------------------------------------
 
 F64 consoleStringToNumber(const char *str, StringTableEntry file, U32 line)
 {
@@ -133,7 +54,7 @@ F64 consoleStringToNumber(const char *str, StringTableEntry file, U32 line)
       return 0;
    else if(file)
    {
-      Con::warnf(ConsoleLogEntry::General, "%s (%d): string always evaluates to 0.", file, line);
+      // TOFIX mWorld->warnf(ConsoleLogEntry::General, "%s (%d): string always evaluates to 0.", file, line);
       return 0;
    }
    return 0;
@@ -141,78 +62,26 @@ F64 consoleStringToNumber(const char *str, StringTableEntry file, U32 line)
 
 //------------------------------------------------------------
 
-namespace Con
-{
-   char *getReturnBuffer(U32 bufferSize)
-   {
-      return STR.getReturnBuffer(bufferSize);
-   }
-   
-   char *getReturnBuffer( const char *stringToCopy )
-   {
-      char *ret = STR.getReturnBuffer( dStrlen( stringToCopy ) + 1 );
-      dStrcpy( ret, stringToCopy );
-      ret[dStrlen( stringToCopy )] = '\0';
-      return ret;
-   }
-   
-   char *getArgBuffer(U32 bufferSize)
-   {
-      return STR.getArgBuffer(bufferSize);
-   }
-   
-   char *getFloatArg(F64 arg)
-   {
-      char *ret = STR.getArgBuffer(32);
-      dSprintf(ret, 32, "%g", arg);
-      return ret;
-   }
-   
-   char *getIntArg(S32 arg)
-   {
-      char *ret = STR.getArgBuffer(32);
-      dSprintf(ret, 32, "%d", arg);
-      return ret;
-   }
-   
-   char* getBoolArg(bool arg)
-   {
-      char *ret = STR.getArgBuffer(32);
-      dSprintf(ret, 32, "%d", arg);
-      return ret;
-   }
-
-   char *getStringArg( const char *arg )
-   {
-      U32 len = dStrlen( arg ) + 1;
-      char *ret = STR.getArgBuffer( len );
-      dMemcpy( ret, arg, len );
-      return ret;
-   }
-}
-
-//------------------------------------------------------------
-
 inline void ExprEvalState::setCurVarName(StringTableEntry name)
 {
    if(name[0] == '$')
-      currentVariable = globalVars.lookup(name);
+      currentVariable = globalVars.lookupDE(name);
    else if(stack.size())
-      currentVariable = stack.last()->lookup(name);
-   if(!currentVariable && gWarnUndefinedScriptVariables)
-      Con::warnf(ConsoleLogEntry::Script, "Variable referenced before assignment: %s", name);
+      currentVariable = stack.last()->lookupDE(name);
+   if(!currentVariable.dictionary && gWarnUndefinedScriptVariables)
+      mWorld->warnf(ConsoleLogEntry::Script, "Variable referenced before assignment: %s", name);
 }
 
 inline void ExprEvalState::setCurVarNameCreate(StringTableEntry name)
 {
    if(name[0] == '$')
-      currentVariable = globalVars.add(name);
+      currentVariable = globalVars.addDE(name);
    else if(stack.size())
-      currentVariable = stack.last()->add(name);
+      currentVariable = stack.last()->addDE(name);
    else
    {
-      currentVariable = NULL;
-      Con::warnf(ConsoleLogEntry::Script, "Accessing local variable in global scope... failed: %s", name);
+      currentVariable.setNull();
+      mWorld->warnf(ConsoleLogEntry::Script, "Accessing local variable in global scope... failed: %s", name);
    }
 }
 
@@ -220,59 +89,59 @@ inline void ExprEvalState::setCurVarNameCreate(StringTableEntry name)
 
 inline S32 ExprEvalState::getIntVariable()
 {
-   return currentVariable ? currentVariable->getIntValue() : 0;
+   return currentVariable.dictionary ? currentVariable.dictionary->getIntValue(currentVariable.entry) : 0;
 }
 
 inline F64 ExprEvalState::getFloatVariable()
 {
-   return currentVariable ? currentVariable->getFloatValue() : 0;
+   return currentVariable.dictionary ? currentVariable.dictionary->getFloatValue(currentVariable.entry) : 0;
 }
 
 inline const char *ExprEvalState::getStringVariable()
 {
-   return currentVariable ? currentVariable->getStringValue() : "";
+   return currentVariable.dictionary ? currentVariable.dictionary->getStringValue(currentVariable.entry) : "";
 }
 
 //------------------------------------------------------------
 
 inline void ExprEvalState::setIntVariable(S32 val)
 {
-   AssertFatal(currentVariable != NULL, "Invalid evaluator state - trying to set null variable!");
-   currentVariable->setIntValue(val);
+   AssertFatal(currentVariable.dictionary != NULL, "Invalid evaluator state - trying to set null variable!");
+   currentVariable.dictionary->setIntValue(currentVariable.entry, val);
 }
 
 inline void ExprEvalState::setFloatVariable(F64 val)
 {
-   AssertFatal(currentVariable != NULL, "Invalid evaluator state - trying to set null variable!");
-   currentVariable->setFloatValue((F32)val);
+   AssertFatal(currentVariable.dictionary != NULL, "Invalid evaluator state - trying to set null variable!");
+   currentVariable.dictionary->setFloatValue(currentVariable.entry, (F32)val);
 }
 
 inline void ExprEvalState::setStringVariable(const char *val)
 {
-   AssertFatal(currentVariable != NULL, "Invalid evaluator state - trying to set null variable!");
-   currentVariable->setStringValue(val);
+   AssertFatal(currentVariable.dictionary != NULL, "Invalid evaluator state - trying to set null variable!");
+   currentVariable.dictionary->setStringValue(currentVariable.entry, val);
 }
 
 inline void ExprEvalState::setCopyVariable()
 {
-   if (copyVariable)
+   if (copyVariable.dictionary)
    {
-      switch (copyVariable->type)
+      switch (copyVariable.entry->type)
       {
-         case Dictionary::Entry::TypeInternalInt:
-            currentVariable->setIntValue(copyVariable->getIntValue());
+         case Dictionary::TypeInternalInt:
+            currentVariable.dictionary->setIntValue(currentVariable.entry, copyVariable.dictionary->getIntValue(copyVariable.entry));
          break;
-         case Dictionary::Entry::TypeInternalFloat:
-            currentVariable->setFloatValue(copyVariable->getFloatValue());
+         case Dictionary::TypeInternalFloat:
+            currentVariable.dictionary->setFloatValue(currentVariable.entry, copyVariable.dictionary->getFloatValue(copyVariable.entry));
          break;
          default:
-            currentVariable->setStringValue(copyVariable->getStringValue());
+            currentVariable.dictionary->setStringValue(currentVariable.entry, copyVariable.dictionary->getStringValue(copyVariable.entry));
          break;
       }
    }
-   else if (currentVariable)
+   else if (currentVariable.dictionary)
    {
-      currentVariable->setStringValue(""); // needs to be set to blank if copyVariable doesn't exist
+      currentVariable.dictionary->setStringValue(currentVariable.entry, ""); // needs to be set to blank if copyVariable doesn't exist
    }
 }
 
@@ -314,6 +183,16 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
    U32 i;
    
    U32 iterDepth = 0;
+   ExprEvalState& gEvalState = *mWorld->gEvalState;
+
+   F64* floatStack = &gEvalState.floatStack[0];
+   S64* intStack = &gEvalState.intStack[0];
+   ExprEvalState::IterStackRecord* iterStack = &gEvalState.iterStack[0];
+
+   U32& _FLT = gEvalState._FLT;
+   U32& _UINT = gEvalState._UINT;
+   U32& _ITER = gEvalState._ITER;
+   StringStack& STR = gEvalState.STR;
    
    incRefCount();
    F64 *curFloatTable;
@@ -355,7 +234,7 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
                dStrcat(traceBuffer, ", ");
          }
          dStrcat(traceBuffer, ")");
-         Con::printf("%s", traceBuffer);
+         mWorld->printf("%s", traceBuffer);
       }
       gEvalState.pushFrame(thisFunctionName, thisNamespace);
       popFrame = true;
@@ -408,16 +287,16 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
    static const U32 objectCreationStackSize = 32;
    U32 objectCreationStackIndex = 0;
    struct {
-      SimObject *newObject;
+      ConsoleObject *newObject;
       U32 failJump;
    } objectCreationStack[ objectCreationStackSize ];
    
-   SimObject *currentNewObject = 0;
+   ConsoleObject *currentNewObject = 0;
    StringTableEntry prevField = NULL;
    StringTableEntry curField = NULL;
-   SimObject *prevObject = NULL;
-   SimObject *curObject = NULL;
-   SimObject *saveObject=NULL;
+   ConsoleObject *prevObject = NULL;
+   ConsoleObject *curObject = NULL;
+   ConsoleObject *saveObject=NULL;
    Namespace::Entry *nsEntry;
    Namespace *ns;
    const char* curFNDocBlock = NULL;
@@ -431,12 +310,12 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
    static char curFieldArray[256];
    static char prevFieldArray[256];
    
-   CodeBlock *saveCodeBlock = smCurrentCodeBlock;
-   smCurrentCodeBlock = this;
+   CodeBlock *saveCodeBlock = mWorld->smCurrentCodeBlock;
+   mWorld->smCurrentCodeBlock = this;
    if(this->name)
    {
-      Con::gCurrentFile = this->name;
-      Con::gCurrentRoot = mRoot;
+      mWorld->gCurrentFile = this->name;
+      mWorld->gCurrentRoot = mRoot;
    }
    const char * val;
    
@@ -460,8 +339,8 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
                bool hasBody = ( code[ ip + 6 ] & 0x01 ) != 0;
                U32 lineNumber = code[ ip + 6 ] >> 1;
                
-               Namespace::unlinkPackages();
-               ns = Namespace::find(fnNamespace, fnPackage);
+               mWorld->unlinkPackages();
+               ns = mWorld->find(fnNamespace, fnPackage);
                ns->addFunction(fnName, this, hasBody ? ip : 0 );// if no body, set the IP to 0
                if( curNSDocBlock )
                {
@@ -474,12 +353,12 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
                      curNSDocBlock = NULL;
                   }
                }
-               Namespace::relinkPackages();
+               mWorld->relinkPackages();
                
                // If we had a docblock, it's definitely not valid anymore, so clear it out.
                curFNDocBlock = NULL;
                
-               //Con::printf("Adding function %s::%s (%d)", fnNamespace, fnName, ip);
+               //mWorld->printf("Adding function %s::%s (%d)", fnNamespace, fnName, ip);
             }
             ip = code[ip + 7];
             break;
@@ -513,7 +392,7 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
             STR.getArgcArgv(NULL, &callArgc, &callArgv);
             const char *objectName = callArgv[ 2 ];
             
-            // Con::printf("Creating object...");
+            // mWorld->printf("Creating object...");
             
             // objectName = argv[1]...
             currentNewObject = NULL;
@@ -522,15 +401,16 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
             // an old one.
             if(isDataBlock)
             {
-               // Con::printf("  - is a datablock");
+               #ifdef TOFIX
+               // mWorld->printf("  - is a datablock");
                
                // Find the old one if any.
-               SimObject *db = Sim::getDataBlockGroup()->findObject(callArgv[2]);
+               ConsoleObject *db = mWorld->lookupObject(DataBlockGroupID)->findObject(callArgv[2]);
                
                // Make sure we're not changing types on ourselves...
                if(db && dStricmp(db->getClassName(), callArgv[1]))
                {
-                  Con::errorf(ConsoleLogEntry::General, "Cannot re-declare data block %s with a different class.", callArgv[2]);
+                  mWorld->errorf(ConsoleLogEntry::General, "Cannot re-declare data block %s with a different class.", callArgv[2]);
                   ip = failJump;
                   break;
                }
@@ -538,12 +418,13 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
                // If there was one, set the currentNewObject and move on.
                if(db)
                   currentNewObject = db;
+                  #endif
             }
 
             // For singletons, delete the old object if it exists
             if ( isSingleton )
             {
-               SimObject *oldObject = Sim::findObject( objectName );
+               ConsoleObject *oldObject = mWorld->lookupObject( objectName );
                if (oldObject)
                {                  
                   // Prevent stack value corruption
@@ -568,12 +449,13 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
                // Deal with failure!
                if(!object)
                {
-                  Con::errorf(ConsoleLogEntry::General, "%s: Unable to instantiate non-conobject class %s.", getFileLine(ip-1), callArgv[1]);
+                  mWorld->errorf(ConsoleLogEntry::General, "%s: Unable to instantiate non-conobject class %s.", getFileLine(ip-1), callArgv[1]);
                   ip = failJump;
                   break;
                }
                
                // Do special datablock init if appropros
+               #ifdef TOFIX
                if(isDataBlock)
                {
                   SimDataBlock *dataBlock = dynamic_cast<SimDataBlock *>(object);
@@ -584,7 +466,7 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
                   else
                   {
                      // They tried to make a non-datablock with a datablock keyword!
-                     Con::errorf(ConsoleLogEntry::General, "%s: Unable to instantiate non-datablock class %s.", getFileLine(ip-1), callArgv[1]);
+                     mWorld->errorf(ConsoleLogEntry::General, "%s: Unable to instantiate non-datablock class %s.", getFileLine(ip-1), callArgv[1]);
                      
                      // Clean up...
                      delete object;
@@ -592,14 +474,15 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
                      break;
                   }
                }
+               #endif
                
                // Finally, set currentNewObject to point to the new one.
-               currentNewObject = dynamic_cast<SimObject *>(object);
+               currentNewObject = object;
                
-               // Deal with the case of a non-SimObject.
+               // Deal with the case of a non-ConsoleObject.
                if(!currentNewObject)
                {
-                  Con::errorf(ConsoleLogEntry::General, "%s: Unable to instantiate non-SimObject class %s.", getFileLine(ip-1), callArgv[1]);
+                  mWorld->errorf(ConsoleLogEntry::General, "%s: Unable to instantiate non-ConsoleObject class %s.", getFileLine(ip-1), callArgv[1]);
                   delete object;
                   ip = failJump;
                   break;
@@ -608,16 +491,16 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
                if(*objParent)
                {
                   // Find it!
-                  SimObject *parent;
-                  if(Sim::findObject(objParent, parent))
+                  ConsoleObject *parent;
+                  if((parent = mWorld->lookupObject(objParent)))
                   {
-                     // Con::printf(" - Parent object found: %s", parent->getClassName());
+                     // mWorld->printf(" - Parent object found: %s", parent->getClassName());
                      
                      // and suck the juices from it!
                      currentNewObject->assignFieldsFrom(parent);
                   }
                   else
-                     Con::errorf(ConsoleLogEntry::General, "%s: Unable to find parent object %s for %s.", getFileLine(ip-1), objParent, callArgv[1]);
+                     mWorld->errorf(ConsoleLogEntry::General, "%s: Unable to find parent object %s for %s.", getFileLine(ip-1), objParent, callArgv[1]);
                   
                   // Mm! Juices!
                }
@@ -667,7 +550,7 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
             // Do we place this object at the root?
             bool placeAtRoot = code[ip++];
             
-            // Con::printf("Adding object %s", currentNewObject->getName());
+            // mWorld->printf("Adding object %s", currentNewObject->getName());
             
             // Make sure it wasn't already added, then add it.
             if (currentNewObject == NULL)
@@ -682,7 +565,7 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
                if (!ret)
                {
                   // This error is usually caused by failing to call Parent::initPersistFields in the class' initPersistFields().
-                  Con::warnf(ConsoleLogEntry::General, "%s: Register object failed for object %s of class %s.", getFileLine(ip-2), currentNewObject->getName(), currentNewObject->getClassName());
+                  mWorld->warnf(ConsoleLogEntry::General, "%s: Register object failed for object %s of class %s.", getFileLine(ip-2), currentNewObject->getName(), currentNewObject->getClassName());
                   delete currentNewObject;
                   ip = failJump;
                   break;
@@ -690,23 +573,24 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
             }
             
             // Are we dealing with a datablock?
+            #ifdef TOFIX
             SimDataBlock *dataBlock = dynamic_cast<SimDataBlock *>(currentNewObject);
             static char errorBuffer[256];
             
             // If so, preload it.
             if(dataBlock && !dataBlock->preload(true, errorBuffer))
             {
-               Con::errorf(ConsoleLogEntry::General, "%s: preload failed for %s: %s.", getFileLine(ip-2),
+               mWorld->errorf(ConsoleLogEntry::General, "%s: preload failed for %s: %s.", getFileLine(ip-2),
                            currentNewObject->getName(), errorBuffer);
                dataBlock->deleteObject();
                ip = failJump;
                break;
             }
+            #endif
             
             // What group will we be added to, if any?
             U32 groupAddId = (U32)intStack[_UINT];
-            SimGroup *grp = NULL;
-            SimSet   *set = NULL;
+            ConsoleObject *grp = NULL;
             
             if(!placeAtRoot || !currentNewObject->getGroup())
             {
@@ -714,30 +598,25 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
                   if(! placeAtRoot)
                   {
                      // Otherwise just add to the requested group or set.
-                     if(!Sim::findObject(groupAddId, grp))
-                        Sim::findObject(groupAddId, set);
+                     grp = mWorld->lookupObject(groupAddId);
                   }
                   
                   if(placeAtRoot)
                   {
                      // Deal with the instantGroup if we're being put at the root or we're adding to a component.
-                     const char *addGroupName = Con::getVariable("instantGroup");
-                     if(!Sim::findObject(addGroupName, grp))
-                        Sim::findObject(RootGroupId, grp);
+                     const char *addGroupName = mWorld->getVariable("instantGroup");
+                     if((grp = mWorld->lookupObject(addGroupName)) == NULL)
+                        grp = mWorld->lookupObject(CodeBlockWorld::RootGroupID);
                   }
                }
                
                // If we didn't get a group, then make sure we have a pointer to
                // the rootgroup.
                if(!grp)
-                  Sim::findObject(RootGroupId, grp);
+                  grp = mWorld->lookupObject(CodeBlockWorld::RootGroupID);
                
                // add to the parent group
                grp->addObject(currentNewObject);
-               
-               // add to any set we might be in
-               if(set)
-                  set->addObject(currentNewObject);
             }
             
             // store the new object's ID on the stack (overwriting the group/set
@@ -1115,25 +994,24 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
                   break;
                }
             }
-            curObject = Sim::findObject(val);
+            curObject = mWorld->lookupObject(val);
             break;
             
          case OP_SETCUROBJECT_INTERNAL:
             ++ip; // To skip the recurse flag if the object wasnt found
             if(curObject)
             {
-               SimGroup *group = dynamic_cast<SimGroup *>(curObject);
-               if(group)
+               if(curObject->isGroup())
                {
                   StringTableEntry intName = StringTable->insert(STR.getStringValue());
                   bool recurse = code[ip-1];
-                  SimObject *obj = group->findObjectByInternalName(intName, recurse);
+                  ConsoleObject *obj = curObject->findObjectByInternalName(intName, recurse);
                   intStack[_UINT+1] = obj ? obj->getId() : 0;
                   _UINT++;
                }
                else
                {
-                  Con::errorf(ConsoleLogEntry::Script, "%s: Attempt to use -> on non-group %s of class %s.", getFileLine(ip-2), curObject->getName(), curObject->getClassName());
+                  mWorld->errorf(ConsoleLogEntry::Script, "%s: Attempt to use -> on non-group %s of class %s.", getFileLine(ip-2), curObject->getName(), curObject->getClassName());
                   intStack[_UINT] = 0;
                }
             }
@@ -1288,7 +1166,7 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
             break;
          
          case OP_COPYVAR_TO_NONE:
-            gEvalState.copyVariable = NULL;
+            gEvalState.copyVariable.setNull();
             break;
             
          case OP_LOADIMMED_UINT:
@@ -1356,12 +1234,12 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
             fnName      = CodeToSTE(code, ip);
             
             // Try to look it up.
-            ns = Namespace::find(fnNamespace);
+            ns = mWorld->find(fnNamespace);
             nsEntry = ns->lookup(fnName);
             if(!nsEntry)
             {
                ip+= 5;
-               Con::warnf(ConsoleLogEntry::General,
+               mWorld->warnf(ConsoleLogEntry::General,
                           "%s: Unable to find function %s%s%s",
                           getFileLine(ip-4), fnNamespace ? fnNamespace : "",
                           fnNamespace ? "::" : "", fnName);
@@ -1411,11 +1289,11 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
             else if(callType == FuncCallExprNode::MethodCall)
             {
                saveObject = gEvalState.thisObject;
-               gEvalState.thisObject = Sim::findObject(callArgv[1]);
+               gEvalState.thisObject = mWorld->lookupObject(callArgv[1]);
                if(!gEvalState.thisObject)
                {
                   gEvalState.thisObject = 0;
-                  Con::warnf(ConsoleLogEntry::General,"%s: Unable to find object: '%s' attempting to call function '%s'", getFileLine(ip-6), callArgv[1], fnName);
+                  mWorld->warnf(ConsoleLogEntry::General,"%s: Unable to find object: '%s' attempting to call function '%s'", getFileLine(ip-6), callArgv[1], fnName);
                   STR.popFrame();
                   STR.setStringValue("");
                   break;
@@ -1448,12 +1326,12 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
             {
                if(!noCalls)
                {
-                  Con::warnf(ConsoleLogEntry::General,"%s: Unknown command %s.", getFileLine(ip-4), fnName);
+                  mWorld->warnf(ConsoleLogEntry::General,"%s: Unknown command %s.", getFileLine(ip-4), fnName);
                   if(callType == FuncCallExprNode::MethodCall)
                   {
-                     Con::warnf(ConsoleLogEntry::General, "  Object %s(%d) %s",
+                     mWorld->warnf(ConsoleLogEntry::General, "  Object %s(%d) %s",
                                 gEvalState.thisObject->getName() ? gEvalState.thisObject->getName() : "",
-                                gEvalState.thisObject->getId(), Con::getNamespaceList(ns) );
+                                gEvalState.thisObject->getId(), mWorld->getNamespaceList(ns) );
                   }
                }
                STR.popFrame();
@@ -1477,8 +1355,8 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
                if((nsEntry->mMinArgs && S32(callArgc) < nsEntry->mMinArgs) || (nsEntry->mMaxArgs && S32(callArgc) > nsEntry->mMaxArgs))
                {
                   const char* nsName = ns? ns->mName: "";
-                  Con::warnf(ConsoleLogEntry::Script, "%s: %s::%s - wrong number of arguments.", getFileLine(ip-4), nsName, fnName);
-                  Con::warnf(ConsoleLogEntry::Script, "%s: usage: %s", getFileLine(ip-4), nsEntry->mUsage);
+                  mWorld->warnf(ConsoleLogEntry::Script, "%s: %s::%s - wrong number of arguments.", getFileLine(ip-4), nsName, fnName);
+                  mWorld->warnf(ConsoleLogEntry::Script, "%s: usage: %s", getFileLine(ip-4), nsEntry->mUsage);
                   STR.popFrame();
                   STR.setStringValue("");
                }
@@ -1488,7 +1366,7 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
                   {
                      case Namespace::Entry::StringCallbackType:
                      {
-                        const char *ret = nsEntry->cb.mStringCallbackFunc(gEvalState.thisObject, callArgc, callArgv);
+                        const char *ret = nsEntry->cb.mStringCallbackFunc(mWorld, gEvalState.thisObject, callArgc, callArgv);
                         STR.popFrame();
                         if(ret != STR.getStringValue())
                            STR.setStringValue(ret);
@@ -1498,7 +1376,7 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
                      }
                      case Namespace::Entry::IntCallbackType:
                      {
-                        S32 result = nsEntry->cb.mIntCallbackFunc(gEvalState.thisObject, callArgc, callArgv);
+                        S32 result = nsEntry->cb.mIntCallbackFunc(mWorld, gEvalState.thisObject, callArgc, callArgv);
                         STR.popFrame();
                         if(code[ip] == OP_STR_TO_UINT)
                         {
@@ -1520,7 +1398,7 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
                      }
                      case Namespace::Entry::FloatCallbackType:
                      {
-                        F64 result = nsEntry->cb.mFloatCallbackFunc(gEvalState.thisObject, callArgc, callArgv);
+                        F64 result = nsEntry->cb.mFloatCallbackFunc(mWorld, gEvalState.thisObject, callArgc, callArgv);
                         STR.popFrame();
                         if(code[ip] == OP_STR_TO_UINT)
                         {
@@ -1541,15 +1419,15 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
                         break;
                      }
                      case Namespace::Entry::VoidCallbackType:
-                        nsEntry->cb.mVoidCallbackFunc(gEvalState.thisObject, callArgc, callArgv);
+                        nsEntry->cb.mVoidCallbackFunc(mWorld, gEvalState.thisObject, callArgc, callArgv);
                         if(code[ip] != OP_STR_TO_NONE)
-                           Con::warnf(ConsoleLogEntry::General, "%s: Call to %s in %s uses result of void function call.", getFileLine(ip-4), fnName, functionName);
+                           mWorld->warnf(ConsoleLogEntry::General, "%s: Call to %s in %s uses result of void function call.", getFileLine(ip-4), fnName, functionName);
                         STR.popFrame();
                         STR.setStringValue("");
                         break;
                      case Namespace::Entry::BoolCallbackType:
                      {
-                        bool result = nsEntry->cb.mBoolCallbackFunc(gEvalState.thisObject, callArgc, callArgv);
+                        bool result = nsEntry->cb.mBoolCallbackFunc(mWorld, gEvalState.thisObject, callArgc, callArgv);
                         STR.popFrame();
                         if(code[ip] == OP_STR_TO_UINT)
                         {
@@ -1684,9 +1562,9 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
             StringTableEntry varName = CodeToSTE(code, ip);
             U32 failIp = code[ ip + 2 ];
             
-            IterStackRecord& iter = iterStack[ _ITER ];
+            ExprEvalState::IterStackRecord& iter = iterStack[ _ITER ];
             
-            iter.mVariable = gEvalState.getCurrentFrame().add( varName );
+            iter.mVariable = gEvalState.getCurrentFrame().addDE( varName );
             
             if( iter.mIsStringIter )
             {
@@ -1697,11 +1575,11 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
             {
                // Look up the object.
                
-               SimSet* set;
-               if( !Sim::findObject( STR.getStringValue(), set ) )
+               ConsoleObject* set = NULL;
+               if( ! (set = mWorld->lookupObject( STR.getStringValue() ) ) )
                {
-                  Con::errorf( ConsoleLogEntry::General, "No SimSet object '%s'", STR.getStringValue() );
-                  Con::errorf( ConsoleLogEntry::General, "Did you mean to use 'foreach$' instead of 'foreach'?" );
+                  mWorld->errorf( ConsoleLogEntry::General, "No SimSet object '%s'", STR.getStringValue() );
+                  mWorld->errorf( ConsoleLogEntry::General, "Did you mean to use 'foreach$' instead of 'foreach'?" );
                   ip = failIp;
                   continue;
                }
@@ -1724,7 +1602,7 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
          case OP_ITER:
          {
             U32 breakIp = code[ ip ];
-            IterStackRecord& iter = iterStack[ _ITER - 1 ];
+            ExprEvalState::IterStackRecord& iter = iterStack[ _ITER - 1 ];
             
             if( iter.mIsStringIter )
             {
@@ -1753,11 +1631,11 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
                {
                   char savedChar = str[ endIndex ];
                   const_cast< char* >( str )[ endIndex ] = '\0'; // We are on the string stack so this is okay.
-                  iter.mVariable->setStringValue( &str[ startIndex ] );
+                  iter.mVariable.dictionary->setStringValue( iter.mVariable.entry, &str[ startIndex ] );
                   const_cast< char* >( str )[ endIndex ] = savedChar;                  
                }
                else
-                  iter.mVariable->setStringValue( "" );
+                  iter.mVariable.dictionary->setStringValue( iter.mVariable.entry, "" );
 
                // Skip separator.
                if( str[ endIndex ] != '\0' )
@@ -1768,15 +1646,15 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
             else
             {
                U32 index = iter.mData.mObj.mIndex;
-               SimSet* set = iter.mData.mObj.mSet;
+               ConsoleObject* set = iter.mData.mObj.mSet;
                
-               if( index >= set->size() )
+               if( index >= set->getChildObjectCount() )
                {
                   ip = breakIp;
                   continue;
                }
                
-               iter.mVariable->setIntValue( set->at( index )->getId() );
+               iter.mVariable.dictionary->setIntValue( iter.mVariable.entry, set->getObject( index )->getId() );
                iter.mData.mObj.mIndex = index + 1;
             }
             
@@ -1833,7 +1711,7 @@ execFinished:
             dSprintf(traceBuffer + dStrlen(traceBuffer), sizeof(traceBuffer) - dStrlen(traceBuffer),
                      "%s() - return %s", thisFunctionName, STR.getStringValue());
          }
-         Con::printf("%s", traceBuffer);
+         mWorld->printf("%s", traceBuffer);
       }
    }
    else
@@ -1843,11 +1721,11 @@ execFinished:
       globalStrings = NULL;
       globalFloats = NULL;
    }
-   smCurrentCodeBlock = saveCodeBlock;
+   mWorld->smCurrentCodeBlock = saveCodeBlock;
    if(saveCodeBlock && saveCodeBlock->name)
    {
-      Con::gCurrentFile = saveCodeBlock->name;
-      Con::gCurrentRoot = saveCodeBlock->mRoot;
+      mWorld->gCurrentFile = saveCodeBlock->name;
+      mWorld->gCurrentRoot = saveCodeBlock->mRoot;
    }
    
    decRefCount();

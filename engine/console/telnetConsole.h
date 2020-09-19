@@ -89,11 +89,13 @@ class TelnetConsole
       TelnetClient *nextClient;
    };
    TelnetClient *mClientList;
-   TelnetConsole();
+   TelnetConsole(CodeBlockWorld* world);
    ~TelnetConsole();
 
+   CodeBlockWorld* mWorld;
+
 public:
-   static void create();    ///< Initialize the telnet console.
+   static void create(CodeBlockWorld* world);    ///< Initialize the telnet console.
    static void destroy();   ///< Shut down the telnet console.
    void process();          ///< Called by the main loop to let the console process commands
                             ///  and connections.

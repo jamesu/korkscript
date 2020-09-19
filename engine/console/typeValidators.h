@@ -23,6 +23,8 @@
 #ifndef _CONSOLE_TYPE_VALIDATORS_H_
 #define _CONSOLE_TYPE_VALIDATORS_H_
 
+class ConsoleObject;
+
 class TypeValidator
 {
    public:
@@ -38,11 +40,11 @@ class TypeValidator
    /// @code
    /// className objectName (objectId) - invalid value for fieldName: msg
    /// @endcode
-   void consoleError(SimObject *object, const char *format, ...);
+   void consoleError(ConsoleObject *object, const char *format, ...);
 
    /// validateType is called for each assigned value on the field this
    /// validator is attached to.
-   virtual void validateType(SimObject *object, void *typePtr) = 0;
+   virtual void validateType(ConsoleObject *object, void *typePtr) = 0;
 };
 
 
@@ -56,7 +58,7 @@ public:
       minV = minValue;
       maxV = maxValue;
    }
-   void validateType(SimObject *object, void *typePtr);
+   void validateType(ConsoleObject *object, void *typePtr);
 };
 
 /// Signed integer min/max range validator
@@ -69,7 +71,7 @@ public:
       minV = minValue;
       maxV = maxValue;
    }
-   void validateType(SimObject *object, void *typePtr);
+   void validateType(ConsoleObject *object, void *typePtr);
 };
 
 /// Scaled integer field validator
@@ -87,7 +89,7 @@ public:
       maxV = maxValueScaled;
       factor = scaleFactor;
    }
-   void validateType(SimObject *object, void *typePtr);
+   void validateType(ConsoleObject *object, void *typePtr);
 };
 
 #endif // _CONSOLE_TYPE_VALIDATORS_H_

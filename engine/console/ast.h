@@ -25,8 +25,6 @@
 
 class ExprEvalState;
 class Namespace;
-class SimObject;
-class SimGroup;
 class CodeStream;
 
 /// Enable this #define if you are seeing the message "precompile size mismatch" in the console.
@@ -575,6 +573,5 @@ struct FunctionDeclStmtNode : StmtNode
 };
 
 extern StmtNode *gStatementList;
-extern ExprEvalState gEvalState;
 
 #endif

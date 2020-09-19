@@ -253,7 +253,7 @@ void CMDerror(char *format, ...)
 
    if(fileName)
    {
-      Con::errorf(ConsoleLogEntry::Script, "%s Line: %d - %s", fileName, lineIndex, tempBuf);
+      printf("%s Line: %d - %s", fileName, lineIndex, tempBuf);
 
 #ifndef NO_ADVANCED_ERROR_REPORT
       // dhc - lineIndex is bogus.  let's try to add some sanity back in.
@@ -297,26 +297,26 @@ void CMDerror(char *format, ...)
       for(n=0; n<i+j+5; n++) // convert CR to LF if alone...
          if (tempBuf[n]=='\r' && tempBuf[n+1]!='\n') tempBuf[n] = '\n';
       // write out to console the advanced error report
-      Con::warnf(ConsoleLogEntry::Script, ">>> Advanced script error report.  Line %d.", lineIndex);
-      Con::warnf(ConsoleLogEntry::Script, ">>> Some error context, with ## on sides of error halt:");
-      Con::errorf(ConsoleLogEntry::Script, "%s", tempBuf);
-      Con::warnf(ConsoleLogEntry::Script, ">>> Error report complete.\n");
+      printf(">>> Advanced script error report.  Line %d.", lineIndex);
+      printf(">>> Some error context, with ## on sides of error halt:");
+      printf("%s", tempBuf);
+      printf(">>> Error report complete.\n");
 #endif
 
       // Update the script-visible error buffer.
-      const char *prevStr = Con::getVariable("$ScriptError");
+      const char *prevStr = NULL;Con::getVariable("$ScriptError");
       if (prevStr[0])
          dSprintf(tempBuf, sizeof(tempBuf), "%s\n%s Line: %d - Syntax error.", prevStr, fileName, lineIndex);
       else
          dSprintf(tempBuf, sizeof(tempBuf), "%s Line: %d - Syntax error.", fileName, lineIndex);
-      Con::setVariable("$ScriptError", tempBuf);
+      //Con::setVariable("$ScriptError", tempBuf);
 
       // We also need to mark that we came up with a new error.
       static S32 sScriptErrorHash=1000;
-      Con::setIntVariable("$ScriptErrorHash", sScriptErrorHash++);
+      //Con::setIntVariable("$ScriptErrorHash", sScriptErrorHash++);
    }
    else
-      Con::errorf(ConsoleLogEntry::Script, tempBuf);
+      printf(tempBuf);
 }
 
 void CMDSetScanBuffer(const char *sb, const char *fn)

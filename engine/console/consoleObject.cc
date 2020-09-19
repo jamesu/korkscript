@@ -26,6 +26,7 @@
 #include "console/console.h"
 #include "console/consoleInternal.h"
 #include "console/typeValidators.h"
+#include "console/codeBlockWorld.h"
 
 // TOFIX: add back in if networking needed
 #define INITIAL_CRC_VALUE 0
@@ -170,7 +171,7 @@ S32 QSORT_CALLBACK ACRCompare(const void *aptr, const void *bptr)
    return dStricmp(a->getClassName(), b->getClassName());
 }
 
-void AbstractClassRep::initialize()
+void AbstractClassRep::initialize(CodeBlockWorld* world)
 {
    AssertFatal(!initialized, "Duplicate call to AbstractClassRep::initialize()!");
    Vector<AbstractClassRep *> dynamicTable(__FILE__, __LINE__);
@@ -180,7 +181,7 @@ void AbstractClassRep::initialize()
    // Initialize namespace references...
    for (walk = classLinkList; walk; walk = walk->nextClass)
    {
-      walk->mNamespace = Con::lookupNamespace(StringTable->insert(walk->getClassName()));
+      walk->mNamespace = world->lookupNamespace(StringTable->insert(walk->getClassName()));
       walk->mNamespace->mClassRep = walk;
    }
 
@@ -191,7 +192,7 @@ void AbstractClassRep::initialize()
       // (see addField, addGroup, etc.)
       sg_tempFieldList.setSize(0);
 
-      walk->init();
+      walk->init(world);
 
       // So if we have things in it, copy it over...
       if (sg_tempFieldList.size() != 0)
@@ -585,3 +586,28 @@ AbstractClassRep* ConsoleObject::getClassRep() const
    return NULL;
 }
 
+bool ConsoleObject::setField(const char *fieldName, const char *value)
+{
+   //sanity check
+   if ((! fieldName) || (! fieldName[0]) || (! value))
+      return false;
+
+   if (! getClassRep())
+      return false;
+
+   const AbstractClassRep::Field *myField = getClassRep()->findField(StringTable->insert(fieldName));
+
+   if (! myField)
+      return false;
+
+   mWorld->setData(
+      myField->type,
+      (void *) (((const char *)(this)) + myField->offset),
+      0,
+      1,
+      &value,
+      myField->table,
+      myField->flag);
+
+   return true;
+}

@@ -106,7 +106,7 @@ static bool deleteDirectoryRecusrive( const char* pPath )
     if ( !Platform::dumpDirectories( pPath, directories, 0 ) )
     {
         // Warn.
-        Con::warnf( "Could not retrieve sub-directories of '%s'.", pPath );
+        printf( "Could not retrieve sub-directories of '%s'.", pPath );
         return false;
     }
 
@@ -130,7 +130,7 @@ static bool deleteDirectoryRecusrive( const char* pPath )
     if ( !Platform::dumpPath( pPath, files, 0 ) )
     {
         // Warn.
-        Con::warnf( "Could not retrieve files for directory '%s'.", pPath );
+        printf( "Could not retrieve files for directory '%s'.", pPath );
         return false;
     }
 
@@ -144,7 +144,7 @@ static bool deleteDirectoryRecusrive( const char* pPath )
         if ( !Platform::fileDelete( filePathBuffer ) )
         {
             // Warn.
-            Con::warnf( "Could not delete file '%s'.", filePathBuffer );
+            printf( "Could not delete file '%s'.", filePathBuffer );
             return false;
         }
     }
@@ -153,7 +153,7 @@ static bool deleteDirectoryRecusrive( const char* pPath )
     if ( !Platform::fileDelete( pPath ) )
     {
         // Warn.
-        Con::warnf( "Could not delete directory '%s'.", pPath );
+        printf( "Could not delete directory '%s'.", pPath );
         return false;
     }
 
@@ -171,16 +171,18 @@ bool Platform::deleteDirectory( const char* pPath )
     if ( Platform::isFile( pPath ) )
     {
         // Yes, so warn.
-        Con::warnf( "Cannot delete directory '%s' as it specifies a file.", pPath );
+        printf( "Cannot delete directory '%s' as it specifies a file.", pPath );
         return false;
     }
 
+    return false;
+    /*
     // Expand module location.
     char pathBuffer[1024];
     Con::expandPath( pathBuffer, sizeof(pathBuffer), pPath, NULL, true );
 
     // Delete directory recursively.
-    return deleteDirectoryRecusrive( pathBuffer );
+    return deleteDirectoryRecusrive( pathBuffer );*/
 }
 
 //-----------------------------------------------------------------------------
@@ -439,10 +441,10 @@ StringTableEntry Platform::stripBasePath(const char *path)
    if ( str )
       return str;
     
-   str = tryStripBasePath( path, Platform::getPrefsPath() );
+   //str = tryStripBasePath( path, Platform::getPrefsPath() );
 
-   if ( str )
-      return str;
+   //if ( str )
+   //   return str;
 
     
    return path;
@@ -452,6 +454,8 @@ StringTableEntry Platform::stripBasePath(const char *path)
 
 StringTableEntry Platform::getPrefsPath(const char *file /* = NULL */)
 {
+  return "";
+  #if 0
     char buf[1024];
 #if defined(TORQUE_OS_IOS) || defined(TORQUE_OS_ANDROID)
     
@@ -497,6 +501,7 @@ StringTableEntry Platform::getPrefsPath(const char *file /* = NULL */)
       dSprintf(buf, sizeof(buf), "%s/%s/%s", Platform::getUserDataDirectory(), company, appName);
 
    return StringTable->insert(buf, true);
+   #endif
 }
 
 //-----------------------------------------------------------------------------

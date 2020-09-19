@@ -33,8 +33,6 @@
 #include "core/fileStream.h"
 #include "console/compiler.h"
 
-#include "console/simBase.h"
-
 namespace Compiler
 {
 
@@ -49,7 +47,7 @@ namespace Compiler
          return 0;
       else if(file)
       {
-         Con::warnf(ConsoleLogEntry::General, "%s (%d): string always evaluates to 0.", file, line);
+         printf("%s (%d): string always evaluates to 0.", file, line);
          return 0;
       }
       return 0;

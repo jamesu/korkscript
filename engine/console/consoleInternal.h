@@ -43,7 +43,8 @@ class ExprEvalState;
 struct FunctionDecl;
 class CodeBlock;
 class AbstractClassRep;
-class EnumTable;
+struct EnumTable;
+class StringStack;
 
 //-----------------------------------------------------------------------------
 
@@ -53,17 +54,11 @@ class EnumTable;
 
 class Namespace
 {
-   enum {
-        MaxActivePackages = 512,
-   };
-
-   static U32 mNumActivePackages;
-   static U32 mOldNumActivePackages;
-   static StringTableEntry mActivePackages[MaxActivePackages];
    public:
    StringTableEntry mName;
    StringTableEntry mPackage;
 
+   CodeBlockWorld* mWorld;
    Namespace *mParent;
    Namespace *mNext;
    AbstractClassRep *mClassRep;
@@ -109,7 +104,7 @@ class Namespace
       Entry();
       void clear();
 
-      const char *execute(S32 argc, const char **argv, ExprEvalState *state);
+      const char *execute(CodeBlockWorld* world, S32 argc, const char **argv, ExprEvalState *state);
 
    };
    Entry *mEntryList;
@@ -119,7 +114,7 @@ class Namespace
    U32 mHashSequence;  ///< @note The hash sequence is used by the autodoc console facility
                      ///        as a means of testing reference asstate.
 
-   Namespace();
+   Namespace(CodeBlockWorld* world);
    ~Namespace();
    void addFunction(StringTableEntry name, CodeBlock *cb, U32 functionOffset, const char* usage = NULL);
    void addCommand(StringTableEntry name,StringCallback, const char *usage, S32 minArgs, S32 maxArgs);
@@ -144,30 +139,6 @@ class Namespace
    bool unlinkClass(Namespace *parent);
 
    const char *tabComplete(const char *prevText, S32 baseLen, bool fForward);
-
-   static U32 mCacheSequence;
-   static DataChunker mCacheAllocator;
-   static DataChunker mAllocator;
-   static void trashCache();
-   static Namespace *mNamespaceList;
-   static Namespace *mGlobalNamespace;
-
-   static void init();
-   static void shutdown();
-   static Namespace *global();
-
-   static Namespace *find(StringTableEntry name, StringTableEntry package=NULL);
-
-   static bool canTabComplete(const char *prevText, const char *bestMatch, const char *newText, S32 baseLen, bool fForward);
-
-   static void activatePackage(StringTableEntry name);
-   static void deactivatePackage(StringTableEntry name);
-   static void dumpClasses( bool dumpScript = true, bool dumpEngine = true );
-   static void dumpFunctions( bool dumpScript = true, bool dumpEngine = true );
-   static void printNamespaceEntries(Namespace * g, bool dumpScript = true, bool dumpEngine = true);
-   static void unlinkPackages();
-   static void relinkPackages();
-   static bool isPackage(StringTableEntry name);
 };
 
 typedef VectorPtr<Namespace::Entry *>::iterator NamespaceEntryListIterator;
@@ -176,17 +147,17 @@ extern char *typeValueEmpty;
 class Dictionary
 {
 public:
+      
+   enum
+   {
+      TypeInternalInt = -3,
+      TypeInternalFloat = -2,
+      TypeInternalString = -1,
+   };
    
    struct Entry
    {
       friend class Dictionary;
-      
-      enum
-      {
-         TypeInternalInt = -3,
-         TypeInternalFloat = -2,
-         TypeInternalString = -1,
-      };
       
       StringTableEntry name;
       Entry *nextEntry;
@@ -237,88 +208,6 @@ public:
       
       Entry(StringTableEntry name);
       ~Entry();
-      
-      U32 getIntValue()
-      {
-         if(type <= TypeInternalString)
-            return ival;
-         else
-            return dAtoi(Con::getData(type, dataPtr, 0, enumTable));
-      }
-      
-      F32 getFloatValue()
-      {
-         if(type <= TypeInternalString)
-            return fval;
-         else
-            return dAtof(Con::getData(type, dataPtr, 0, enumTable));
-      }
-      
-      const char *getStringValue()
-      {
-         if(type == TypeInternalString)
-            return sval;
-         if(type == TypeInternalFloat)
-            return Con::getData(TypeF32, &fval, 0);
-         else if(type == TypeInternalInt)
-            return Con::getData(TypeS32, &ival, 0);
-         else
-            return Con::getData(type, dataPtr, 0, enumTable);
-      }
-      
-      void setIntValue(U32 val)
-      {
-         if( mIsConstant )
-         {
-            Con::errorf( "Cannot assign value to constant '%s'.", name );
-            return;
-         }
-         
-         if(type <= TypeInternalString)
-         {
-            fval = (F32)val;
-            ival = val;
-            if(sval != typeValueEmpty)
-            {
-               dFree(sval);
-               sval = typeValueEmpty;
-            }
-            type = TypeInternalInt;
-         }
-         else
-         {
-            const char *dptr = Con::getData(TypeS32, &val, 0);
-            Con::setData(type, dataPtr, 0, 1, &dptr, enumTable);
-         }
-      }
-      
-      void setFloatValue(F32 val)
-      {
-         if( mIsConstant )
-         {
-            Con::errorf( "Cannot assign value to constant '%s'.", name );
-            return;
-         }
-         
-         if(type <= TypeInternalString)
-         {
-            fval = val;
-            ival = static_cast<U32>(val);
-            if(sval != typeValueEmpty)
-            {
-               dFree(sval);
-               sval = typeValueEmpty;
-            }
-            type = TypeInternalFloat;
-         }
-         else
-         {
-            const char *dptr = Con::getData(TypeF32, &val, 0);
-            Con::setData(type, dataPtr, 0, 1, &dptr, enumTable);
-         }
-      }
-      
-      void setStringValue(const char *value);
    };
    
    struct HashTableData
@@ -328,6 +217,16 @@ public:
       S32 count;
       Entry **data;
    };
+
+   struct LookupEntry
+   {
+      Dictionary* dictionary;
+      Dictionary::Entry* entry;
+
+      LookupEntry() : dictionary(NULL), entry(NULL) {;}
+
+      inline void setNull() { dictionary = NULL; entry = NULL; }
+   };
    
    HashTableData *hashTable;
    ExprEvalState *exprState;
@@ -335,14 +234,30 @@ public:
    StringTableEntry scopeName;
    Namespace *scopeNamespace;
    CodeBlock *code;
+   CodeBlockWorld* world;
    U32 ip;
    
-   Dictionary();
+   Dictionary(CodeBlockWorld* world);
    Dictionary(ExprEvalState *state, Dictionary* ref=NULL);
    ~Dictionary();
    
    Entry *lookup(StringTableEntry name);
    Entry *add(StringTableEntry name);
+
+   inline LookupEntry lookupDE(StringTableEntry name)
+   {
+      LookupEntry ent;
+      ent.dictionary = this;
+      ent.entry = lookup(name);
+   }
+
+   inline LookupEntry addDE(StringTableEntry name)
+   {
+      LookupEntry ent;
+      ent.dictionary = this;
+      ent.entry = add(name);
+   }
+
    void setState(ExprEvalState *state, Dictionary* ref=NULL);
    void remove(Entry *);
    void reset();
@@ -352,6 +267,21 @@ public:
    
    void setVariable(StringTableEntry name, const char *value);
    const char *getVariable(StringTableEntry name, bool *valid = NULL);
+
+
+   // Moved here to simplify world referencing
+
+   U32 getIntValue(Entry* entry);
+   
+   F32 getFloatValue(Entry* entry);
+   
+   const char *getStringValue(Entry* entry);
+   
+   void setIntValue(Entry* entry, U32 val);
+   
+   void setFloatValue(Entry* entry, F32 val);
+   
+   void setStringValue(Entry* entry, const char *value);
    
    U32 getCount() const
    {
@@ -380,6 +310,7 @@ public:
    void validate();
 };
 
+
 class ExprEvalState
 {
 public:
@@ -387,14 +318,68 @@ public:
    /// @{
    
    ///
-   SimObject *thisObject;
-   Dictionary::Entry *currentVariable;
-   Dictionary::Entry *copyVariable;
+   ConsoleObject *thisObject;
+   Dictionary::LookupEntry currentVariable;
+   Dictionary::LookupEntry copyVariable;
    bool traceOn;
+   CodeBlockWorld* mWorld;
    
    U32 mStackDepth;
+
+   enum EvalConstants {
+      MaxStackSize = 1024,
+      MethodOnComponent = -2
+   };
+
+
+   /// Frame data for a foreach/foreach$ loop.
+   struct IterStackRecord
+   {
+      /// If true, this is a foreach$ loop; if not, it's a foreach loop.
+      bool mIsStringIter;
+      
+      /// The iterator variable.
+      Dictionary::LookupEntry mVariable;
+      
+      /// Information for an object iterator loop.
+      struct ObjectPos
+      {
+         /// The set being iterated over.
+         ConsoleObject* mSet;
+
+         /// Current index in the set.
+         U32 mIndex;
+      };
+      
+      /// Information for a string iterator loop.
+      struct StringPos
+      {
+         /// The raw string data on the string stack.
+         const char* mString;
+         
+         /// Current parsing position.
+         U32 mIndex;
+      };
+      union
+      {
+         ObjectPos mObj;
+         StringPos mStr;
+      } mData;
+   };
+
+   IterStackRecord iterStack[ MaxStackSize ];
+
+   F64 floatStack[MaxStackSize];
+   S64 intStack[MaxStackSize];
+
+   StringStack STR;
+
+   U32 _FLT;
+   U32 _UINT;
+   U32 _ITER;    ///< Stack pointer for iterStack.
+
    
-   ExprEvalState();
+   ExprEvalState(CodeBlockWorld* world);
    ~ExprEvalState();
    
    /// @}

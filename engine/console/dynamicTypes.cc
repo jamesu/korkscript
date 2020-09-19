@@ -20,6 +20,7 @@
 // IN THE SOFTWARE.
 //-----------------------------------------------------------------------------
 
+#include "console/console.h"
 #include "console/dynamicTypes.h"
 
 // Init the globals.

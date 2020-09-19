@@ -64,8 +64,9 @@ class TelnetDebugger
    char mLineBuffer[MaxCommandSize];
    S32 mCurPos;
    bool mWaitForClient;
+   CodeBlockWorld* mWorld;
 
-   TelnetDebugger();
+   TelnetDebugger(CodeBlockWorld* world);
    ~TelnetDebugger();
 
    struct Breakpoint
@@ -108,7 +109,7 @@ class TelnetDebugger
    void sendBreak();
    void setBreakOnNextStatement( bool enabled );
 public:
-   static void create();
+   static void create(CodeBlockWorld* world);
    static void destroy();
 
    void disconnect();

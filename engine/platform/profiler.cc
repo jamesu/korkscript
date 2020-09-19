@@ -28,7 +28,6 @@
 #include "console/console.h"
 #include "core/tVector.h"
 #include "core/fileStream.h"
-#include "platform/threads/thread.h"
 
 #ifdef TORQUE_ENABLE_PROFILER
 
@@ -410,10 +409,10 @@ void Profiler::enable(bool enabled)
 {
    mNextEnable = enabled;
 
-   if ( enabled )
+   /*if ( enabled )
        Con::printf( "Profiler is on." );
    else
-       Con::printf("Profiler is off." );
+       Con::printf("Profiler is off." );*/
 }
 
 void Profiler::dumpToConsole()
@@ -480,12 +479,12 @@ static S32 QSORT_CALLBACK rootDataCompare(const void *s1, const void *s2)
 static void profilerDataDumpRecurse(ProfilerData *data, char *buffer, U32 bufferLen, F64 totalTime)
 {
    // dump out this one:
-   Con::printf("%7.3f %7.3f %8d %s%s",
+   /*Con::printf("%7.3f %7.3f %8d %s%s",
          100 * data->mTotalTime / totalTime,
          100 * (data->mTotalTime - data->mSubTime) / totalTime,
          data->mInvokeCount,
          buffer,
-         data->mRoot ? data->mRoot->mName : "ROOT" );
+         data->mRoot ? data->mRoot->mName : "ROOT" );*/
    data->mTotalTime = 0;
    data->mSubTime = 0;
    data->mInvokeCount = 0;
@@ -575,23 +574,23 @@ void Profiler::dump()
 
    if (mDumpToConsole == true)
    {
-      Con::printf("Profiler Data Dump:");
+      /*Con::printf("Profiler Data Dump:");
       Con::printf("Ordered by non-sub total time -");
-      Con::printf("%%NSTime  %% Time  Invoke #  Name");
+      Con::printf("%%NSTime  %% Time  Invoke #  Name");*/
       for(U32 i = 0; i < (U32)rootVector.size(); i++)
       {
-         Con::printf("%7.3f %7.3f %8d %s",
+         /*Con::printf("%7.3f %7.3f %8d %s",
                      100 * (rootVector[i]->mTotalTime - rootVector[i]->mSubTime) / totalTime,
                      100 * rootVector[i]->mTotalTime / totalTime,
                      rootVector[i]->mTotalInvokeCount,
-                     rootVector[i]->mName);
+                     rootVector[i]->mName);*/
          rootVector[i]->mTotalInvokeCount = 0;
          rootVector[i]->mTotalTime = 0;
          rootVector[i]->mSubTime = 0;
       }
-      Con::printf("");
+      /*Con::printf("");
       Con::printf("Ordered by stack trace total time -");
-      Con::printf("%% Time  %% NSTime  Invoke #  Name");
+      Con::printf("%% Time  %% NSTime  Invoke #  Name");*/
 
       mCurrentProfilerData->mTotalTime = endHighResolutionTimer(mCurrentProfilerData->mStartTime);
 

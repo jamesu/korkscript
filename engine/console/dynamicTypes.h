@@ -23,9 +23,9 @@
 #ifndef _DYNAMIC_CONSOLETYPES_H_
 #define _DYNAMIC_CONSOLETYPES_H_
 
-#ifndef _SIMBASE_H_
-#include "console/simBase.h"
-#endif
+#include "platform/platform.h"
+
+class CodeBlockWorld;
 
 class ConsoleBaseType
 {
@@ -83,11 +83,11 @@ public:
    void setInspectorFieldType(const char *type) { mInspectorFieldType = type; }
    const char *getInspectorFieldType() { return mInspectorFieldType; }
 
-   virtual void setData(void *dptr, S32 argc, const char **argv, const EnumTable *tbl, BitSet32 flag)=0;
-   virtual const char *getData(void *dptr, const EnumTable *tbl, BitSet32 flag )=0;
+   virtual void setData(CodeBlockWorld* con, void *dptr, S32 argc, const char **argv, const EnumTable *tbl, BitSet32 flag)=0;
+   virtual const char *getData(CodeBlockWorld* con, void *dptr, const EnumTable *tbl, BitSet32 flag )=0;
    virtual const char *getTypeClassName()=0;
    virtual const bool isDatablock() { return false; };
-   virtual const char *prepData(const char *data, char *buffer, U32 bufferLen) { return data; };
+   virtual const char *prepData(CodeBlockWorld* con, const char *data, char *buffer, U32 bufferLen) { return data; };
    virtual StringTableEntry getTypePrefix( void ) const { return StringTable->EmptyString; }
 };
 
@@ -98,8 +98,8 @@ public:
    { \
    public: \
       ConsoleType##type (const S32 aSize, S32 *idPtr, const char *aTypeName) : ConsoleBaseType(aSize, idPtr, aTypeName) { } \
-      virtual void setData(void *dptr, S32 argc, const char **argv, const EnumTable *tbl, BitSet32 flag); \
-      virtual const char *getData(void *dptr, const EnumTable *tbl, BitSet32 flag ); \
+      virtual void setData(CodeBlockWorld* con, void *dptr, S32 argc, const char **argv, const EnumTable *tbl, BitSet32 flag); \
+      virtual const char *getData(CodeBlockWorld* con, void *dptr, const EnumTable *tbl, BitSet32 flag ); \
       virtual const char *getTypeClassName() { return #typeName ; } \
       virtual StringTableEntry getTypePrefix( void ) const { return StringTable->insert( typePrefix ); }\
    }; \
@@ -111,23 +111,23 @@ public:
    { \
    public: \
       ConsoleType##type (const S32 aSize, S32 *idPtr, const char *aTypeName) : ConsoleBaseType(aSize, idPtr, aTypeName) { } \
-      virtual void setData(void *dptr, S32 argc, const char **argv, const EnumTable *tbl, BitSet32 flag); \
-      virtual const char *getData(void *dptr, const EnumTable *tbl, BitSet32 flag ); \
+      virtual void setData(CodeBlockWorld* con, void *dptr, S32 argc, const char **argv, const EnumTable *tbl, BitSet32 flag); \
+      virtual const char *getData(CodeBlockWorld* con, void *dptr, const EnumTable *tbl, BitSet32 flag ); \
       virtual const char *getTypeClassName() { return #typeName; }; \
-      virtual const char *prepData(const char *data, char *buffer, U32 bufferLen); \
+      virtual const char *prepData(CodeBlockWorld* con, const char *data, char *buffer, U32 bufferLen); \
       virtual StringTableEntry getTypePrefix( void ) const { return StringTable->insert( typePrefix ); }\
    }; \
    S32 type = -1; \
    ConsoleType##type gConsoleType##type##Instance(size,&type,#type); \
 
 #define ConsoleSetType( type ) \
-   void ConsoleType##type::setData(void *dptr, S32 argc, const char **argv, const EnumTable *tbl, BitSet32 flag)
+   void ConsoleType##type::setData(CodeBlockWorld* con, void *dptr, S32 argc, const char **argv, const EnumTable *tbl, BitSet32 flag)
 
 #define ConsoleGetType( type ) \
-   const char *ConsoleType##type::getData(void *dptr, const EnumTable *tbl, BitSet32 flag)
+   const char *ConsoleType##type::getData(CodeBlockWorld* con, void *dptr, const EnumTable *tbl, BitSet32 flag)
 
 #define ConsolePrepData( type ) \
-   const char *ConsoleType##type::prepData(const char *data, char *buffer, U32 bufferSize)
+   const char *ConsoleType##type::prepData(CodeBlockWorld* con, const char *data, char *buffer, U32 bufferSize)
 
 #define ConsoleTypeFieldPrefix( type, typePrefix ) \
    StringTableEntry ConsoleType##type::getTypePrefix( void ) const { return StringTable->insert( typePrefix ); }
@@ -137,8 +137,8 @@ public:
    { \
    public: \
       ConsoleType##type (const S32 aSize, S32 *idPtr, const char *aTypeName) : ConsoleBaseType(aSize, idPtr, aTypeName) { } \
-      virtual void setData(void *dptr, S32 argc, const char **argv, const EnumTable *tbl, BitSet32 flag); \
-      virtual const char *getData(void *dptr, const EnumTable *tbl, BitSet32 flag ); \
+      virtual void setData(CodeBlockWorld* con, void *dptr, S32 argc, const char **argv, const EnumTable *tbl, BitSet32 flag); \
+      virtual const char *getData(CodeBlockWorld* con, void *dptr, const EnumTable *tbl, BitSet32 flag ); \
       virtual const char *getTypeClassName() { return #className; }; \
       virtual const bool isDatablock() { return true; }; \
    }; \

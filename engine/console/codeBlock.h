@@ -27,6 +27,7 @@
 #include "console/consoleParser.h"
 
 class Stream;
+class CodeBlockWorld;
 
 
 /// Core TorqueScript code management class.
@@ -34,30 +35,15 @@ class Stream;
 /// This class represents a block of code, usually mapped directly to a file.
 class CodeBlock
 {
-private:
-   static CodeBlock* smCodeBlockList;
-   static CodeBlock* smCurrentCodeBlock;
-   
 public:
+   CodeBlockWorld* mWorld; ///< World this codeblock belongs to.
+
    static bool                      smInFunction;
    static Compiler::ConsoleParser * smCurrentParser;
    
-   static CodeBlock* getCurrentBlock()
-   {
-      return smCurrentCodeBlock;
-   }
+public:
    
-   static CodeBlock *getCodeBlockList()
-   {
-      return smCodeBlockList;
-   }
-   
-   static StringTableEntry getCurrentCodeBlockName();
-   static StringTableEntry getCurrentCodeBlockFullPath();
-   static StringTableEntry getCurrentCodeBlockModName();
-   static CodeBlock *find(StringTableEntry);
-   
-   CodeBlock();
+   CodeBlock(CodeBlockWorld* world);
    ~CodeBlock();
    
    StringTableEntry name;

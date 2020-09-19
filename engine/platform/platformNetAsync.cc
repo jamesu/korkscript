@@ -21,8 +21,6 @@
 //-----------------------------------------------------------------------------
 
 #include "platform/platform.h"
-#include "platform/threads/mutex.h"
-#include "platform/threads/thread.h"
 #include "platform/platformNetAsync.h"
 #include "console/console.h"
 

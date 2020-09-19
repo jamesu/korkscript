@@ -44,6 +44,7 @@
 
 class Namespace;
 class ConsoleObject;
+class CodeBlockWorld;
 
 //-----------------------------------------------------------------------------
 
@@ -243,7 +244,7 @@ public:
 
    static void registerClassRep(AbstractClassRep*);
    static AbstractClassRep* findClassRep(const char* in_pClassName);
-   static void initialize(); // Called from Con::init once on startup
+   static void initialize(CodeBlockWorld* world); // Called from Con::init once on startup
    static void destroyFieldValidators(AbstractClassRep::FieldList &mFieldList);
 
 public:
@@ -263,7 +264,7 @@ public:
    static U32                   getClassCRC (U32 netClassGroup);
    const char*                  getClassName() const;
    static AbstractClassRep*     getClassList();
-   Namespace*                   getNameSpace();
+   Namespace*                   getNamespace();
    AbstractClassRep*            getNextClass();
    AbstractClassRep*            getParentClass();
    virtual AbstractClassRep*    getContainerChildClass( const bool recurse ) = 0;
@@ -291,7 +292,7 @@ public:
    AbstractClassRep* findContainerChildRoot( AbstractClassRep* pChild );
 
 protected:
-   virtual void init() const = 0;
+   virtual void init(CodeBlockWorld* world) const = 0;
 };
 
 //-----------------------------------------------------------------------------
@@ -338,7 +339,7 @@ inline const char* AbstractClassRep::getClassName() const
 
 //-----------------------------------------------------------------------------
 
-inline Namespace *AbstractClassRep::getNameSpace()
+inline Namespace *AbstractClassRep::getNamespace()
 {
    return mNamespace;
 }
@@ -387,7 +388,7 @@ public:
    /// Perform class specific initialization tasks.
    ///
    /// Link namespaces, call initPersistFields() and consoleInit().
-   void init() const
+   void init(CodeBlockWorld* world) const
    {
       // Get handle to our parent class, if any, and ourselves (we are our parent's child).
       AbstractClassRep *parent      = T::getParentStaticClassRep();
@@ -395,7 +396,7 @@ public:
 
       // If we got reps, then link those namespaces! (To get proper inheritance.)
       if(parent && child)
-         Con::classLinkNamespaces(parent->getNameSpace(), child->getNameSpace());
+         world->classLinkNamespaces(parent->getNamespace(), child->getNamespace());
 
       // Finally, do any class specific initialization...
       T::initPersistFields();
@@ -724,6 +725,53 @@ public:
    const char *getClassName() const;
 
    /// @}
+
+public:
+
+   // Sim* apis for interpreter
+   virtual bool registerObject() { return false; }
+   virtual bool isProperlyAdded() { return false; }
+   virtual void deleteObject() { }
+   virtual void assignFieldsFrom(ConsoleObject* other) { }
+   virtual void assignName(StringTableEntry name) {;}
+   virtual void setInternalName(StringTableEntry name) {;}
+   virtual bool processArguments(int argc, const char **argv) { return false; }
+
+   virtual void setModStaticFields(bool value) { ; }
+   virtual void setModDynamicFields(bool value) { ; }
+
+   virtual void addObject(ConsoleObject* child) {;}
+   virtual ConsoleObject* getObject(int index) {return NULL;}
+   virtual U32 getChildObjectCount() { return 0; }
+   virtual bool isGroup() { return false; }
+   virtual ConsoleObject* getGroup() { return NULL; }
+
+   virtual U32 getId() { return 0; }
+
+   virtual const char *getDataField(StringTableEntry slotName, const char *array){return NULL;}
+   virtual void setDataField(StringTableEntry slotName, const char *array, const char *value){;}
+
+   virtual Namespace* getNamespace() { return getClassRep()->getNamespace(); }
+   virtual StringTableEntry getName() { return ""; }
+
+   ConsoleObject* findObjectByInternalName(StringTableEntry name, bool recurse) { return NULL; }
+
+
+   virtual void pushScriptCallbackGuard()
+   {
+      
+   }
+
+   virtual void popScriptCallbackGuard()
+   {
+
+   }
+
+
+public:
+
+   CodeBlockWorld* mWorld;
+
 };
 
 //-----------------------------------------------------------------------------
@@ -755,34 +803,6 @@ inline const AbstractClassRep::Field * ConsoleObject::findField(StringTableEntry
    AssertFatal(getClassRep() != NULL,
       avar("Cannot get field '%s' from non-declared dynamic class.", name));
    return getClassRep()->findField(name);
-}
-
-//-----------------------------------------------------------------------------
-
-inline bool ConsoleObject::setField(const char *fieldName, const char *value)
-{
-   //sanity check
-   if ((! fieldName) || (! fieldName[0]) || (! value))
-      return false;
-
-   if (! getClassRep())
-      return false;
-
-   const AbstractClassRep::Field *myField = getClassRep()->findField(StringTable->insert(fieldName));
-
-   if (! myField)
-      return false;
-
-   Con::setData(
-      myField->type,
-      (void *) (((const char *)(this)) + myField->offset),
-      0,
-      1,
-      &value,
-      myField->table,
-      myField->flag);
-
-   return true;
 }
 
 //-----------------------------------------------------------------------------

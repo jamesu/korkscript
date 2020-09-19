@@ -26,9 +26,9 @@
 
 TelnetConsole *TelConsole = NULL;
 
-void TelnetConsole::create()
+void TelnetConsole::create(CodeBlockWorld* world)
 {
-   TelConsole = new TelnetConsole;
+   TelConsole = new TelnetConsole(world);
 }
 
 void TelnetConsole::destroy()
@@ -57,19 +57,20 @@ static void telnetCallback(ConsoleLogEntry::Level level, const char *consoleLine
 	  TelConsole->processConsoleLine(consoleLine);
 }
 
-TelnetConsole::TelnetConsole()
+TelnetConsole::TelnetConsole(CodeBlockWorld* world)
 {
-   Con::addConsumer(telnetCallback);
+   world->addConsumer(telnetCallback);
 
    mAcceptSocket = NetSocket::INVALID;
    mAcceptPort = -1;
    mClientList = NULL;
    mRemoteEchoEnabled = false;
+   mWorld = world;
 }
 
 TelnetConsole::~TelnetConsole()
 {
-   Con::removeConsumer(telnetCallback);
+   mWorld->removeConsumer(telnetCallback);
    if(mAcceptSocket != NetSocket::INVALID)
       Net::closeSocket(mAcceptSocket);
    TelnetClient *walk = mClientList, *temp;
@@ -145,7 +146,7 @@ void TelnetConsole::process()
       {
          char buffer[256];
          Net::addressToString(&address, buffer);
-         Con::printf("Telnet connection from %s", buffer);
+         mWorld->printf("Telnet connection from %s", buffer);
          
          TelnetClient *cl = new TelnetClient;
          cl->socket = newConnection;
@@ -161,7 +162,7 @@ void TelnetConsole::process()
          
          Net::setBlocking(newConnection, false);
          
-         const char *prompt = Con::getVariable("Con::Prompt");
+         const char *prompt = mWorld->getVariable("mWorld->Prompt");
          char connectMessage[1024];
          dSprintf(connectMessage, sizeof(connectMessage),
                   "Torque Telnet Remote Console\r\n\r\n%s",
@@ -219,7 +220,7 @@ void TelnetConsole::process()
                */
                
                // note - send prompt next
-               const char *prompt = Con::getVariable("Con::Prompt");
+               const char *prompt = mWorld->getVariable("mWorld->Prompt");
                if ( client->socket != NetSocket::INVALID )
                   Net::send(client->socket, (const unsigned char*)prompt, dStrlen(prompt));
             }
@@ -239,7 +240,7 @@ void TelnetConsole::process()
                   replyPos = 0;
                   
                   // send prompt
-                  const char *prompt = Con::getVariable("Con::Prompt");
+                  const char *prompt = mWorld->getVariable("mWorld->Prompt");
                   if ( client->socket != NetSocket::INVALID )
                      Net::send(client->socket, (const unsigned char*)prompt, dStrlen(prompt));
                   client->state = FullAccessConnected;
