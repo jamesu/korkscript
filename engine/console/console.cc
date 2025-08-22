@@ -549,7 +549,7 @@ static void _printf(ConsoleLogEntry::Level level, ConsoleLogEntry::Type type, co
    for(U32 i = 0; i < (U32)gConsumers.size(); i++)
       gConsumers[i](level, buffer);
 
-   Platform::cprintf(buffer);
+   //Platform::cprintf(buffer);
 
    if(logBufferEnabled || consoleLogMode)
    {

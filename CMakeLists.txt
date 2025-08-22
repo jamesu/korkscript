@@ -65,6 +65,8 @@ set(KS_SRCS
 	./engine/console/simBase.cc
 	./engine/console/astAlloc.cc
 	./engine/console/compiler.cc
+
+	./engine/console/simpleLexer.h
 )
 
 set(KS_TEST_SRCS
@@ -73,4 +75,12 @@ set(KS_TEST_SRCS
 	test/main.cpp
 )
 
+set(KS_LEX_TEST_SRCS
+	${KS_SRCS}
+	${KS_NETWORK_SRCS}
+	test/lexerCheck.cpp
+)
+
+
 add_executable(cstest ${KS_TEST_SRCS})
+add_executable(cslextest ${KS_LEX_TEST_SRCS})
