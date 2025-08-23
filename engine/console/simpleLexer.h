@@ -150,7 +150,7 @@ public:
    
    std::string stringValue(Token& t)
    {
-      if (t.kind == TokenType::TAGATOM || t.kind == TokenType::STRATOM || t.kind == TokenType::IDENT || t.kind == TokenType::VAR)
+      if (t.kind == TokenType::TAGATOM || t.kind == TokenType::STRATOM || t.kind == TokenType::IDENT || t.kind == TokenType::VAR || t.kind == TokenType::DOCBLOCK)
       {
          return std::string(mSource.begin() + t.stringValue.offset, mSource.begin() + t.stringValue.offset + t.stringValue.len);
       }
@@ -172,7 +172,7 @@ public:
       else if (t.kind == TokenType::DOCBLOCK)
       {
          std::string ss(mSource.begin() + t.stringValue.offset, mSource.begin() + t.stringValue.offset + t.stringValue.len);
-         snprintf(buf, sizeof(buf), "%s=/// %s", kindToString(t.kind), ss.c_str());
+         snprintf(buf, sizeof(buf), "%s=///%s", kindToString(t.kind), ss.c_str());
       }
       else if (t.kind == TokenType::INTCONST)
       {
@@ -681,6 +681,11 @@ private:
          // float
          Token t = make(TokenType::FLTCONST);
          t.value = std::stod(s);
+         
+#ifndef PRECISE_NUMBERS
+         F32 f = static_cast<F32>(t.value);
+         t.value = f;
+#endif
          return t;
       }
       else
@@ -836,49 +841,33 @@ private:
                
                char k = buf[codeIDX+1];
                
-               // Special case: user outputs NULL
-               if (k == '0')
-               {
-                  // mark a zero byte at output (will be removed in compaction)
-                  buf[slashIDX] = '\0';
-                  buf[slashIDX+1] = '\0';
-                  buf[slashIDX+2] = '\0';
-                  idx += 3;  // i.e. next after \x0_
-                  if (effective_boundary < 0)
+               unsigned char byte = 0;
+               if      (k == 'r') byte = 15;
+               else if (k == 'p') byte = 16;
+               else if (k == 'o') byte = 17;
+               else
+               {  // note: '0' handled above
+                  static const unsigned char map[10] =
+                  { 0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0xB, 0xC, 0xE };
+                  int dig = (int)k - '0';
+                  if (dig < 0 || dig > 9)
                   {
-                     effective_boundary = slashIDX; // position of that zero (exclusive after compaction)
+                     return illegal("invalid escape");
                   }
+                  byte = map[dig];
+               }
+               
+               if (firstOut && byte == 0x01)
+               {
+                  buf[slashIDX] = char(0x02);
+                  buf[slashIDX+1] = char(0x01);
+                  buf[slashIDX+2] = '\0';
                }
                else
                {
-                  unsigned char byte = 0;
-                  if      (k == 'r') byte = 15;
-                  else if (k == 'p') byte = 16;
-                  else if (k == 'o') byte = 17;
-                  else if (k >= '1' && k <= '9')
-                  {  // note: '0' handled above
-                     static const unsigned char map[10] =
-                     { 0x00, 0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0xB, 0xC }; // 0 unused here; 9->0xC
-                     byte = map[k - '0'];
-                  } else {
-                     return illegal("invalid escape");
-                  }
-                  
-                  if (!(k == '0'))
-                  { // (we already handled '0')
-                     if (firstOut && byte == 0x01)
-                     {
-                        buf[slashIDX] = char(0x02);
-                        buf[slashIDX+1] = char(0x01);
-                        buf[slashIDX+2] = '\0';
-                     }
-                     else
-                     {
-                        buf[slashIDX] = char(byte);
-                        buf[slashIDX+1] = char(0x01);
-                        buf[slashIDX+2] = '\0';
-                     }
-                  }
+                  buf[slashIDX] = char(byte);
+                  buf[slashIDX+1] = '\0';
+                  buf[slashIDX+2] = '\0';
                }
                
                idx += 3;  // i.e. next after \cX_
@@ -1007,7 +996,7 @@ private:
       for (U32 i=0; i<sizeof(chkTable) / sizeof(chkTable[0]); i++)
       {
          //printf("CHK %s %c%c%c%c%c%c%c=%i\n", chkTable[i].val, startStr[0], startStr[1], startStr[2], startStr[3], startStr[4], startStr[5], startStr[6], strlen(chkTable[i].val));
-         if (strncmp(startStr, chkTable[i].val, strlen(chkTable[i].val)) == 0)
+         if (strncmp(startStr, chkTable[i].val, std::max<S64>(mBytePos - t.stringValue.offset, strlen(chkTable[i].val))) == 0)
          {
             t.kind = chkTable[i].kind;
             if (t.kind == TokenType::INTCONST)

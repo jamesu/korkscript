@@ -40,8 +40,23 @@ const char* getCMDSVal();
 U32 getCMDIVal();
 F32 getCMDFVal();
 
+void printHex(const char *str) {
+    while (*str) {
+        printf("%02x ", (unsigned char)*str);
+        str++;
+    }
+    printf("\n");
+}
+
 bool LEXMatches(int lexRet, SimpleLexer::Tokenizer& lex, SimpleLexer::Token& tok)
 {
+   //printf("fval=%f tok=%f\n", getCMDFVal(), tok.value);
+   /*if (lexRet == 295) {
+      printf("sval=%s\n", getCMDSVal());
+      printHex(getCMDSVal());
+      printf("TOK\n");
+      printHex(lex.stringValue(tok).c_str());
+   }*/
    switch (lexRet) {
       case 258: return tok.kind == SimpleLexer::TokenType::rwDEFINE && true;
          //case 259: return tok.kind == SimpleLexer::TokenType::rwENDDEF && true;
@@ -77,14 +92,15 @@ bool LEXMatches(int lexRet, SimpleLexer::Tokenizer& lex, SimpleLexer::Token& tok
          //case 289: return tok.kind == SimpleLexer::TokenType::CHRCONST && true;
       case 290: return tok.kind == SimpleLexer::TokenType::INTCONST && tok.ivalue == getCMDIVal();
          //case 291: return tok.kind == SimpleLexer::TokenType::TTAG && true;
-      case 292: return tok.kind == SimpleLexer::TokenType::VAR && strcmp(lex.stringValue(tok).c_str(), getCMDSVal()) == 0;
+      case 292: return tok.kind == SimpleLexer::TokenType::VAR && strcasecmp(lex.stringValue(tok).c_str(), getCMDSVal()) == 0;
       case 293: return tok.kind == SimpleLexer::TokenType::IDENT && strcasecmp(lex.stringValue(tok).c_str(), getCMDSVal()) == 0;
          //case 294: return tok.kind == SimpleLexer::TokenType::TYPEIDENT && strcmp(lex.stringValue(tok).c_str(), getCMDSVal()) == 0;
       case 295: return tok.kind == SimpleLexer::TokenType::DOCBLOCK && strcmp(lex.stringValue(tok).c_str(), getCMDSVal()) == 0;
       case 296:
          return tok.kind == SimpleLexer::TokenType::STRATOM && strcmp(lex.stringValue(tok).c_str(), getCMDSVal()) == 0;
       case 297: return tok.kind == SimpleLexer::TokenType::TAGATOM && strcmp(lex.stringValue(tok).c_str(), getCMDSVal()) == 0;
-      case 298: return tok.kind == SimpleLexer::TokenType::FLTCONST && tok.value == getCMDFVal();
+      case 298: 
+         return tok.kind == SimpleLexer::TokenType::FLTCONST && (F32)tok.value == getCMDFVal();
       case 299: return tok.kind == SimpleLexer::TokenType::opINTNAME && true;
       case 300: return tok.kind == SimpleLexer::TokenType::opINTNAMER && true;
       case 301: return tok.kind == SimpleLexer::TokenType::opMINUSMINUS && true;
