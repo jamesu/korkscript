@@ -88,7 +88,14 @@ set(KS_PARSER_TEST_SRCS
 	test/parserCheck.cpp
 )
 
+set(KS_AST_PRINT_SRCS
+	${KS_SRCS}
+	${KS_NETWORK_SRCS}
+	test/astPrint.cpp
+)
+
 
 add_executable(cstest ${KS_TEST_SRCS})
 add_executable(cslextest ${KS_LEX_TEST_SRCS})
 add_executable(csparsetest ${KS_PARSER_TEST_SRCS})
+add_executable(csprintast ${KS_AST_PRINT_SRCS})
