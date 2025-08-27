@@ -29,6 +29,8 @@ bool reportMismatch(const char* part, const StmtNode* node)
 #include <typeinfo>
 #include <cstring> // std::strcmp
 
+U32 gNumCheckedNodes = 0;
+
 // --- small helpers ----------------------------------------------------------
 
 static inline bool eqStrTbl(StringTableEntry a, StringTableEntry b) {
@@ -334,19 +336,14 @@ static bool eqNodeSameType(const StmtNode* a, const StmtNode* b) {
 
 // Public entrypoint
 static bool eqNode(const StmtNode* a, const StmtNode* b) {
+   gNumCheckedNodes++;
+   
     if (a == b) return true;
     if (!a || !b) return reportMismatch("StmtNode ", a ? a : b);
     // exact concrete type match
     if (typeid(*a) != typeid(*b)) return reportMismatch("StmtNode type", a);
 
     return eqNodeSameType(a, b);
-}
-
-
-
-bool itrCheckASTNodes(StmtNode* rootNode)
-{
-   return true;
 }
 
 bool ensureASTMatches(const char* buf, const char* filename)
@@ -399,7 +396,7 @@ bool ensureASTMatches(const char* buf, const char* filename)
       
    }
 
-   Con::printf("%s: Parser matches (%i nodes)!\n", filename, 0);
+   Con::printf("%s: Parser matches (%i nodes)!\n", filename, gNumCheckedNodes);
    return true;
 }
 
