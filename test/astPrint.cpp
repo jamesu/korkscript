@@ -34,7 +34,7 @@ static void printNode(const StmtNode* n, int pad = 0);
 template <class T>
 static void printChild(const char* key, const T* child, int pad) {
    indent(pad); printf("%s = ", key);
-   if (!child) { uts("null"); return; }
+   if (!child) { puts("null"); return; }
    printNode(child, pad);
 }
 
@@ -46,9 +46,9 @@ static void printList(const char* key, const T* head, int pad) {
    while (it) {
       printNode(it, pad + 2);
       it = it->next;
-      if (it) uts("");
+      if (it) puts("");
    }
-   indent(pad); uts("}");
+   indent(pad); puts("}");
 }
 
 static const char* typeReqName(TypeReq t) {
@@ -70,11 +70,11 @@ static void close(const StmtNode* n, int pad) {
    if (n && n->next) {
       printChild("next", n->next, pad + 2);
    }
-   indent(pad); uts("}");
+   indent(pad); puts("}");
 }
 
 static void printNode(const StmtNode* n, int pad) {
-   if (!n) { indent(pad); uts("null"); return; }
+   if (!n) { indent(pad); puts("null"); return; }
    
    if (auto x = dynamic_cast<const BreakStmtNode*>(n)) {
       open("BreakStmtNode", pad);
@@ -344,7 +344,7 @@ static inline void printTree(const StmtNode* root) {
    while (it) {
       printNode(it, 0);
       it = it->next;
-      if (it) uts("");
+      if (it) puts("");
    }
 }
 
