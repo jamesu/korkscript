@@ -400,86 +400,118 @@ private:
       }
    }
    
-   // Handles case statement body
-   //
+   // case_expr : expr | case_expr rwCASEOR expr
+   ExprNode* parseCaseExprList()
+   {
+      using TT = SimpleLexer::TokenType;
+      ExprNode* head = parseExprNode();
+      ExprNode* tail = head;
+      while (match(TT::rwCASEOR)) 
+      {
+         ExprNode* e = parseExprNode();
+         tail->append(e);
+         tail = e;
+      }
+      return head;
+   }
+   
+   // Parse the case body (statement_list) until we hit 'case', 'default' or '}'
    StmtNode* parseCaseBody()
    {
-      StmtNode* headB = NULL; StmtNode* tailB = NULL;
+      using TT = SimpleLexer::TokenType;
+      StmtNode* head = NULL;
+      StmtNode* tail = NULL;
+      
       while (!atEnd())
       {
-         TT k = LA().kind;
-         if ((k == TT::rwCASE) ||
-             (k == TT::rwDEFAULT) ||
-             (k == TT::opCHAR && LA().ivalue == '}'))
+         const auto& k = LA();
+         if ((k.kind == TT::rwCASE) || (k.kind == TT::rwDEFAULT) ||
+             (k.kind == TT::opCHAR && k.ivalue == '}'))
             break;
+         
          StmtNode* s = parseStmtNode();
-         if (!headB) { headB = s; tailB = s; }
-         else { tailB->append(s); while (tailB->getNext()) tailB = tailB->getNext(); }
+         if (!head) head = s;
+         else tail->append(s);
+         
+         // walk tail to end (parseStmtNode may return lists)
+         tail = head;
+         while (tail && tail->getNext()) tail = tail->getNext();
       }
-      return headB;
+      return head;
+   }
+   
+   // Handles case ...: ...
+   //
+   // case_block : rwCASE case_expr ':' statement_list case_block
+   // (variants of case_block to handle token conflicts)
+   IfStmtNode* parseCaseBlock()
+   {
+      using TT = SimpleLexer::TokenType;
+      
+      // case ...
+      SimpleLexer::Token caseTok = expect(TT::rwCASE, "'case' expected");
+      ExprNode* list = parseCaseExprList();     // store the *list* as testExpr for now
+      expectChar(':', "':' expected after case");
+      
+      StmtNode* body = parseCaseBody();
+      
+      // default? next case? or end?
+      if (match(TT::rwDEFAULT))
+      {
+         expectChar(':', "':' expected after default");
+         StmtNode* defBody = parseCaseBody();
+         // CASE ... ':' stmts DEFAULT ':' stmts
+         return IfStmtNode::alloc(caseTok.pos.line, list, body, defBody, false);
+      }
+      
+      if (LA().kind == TT::rwCASE)
+      {
+         // CASE ... ':' stmts case_block
+         IfStmtNode* rest = parseCaseBlock();
+         return IfStmtNode::alloc(caseTok.pos.line, list, body, rest, true);
+      }
+      
+      // CASE ... ':' stmts
+      return IfStmtNode::alloc(caseTok.pos.line, list, body, NULL, false);
    }
    
    // Handles switch statement
    //
    // switch_stmt : rwSWITCH '(' expr ')' '{' case_block '}' | wSWITCHSTR '(' expr ')' '{' case_block '}'
-   // case_block : rwCASE case_expr ':' statement_list case_block
-   // (variants of case_block to handle token conflicts)
    StmtNode* parseSwitchStmt()
    {
-      bool string = false;
-      TOK sw;
-      if (match(TT::rwSWITCHSTR)) { string = true; sw = LA(-1); }
-      else { sw = expect(TT::rwSWITCH, "'switch' expected"); }
+      using TT = SimpleLexer::TokenType;
+      
+      bool isString = false;
+      SimpleLexer::Token sw;
+      if (match(TT::rwSWITCHSTR)) 
+      {
+         isString = true;
+         sw = LA(-1);
+      }
+      else
+      {
+         sw = expect(TT::rwSWITCH, "'switch' expected");
+      }
       
       expectChar('(', "'(' expected");
       ExprNode* selector = parseExprNode();
       expectChar(')', "')' expected");
       expectChar('{', "'{' expected");
       
-      // Build an if/else-if chain.
-      IfStmtNode* head = NULL;
-      IfStmtNode* tail = NULL;
-      StmtNode*   defaultBlock = NULL;
-      
-      while (!atEnd() && !(LA().kind == TT::opCHAR && LA().ivalue == '}'))
+      // Must start with 'case' per grammar; 'default' first is invalid.
+      if (LA().kind != TT::rwCASE)
       {
-         if (match(TT::rwCASE))
-         {
-            S32 line = LA(-1).pos.line;
-            // case X (or Y ...):
-            ExprNode* first = parseExprNode();
-            ExprNode* cond = emitEqNode(line, selector, first, string);
-            
-            while (match(TT::rwCASEOR))
-            {
-               ExprNode* more = parseExprNode();
-               ExprNode* eq   = emitEqNode(line, selector, more, string);
-               cond = IntBinaryExprNode::alloc(line, toBisonTok(TT::opOR), cond, eq);
-            }
-            
-            expectChar(':', "':' expected");
-            StmtNode* body = parseCaseBody();
-            
-            IfStmtNode* cur = IfStmtNode::alloc(line, cond, body, NULL, false);
-            if (!head) head = cur;
-            else tail->elseBlock = cur;
-            tail = cur;
-         }
-         else if (match(TT::rwDEFAULT))
-         {
-            expectChar(':', "':' expected");
-            defaultBlock = parseCaseBody();
-         }
-         else
-         {
-            errorHere(LA(), "expected 'case' or 'default' or '}'");
-         }
+         errorHere(LA(), "expected 'case' to start switch block");
       }
       
+      IfStmtNode* root = parseCaseBlock();
+      
       expectChar('}', "'}' expected");
-      if (!head) return defaultBlock;
-      head->elseBlock = defaultBlock;
-      return head;
+      
+      // Now attach selector to each case by expanding the stored lists into ORs of (selector == expr)
+      root->propagateSwitchExpr(selector, isString);
+      return root;
    }
    
    // Checks if the current token the start of a slot assignment.
