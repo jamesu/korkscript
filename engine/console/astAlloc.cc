@@ -242,10 +242,19 @@ StrConstNode *StrConstNode::alloc( S32 lineNumber, char *str, bool tag, bool doc
    StrConstNode *ret = (StrConstNode *) consoleAlloc(sizeof(StrConstNode));
    constructInPlace(ret);
    ret->dbgLineNumber = lineNumber;
-   ret->str = (char *) consoleAlloc(forceLen >= 0 ? forceLen : dStrlen(str) + 1);
+   ret->str = (char *) consoleAlloc(forceLen >= 0 ? forceLen+1 : dStrlen(str) + 1);
    ret->tag = tag;
    ret->doc = doc;
-   dStrcpy(ret->str, str);
+   
+   if (forceLen >= 0)
+   {
+      memcpy(ret->str, str, forceLen);
+      ret->str[forceLen] = '\0';
+   }
+   else
+   {
+      dStrcpy(ret->str, str);
+   }
    
    return ret;
 }
