@@ -399,6 +399,7 @@ SlotAssignOpNode *SlotAssignOpNode::alloc( S32 lineNumber, ExprNode *objectExpr,
    ret->op = op;
    ret->operand = 0;
    ret->valueExpr = valueExpr;
+   ret->subType = TypeReqNone;
    return ret;
 }
 

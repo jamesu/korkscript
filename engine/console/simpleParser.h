@@ -197,7 +197,7 @@ private:
    StmtNode* parseBlockStmt()
    {
       expectChar('{', "'{' expected");
-      StmtNode* list = parseStmtNodeListUntil(TT::opCHAR /* '}' */);
+      StmtNode* list = parseStmtNodeListUntilSC();
       expectChar('}', "'}' expected");
       return list;
    }
@@ -215,10 +215,10 @@ private:
    // Handles statement lists
    //
    // statement_list : (empty) | statement_list stmt
-   StmtNode* parseStmtNodeListUntil(TT endTok)
+   StmtNode* parseStmtNodeListUntilSC()
    {
       StmtNode* list = NULL;
-      while (!atEnd() && LA().kind != endTok)
+      while (!atEnd() && !(LA().kind == TT::opCHAR && LA().ivalue == '}'))
       {
          StmtNode* s = parseStmtNode();
          if (list)
@@ -676,7 +676,8 @@ private:
          }
          
          // args
-         argList = parseExprListOptUntil(')');
+         argList = matchChar(',') ? parseExprListOptUntil(')') : NULL;
+         
          expectChar(')', "')' expected");
       }
       
