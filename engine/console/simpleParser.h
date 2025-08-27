@@ -363,7 +363,7 @@ private:
       
       // If test omitted, treat as true (1).
       if (!test) test = IntNode::alloc(fTok.pos.line, 1);
-      return LoopStmtNode::alloc(fTok.pos.line, test, init, end, body, false);
+      return LoopStmtNode::alloc(fTok.pos.line, init, test, end, body, false);
    }
    
    // Handles foreach & foreach$ iterators
