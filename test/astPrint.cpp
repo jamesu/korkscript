@@ -13,7 +13,7 @@
  
  */
 
-bool gPrintTokens = false;
+bool gPrintBytecode = false;
 
 void MyLogger(ConsoleLogEntry::Level level, const char *consoleLine)
 {
@@ -350,6 +350,35 @@ static inline void printTree(const StmtNode* root) {
 
 }
 
+void dumpToInstructionsPrint(StmtNode* rootNode)
+{
+   // Convert AST to bytecode
+   CodeStream codeStream;
+   CodeBlock* cb = new CodeBlock();
+   Compiler::STEtoCode = &Compiler::evalSTEtoCode;
+   Compiler::resetTables();
+   CodeBlock::smInFunction = false;
+   
+   U32 lastIP = Compiler::compileBlock(rootNode, codeStream, 0) + 1;
+   
+   codeStream.emit(Compiler::OP_RETURN);
+   codeStream.emitCodeStream(&cb->codeSize, &cb->code, &cb->lineBreakPairs);
+   
+   
+   cb->lineBreakPairCount = codeStream.getNumLineBreaks();
+   
+   cb->globalStrings   = Compiler::getGlobalStringTable().build();
+   cb->globalStringsMaxLen =Compiler::getGlobalStringTable().totalLen;
+   
+   cb->functionStrings = Compiler::getFunctionStringTable().build();
+   cb->functionStringsMaxLen = Compiler::getFunctionStringTable().totalLen;
+   
+   cb->globalFloats    = Compiler::getGlobalFloatTable().build();
+   cb->functionFloats  = Compiler::getFunctionFloatTable().build();
+   
+   cb->dumpInstructions();
+}
+
 bool printAST(const char* buf, const char* filename)
 {
    Compiler::ConsoleParser myParser;
@@ -374,7 +403,27 @@ bool printAST(const char* buf, const char* filename)
    {
       astGen.processTokens();
       rootNode = astGen.parseProgram();
-      astprint::printTree(rootNode);
+      
+      if (gPrintBytecode)
+      {
+         // Convert AST to bytecode
+         Con::printf("== Parser Bytecode ==");
+         dumpToInstructionsPrint(rootNode);
+         Con::printf("== Bison Bytecode ==");
+         
+         Compiler::consoleAllocReset();
+         gStatementList = NULL;
+         CodeBlock::smCurrentParser = Compiler::getParserForFile(filename);
+         CodeBlock::smCurrentParser->setScanBuffer(theBuf.c_str(), filename);
+         CodeBlock::smCurrentParser->restart(NULL);
+         CodeBlock::smCurrentParser->parse();
+         
+         dumpToInstructionsPrint(gStatementList);
+      }
+      else
+      {
+         astprint::printTree(rootNode);
+      }
    }
    catch (SimpleParser::TokenError& e)
    {
@@ -396,9 +445,9 @@ int procMain(int argc, char **argv)
    
    for (int i=2; i<argc; i++)
    {
-      if (strcmp(argv[i], "-v") == 0)
+      if (strcmp(argv[i], "-b") == 0)
       {
-         gPrintTokens = true;
+         gPrintBytecode = true;
       }
    }
    
