@@ -232,12 +232,12 @@ FloatNode *FloatNode::alloc( S32 lineNumber, F64 value )
    return ret;
 }
 
-StrConstNode *StrConstNode::alloc( S32 lineNumber, char *str, bool tag, bool doc )
+StrConstNode *StrConstNode::alloc( S32 lineNumber, char *str, bool tag, bool doc, S32 forceLen)
 {
    StrConstNode *ret = (StrConstNode *) consoleAlloc(sizeof(StrConstNode));
    constructInPlace(ret);
    ret->dbgLineNumber = lineNumber;
-   ret->str = (char *) consoleAlloc(dStrlen(str) + 1);
+   ret->str = (char *) consoleAlloc(forceLen >= 0 ? forceLen : dStrlen(str) + 1);
    ret->tag = tag;
    ret->doc = doc;
    dStrcpy(ret->str, str);

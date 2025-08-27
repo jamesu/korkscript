@@ -4,14 +4,15 @@
 #include <string_view>
 #include <vector>
 #include <cctype>
+#include "core/stringTable.h"
 
 namespace SimpleLexer
 {
 
 struct SrcPos
 {
-   S64 line;
-   S64 col;
+   S32 line;
+   S32 col;
 };
 
 enum class TokenType : uint32_t
@@ -68,6 +69,7 @@ struct Token
       F64 value; // float/double/numeric value
       U64 ivalue; // integer value (e.g. bool or uint)
       StringOffset stringValue; // string position in buffer
+      StringTableEntry stString;
    };
    
    Token()
@@ -76,6 +78,29 @@ struct Token
       kind = TokenType::END;
       ivalue = 0;
    }
+   
+   Token(const Token& other)
+   {
+      kind = other.kind;
+      pos = other.pos;
+      ivalue = other.ivalue;
+   }
+   
+   Token(const TokenType theKind)
+   {
+      pos = {};
+      kind = theKind;
+      ivalue = 0;
+   }
+   
+   Token& operator=(const Token& other)
+   {
+      kind = other.kind;
+      pos = other.pos;
+      ivalue = other.ivalue;
+      return *this;
+   }
+   
    
    inline bool isNone() const
    {
@@ -91,13 +116,23 @@ struct Token
    {
       return kind == TokenType::END;
    }
+   
+   inline bool isChar(const Token& t, char ch)  const
+   {
+       return t.kind == TokenType::opCHAR && static_cast<char>(t.ivalue) == ch;
+   }
+   
+   inline char asChar() const
+   {
+      return static_cast<char>(ivalue);
+   }
 };
 
 class Tokenizer
 {
 public:
-   explicit Tokenizer(std::string_view src, std::string filename = {})
-   : mFilename(std::move(filename))
+   explicit Tokenizer(_StringTable* st, std::string_view src, std::string filename = {})
+   : mStringTable(st), mFilename(std::move(filename))
    {
       mPos = {};
       mBytePos = 0;
@@ -150,9 +185,13 @@ public:
    
    std::string stringValue(Token& t)
    {
-      if (t.kind == TokenType::TAGATOM || t.kind == TokenType::STRATOM || t.kind == TokenType::IDENT || t.kind == TokenType::VAR || t.kind == TokenType::DOCBLOCK)
+      if (t.kind == TokenType::TAGATOM || t.kind == TokenType::STRATOM || t.kind == TokenType::DOCBLOCK)
       {
          return std::string(mSource.begin() + t.stringValue.offset, mSource.begin() + t.stringValue.offset + t.stringValue.len);
+      }
+      else if (t.kind == TokenType::IDENT || t.kind == TokenType::VAR)
+      {
+        return t.stString;
       }
       else
       {
@@ -160,14 +199,23 @@ public:
       }
    }
    
+   char* bufferAtOffset(U32 offset)
+   {
+      return &mSource[offset];
+   }
+   
    std::string toString(Token &t)
    {
       char buf[4096];
       
-      if (t.kind == TokenType::TAGATOM || t.kind == TokenType::STRATOM || t.kind == TokenType::IDENT || t.kind == TokenType::VAR)
+      if (t.kind == TokenType::TAGATOM || t.kind == TokenType::STRATOM)
       {
          std::string ss(mSource.begin() + t.stringValue.offset, mSource.begin() + t.stringValue.offset + t.stringValue.len);
          snprintf(buf, sizeof(buf), "%s=\"%s\"", kindToString(t.kind), ss.c_str());
+      }
+      else if (t.kind == TokenType::IDENT || t.kind == TokenType::VAR)
+      {
+        return t.stString;
       }
       else if (t.kind == TokenType::DOCBLOCK)
       {
@@ -323,6 +371,9 @@ private:
    std::string mFilename;
    S64 mBytePos;
    SrcPos mPos;
+public:
+   _StringTable* mStringTable;
+private:
    
    // --- utilities
    bool eof(S64 off = 0) const
@@ -431,10 +482,12 @@ private:
       return false;
    }
    
+public:
    Token make(TokenType k)
    {
       Token t; t.kind = k; t.pos = mPos; return t;
    }
+private:
    
    Token makeChar(char ch)
    {
@@ -1022,7 +1075,7 @@ private:
          
          // Default to IDENT
          t.kind = TokenType::IDENT;
-         t.stringValue.len = mBytePos - t.stringValue.offset;
+         t.stString = mStringTable->insertn(&mSource[t.stringValue.offset], mBytePos - t.stringValue.offset);
       }
       
       return t;
@@ -1067,7 +1120,7 @@ private:
       // TODO: TYPEID match
       
       // Build token as a view into the source
-      t.stringValue.len = mBytePos - t.stringValue.offset;
+      t.stString = mStringTable->insertn(&mSource[t.stringValue.offset], mBytePos - t.stringValue.offset);
       return t;
    }
 };

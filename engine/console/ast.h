@@ -63,6 +63,7 @@ struct StmtNode
    ///
    void append(StmtNode *next);
    StmtNode *getNext() const { return next; }
+   StmtNode *getTail() { StmtNode* itr = this; while (itr->next) itr = itr->next; return next; }
 
    /// @}
 
@@ -335,7 +336,7 @@ struct StrConstNode : ExprNode
    bool tag;
    bool doc; // Specifies that this string is a documentation block.
 
-   static StrConstNode *alloc( S32 lineNumber, char *str, bool tag, bool doc = false );
+   static StrConstNode *alloc( S32 lineNumber, char *str, bool tag, bool doc = false, S32 forceLen = -1);
   
    U32 compile(CodeStream &codeStream, U32 ip, TypeReq type);
    TypeReq getPreferredType();

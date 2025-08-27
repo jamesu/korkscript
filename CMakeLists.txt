@@ -67,6 +67,7 @@ set(KS_SRCS
 	./engine/console/compiler.cc
 
 	./engine/console/simpleLexer.h
+	./engine/console/simpleParser.h
 )
 
 set(KS_TEST_SRCS
@@ -81,6 +82,13 @@ set(KS_LEX_TEST_SRCS
 	test/lexerCheck.cpp
 )
 
+set(KS_PARSER_TEST_SRCS
+	${KS_SRCS}
+	${KS_NETWORK_SRCS}
+	test/parserCheck.cpp
+)
+
 
 add_executable(cstest ${KS_TEST_SRCS})
 add_executable(cslextest ${KS_LEX_TEST_SRCS})
+add_executable(csparsetest ${KS_PARSER_TEST_SRCS})
