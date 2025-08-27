@@ -24,7 +24,6 @@
 #define _CODEBLOCK_H_
 
 #include "console/compiler.h"
-#include "console/consoleParser.h"
 
 class Stream;
 
@@ -39,8 +38,6 @@ private:
    static CodeBlock* smCurrentCodeBlock;
    
 public:
-   static bool                      smInFunction;
-   static Compiler::ConsoleParser * smCurrentParser;
    
    static CodeBlock* getCurrentBlock()
    {

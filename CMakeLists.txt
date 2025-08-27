@@ -49,15 +49,12 @@ set(KS_SRCS
 	./engine/console/consoleFunctions.cc
 	./engine/console/compiledEval.cc
 	./engine/console/scriptObject.cc
-	./engine/console/CMDscan.cc
 	./engine/console/consoleTypes.cc
 	./engine/console/codeBlock.cc
 	./engine/console/consoleDoc.cc
 	./engine/console/consoleObject.cc
-	./engine/console/cmdgram.cc
 	./engine/console/stringStack.cc
 	./engine/console/dynamicTypes.cc
-	./engine/console/consoleParser.cc
 	./engine/console/console.cc
 	./engine/console/consoleInternal.cc
 	./engine/console/simDictionary.cc
@@ -96,6 +93,4 @@ set(KS_AST_PRINT_SRCS
 
 
 add_executable(cstest ${KS_TEST_SRCS})
-add_executable(cslextest ${KS_LEX_TEST_SRCS})
-add_executable(csparsetest ${KS_PARSER_TEST_SRCS})
 add_executable(csprintast ${KS_AST_PRINT_SRCS})

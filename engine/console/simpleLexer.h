@@ -50,6 +50,20 @@ enum class TokenType : uint32_t
    // Single-char tokens get returned as their ASCII using opCHAR with value in int field.
    opCHAR,
    
+   // processed variants of opCHAR
+   opPCHAR_PLUS,      // '+'
+   opPCHAR_MINUS,     // '-'
+   opPCHAR_SLASH,     // '/'
+   opPCHAR_ASTERISK,  // '*'
+   opPCHAR_CARET,     // '^'
+   opPCHAR_PERCENT,   // '%'
+   opPCHAR_AMPERSAND, // '&'
+   opPCHAR_PIPE,      // '|'
+   opPCHAR_LESS,      // '<'
+   opPCHAR_GREATER,   // '>'
+   opPCHAR_EXCL,      // '!'
+   opPCHAR_TILDE,     // '~'
+   
    opCONCAT // @
 };
 

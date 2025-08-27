@@ -126,54 +126,30 @@ private:
       throw TokenError(tok, TT::NONE, msg);
    }
    
-   inline int toBisonOpTok(const SimpleLexer::Token& t)
+   inline SimpleLexer::TokenType processCharOp(const SimpleLexer::Token& t)
    {
       if (t.kind == TT::opCHAR)
       {
-         return t.asChar();
+         switch ((char)t.ivalue) {
+            case '+': return TT::opPCHAR_PLUS;
+            case '-': return TT::opPCHAR_MINUS;
+            case '/': return TT::opPCHAR_SLASH;
+            case '*': return TT::opPCHAR_ASTERISK;
+            case '^': return TT::opPCHAR_CARET;
+            case '%': return TT::opPCHAR_PERCENT;
+            case '&': return TT::opPCHAR_AMPERSAND;
+            case '|': return TT::opPCHAR_PIPE;
+            case '<': return TT::opPCHAR_LESS;
+            case '>': return TT::opPCHAR_GREATER;
+            case '!': return TT::opPCHAR_EXCL;
+            case '~': return TT::opPCHAR_TILDE;
+             default:
+               return TT::ILLEGAL;
+         }
       }
-      
-      switch (t.kind)
+      else
       {
-            // ---- comparison / logic ----
-         case TT::opEQ:         return 317;
-         case TT::opNE:         return 318;
-         case TT::opGE:         return 319;
-         case TT::opLE:         return 320;
-         case TT::opAND:        return 321;  // &&
-         case TT::opOR:         return 322;  // ||
-            
-            // ---- namespace & internal-slot ----
-         case TT::opCOLONCOLON: return 324;  // ::
-         case TT::opINTNAME:    return 299;  // ->
-         case TT::opINTNAMER:   return 300;  // -->
-            
-            // ---- inc/dec ----
-         case TT::opMINUSMINUS: return 301;  // --
-         case TT::opPLUSPLUS:   return 302;  // ++
-            
-            // ---- string/concat ----
-         case TT::opSTREQ:      return 323;  // $=
-         case TT::opSTRNE:      return 328;  // !$=
-            
-            // ---- shifts ----
-         case TT::opSHL:        return 304;  // <<
-         case TT::opSHR:        return 305;  // >>
-            
-            // ---- compound assigns ----
-         case TT::opPLASN:      return '+';  // +=
-         case TT::opMIASN:      return '-';  // -=
-         case TT::opMLASN:      return '*';  // *=
-         case TT::opDVASN:      return '/';  // /=
-         case TT::opMODASN:     return '%';  // %=
-         case TT::opANDASN:     return '&';  // &=
-         case TT::opXORASN:     return '^';  // ^=
-         case TT::opORASN:      return '|';  // |=
-         case TT::opSLASN:      return 304;  // <<=
-         case TT::opSRASN:      return 305;  // >>=
-            
-         default:
-            return -1;
+         return t.kind;
       }
    }
    
@@ -394,7 +370,7 @@ private:
       }
       else
       {
-         return IntBinaryExprNode::alloc(line, toBisonOpTok(TT::opEQ), left, right);
+         return IntBinaryExprNode::alloc(line, processCharOp(TT::opEQ), left, right);
       }
    }
    
@@ -1083,7 +1059,7 @@ private:
             return AssignExprNode::alloc(tok.pos.line, v->varName, v->arrayIndex, r);            // =
          }
          // all op*ASN kinds go through AssignOpExprNode with tok.kind payload
-         return AssignOpExprNode::alloc(tok.pos.line, v->varName, v->arrayIndex, r, toBisonOpTok(TOK(tok)));
+         return AssignOpExprNode::alloc(tok.pos.line, v->varName, v->arrayIndex, r, processCharOp(TOK(tok)));
       }
       if (SlotAccessNode* s = dynamic_cast<SlotAccessNode*>(l))
       {
@@ -1091,7 +1067,7 @@ private:
          {
             return SlotAssignNode::alloc(tok.pos.line, s->objectExpr, s->arrayExpr, s->slotName, r);
          }
-         return SlotAssignOpNode::alloc(tok.pos.line, s->objectExpr, s->slotName, s->arrayExpr, toBisonOpTok(TOK(tok)), r);
+         return SlotAssignOpNode::alloc(tok.pos.line, s->objectExpr, s->slotName, s->arrayExpr, processCharOp(TOK(tok)), r);
       }
       errorHere(tok, "left-hand side of assignment must be a variable");
       return NULL;
@@ -1190,9 +1166,9 @@ private:
                {
                      // Single-char arithmetic etc.
                   case '+': case '-': case '*': case '/':
-                     return FloatBinaryExprNode::alloc(op.pos.line, op.asChar(), left, right);
+                     return FloatBinaryExprNode::alloc(op.pos.line, processCharOp(op), left, right);
                   case '%': case '^': case '&': case '|': case '<': case '>':
-                     return IntBinaryExprNode::alloc(op.pos.line, op.asChar(), left, right);
+                     return IntBinaryExprNode::alloc(op.pos.line, processCharOp(op), left, right);
                   default:
                      errorHere(op, "unsupported operator in expression");
                      break;
@@ -1214,13 +1190,13 @@ private:
             if (VarNode* v = dynamic_cast<VarNode*>(left))
             {
                ExprNode* one = FloatNode::alloc(op.pos.line, 1);
-               int asn = (op.kind == TT::opPLUSPLUS) ? '+' : '-';
+               TT asn = (op.kind == TT::opPLUSPLUS) ? TT::opPCHAR_PLUS : TT::opPCHAR_MINUS;
                return AssignOpExprNode::alloc(op.pos.line, v->varName, v->arrayIndex, one, asn);
             }
             else if (SlotAccessNode* s = dynamic_cast<SlotAccessNode*>(left))
             {
                ExprNode* one = FloatNode::alloc(op.pos.line, 1);
-               int asn = (op.kind == TT::opPLUSPLUS) ? '+' : '-';
+               TT asn = (op.kind == TT::opPLUSPLUS) ? TT::opPCHAR_PLUS : TT::opPCHAR_MINUS;
                return SlotAssignOpNode::alloc(op.pos.line, s->objectExpr, s->slotName, s->arrayExpr, asn, one);
             }
             errorHere(op, "postfix ++/-- requires a variable");
@@ -1233,7 +1209,7 @@ private:
          case TT::opSHL: case TT::opSHR:
          {
             ExprNode* right = parseExpression(associativity(op)==LEFT ? opBP : (opBP-1));
-            return IntBinaryExprNode::alloc(op.pos.line, toBisonOpTok(op.kind), left, right);
+            return IntBinaryExprNode::alloc(op.pos.line, processCharOp(op.kind), left, right);
          }
             
          case TT::opSTREQ:
@@ -1334,9 +1310,9 @@ private:
                   expectChar(')', ") expected");
                   return e;
                }
-               case '-':  return FloatUnaryExprNode::alloc(t.pos.line, '-', parseExpression(110)); // bind tighter than *,/,%  (any high > 100)
-               case '!':  return IntUnaryExprNode::alloc(t.pos.line,   '!', parseExpression(110));
-               case '~':  return IntUnaryExprNode::alloc(t.pos.line,   '~', parseExpression(110));
+               case '-':  return FloatUnaryExprNode::alloc(t.pos.line, TT::opPCHAR_MINUS, parseExpression(110)); // bind tighter than *,/,%  (any high > 100)
+               case '!':  return IntUnaryExprNode::alloc(t.pos.line,   TT::opPCHAR_EXCL, parseExpression(110));
+               case '~':  return IntUnaryExprNode::alloc(t.pos.line,   TT::opPCHAR_TILDE, parseExpression(110));
                case '*':  return TTagDerefNode::alloc(t.pos.line,          parseExpression(110));
             }
             break;

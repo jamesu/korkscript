@@ -31,10 +31,8 @@
 
 using namespace Compiler;
 
-bool           CodeBlock::smInFunction = false;
 CodeBlock *    CodeBlock::smCodeBlockList = NULL;
 CodeBlock *    CodeBlock::smCurrentCodeBlock = NULL;
-ConsoleParser *CodeBlock::smCurrentParser = NULL;
 
 //-------------------------------------------------------------------------
 
@@ -472,18 +470,11 @@ bool CodeBlock::compile(const char *codeFileName, StringTableEntry fileName, con
    
    STEtoCode = &compileSTEtoCode;
    
-   gStatementList = NULL;
+   StmtNode* rootNode = NULL;
    
-   // Set up the parser.
-   smCurrentParser = getParserForFile(fileName);
-   AssertISV(smCurrentParser, avar("CodeBlock::compile - no parser available for '%s'!", fileName));
+   // TOFIX
    
-   // Now do some parsing.
-   smCurrentParser->setScanBuffer(script, fileName);
-   smCurrentParser->restart(NULL);
-   smCurrentParser->parse();
-   
-   if(gSyntaxError)
+   if(!rootNode)
    {
       consoleAllocReset();
       return false;
@@ -497,13 +488,12 @@ bool CodeBlock::compile(const char *codeFileName, StringTableEntry fileName, con
    // Reset all our value tables...
    resetTables();
    
-   smInFunction = false;
-   
    CodeStream codeStream;
+   codeStream.setFilename(fileName);
    U32 lastIp;
-   if(gStatementList)
+   if(rootNode)
    {
-      lastIp = compileBlock(gStatementList, codeStream, 0) + 1;
+      lastIp = compileBlock(rootNode, codeStream, 0) + 1;
    }
    else
    {
@@ -594,18 +584,11 @@ const char *CodeBlock::compileExec(StringTableEntry fileName, const char *inStri
    if(name)
       addToCodeList();
    
-   gStatementList = NULL;
+   StmtNode* rootNode = NULL;
    
-   // Set up the parser.
-   smCurrentParser = getParserForFile(fileName);
-   AssertISV(smCurrentParser, avar("CodeBlock::compile - no parser available for '%s'!", fileName));
+   // TOFIX
    
-   // Now do some parsing.
-   smCurrentParser->setScanBuffer(string, fileName);
-   smCurrentParser->restart(NULL);
-   smCurrentParser->parse();
-   
-   if(!gStatementList)
+   if(!rootNode)
    {
       delete this;
       return "";
@@ -613,10 +596,9 @@ const char *CodeBlock::compileExec(StringTableEntry fileName, const char *inStri
    
    resetTables();
    
-   smInFunction = false;
-   
    CodeStream codeStream;
-   U32 lastIp = compileBlock(gStatementList, codeStream, 0);
+   codeStream.setFilename(fileName);
+   U32 lastIp = compileBlock(rootNode, codeStream, 0);
    
    lineBreakPairCount = codeStream.getNumLineBreaks();
    
@@ -662,14 +644,14 @@ void CodeBlock::decRefCount()
 void CodeBlock::dumpInstructions( U32 startIp, bool upToReturn )
 {
    U32 ip = startIp;
-   smInFunction = false;
    U32 endFuncIp = 0;
+   bool inFunction = false;
    
    while( ip < codeSize )
    {
       if (ip > endFuncIp)
       {
-         smInFunction = false;
+         inFunction = false;
       }
       
       switch( code[ ip ++ ] )
@@ -691,7 +673,7 @@ void CodeBlock::dumpInstructions( U32 startIp, bool upToReturn )
             // Skip args.
                            
             ip += 9 + (argc * 2);
-            smInFunction = true;
+            inFunction = true;
             break;
          }
             
@@ -1177,7 +1159,7 @@ void CodeBlock::dumpInstructions( U32 startIp, bool upToReturn )
 
          case OP_LOADIMMED_FLT:
          {
-            F64 val = (smInFunction ? functionFloats : globalFloats)[ code[ ip ] ];
+            F64 val = (inFunction ? functionFloats : globalFloats)[ code[ ip ] ];
             Con::printf( "%i: OP_LOADIMMED_FLT val=%f", ip - 1, val );
             ++ ip;
             break;
@@ -1185,7 +1167,7 @@ void CodeBlock::dumpInstructions( U32 startIp, bool upToReturn )
 
          case OP_TAG_TO_STR:
          {
-            const char* str = (smInFunction ? functionStrings : globalStrings) + code[ ip ];
+            const char* str = (inFunction ? functionStrings : globalStrings) + code[ ip ];
             Con::printf( "%i: OP_TAG_TO_STR str=%s", ip - 1, str );
             ++ ip;
             break;
@@ -1193,7 +1175,7 @@ void CodeBlock::dumpInstructions( U32 startIp, bool upToReturn )
          
          case OP_LOADIMMED_STR:
          {
-            const char* str = (smInFunction ? functionStrings : globalStrings) + code[ ip ];
+            const char* str = (inFunction ? functionStrings : globalStrings) + code[ ip ];
             Con::printf( "%i: OP_LOADIMMED_STR str=%s", ip - 1, str );
             ++ ip;
             break;
@@ -1201,7 +1183,7 @@ void CodeBlock::dumpInstructions( U32 startIp, bool upToReturn )
 
          case OP_DOCBLOCK_STR:
          {
-            const char* str = (smInFunction ? functionStrings : globalStrings) + code[ ip ];
+            const char* str = (inFunction ? functionStrings : globalStrings) + code[ ip ];
             Con::printf( "%i: OP_DOCBLOCK_STR str=%s", ip - 1, str );
             ++ ip;
             break;
@@ -1319,7 +1301,7 @@ void CodeBlock::dumpInstructions( U32 startIp, bool upToReturn )
 
          case OP_ASSERT:
          {
-            const char* message = (smInFunction ? functionStrings : globalStrings) + code[ ip ];
+            const char* message = (inFunction ? functionStrings : globalStrings) + code[ ip ];
             Con::printf( "%i: OP_ASSERT message=%s", ip - 1, message );
             ++ ip;
             break;
@@ -1374,6 +1356,4 @@ void CodeBlock::dumpInstructions( U32 startIp, bool upToReturn )
             break;
       }
    }
-   
-   smInFunction = false;
 }

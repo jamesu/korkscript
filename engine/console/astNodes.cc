@@ -24,6 +24,7 @@
 #include "console/console.h"
 #include "console/telnetDebugger.h"
 
+#include "console/simpleLexer.h"
 #include "console/ast.h"
 #include "core/tAlgorithm.h"
 
@@ -35,13 +36,15 @@
 
 #include "console/simBase.h"
 
+using TT = SimpleLexer::TokenType;
+
 template< typename T >
 struct Token
 {
    T value;
    S32 lineNumber;
 };
-#include "console/cmdgram.h"
+#include "console/simpleLexer.h"
 
 
 namespace Compiler
@@ -68,7 +71,6 @@ void StmtNode::addBreakLine(CodeStream &code)
 StmtNode::StmtNode()
 {
    next = NULL;
-   dbgFileName = CodeBlock::smCurrentParser->getCurrentFile();
 }
 
 void StmtNode::setPackage(StringTableEntry)
@@ -176,7 +178,7 @@ U32 BreakStmtNode::compileStmt(CodeStream &codeStream, U32 ip)
    }
    else
    {
-      Con::warnf(ConsoleLogEntry::General, "%s (%d): break outside of loop... ignoring.", dbgFileName, dbgLineNumber);
+      Con::warnf(ConsoleLogEntry::General, "%s (%d): break outside of loop... ignoring.", codeStream.getFilename(), dbgLineNumber);
    }
    return codeStream.tell();
 }
@@ -193,7 +195,7 @@ U32 ContinueStmtNode::compileStmt(CodeStream &codeStream, U32 ip)
    }
    else
    {
-      Con::warnf(ConsoleLogEntry::General, "%s (%d): continue outside of loop... ignoring.", dbgFileName, dbgLineNumber);
+      Con::warnf(ConsoleLogEntry::General, "%s (%d): continue outside of loop... ignoring.", codeStream.getFilename(), dbgLineNumber);
    }
    return codeStream.tell();
 }
@@ -244,10 +246,10 @@ ExprNode *IfStmtNode::getSwitchOR(ExprNode *left, ExprNode *list, bool string)
    if(string)
       test = StreqExprNode::alloc( left->dbgLineNumber, left, list, true );
    else
-      test = IntBinaryExprNode::alloc( left->dbgLineNumber, opEQ, left, list );
+      test = IntBinaryExprNode::alloc( left->dbgLineNumber, SimpleLexer::TokenType::opEQ, left, list );
    if(!nextExpr)
       return test;
-   return IntBinaryExprNode::alloc( test->dbgLineNumber, opOR, test, getSwitchOR( left, nextExpr, string ) );
+   return IntBinaryExprNode::alloc( test->dbgLineNumber, SimpleLexer::TokenType::opOR, test, getSwitchOR( left, nextExpr, string ) );
 }
 
 void IfStmtNode::propagateSwitchExpr(ExprNode *left, bool string)
@@ -461,16 +463,16 @@ U32 FloatBinaryExprNode::compile(CodeStream &codeStream, U32 ip, TypeReq type)
    U32 operand = OP_INVALID;
    switch(op)
    {
-   case '+':
+   case SimpleLexer::TokenType::opPCHAR_PLUS:
       operand = OP_ADD;
       break;
-   case '-':
+   case SimpleLexer::TokenType::opPCHAR_MINUS:
       operand = OP_SUB;
       break;
-   case '/':
+   case SimpleLexer::TokenType::opPCHAR_SLASH:
       operand = OP_DIV;
       break;
-   case '*':
+   case SimpleLexer::TokenType::opPCHAR_ASTERISK:
       operand = OP_MUL;
       break;
    }
@@ -492,52 +494,52 @@ void IntBinaryExprNode::getSubTypeOperand()
    subType = TypeReqUInt;
    switch(op)
    {
-   case '^':
+   case SimpleLexer::TokenType::opPCHAR_CARET:
       operand = OP_XOR;
       break;
-   case '%':
+   case SimpleLexer::TokenType::opPCHAR_PERCENT:
       operand = OP_MOD;
       break;
-   case '&':
+   case SimpleLexer::TokenType::opPCHAR_AMPERSAND:
       operand = OP_BITAND;
       break;
-   case '|':
+   case SimpleLexer::TokenType::opPCHAR_PIPE:
       operand = OP_BITOR;
       break;
-   case '<':
+   case SimpleLexer::TokenType::opPCHAR_LESS:
       operand = OP_CMPLT;
       subType = TypeReqFloat;
       break;
-   case '>':
+   case SimpleLexer::TokenType::opPCHAR_GREATER:
       operand = OP_CMPGR;
       subType = TypeReqFloat;
       break;
-   case opGE:
+      case SimpleLexer::TokenType::opGE:
       operand = OP_CMPGE;
       subType = TypeReqFloat;
       break;
-   case opLE:
+      case SimpleLexer::TokenType::opLE:
       operand = OP_CMPLE;
       subType = TypeReqFloat;
       break;
-   case opEQ:
+      case SimpleLexer::TokenType::opEQ:
       operand = OP_CMPEQ;
       subType = TypeReqFloat;
       break;
-   case opNE:
+      case SimpleLexer::TokenType::opNE:
       operand = OP_CMPNE;
       subType = TypeReqFloat;
       break;
-   case opOR:
+      case SimpleLexer::TokenType::opOR:
       operand = OP_OR;
       break;
-   case opAND:
+      case SimpleLexer::TokenType::opAND:
       operand = OP_AND;
       break;
-   case opSHR:
+      case SimpleLexer::TokenType::opSHR:
       operand = OP_SHR;
       break;
-   case opSHL:
+      case SimpleLexer::TokenType::opSHL:
       operand = OP_SHL;
       break;
    }
@@ -636,7 +638,7 @@ U32 CommaCatExprNode::compile(CodeStream &codeStream, U32 ip, TypeReq type)
 
    // But we're paranoid, so accept (but whine) if we get an oddity...
    if(type == TypeReqUInt || type == TypeReqFloat)
-      Con::warnf(ConsoleLogEntry::General, "%s (%d): converting comma string to a number... probably wrong.", dbgFileName, dbgLineNumber);
+      Con::warnf(ConsoleLogEntry::General, "%s (%d): converting comma string to a number... probably wrong.", codeStream.getFilename(), dbgLineNumber);
    if(type == TypeReqUInt)
       codeStream.emit(OP_STR_TO_UINT);
    else if(type == TypeReqFloat)
@@ -655,13 +657,14 @@ U32 IntUnaryExprNode::compile(CodeStream &codeStream, U32 ip, TypeReq type)
 {
    integer = true;
    TypeReq prefType = expr->getPreferredType();
-   if(op == '!' && (prefType == TypeReqFloat || prefType == TypeReqString))
+   if(op == SimpleLexer::TokenType::opPCHAR_EXCL && // !
+      (prefType == TypeReqFloat || prefType == TypeReqString))
       integer = false;
    
    ip = expr->compile(codeStream, ip, integer ? TypeReqUInt : TypeReqFloat);
-   if(op == '!')
+   if(op == SimpleLexer::TokenType::opPCHAR_EXCL) // !
       codeStream.emit(integer ? OP_NOT : OP_NOTF);
-   else if(op == '~')
+   else if(op == SimpleLexer::TokenType::opPCHAR_TILDE) // ~
       codeStream.emit(OP_ONESCOMPLEMENT);
    if(type != TypeReqUInt)
       codeStream.emit(conversionOp(TypeReqUInt, type));
@@ -832,7 +835,7 @@ U32 StrConstNode::compile(CodeStream &codeStream, U32 ip, TypeReq type)
    }
    else if (type != TypeReqNone)
    {
-      fVal = consoleStringToNumber(str, dbgFileName, dbgLineNumber);
+      fVal = consoleStringToNumber(str, codeStream.getFilename(), dbgLineNumber);
       if(type == TypeReqFloat)
       {
          index = getCurrentFloatTable()->add(fVal);
@@ -883,7 +886,7 @@ U32 ConstantNode::compile(CodeStream &codeStream, U32 ip, TypeReq type)
    }
    else if (type != TypeReqNone)
    {
-      fVal = consoleStringToNumber(value, dbgFileName, dbgLineNumber);
+      fVal = consoleStringToNumber(value, codeStream.getFilename(), dbgLineNumber);
       if(type == TypeReqFloat)
          index = getCurrentFloatTable()->add(fVal);
    }
@@ -1006,47 +1009,47 @@ TypeReq AssignExprNode::getPreferredType()
 
 //------------------------------------------------------------
 
-static void getAssignOpTypeOp(S32 op, TypeReq &type, U32 &operand)
+static void getAssignOpTypeOp(SimpleLexer::TokenType op, TypeReq &type, U32 &operand)
 {
    switch(op)
    {
-   case '+':
+   case SimpleLexer::TokenType::opPCHAR_PLUS:
       type = TypeReqFloat;
       operand = OP_ADD;
       break;
-   case '-':
+   case SimpleLexer::TokenType::opPCHAR_MINUS:
       type = TypeReqFloat;
       operand = OP_SUB;
       break;
-   case '*':
+   case SimpleLexer::TokenType::opPCHAR_ASTERISK:
       type = TypeReqFloat;
       operand = OP_MUL;
       break;
-   case '/':
+   case SimpleLexer::TokenType::opPCHAR_SLASH:
       type = TypeReqFloat;
       operand = OP_DIV;
       break;
-   case '%':
+   case SimpleLexer::TokenType::opPCHAR_PERCENT:
       type = TypeReqUInt;
       operand = OP_MOD;
       break;
-   case '&':
+   case SimpleLexer::TokenType::opPCHAR_AMPERSAND:
       type = TypeReqUInt;
       operand = OP_BITAND;
       break;
-   case '^':
+   case SimpleLexer::TokenType::opPCHAR_CARET:
       type = TypeReqUInt;
       operand = OP_XOR;
       break;
-   case '|':
+   case SimpleLexer::TokenType::opPCHAR_PIPE:
       type = TypeReqUInt;
       operand = OP_BITOR;
       break;
-   case opSHL:
+      case SimpleLexer::TokenType::opSHL:
       type = TypeReqUInt;
       operand = OP_SHL;
       break;
-   case opSHR:
+      case SimpleLexer::TokenType::opSHR:
       type = TypeReqUInt;
       operand = OP_SHR;
       break;
@@ -1556,13 +1559,9 @@ U32 FunctionDeclStmtNode::compileStmt(CodeStream &codeStream, U32 ip)
       argc++;
    }
    
-   CodeBlock::smInFunction = true;
-   
    precompileIdent(fnName);
    precompileIdent(nameSpace);
    precompileIdent(package);
-   
-   CodeBlock::smInFunction = false;
    
    codeStream.emit(OP_FUNC_DECL);
    codeStream.emitSTE(fnName);
@@ -1576,14 +1575,13 @@ U32 FunctionDeclStmtNode::compileStmt(CodeStream &codeStream, U32 ip)
    {
       codeStream.emitSTE(walk->varName);
    }
-   CodeBlock::smInFunction = true;
+
    ip = compileBlock(stmts, codeStream, ip);
 
    // Add break so breakpoint can be set at closing brace or
    // in empty function.
    addBreakLine(codeStream);
 
-   CodeBlock::smInFunction = false;
    codeStream.emit(OP_RETURN_VOID);
    
    codeStream.patch(endIp, codeStream.tell());

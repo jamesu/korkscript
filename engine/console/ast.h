@@ -70,7 +70,6 @@ struct StmtNode
    /// @name Debug Info
    /// @{
 
-   StringTableEntry dbgFileName; ///< Name of file this node is associated with.
    S32 dbgLineNumber;            ///< Line number this node is associated with.
 #ifdef DEBUG_AST_NODES
    virtual String dbgStmtType() const = 0;
@@ -196,14 +195,14 @@ struct IterStmtNode : StmtNode
 /// A binary mathematical expression (ie, left op right).
 struct BinaryExprNode : ExprNode
 {
-   S32 op;
+   SimpleLexer::TokenType op;
    ExprNode *left;
    ExprNode *right;
 };
 
 struct FloatBinaryExprNode : BinaryExprNode
 {
-   static FloatBinaryExprNode *alloc( S32 lineNumber, S32 op, ExprNode *left, ExprNode *right );
+   static FloatBinaryExprNode *alloc( S32 lineNumber, const SimpleLexer::TokenType op, ExprNode *left, ExprNode *right );
   
    U32 compile(CodeStream &codeStream, U32 ip, TypeReq type);
    TypeReq getPreferredType();
@@ -228,7 +227,7 @@ struct IntBinaryExprNode : BinaryExprNode
    TypeReq subType;
    U32 operand;
 
-   static IntBinaryExprNode *alloc( S32 lineNumber, S32 op, ExprNode *left, ExprNode *right );
+   static IntBinaryExprNode *alloc( S32 lineNumber, const SimpleLexer::TokenType op, ExprNode *left, ExprNode *right );
 
    void getSubTypeOperand();
    
@@ -269,11 +268,11 @@ struct CommaCatExprNode : BinaryExprNode
 
 struct IntUnaryExprNode : ExprNode
 {
-   S32 op;
+   SimpleLexer::TokenType op;
    ExprNode *expr;
    bool integer;
 
-   static IntUnaryExprNode *alloc( S32 lineNumber, S32 op, ExprNode *expr );
+   static IntUnaryExprNode *alloc( S32 lineNumber, const SimpleLexer::TokenType op, ExprNode *expr );
   
    U32 compile(CodeStream &codeStream, U32 ip, TypeReq type);
    TypeReq getPreferredType();
@@ -282,10 +281,10 @@ struct IntUnaryExprNode : ExprNode
 
 struct FloatUnaryExprNode : ExprNode
 {
-   S32 op;
+   SimpleLexer::TokenType op;
    ExprNode *expr;
 
-   static FloatUnaryExprNode *alloc( S32 lineNumber, S32 op, ExprNode *expr );
+   static FloatUnaryExprNode *alloc( S32 lineNumber, const SimpleLexer::TokenType op, ExprNode *expr );
   
    U32 compile(CodeStream &codeStream, U32 ip, TypeReq type);
    TypeReq getPreferredType();
@@ -383,11 +382,11 @@ struct AssignOpExprNode : ExprNode
    StringTableEntry varName;
    ExprNode *expr;
    ExprNode *arrayIndex;
-   S32 op;
+   SimpleLexer::TokenType op;
    U32 operand;
    TypeReq subType;
 
-   static AssignOpExprNode *alloc( S32 lineNumber, StringTableEntry varName, ExprNode *arrayIndex, ExprNode *expr, S32 op );
+   static AssignOpExprNode *alloc( S32 lineNumber, StringTableEntry varName, ExprNode *arrayIndex, ExprNode *expr, const SimpleLexer::TokenType op );
   
    U32 compile(CodeStream &codeStream, U32 ip, TypeReq type);
    TypeReq getPreferredType();
@@ -518,12 +517,12 @@ struct SlotAssignOpNode : ExprNode
 {
    ExprNode *objectExpr, *arrayExpr;
    StringTableEntry slotName;
-   S32 op;
+   SimpleLexer::TokenType op;
    ExprNode *valueExpr;
    U32 operand;
    TypeReq subType;
 
-   static SlotAssignOpNode *alloc( S32 lineNumber, ExprNode *objectExpr, StringTableEntry slotName, ExprNode *arrayExpr, S32 op, ExprNode *valueExpr );
+   static SlotAssignOpNode *alloc( S32 lineNumber, ExprNode *objectExpr, StringTableEntry slotName, ExprNode *arrayExpr, const SimpleLexer::TokenType op, ExprNode *valueExpr );
   
    U32 compile(CodeStream &codeStream, U32 ip, TypeReq type);
    TypeReq getPreferredType();
@@ -575,7 +574,6 @@ struct FunctionDeclStmtNode : StmtNode
    DBG_STMT_TYPE(FunctionDeclStmtNode);
 };
 
-extern StmtNode *gStatementList;
 extern ExprEvalState gEvalState;
 
 #endif

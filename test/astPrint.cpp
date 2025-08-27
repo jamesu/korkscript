@@ -1,8 +1,8 @@
 #include "platform/platform.h"
 #include "console/console.h"
+#include "console/simpleLexer.h"
 #include "console/ast.h"
 #include "console/compiler.h"
-#include "console/simpleLexer.h"
 #include "console/simpleParser.h"
 #include "core/fileStream.h"
 #include <stdio.h>
@@ -354,10 +354,10 @@ void dumpToInstructionsPrint(StmtNode* rootNode)
 {
    // Convert AST to bytecode
    CodeStream codeStream;
+   codeStream.setFilename("input");
    CodeBlock* cb = new CodeBlock();
    Compiler::STEtoCode = &Compiler::evalSTEtoCode;
    Compiler::resetTables();
-   CodeBlock::smInFunction = false;
    
    U32 lastIP = Compiler::compileBlock(rootNode, codeStream, 0) + 1;
    
@@ -381,18 +381,6 @@ void dumpToInstructionsPrint(StmtNode* rootNode)
 
 bool printAST(const char* buf, const char* filename)
 {
-   Compiler::ConsoleParser myParser;
-   myParser.next = NULL;
-   myParser.getCurrentFile = [](){
-      return "input";
-   };
-   myParser.getCurrentLine = [](){
-      return (S32)0;
-   };
-   
-   // Now parse using new API
-   CodeBlock::smCurrentParser = &myParser;
-   
    std::string theBuf(buf);
    SimpleLexer::Tokenizer lex(StringTable, theBuf, filename);
    SimpleParser::ASTGen astGen(&lex);
@@ -409,16 +397,6 @@ bool printAST(const char* buf, const char* filename)
          // Convert AST to bytecode
          Con::printf("== Parser Bytecode ==");
          dumpToInstructionsPrint(rootNode);
-         Con::printf("== Bison Bytecode ==");
-         
-         Compiler::consoleAllocReset();
-         gStatementList = NULL;
-         CodeBlock::smCurrentParser = Compiler::getParserForFile(filename);
-         CodeBlock::smCurrentParser->setScanBuffer(theBuf.c_str(), filename);
-         CodeBlock::smCurrentParser->restart(NULL);
-         CodeBlock::smCurrentParser->parse();
-         
-         dumpToInstructionsPrint(gStatementList);
       }
       else
       {

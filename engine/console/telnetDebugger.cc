@@ -25,6 +25,7 @@
 #include "console/telnetDebugger.h"
 #include "core/stringTable.h"
 #include "console/consoleInternal.h"
+#include "console/simpleLexer.h"
 #include "console/ast.h"
 #include "console/compiler.h"
 #include "core/tempAlloc.h"

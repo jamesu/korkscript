@@ -112,7 +112,7 @@ IterStmtNode* IterStmtNode::alloc( S32 lineNumber, StringTableEntry varName, Exp
    return ret;
 }
 
-FloatBinaryExprNode *FloatBinaryExprNode::alloc( S32 lineNumber, S32 op, ExprNode *left, ExprNode *right )
+FloatBinaryExprNode *FloatBinaryExprNode::alloc( S32 lineNumber, const SimpleLexer::TokenType op, ExprNode *left, ExprNode *right )
 {
    FloatBinaryExprNode *ret = (FloatBinaryExprNode *) consoleAlloc(sizeof(FloatBinaryExprNode));
    constructInPlace(ret);
@@ -125,7 +125,7 @@ FloatBinaryExprNode *FloatBinaryExprNode::alloc( S32 lineNumber, S32 op, ExprNod
    return ret;
 }
 
-IntBinaryExprNode *IntBinaryExprNode::alloc( S32 lineNumber, S32 op, ExprNode *left, ExprNode *right )
+IntBinaryExprNode *IntBinaryExprNode::alloc( S32 lineNumber, const SimpleLexer::TokenType op, ExprNode *left, ExprNode *right )
 {
    IntBinaryExprNode *ret = (IntBinaryExprNode *) consoleAlloc(sizeof(IntBinaryExprNode));
    constructInPlace(ret);
@@ -175,7 +175,7 @@ CommaCatExprNode *CommaCatExprNode::alloc( S32 lineNumber, ExprNode *left, ExprN
    return ret;
 }
 
-IntUnaryExprNode *IntUnaryExprNode::alloc( S32 lineNumber, S32 op, ExprNode *expr )
+IntUnaryExprNode *IntUnaryExprNode::alloc( S32 lineNumber, const SimpleLexer::TokenType op, ExprNode *expr )
 {
    IntUnaryExprNode *ret = (IntUnaryExprNode *) consoleAlloc(sizeof(IntUnaryExprNode));
    constructInPlace(ret);
@@ -186,7 +186,7 @@ IntUnaryExprNode *IntUnaryExprNode::alloc( S32 lineNumber, S32 op, ExprNode *exp
    return ret;
 }
 
-FloatUnaryExprNode *FloatUnaryExprNode::alloc( S32 lineNumber, S32 op, ExprNode *expr )
+FloatUnaryExprNode *FloatUnaryExprNode::alloc( S32 lineNumber, const SimpleLexer::TokenType op, ExprNode *expr )
 {
    FloatUnaryExprNode *ret = (FloatUnaryExprNode *) consoleAlloc(sizeof(FloatUnaryExprNode));
    constructInPlace(ret);
@@ -281,7 +281,7 @@ AssignExprNode *AssignExprNode::alloc( S32 lineNumber, StringTableEntry varName,
    return ret;
 }
 
-AssignOpExprNode *AssignOpExprNode::alloc( S32 lineNumber, StringTableEntry varName, ExprNode *arrayIndex, ExprNode *expr, S32 op )
+AssignOpExprNode *AssignOpExprNode::alloc( S32 lineNumber, StringTableEntry varName, ExprNode *arrayIndex, ExprNode *expr, const SimpleLexer::TokenType op )
 {
    AssignOpExprNode *ret = (AssignOpExprNode *) consoleAlloc(sizeof(AssignOpExprNode));
    constructInPlace(ret);
@@ -397,7 +397,7 @@ SlotAssignNode *SlotAssignNode::alloc( S32 lineNumber, ExprNode *objectExpr, Exp
    return ret;
 }
 
-SlotAssignOpNode *SlotAssignOpNode::alloc( S32 lineNumber, ExprNode *objectExpr, StringTableEntry slotName, ExprNode *arrayExpr, S32 op, ExprNode *valueExpr )
+SlotAssignOpNode *SlotAssignOpNode::alloc( S32 lineNumber, ExprNode *objectExpr, StringTableEntry slotName, ExprNode *arrayExpr, const SimpleLexer::TokenType op, ExprNode *valueExpr )
 {
    SlotAssignOpNode *ret = (SlotAssignOpNode *) consoleAlloc(sizeof(SlotAssignOpNode));
    constructInPlace(ret);

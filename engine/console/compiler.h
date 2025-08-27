@@ -34,6 +34,7 @@ class Stream;
 class DataChunker;
 
 #include "platform/platform.h"
+#include "console/simpleLexer.h"
 #include "console/ast.h"
 #include "console/codeBlock.h"
 
@@ -329,9 +330,11 @@ protected:
    
    Vector<U32> mBreakLines; ///< Line numbers
    
+   const char* mFilename;
+   
 public:
 
-   CodeStream() : mCode(0), mCodeHead(NULL), mCodePos(0)
+   CodeStream() : mCode(0), mCodeHead(NULL), mCodePos(0), mFilename(NULL)
    {
    }
    
@@ -345,6 +348,9 @@ public:
          delete mCode;
       }
    }
+   
+   void setFilename(const char* name) { mFilename = name; }
+   const char* getFilename() const { return mFilename; }
    
    U8 *allocCode(U32 sz);
    

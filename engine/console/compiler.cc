@@ -24,6 +24,7 @@
 #include "console/console.h"
 #include "console/telnetDebugger.h"
 
+#include "console/simpleLexer.h"
 #include "console/ast.h"
 #include "core/tAlgorithm.h"
 
