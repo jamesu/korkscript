@@ -317,7 +317,7 @@ private:
          ExprNode* test = parseExprNode();
          expectChar(')', "')' expected");
          StmtNode* body = parseStmtOrBlock();
-         return LoopStmtNode::alloc(wTok.pos.line, test, NULL, NULL, body, false);
+         return LoopStmtNode::alloc(wTok.pos.line, NULL, test, NULL, body, false);
       }
       else
       {
@@ -328,7 +328,7 @@ private:
          ExprNode* test = parseExprNode();
          expectChar(')', "')' expected");
          expectChar(';', "';' expected");
-         return LoopStmtNode::alloc(dTok.pos.line, test, NULL, NULL, body, true);
+         return LoopStmtNode::alloc(dTok.pos.line, NULL, test, NULL, body, true);
       }
    }
    
