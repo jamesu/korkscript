@@ -132,6 +132,7 @@ IntBinaryExprNode *IntBinaryExprNode::alloc( S32 lineNumber, S32 op, ExprNode *l
    ret->op = op;
    ret->left = left;
    ret->right = right;
+   ret->subType = TypeReqNone;
    
    return ret;
 }
@@ -262,6 +263,7 @@ AssignExprNode *AssignExprNode::alloc( S32 lineNumber, StringTableEntry varName,
    ret->varName = varName;
    ret->expr = expr;
    ret->arrayIndex = arrayIndex;
+   ret->subType = TypeReqNone;
    
    return ret;
 }
@@ -274,6 +276,7 @@ AssignOpExprNode *AssignOpExprNode::alloc( S32 lineNumber, StringTableEntry varN
    ret->varName = varName;
    ret->expr = expr;
    ret->arrayIndex = arrayIndex;
+   ret->subType = TypeReqNone;
    ret->op = op;
    return ret;
 }
