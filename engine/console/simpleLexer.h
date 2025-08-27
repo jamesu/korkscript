@@ -204,7 +204,7 @@ public:
       return &mSource[offset];
    }
    
-   std::string toString(Token &t)
+   std::string toString(const Token &t)
    {
       char buf[4096];
       

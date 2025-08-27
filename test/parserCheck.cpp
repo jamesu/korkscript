@@ -389,7 +389,8 @@ bool ensureASTMatches(const char* buf, const char* filename)
    }
    catch (SimpleParser::TokenError& e)
    {
-      Con::printf("Error parsing");
+      Con::printf("Error parsing (%s :: %s)", e.what(), lex.toString(e.token()).c_str());
+      
    }
 
    Con::printf("%s: Parser matches (%i nodes)!\n", filename, 0);

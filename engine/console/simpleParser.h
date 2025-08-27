@@ -601,14 +601,22 @@ private:
    // handles new ObjectClass(name) { ... }
    //
    //
-   ObjectDeclNode* parseObjectDecl()
+   ObjectDeclNode* parseObjectDecl(bool isExpr)
    {
       using K = TT;
       S32 line = LA().pos.line;
       
       // new | singleton
-      TOK startToken = LA();
-      mTokenPos++;
+      TOK startToken;
+      if (isExpr)
+      {
+         startToken = LA(-1);
+      }
+      else
+      {
+         startToken = LA();
+         mTokenPos++;
+      }
       
       // class_name_expr
       ExprNode* klassName = parseClassNameExpr();
@@ -645,8 +653,16 @@ private:
          
          // args
          argList = parseExprListOptUntil(')');
+         expectChar(')', "')' expected");
       }
-      expectChar(')', "')' expected");
+      
+      // If no object name, alloc ""
+      if (objectNameExpr == NULL)
+      {
+         char empty[1];
+         empty[0] = '\0';
+         objectNameExpr = StrConstNode::alloc(line, empty, false);
+      }
       
       // Optional { slots }
       SlotAssignNode* slots = NULL;
@@ -662,7 +678,7 @@ private:
          
          while (beginsObjectDecl())
          {
-            ObjectDeclNode* child = parseObjectDecl();
+            ObjectDeclNode* child = parseObjectDecl(false);
             if (!child) { errorHere(LA(-1), "nested object parse failure"); break; }
             
             if (!head) head = tail = child;
@@ -674,7 +690,10 @@ private:
          expectChar('}', "'}' expected");
       }
       
-      expectChar(';', "';' expected");
+      if (!isExpr)
+      {
+         expectChar(';', "';' expected");
+      }
       
       return ObjectDeclNode::alloc(line, klassName, objectNameExpr, argList,
                                    parentObject, slots, subs,
@@ -847,7 +866,7 @@ private:
             
          case TT::rwDECLARE:             // 'new'
          case TT::rwDECLARESINGLETON:  { // 'singleton'
-            return parseObjectDecl();
+            return parseObjectDecl(false);
          }
             
          case TT::rwBREAK: {
@@ -1273,6 +1292,10 @@ private:
             return ConstantNode::alloc(t.pos.line, t.stString);
          }
          case TT::VAR:        return VarNode::alloc(t.pos.line, t.stString, NULL);
+            
+         case TT::rwDECLARE:           // 'new'
+         case TT::rwDECLARESINGLETON:  // 'singleton'
+            return parseObjectDecl(true);
             
             // Prefix operators and grouping
          case TT::opCHAR:
