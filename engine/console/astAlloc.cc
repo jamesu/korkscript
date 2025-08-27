@@ -73,6 +73,7 @@ IfStmtNode *IfStmtNode::alloc( S32 lineNumber, ExprNode *testExpr, StmtNode *ifB
    ret->ifBlock = ifBlock;
    ret->elseBlock = elseBlock;
    ret->propagate = propagate;
+   ret->integer = 0;
    
    return ret;
 }
@@ -87,6 +88,7 @@ LoopStmtNode *LoopStmtNode::alloc( S32 lineNumber, ExprNode *initExpr, ExprNode 
    ret->endLoopExpr = endLoopExpr;
    ret->loopBlock = loopBlock;
    ret->isDoLoop = isDoLoop;
+   ret->integer = 0;
    
    // Deal with setting some dummy constant nodes if we weren't provided with
    // info... This allows us to play nice with missing parts of for(;;) for
@@ -133,6 +135,7 @@ IntBinaryExprNode *IntBinaryExprNode::alloc( S32 lineNumber, S32 op, ExprNode *l
    ret->left = left;
    ret->right = right;
    ret->subType = TypeReqNone;
+   ret->operand = 0;
    
    return ret;
 }
@@ -179,6 +182,7 @@ IntUnaryExprNode *IntUnaryExprNode::alloc( S32 lineNumber, S32 op, ExprNode *exp
    ret->dbgLineNumber = lineNumber;
    ret->op = op;
    ret->expr = expr;
+   ret->integer = 0;
    return ret;
 }
 
@@ -278,6 +282,7 @@ AssignOpExprNode *AssignOpExprNode::alloc( S32 lineNumber, StringTableEntry varN
    ret->arrayIndex = arrayIndex;
    ret->subType = TypeReqNone;
    ret->op = op;
+   ret->operand = 0;
    return ret;
 }
 
@@ -392,6 +397,7 @@ SlotAssignOpNode *SlotAssignOpNode::alloc( S32 lineNumber, ExprNode *objectExpr,
    ret->arrayExpr = arrayExpr;
    ret->slotName = slotName;
    ret->op = op;
+   ret->operand = 0;
    ret->valueExpr = valueExpr;
    return ret;
 }
@@ -427,5 +433,6 @@ FunctionDeclStmtNode *FunctionDeclStmtNode::alloc( S32 lineNumber, StringTableEn
    ret->stmts = stmts;
    ret->nameSpace = nameSpace;
    ret->package = NULL;
+   ret->argc = 0;
    return ret;
 }

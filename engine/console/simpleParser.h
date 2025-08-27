@@ -126,10 +126,8 @@ private:
       throw TokenError(tok, TT::NONE, msg);
    }
    
-   inline int toBisonTok(const SimpleLexer::Token& t)
+   inline int toBisonOpTok(const SimpleLexer::Token& t)
    {
-      using TT = SimpleLexer::TokenType;
-      
       if (t.kind == TT::opCHAR)
       {
          return t.asChar();
@@ -163,16 +161,16 @@ private:
          case TT::opSHR:        return 305;  // >>
             
             // ---- compound assigns ----
-         case TT::opPLASN:      return 306;  // +=
-         case TT::opMIASN:      return 307;  // -=
-         case TT::opMLASN:      return 308;  // *=
-         case TT::opDVASN:      return 309;  // /=
-         case TT::opMODASN:     return 310;  // %=
-         case TT::opANDASN:     return 311;  // &=
-         case TT::opXORASN:     return 312;  // ^=
-         case TT::opORASN:      return 313;  // |=
-         case TT::opSLASN:      return 314;  // <<=
-         case TT::opSRASN:      return 315;  // >>=
+         case TT::opPLASN:      return '+';  // +=
+         case TT::opMIASN:      return '-';  // -=
+         case TT::opMLASN:      return '*';  // *=
+         case TT::opDVASN:      return '/';  // /=
+         case TT::opMODASN:     return '%';  // %=
+         case TT::opANDASN:     return '&';  // &=
+         case TT::opXORASN:     return '^';  // ^=
+         case TT::opORASN:      return '|';  // |=
+         case TT::opSLASN:      return 304;  // <<=
+         case TT::opSRASN:      return 305;  // >>=
             
          default:
             return -1;
@@ -396,17 +394,16 @@ private:
       }
       else
       {
-         return IntBinaryExprNode::alloc(line, toBisonTok(TT::opEQ), left, right);
+         return IntBinaryExprNode::alloc(line, toBisonOpTok(TT::opEQ), left, right);
       }
    }
    
    // case_expr : expr | case_expr rwCASEOR expr
    ExprNode* parseCaseExprList()
    {
-      using TT = SimpleLexer::TokenType;
       ExprNode* head = parseExprNode();
       ExprNode* tail = head;
-      while (match(TT::rwCASEOR)) 
+      while (match(TT::rwCASEOR))
       {
          ExprNode* e = parseExprNode();
          tail->append(e);
@@ -418,7 +415,6 @@ private:
    // Parse the case body (statement_list) until we hit 'case', 'default' or '}'
    StmtNode* parseCaseBody()
    {
-      using TT = SimpleLexer::TokenType;
       StmtNode* head = NULL;
       StmtNode* tail = NULL;
       
@@ -446,8 +442,6 @@ private:
    // (variants of case_block to handle token conflicts)
    IfStmtNode* parseCaseBlock()
    {
-      using TT = SimpleLexer::TokenType;
-      
       // case ...
       SimpleLexer::Token caseTok = expect(TT::rwCASE, "'case' expected");
       ExprNode* list = parseCaseExprList();     // store the *list* as testExpr for now
@@ -480,11 +474,9 @@ private:
    // switch_stmt : rwSWITCH '(' expr ')' '{' case_block '}' | wSWITCHSTR '(' expr ')' '{' case_block '}'
    StmtNode* parseSwitchStmt()
    {
-      using TT = SimpleLexer::TokenType;
-      
       bool isString = false;
       SimpleLexer::Token sw;
-      if (match(TT::rwSWITCHSTR)) 
+      if (match(TT::rwSWITCHSTR))
       {
          isString = true;
          sw = LA(-1);
@@ -1090,7 +1082,7 @@ private:
             return AssignExprNode::alloc(tok.pos.line, v->varName, v->arrayIndex, r);            // =
          }
          // all op*ASN kinds go through AssignOpExprNode with tok.kind payload
-         return AssignOpExprNode::alloc(tok.pos.line, v->varName, v->arrayIndex, r, toBisonTok(TOK(tok)));
+         return AssignOpExprNode::alloc(tok.pos.line, v->varName, v->arrayIndex, r, toBisonOpTok(TOK(tok)));
       }
       if (SlotAccessNode* s = dynamic_cast<SlotAccessNode*>(l))
       {
@@ -1098,7 +1090,7 @@ private:
          {
             return SlotAssignNode::alloc(tok.pos.line, s->objectExpr, s->arrayExpr, s->slotName, r);
          }
-         return SlotAssignOpNode::alloc(tok.pos.line, s->objectExpr, s->slotName, s->arrayExpr, toBisonTok(TOK(tok)), r);
+         return SlotAssignOpNode::alloc(tok.pos.line, s->objectExpr, s->slotName, s->arrayExpr, toBisonOpTok(TOK(tok)), r);
       }
       errorHere(tok, "left-hand side of assignment must be a variable");
       return NULL;
@@ -1240,7 +1232,7 @@ private:
          case TT::opSHL: case TT::opSHR:
          {
             ExprNode* right = parseExpression(associativity(op)==LEFT ? opBP : (opBP-1));
-            return IntBinaryExprNode::alloc(op.pos.line, toBisonTok(op.kind), left, right);
+            return IntBinaryExprNode::alloc(op.pos.line, toBisonOpTok(op.kind), left, right);
          }
             
          case TT::opSTREQ:
