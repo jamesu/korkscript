@@ -396,7 +396,7 @@ private:
       }
       else
       {
-         return IntBinaryExprNode::alloc(line, (int)TT::opEQ, left, right);
+         return IntBinaryExprNode::alloc(line, toBisonTok(TT::opEQ), left, right);
       }
    }
    
@@ -454,7 +454,7 @@ private:
             {
                ExprNode* more = parseExprNode();
                ExprNode* eq   = emitEqNode(line, selector, more, string);
-               cond = IntBinaryExprNode::alloc(line, (int)TT::opOR, cond, eq);
+               cond = IntBinaryExprNode::alloc(line, toBisonTok(TT::opOR), cond, eq);
             }
             
             expectChar(':', "':' expected");
@@ -1208,7 +1208,7 @@ private:
          case TT::opSHL: case TT::opSHR:
          {
             ExprNode* right = parseExpression(associativity(op)==LEFT ? opBP : (opBP-1));
-            return IntBinaryExprNode::alloc(op.pos.line, (int)op.kind, left, right);
+            return IntBinaryExprNode::alloc(op.pos.line, toBisonTok(op.kind), left, right);
          }
             
          case TT::opSTREQ:
