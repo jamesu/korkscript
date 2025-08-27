@@ -21,6 +21,7 @@
 //-----------------------------------------------------------------------------
 #include "console/console.h"
 #include "console/compiler.h"
+#include "console/simpleParser.h"
 #include "console/codeBlock.h"
 #include "console/telnetDebugger.h"
 
@@ -472,7 +473,24 @@ bool CodeBlock::compile(const char *codeFileName, StringTableEntry fileName, con
    
    StmtNode* rootNode = NULL;
    
-   // TOFIX
+   SimpleLexer::Tokenizer lex(StringTable, inScript, fileName);
+   SimpleParser::ASTGen astGen(&lex);
+   
+   try
+   {
+      astGen.processTokens();
+      rootNode = astGen.parseProgram();
+   }
+   catch (SimpleParser::TokenError& e)
+   {
+      Con::errorf("Error parsing (%s :: %s)", e.what(), lex.toString(e.token()).c_str());
+   }
+   
+   if(!rootNode)
+   {
+      delete this;
+      return "";
+   }
    
    if(!rootNode)
    {
@@ -586,7 +604,18 @@ const char *CodeBlock::compileExec(StringTableEntry fileName, const char *inStri
    
    StmtNode* rootNode = NULL;
    
-   // TOFIX
+   SimpleLexer::Tokenizer lex(StringTable, inString, fileName ? fileName : "");
+   SimpleParser::ASTGen astGen(&lex);
+   
+   try
+   {
+      astGen.processTokens();
+      rootNode = astGen.parseProgram();
+   }
+   catch (SimpleParser::TokenError& e)
+   {
+      Con::errorf("Error parsing (%s :: %s)", e.what(), lex.toString(e.token()).c_str());
+   }
    
    if(!rootNode)
    {
