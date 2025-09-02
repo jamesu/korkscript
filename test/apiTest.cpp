@@ -8,7 +8,7 @@
 #include "core/fileStream.h"
 #include <stdio.h>
 #include "embed/api.h"
-
+#include "console/dynamicTypes.h"
 
 /*
  Example for new API
@@ -184,6 +184,8 @@ int testScript(char* script, const char* filename)
    myBase.iCustomFields   = {};
    
    ClassId myBaseId = vm->registerClass(myBase);
+   
+   //ConsoleBaseType::registerWithVM(vm);
    
    // 4) Register Player (derived from MyBase) with a MyPoint3F field
    static FieldInfo playerFields[] = {

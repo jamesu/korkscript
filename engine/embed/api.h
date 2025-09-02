@@ -10,6 +10,24 @@
 namespace KorkApi
 {
 
+template <typename C, auto ThunkFn> struct APIThunk;
+
+template <typename C, typename R, typename... Args, R(C::*ThunkFn)(Args...)>
+struct APIThunk<C, ThunkFn> {
+    using type = R(*)(void*, Args...);
+    static R call(void* user, Args... args) noexcept {
+        return (static_cast<C*>(user)->*ThunkFn)(std::forward<Args>(args)...);
+    }
+};
+
+template <typename C, typename R, typename... Args, R(C::*ThunkFn)(Args...) const>
+struct APIThunk<C, ThunkFn> {
+    using type = R(*)(void*, Args...);
+    static R call(void* user, Args... args) noexcept {
+        return (static_cast<const C*>(user)->*ThunkFn)(std::forward<Args>(args)...);
+    }
+};
+
 struct ConsoleValue {
 	U32 typeId;
 	union {

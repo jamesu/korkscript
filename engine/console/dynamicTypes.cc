@@ -56,6 +56,17 @@ void ConsoleBaseType::initialize()
    // Alright, we're all done here; we can now achieve fast lookups by ID.
 }
 
+void ConsoleBaseType::registerWithVM(KorkApi::Vm* vm)
+{
+   for (U32 i=0; i<smConsoleTypeCount; i++)
+   {
+      if (gConsoleTypeTable[i])
+      {
+         gConsoleTypeTable[i]->registerWithVM(vm);
+      }
+   }
+}
+
 ConsoleBaseType  *ConsoleBaseType::getType(const S32 typeID)
 {
    return gConsoleTypeTable[typeID];
