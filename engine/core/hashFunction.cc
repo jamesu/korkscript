@@ -29,9 +29,6 @@
 
 #include "platform/platform.h"
 
-// Debug Profiling.
-#include "platform/profiler.h"
-
 #include "core/hashFunction.h"
 
 #define hashsize(n) ((U32)1 << (n))

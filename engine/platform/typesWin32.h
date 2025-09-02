@@ -51,15 +51,7 @@ typedef unsigned short     U16;     ///< Compiler independent Unsigned 16-bit sh
 typedef signed int         S32;     ///< Compiler independent Signed 32-bit integer
 typedef unsigned int       U32;     ///< Compiler independent Unsigned 32-bit integer
 
-#ifdef __BORLANDC__
-typedef signed __int64     S64;     ///< Compiler independent Signed 64-bit integer
-typedef unsigned __int64   U64;     ///< Compiler independent Unsigned 64-bit integer
-
-#elif defined(__MWERKS__) // This has to go before MSC_VER since CodeWarrior defines MSC_VER too
-typedef signed long long   S64;     ///< Compiler independent Signed 64-bit integer
-typedef unsigned long long U64;     ///< Compiler independent Unsigned 64-bit integer
-
-#elif defined(_MSC_VER)
+#if defined(_MSC_VER)
 typedef signed _int64      S64;     ///< Compiler independent Signed 64-bit integer
 typedef unsigned _int64    U64;     ///< Compiler independent Unsigned 64-bit integer
 #pragma warning(disable: 4291) // disable warning caused by memory layer...

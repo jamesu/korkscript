@@ -458,8 +458,16 @@ bool CodeBlock::read(StringTableEntry fileName, Stream &st)
    return true;
 }
 
-
 bool CodeBlock::compile(const char *codeFileName, StringTableEntry fileName, const char *inScript)
+{
+   FileStream st;
+   if(!st.open(codeFileName, FileStream::Write))
+      return false;
+   
+   return compileToStream(st, fileName, inScript);
+}
+
+bool CodeBlock::compileToStream(Stream &st, StringTableEntry fileName, const char *inScript)
 {
    // Check for a UTF8 script file
    char *script;
@@ -498,11 +506,6 @@ bool CodeBlock::compile(const char *codeFileName, StringTableEntry fileName, con
       return false;
    }
    
-   FileStream st;
-   if(!st.open(codeFileName, FileStream::Write))
-      return false;
-   st.write(U32(Con::DSOVersion));
-   
    // Reset all our value tables...
    resetTables();
    
@@ -523,6 +526,8 @@ bool CodeBlock::compile(const char *codeFileName, StringTableEntry fileName, con
    codeStream.emitCodeStream(&codeSize, &code, &lineBreakPairs);
    
    lineBreakPairCount = codeStream.getNumLineBreaks();
+   
+   st.write(U32(Con::DSOVersion));
    
    // Write string table data...
    getGlobalStringTable().write(st);
@@ -559,7 +564,6 @@ bool CodeBlock::compile(const char *codeFileName, StringTableEntry fileName, con
    getIdentTable().write(st);
    
    consoleAllocReset();
-   st.close();
    
    return true;
 }

@@ -90,8 +90,6 @@ extern bool dIsdigit(const char c);
 extern bool dIsspace(const char c);
 
 extern int dSscanf(const char *buffer, const char *format, ...);
-extern int dFflushStdout();
-extern int dFflushStderr();
 
 extern void dPrintf(const char *format, ...);
 extern int dVprintf(const char *format, va_list arglist);

@@ -51,6 +51,11 @@
 #include "platform/platformMemory.h"
 #endif
 
+#define PROFILE_START(a)
+#define PROFILE_END()
+#define PROFILE_SCOPE(a)
+
+
 inline U32 getMin(U32 p1, U32 p2)
 {
     return p1 < p2 ? p1 : p2;

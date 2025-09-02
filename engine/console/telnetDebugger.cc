@@ -119,7 +119,7 @@ ConsoleFunction( dbgDisconnect, void, 1, 1, "()"
       TelDebugger->disconnect();
 }
 
-static void debuggerConsumer(ConsoleLogEntry::Level level, const char *line)
+static void debuggerConsumer(ConsoleLogEntry::Level level, const char *line, void* userPtr)
 {
    level;
    if (TelDebugger)

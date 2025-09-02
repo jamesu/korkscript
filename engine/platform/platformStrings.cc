@@ -248,12 +248,7 @@ U32 dStrlen(const char *str)
 
 char* dStrupr(char *str)
 {
-#ifdef __MWERKS__ // metrowerks strupr is broken
-   _strupr(str);
-   return str;
-#else
    return __strtoup(str);
-#endif
 }   
 
 
@@ -460,16 +455,6 @@ S32 dSscanf(const char *buffer, const char *format, ...)
    }
    return 0;
 #endif
-}   
-
-S32 dFflushStdout()
-{
-   return fflush(stdout);
-}
-
-S32 dFflushStderr()
-{
-   return fflush(stderr);
 }
 
 void dQsort(void *base, U32 nelem, U32 width, S32 (QSORT_CALLBACK *fcmp)(const void *, const void *))

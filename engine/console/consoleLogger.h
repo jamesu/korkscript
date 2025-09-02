@@ -104,7 +104,7 @@ class ConsoleLogger : public SimObject
       ///
       /// @note This is a global callback, not executed per-instance.
       /// @see Con::addConsumer
-      static void logCallback( ConsoleLogEntry::Level level, const char *consoleLine );
+      static void logCallback( ConsoleLogEntry::Level level, const char *consoleLine, void* userPtr );
 };
 
 #endif

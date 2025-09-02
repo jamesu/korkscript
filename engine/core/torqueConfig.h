@@ -36,10 +36,6 @@
 //#define TORQUE_MULTITHREAD
 #endif
 
-/// Define me if you want to enable the profiler.
-///    See also the TORQUE_SHIPPING block below
-//#define TORQUE_ENABLE_PROFILER
-
 /// Define me to enable unicode support.
 #ifndef TORQUE_UNICODE
 #define TORQUE_UNICODE
@@ -102,8 +98,6 @@
 #ifdef TORQUE_SHIPPING
  // TORQUE_SHIPPING flags here.
 #else
-   // enable the profiler by default, if we're not doing a shipping build
-#  define TORQUE_ENABLE_PROFILER
 #endif
 
 #ifdef TORQUE_LIB

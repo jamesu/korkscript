@@ -107,6 +107,7 @@ public:
    
    bool read(StringTableEntry fileName, Stream &st);
    bool compile(const char *dsoName, StringTableEntry fileName, const char *script);
+   bool compileToStream(Stream& s, StringTableEntry fileName, const char *script);
    
    void incRefCount();
    void decRefCount();

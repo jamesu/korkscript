@@ -24,7 +24,6 @@
 #include "platform/platformAssert.h"
 #include "core/unicode.h"
 #include "core/tempAlloc.h"
-#include "platform/profiler.h"
 #include "console/console.h"
 #include <stdio.h>
 

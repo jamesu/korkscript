@@ -26,9 +26,6 @@
 #ifndef _TVECTOR_H_
 #include "core/tVector.h"
 #endif
-#ifndef _TALGORITHM_H_
-#include "core/tAlgorithm.h"
-#endif
 #ifndef _BITSET_H_
 #include "core/bitSet.h"
 #endif
@@ -47,6 +44,8 @@
 #ifndef _PLATFORMSEMAPHORE_H_
 #include "platform/platformSemaphore.h"
 #endif
+
+#include <algorithm>
 
 class LightManager;
 // TMP T2D BLOCK
@@ -1048,11 +1047,10 @@ template <class T> class SimObjectPtr
       }
       return *this;
    }
-#if defined(__MWERKS__) && (__MWERKS__ < 0x2400)
-   // CW 5.3 seems to get confused comparing SimObjectPtrs...
-   bool operator == (const SimObject *ptr) { return mObj == ptr; }
-   bool operator != (const SimObject *ptr) { return mObj != ptr; }
-#endif
+
+   inline bool operator ==(const SimObject *ptr) const { return mObj == ptr; }
+   inline bool operator !=(const SimObject *ptr) const { return mObj != ptr; }
+
    bool isNull() const   { return mObj == 0; }
    bool notNull() const   { return mObj != 0; }
    T* operator->() const { return static_cast<T*>(mObj); }
@@ -1351,8 +1349,8 @@ public:
    iterator   end()   { return objectList.end(); }
    value operator[] (S32 index) { return objectList[U32(index)]; }
 
-   inline iterator find( iterator first, iterator last, SimObject *obj ) { return ::find(first, last, obj); }
-   inline iterator find( SimObject *obj ) { return ::find(begin(), end(), obj); }
+   inline iterator find( iterator first, iterator last, SimObject *obj ) { return std::find(first, last, obj); }
+   inline iterator find( SimObject *obj ) { return std::find(begin(), end(), obj); }
 
    template <typename T> inline bool containsType( void )
    {

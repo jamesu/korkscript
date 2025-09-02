@@ -50,7 +50,7 @@ ConsoleFunction( telnetSetParameters, void, 4, 5, "(int port, string consolePass
    }
 }
 
-static void telnetCallback(ConsoleLogEntry::Level level, const char *consoleLine)
+static void telnetCallback(ConsoleLogEntry::Level level, const char *consoleLine, void* userPtr)
 {
    level;
    if (TelConsole)

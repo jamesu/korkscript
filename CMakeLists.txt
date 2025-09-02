@@ -11,8 +11,6 @@ add_definitions(-DUNICODE -D_UNICODE -DINITGUIDE)
 include_directories(
 	.
 	./engine
-	./ext/ghc
-	./ext/yamc/include
 )
 
 set(KS_NETWORK_SRCS
@@ -35,7 +33,6 @@ set(KS_SRCS
 	./engine/core/unicode.cc
 	./engine/core/stringUnit.cc
 
-	./engine/platform/profiler.cc
 	./engine/platform/platformFileIO.cc
 	./engine/platform/platform.cc
 	./engine/platform/platformAssert.cc
@@ -65,6 +62,8 @@ set(KS_SRCS
 
 	./engine/console/simpleLexer.h
 	./engine/console/simpleParser.h
+	./engine/embed/api.h
+	./engine/embed/api.cpp
 )
 
 set(KS_TEST_SRCS
@@ -73,18 +72,11 @@ set(KS_TEST_SRCS
 	test/main.cpp
 )
 
-set(KS_LEX_TEST_SRCS
+set(KS_API_TEST_SRCS
 	${KS_SRCS}
 	${KS_NETWORK_SRCS}
-	test/lexerCheck.cpp
+	test/apiTest.cpp
 )
-
-set(KS_PARSER_TEST_SRCS
-	${KS_SRCS}
-	${KS_NETWORK_SRCS}
-	test/parserCheck.cpp
-)
-
 set(KS_AST_PRINT_SRCS
 	${KS_SRCS}
 	${KS_NETWORK_SRCS}
@@ -94,3 +86,4 @@ set(KS_AST_PRINT_SRCS
 
 add_executable(cstest ${KS_TEST_SRCS})
 add_executable(csprintast ${KS_AST_PRINT_SRCS})
+add_executable(csapitest ${KS_API_TEST_SRCS})

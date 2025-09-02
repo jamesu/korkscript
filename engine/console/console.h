@@ -157,7 +157,7 @@ typedef F32           (*FloatCallback)(SimObject *obj, S32 argc, const char *arg
 typedef void           (*VoidCallback)(SimObject *obj, S32 argc, const char *argv[]); // We have it return a value so things don't break..
 typedef bool           (*BoolCallback)(SimObject *obj, S32 argc, const char *argv[]);
 
-typedef void (*ConsumerCallback)(ConsoleLogEntry::Level level, const char *consoleLine);
+typedef void (*ConsumerCallback)(ConsoleLogEntry::Level level, const char *consoleLine, void* userPtr);
 /// @}
 
 /// @defgroup console_types Scripting Engine Type Functions
@@ -267,8 +267,8 @@ namespace Con
    /// @see ConsoleLogger
    ///
    /// @{
-   void addConsumer(ConsumerCallback cb);
-   void removeConsumer(ConsumerCallback cb);
+   void addConsumer(ConsumerCallback cb, void* userPtr = NULL);
+   void removeConsumer(ConsumerCallback cb, void* userPtr = NULL);
    /// @}
 
    /// @name Miscellaneous

@@ -29,7 +29,6 @@
 #include "core/memStream.h"
 
 #include "console/consoleInternal.h"
-#include "platform/profiler.h"
 #include "console/typeValidators.h"
 #include "console/codeBlock.h"
 
@@ -47,7 +46,7 @@ namespace Sim
 
 void SimObjectList::pushBack(SimObject* obj)
 {
-   if (find(begin(),end(),obj) == end())
+   if (std::find(begin(),end(),obj) == end())
       push_back(obj);
 }  
 
@@ -55,8 +54,8 @@ void SimObjectList::pushBack(SimObject* obj)
 
 void SimObjectList::pushBackForce(SimObject* obj)
 {
-   iterator itr = find(begin(),end(),obj);
-   if (itr == end()) 
+   iterator itr = std::find(begin(),end(),obj);
+   if (itr == end())
    {
       push_back(obj);
    }
@@ -74,7 +73,7 @@ void SimObjectList::pushBackForce(SimObject* obj)
 
 void SimObjectList::pushFront(SimObject* obj)
 {
-   if (find(begin(),end(),obj) == end())
+   if (std::find(begin(),end(),obj) == end())
       push_front(obj);
 }  
 
@@ -82,8 +81,8 @@ void SimObjectList::pushFront(SimObject* obj)
 
 void SimObjectList::remove(SimObject* obj)
 {
-   iterator ptr = find(begin(),end(),obj);
-   if (ptr != end()) 
+   iterator ptr = std::find(begin(),end(),obj);
+   if (ptr != end())
       erase(ptr);
 }
 
@@ -91,7 +90,7 @@ void SimObjectList::remove(SimObject* obj)
 
 void SimObjectList::removeStable(SimObject* obj)
 {
-   iterator ptr = find(begin(),end(),obj);
+   iterator ptr = std::find(begin(),end(),obj);
    if (ptr != end()) 
       erase(ptr);
 }

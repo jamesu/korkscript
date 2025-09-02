@@ -7,11 +7,10 @@
 #include "console/console.h"
 #include "core/safeDelete.h"
 
-#include "ghc/filesystem.hpp"
-namespace fs = ghc::filesystem;
+#include <filesystem>
+namespace fs = std::filesystem;
 
 #include <mutex>
-//#include <yamc_semaphore>
 
 File::File()
 : currentStatus(Closed), capability(0)

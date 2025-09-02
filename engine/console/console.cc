@@ -29,7 +29,6 @@
 
 #include "console/simpleLexer.h"
 #include "console/ast.h"
-#include "core/tAlgorithm.h"
 #include "console/consoleTypes.h"
 #include "console/telnetDebugger.h"
 #include "console/simBase.h"
@@ -376,7 +375,13 @@ ConsoleConstructor::ConsoleConstructor(const char* className, const char* usage)
 namespace Con
 {
 
-static Vector<ConsumerCallback> gConsumers(__FILE__, __LINE__);
+struct CallbackInfo
+{
+   ConsumerCallback callback;
+   void* userPtr;
+};
+
+static Vector<CallbackInfo> gConsumers(__FILE__, __LINE__);
 static DataChunker consoleLogChunker;
 static Vector<ConsoleLogEntry> consoleLog(__FILE__, __LINE__);
 static bool consoleLogLocked;
@@ -736,7 +741,7 @@ static void _printf(ConsoleLogEntry::Level level, ConsoleLogEntry::Type type, co
    dSprintf(buffer + offset, sizeof(buffer) - offset, "%s", fmt);
 
    for(U32 i = 0; i < (U32)gConsumers.size(); i++)
-      gConsumers[i](level, buffer);
+      gConsumers[i].callback(level, buffer, gConsumers[i].userPtr);
 
    //Platform::cprintf(buffer);
 
@@ -929,16 +934,19 @@ void setFloatVariable(const char *varName, F32 value)
 }
 
 //---------------------------------------------------------------------------
-void addConsumer(ConsumerCallback consumer)
+void addConsumer(ConsumerCallback consumer, void* userPtr)
 {
-   gConsumers.push_back(consumer);
+   CallbackInfo info = {};
+   info.callback = consumer;
+   info.userPtr = userPtr;
+   gConsumers.push_back(info);
 }
 
 // dhc - found this empty -- trying what I think is a reasonable impl.
-void removeConsumer(ConsumerCallback consumer)
+void removeConsumer(ConsumerCallback consumer, void* userPtr)
 {
    for(U32 i = 0; i < (U32)gConsumers.size(); i++)
-      if (gConsumers[i] == consumer)
+      if (gConsumers[i].callback == consumer && gConsumers[i].userPtr == userPtr)
       { // remove it from the list.
          gConsumers.erase(i);
          break;
