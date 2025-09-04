@@ -395,7 +395,7 @@ bool printAST(const char* buf, const char* filename)
       if (gPrintBytecode)
       {
          // Convert AST to bytecode
-         Con::printf("== Parser Bytecode ==");
+         printf("== Parser Bytecode ==\n");
          dumpToInstructionsPrint(rootNode);
       }
       else
@@ -405,8 +405,7 @@ bool printAST(const char* buf, const char* filename)
    }
    catch (SimpleParser::TokenError& e)
    {
-      Con::printf("Error parsing (%s :: %s)", e.what(), lex.toString(e.token()).c_str());
-      
+      printf("Error parsing (%s :: %s)\n", e.what(), lex.toString(e.token()).c_str());
    }
    
    return true;
@@ -417,7 +416,7 @@ int procMain(int argc, char **argv)
 {
    if (argc < 2)
    {
-      Con::printf("Not enough args");
+      printf("Not enough args\n");
       return 1;
    }
    
@@ -432,7 +431,7 @@ int procMain(int argc, char **argv)
    FileStream fs;
    if (!fs.open(argv[1], FileStream::Read))
    {
-      Con::printf("Error loading file %s\n", argv[1]);
+      printf("Error loading file %s\n", argv[1]);
       return 1;
    }
    
@@ -447,12 +446,7 @@ int procMain(int argc, char **argv)
 
 int main(int argc, char **argv)
 {
-   Con::init();
-   Con::addConsumer(MyLogger);
-   
    int ret = procMain(argc, argv);
-   
-   Con::shutdown();
    
    return ret;
 }

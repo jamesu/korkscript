@@ -39,7 +39,11 @@
 #include <stdarg.h>
 #include <unordered_map>
 
+#include "embed/api.h"
+
 static Mutex* sLogMutex;
+
+KorkApi::Vm* sVM;
 
 extern StringStack STR;
 
@@ -429,6 +433,10 @@ ConsoleFunctionGroupEnd( Clipboard );
 
 void init()
 {
+   // Setup VM
+   KorkApi::Config config = {};
+   sVM = KorkApi::createVM(&config);
+
    AssertFatal(active == false, "Con::init should only be called once.");
 
    // Set up general init values.
@@ -465,6 +473,10 @@ void init()
 
    // And finally, the ACR...
    AbstractClassRep::initialize();
+
+   // Register types with VM
+   ConsoleBaseType::registerWithVM(sVM);
+   AbstractClassRep::registerWithVM(sVM);
 }
 
 //--------------------------------------
@@ -476,6 +488,9 @@ void shutdown()
 
    consoleLogFile.close();
    Namespace::shutdown();
+
+   KorkApi::destroyVm(sVM);
+   sVM = NULL;
 
    SAFE_DELETE( sLogMutex );
 }

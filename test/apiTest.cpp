@@ -163,6 +163,7 @@ void cPlayerJump(Player* object, int argc, const char** argv)
 int testScript(char* script, const char* filename)
 {
    Config cfg{};
+   cfg.logFn = MyLogger;
    cfg.iFind = { &FindByName, NULL, NULL };
    Vm* vm = createVM(&cfg);
    if (!vm)
@@ -238,7 +239,7 @@ int procMain(int argc, char **argv)
 {
    if (argc < 2)
    {
-      Con::printf("Not enough args");
+      printf("Not enough args\n");
       return 1;
    }
    
@@ -249,7 +250,7 @@ int procMain(int argc, char **argv)
    FileStream fs;
    if (!fs.open(argv[1], FileStream::Read))
    {
-      Con::printf("Error loading file %s\n", argv[1]);
+      printf("Error loading file %s\n", argv[1]);
       return 1;
    }
    
@@ -264,12 +265,7 @@ int procMain(int argc, char **argv)
 
 int main(int argc, char **argv)
 {
-   Con::init();
-   Con::addConsumer(MyLogger);
-   
    int ret = procMain(argc, argv);
-   
-   Con::shutdown();
    
    return ret;
 }

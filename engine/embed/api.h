@@ -221,8 +221,8 @@ struct Config {
   FreeFn   freeFn;
   void*    allocUser;
 
-  ConsumerCallback callbackFn;
-  void*            callbackUser;
+  ConsumerCallback logFn;
+  void*            logUser;
 
   FindObjectsInterface iFind;
 };
