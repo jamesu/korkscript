@@ -47,6 +47,11 @@
 
 #include <algorithm>
 
+namespace KorkApi
+{
+struct VMIterator;
+}
+
 class LightManager;
 // TMP T2D BLOCK
 //---------------------------------------------------------------------------
@@ -276,8 +281,10 @@ class SimFieldDictionaryIterator
 
   public:
    SimFieldDictionaryIterator(SimFieldDictionary*);
+   SimFieldDictionaryIterator(KorkApi::VMIterator& itr);
    SimFieldDictionary::Entry* operator++();
    SimFieldDictionary::Entry* operator*();
+   void toVMItr(KorkApi::VMIterator& itr);
 };
 
 // END T2D BLOCK
@@ -515,6 +522,17 @@ public:
         SelectedOnly = BIT(0) ///< Passed to SimObject::write to indicate that only objects
                             ///  marked as selected should be outputted. Used in SimSet.
     };
+   
+    U32 getInternalFlags() { return mFlags; }
+
+
+    void setupVM(KorkApi::Vm* _vm, KorkApi::VMObject* _vmObject)
+    {
+      vm = _vm;
+      vmObject = _vmObject;
+    }
+    KorkApi::Vm* getVM() { return vm; }
+    KorkApi::VMObject* getVMObject() { return vmObject; }
 
 private:
     // dictionary information stored on the object
@@ -522,6 +540,9 @@ private:
     SimObject*       nextNameObject;
     SimObject*       nextManagerNameObject;
     SimObject*       nextIdObject;
+
+    KorkApi::Vm* vm;
+    KorkApi::VMObject* vmObject;
 
     SimGroup*   mGroup;  ///< SimGroup we're contained in, if any.
     BitSet32    mFlags;
@@ -621,6 +642,7 @@ public:
     /// @param   array       String containing index into array
     ///                      (if field is an array); if NULL, it is ignored.
     const char *getDataField(StringTableEntry slotName, const char *array);
+    const char *getDataFieldDynamic(StringTableEntry slotName, const char *array);
 
     /// Set the value of a field on the object.
     ///
@@ -631,6 +653,7 @@ public:
     /// @param   array       String containing index into array; if NULL, it is ignored.
     /// @param   value       Value to store.
     void setDataField(StringTableEntry slotName, const char *array, const char *value);
+    void setDataFieldDynamic(StringTableEntry slotName, const char *array, const char *value);
 
     const char *getPrefixedDataField(StringTableEntry fieldName, const char *array);
 

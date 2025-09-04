@@ -127,7 +127,7 @@ ConsoleValue Vm::getTypeReturn(TypeId typeId)
 }
 
 // Public
-VMObject* Vm::constructObject(ClassId klassId, const char* name, int argc, char** argv)
+VMObject* Vm::constructObject(ClassId klassId, const char* name, int argc, const char** argv)
 {
    ClassInfo* ci = &mInternal->mClassList[klassId];
    VMObject* object = new VMObject();
@@ -136,10 +136,17 @@ VMObject* Vm::constructObject(ClassId klassId, const char* name, int argc, char*
    {
       object->klass = ci;
       object->ns = NULL;
-      object->userPtr = ci->iCreate.CreateClassFn(ci->userPtr, object, name, argc, argv);
+      object->userPtr = ci->iCreate.CreateClassFn(ci->userPtr, object);
       if (object->userPtr)
       {
-         return object;
+         if (!ci->iCreate.ProcessArgs(this, object, name, false, false, argc, argv))
+         {
+            ci->iCreate.DestroyClassFn(ci->userPtr, object);
+         }
+         else
+         {
+            return object;
+         }
       }
    }
    
@@ -160,6 +167,11 @@ VMObject* Vm::createVMObject(ClassId klassId, void* klassPtr)
    object->ns = NULL;
    object->userPtr = klassPtr;
     return object;
+}
+
+void Vm::destroyVMObject(VMObject* object)
+{
+   delete object;
 }
 
 void Vm::addNamespaceFunction(NamespaceId nsId, StringTableEntry name, StringCallback cb, const char* usage, S32 minArgs, S32 maxArgs)

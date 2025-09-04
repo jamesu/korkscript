@@ -26,6 +26,7 @@
 #include "console/console.h"
 #include "console/consoleInternal.h"
 #include "console/typeValidators.h"
+#include "console/simBase.h"
 
 // TOFIX: add back in if networking needed
 #define INITIAL_CRC_VALUE 0
@@ -156,6 +157,145 @@ ConsoleObject* AbstractClassRep::create(const U32 groupId, const U32 typeId, con
       return classTable[groupId][typeId][in_classId]->create();
 
    return NULL;
+}
+
+//--------------------------------------
+
+void AbstractClassRep::registerWithVm(KorkApi::Vm* vm)
+{
+   if (mClassInfo.name == NULL)
+   {
+      mClassInfo.name = StringTable->insert(mClassName);
+      mClassInfo.userPtr = this;
+      mClassInfo.numFields = mFieldList.size();
+      mClassInfo.fields = &mFieldList[0];
+      // Create & Destroy
+      mClassInfo.iCreate.CreateClassFn = [](void* user, KorkApi::VMObject* object){
+         AbstractClassRep* rep = static_cast<AbstractClassRep*>(user);
+         ConsoleObject* obj = rep->create();
+         return (void*)obj;
+      };
+      mClassInfo.iCreate.DestroyClassFn = [](void* user, void* createdPtr){
+         AbstractClassRep* rep = static_cast<AbstractClassRep*>(user);
+         ConsoleObject* obj = static_cast<ConsoleObject*>(createdPtr);
+         delete obj;
+      };
+      mClassInfo.iCreate.ProcessArgs = [](KorkApi::Vm* vm, KorkApi::VMObject* vmObject, const char* name, bool isDatablock, bool internalName, int argc, const char** argv){
+         ConsoleObject* consoleObject = static_cast<ConsoleObject*>(vmObject->userPtr);
+         SimObject* object = dynamic_cast<SimObject*>(consoleObject);
+         object->setupVM(vm, vmObject);
+
+         if (object->processArguments(argc, argv))
+         {
+            if(name && name[0])
+            {
+               if(!internalName)
+                  object->assignName(name);
+               else
+                  object->setInternalName(name);
+
+               // Set the original name
+               //currentNewObject->setOriginalName( objectName );
+            }
+            
+            if (!isDatablock)
+            {
+               object->setModStaticFields(true);
+               object->setModDynamicFields(true);
+            }
+            
+            vmObject->flags = object->getInternalFlags();
+            return true;
+         }
+         else
+         {
+            object->setupVM(NULL, NULL);
+         }
+         
+         return false;
+      };
+      mClassInfo.iCreate.GetId = [](KorkApi::VMObject* vmObject){
+         ConsoleObject* consoleObject = static_cast<ConsoleObject*>(vmObject->userPtr);
+         SimObject* object = dynamic_cast<SimObject*>(consoleObject);
+         
+         KorkApi::ConsoleValue cv;
+         cv.typeId = 0; // TOFIX
+         cv.integer = object->getId();
+         return cv;
+      };
+      // Custom fields
+      mClassInfo.iCustomFields = {}; // TODO
+      mClassInfo.iCustomFields.IterateFields = [](KorkApi::VMObject* vmObject, KorkApi::VMIterator& state, StringTableEntry* name){
+         SimObject* object = NULL;
+         
+         if (state.userObject == NULL)
+         {
+            // New Iterator
+            ConsoleObject* consoleObject = static_cast<ConsoleObject*>(vmObject->userPtr);
+            object = dynamic_cast<SimObject*>(consoleObject);
+
+            SimFieldDictionaryIterator itr(object->getFieldDictionary());
+            itr.toVMItr(state);
+         }
+         else
+         {
+            // Advance iterator
+            SimFieldDictionaryIterator itr(state);
+            itr.operator++();
+            itr.toVMItr(state);
+         }
+
+         if (state.internalEntry != NULL)
+         {
+            *name = ((SimFieldDictionary::Entry*)state.internalEntry)->slotName;
+            return true;
+         }
+         else
+         {
+            *name = NULL;
+            return false;
+         }
+      };
+      mClassInfo.iCustomFields.GetFieldByIterator = [](KorkApi::VMObject* object, KorkApi::VMIterator& state){
+         KorkApi::ConsoleValue cv;
+         cv.typeId = 0; // TOFIX
+         cv.integer = 0;
+
+         if (state.userObject != NULL)
+         {
+            // Advance iterator
+            SimFieldDictionaryIterator itr(state);
+            // TODO: convert entry
+         }
+
+         return cv;
+      };
+      mClassInfo.iCustomFields.GetFieldByName = [](KorkApi::VMObject* object, const char* name){
+         KorkApi::ConsoleValue cv;
+         cv.typeId = 0; // TOFIX
+         cv.integer = 0;
+         return cv;
+      };
+      mClassInfo.iCustomFields.SetFieldByName = [](KorkApi::VMObject* vmObject, const char* name, KorkApi::ConsoleValue value){
+         ConsoleObject* consoleObject = static_cast<ConsoleObject*>(vmObject->userPtr);
+         SimObject* object = dynamic_cast<SimObject*>(consoleObject);
+         object->setDataFieldDynamic(StringTable->insert(name), "", ""); // TODO
+      };
+      // Enumeration
+      mClassInfo.iEnum = {};
+      mClassInfo.iEnum.GetSize = [](KorkApi::VMObject* vmObject){
+         ConsoleObject* consoleObject = static_cast<ConsoleObject*>(vmObject->userPtr);
+         SimSet* object = dynamic_cast<SimSet*>(consoleObject);
+         return object ? (U32)object->size() : (U32)0;
+      };
+      mClassInfo.iEnum.GetObjectAtIndex = [](KorkApi::VMObject* vmObject, U32 index){
+         ConsoleObject* consoleObject = static_cast<ConsoleObject*>(vmObject->userPtr);
+         SimSet* object = dynamic_cast<SimSet*>(consoleObject);
+         return object ? object->at(index)->getVMObject() : (KorkApi::VMObject*)NULL;
+      };
+   }
+   
+   vm->registerClass(mClassInfo);
 }
 
 //--------------------------------------
@@ -583,5 +723,14 @@ ConsoleObject::~ConsoleObject()
 AbstractClassRep* ConsoleObject::getClassRep() const
 {
    return NULL;
+}
+
+
+void AbstractClassRep::registerWithVM(KorkApi::Vm* vm)
+{
+   for (AbstractClassRep* walk = classLinkList; walk; walk = walk->nextClass)
+   {
+      walk->registerWithVM(vm);
+   }
 }
 

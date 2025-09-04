@@ -514,6 +514,13 @@ void SimObject::unregisterObject()
    Sim::gNameDictionary->remove(this);
    Sim::gIdDictionary->remove(this);
    Sim::cancelPendingEvents(this);
+
+   if (vm && vmObject)
+   {
+      vm->destroyVMObject(vmObject);
+      vm = NULL;
+      vmObject = NULL;
+   }
 }
 
 //---------------------------------------------------------------------------

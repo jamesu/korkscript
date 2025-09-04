@@ -32,6 +32,7 @@
 #include "console/typeValidators.h"
 #include "console/codeBlock.h"
 
+
 namespace Sim
 {
    ImplementNamedGroup(ScriptClassGroup)
@@ -343,6 +344,17 @@ SimFieldDictionaryIterator::SimFieldDictionaryIterator(SimFieldDictionary * dict
    operator++();
 }
 
+SimFieldDictionaryIterator::SimFieldDictionaryIterator(KorkApi::VMIterator& itr)
+{
+   mDictionary = (SimFieldDictionary*)itr.userObject;
+   mHashIndex = itr.count;
+   mEntry = (SimFieldDictionary::Entry*)itr.internalEntry;
+   if (mHashIndex == -1)
+   {
+      operator++();
+   }
+}
+
 SimFieldDictionary::Entry* SimFieldDictionaryIterator::operator++()
 {
    if(!mDictionary)
@@ -360,6 +372,14 @@ SimFieldDictionary::Entry* SimFieldDictionaryIterator::operator++()
 SimFieldDictionary::Entry* SimFieldDictionaryIterator::operator*()
 {
    return(mEntry);
+}
+
+
+void SimFieldDictionaryIterator::toVMItr(KorkApi::VMIterator& itr)
+{
+   itr.userObject = mDictionary;
+   itr.count = mHashIndex;
+   itr.internalEntry = mEntry;
 }
 
 // END T2D BLOCK
@@ -1612,11 +1632,11 @@ void SimObject::setDataField(StringTableEntry slotName, const char *array, const
       {
          if( fld->type == AbstractClassRep::DepricatedFieldType ||
             fld->type == AbstractClassRep::StartGroupFieldType ||
-            fld->type == AbstractClassRep::EndGroupFieldType) 
+            fld->type == AbstractClassRep::EndGroupFieldType)
             return;
-
+         
          S32 array1 = array ? dAtoi(array) : 0;
-
+         
          if(array1 >= 0 && array1 < fld->elementCount && fld->elementCount >= 1)
          {
             // If the set data notify callback returns true, then go ahead and
@@ -1624,54 +1644,58 @@ void SimObject::setDataField(StringTableEntry slotName, const char *array, const
             // already set the data, or has deemed that the data should not
             // be set at all.
             TempAlloc<char> buffer(2048);
-            TempAlloc<char> bufferSecure(2048); // This buffer is used to make a copy of the data 
+            TempAlloc<char> bufferSecure(2048); // This buffer is used to make a copy of the data
             // so that if the prep functions or any other functions use the string stack, the data
             // is not corrupted.
-
+            
             ConsoleBaseType *cbt = ConsoleBaseType::getType( fld->type );
             AssertFatal( cbt != NULL, "Could not resolve Type Id." );
-
+            
             const char* szBuffer = cbt->prepData( value, buffer, 2048 );
             dMemset( bufferSecure, 0, 2048 );
             dMemcpy( bufferSecure, szBuffer, dStrlen( szBuffer ) );
-
+            
             if( (*fld->setDataFn)( this, bufferSecure ) )
                Con::setData(fld->type, (void *) (((const char *)this) + fld->offset), array1, 1, &value, fld->table);
-
+            
             if(fld->validator)
             {
                fld->validator->validateType(this, (void *) (((const char *)this) + fld->offset));
             }
             
             onStaticModified( slotName, value );
-
+            
             return;
          }
-
+         
          if(fld->validator)
          {
             fld->validator->validateType(this, (void *) (((const char *)this) + fld->offset));
          }
-
+         
          onStaticModified( slotName, value );
          return;
       }
    }
-
    if(mFlags.test(ModDynamicFields))
    {
-      if(!mFieldDictionary)
-         mFieldDictionary = new SimFieldDictionary;
+      setDataFieldDynamic(slotName, array, value);
+   }
+}
 
-      if(!array)
-         mFieldDictionary->setFieldValue(slotName, value);
-      else
-      {
-         char buf[256];
-         dStrcpy(buf, slotName);
-         dStrcat(buf, array);
-         mFieldDictionary->setFieldValue(StringTable->insert(buf), value);
-      }
+void SimObject::setDataFieldDynamic(StringTableEntry slotName, const char *array, const char *value)
+{
+   if(!mFieldDictionary)
+      mFieldDictionary = new SimFieldDictionary;
+
+   if(!array)
+      mFieldDictionary->setFieldValue(slotName, value);
+   else
+   {
+      char buf[256];
+      dStrcpy(buf, slotName);
+      dStrcat(buf, array);
+      mFieldDictionary->setFieldValue(StringTable->insert(buf), value);
    }
 }
 
@@ -1708,25 +1732,31 @@ const char *SimObject::getDataField(StringTableEntry slotName, const char *array
 
    if(mFlags.test(ModDynamicFields))
    {
-      if(!mFieldDictionary)
-         return "";
-
-      if(!array) 
-      {
-         if (const char* val = mFieldDictionary->getFieldValue(slotName))
-            return val;
-      }
-      else
-      {
-         static char buf[256];
-         dStrcpy(buf, slotName);
-         dStrcat(buf, array);
-         if (const char* val = mFieldDictionary->getFieldValue(StringTable->insert(buf)))
-            return val;
-      }
+      return getDataFieldDynamic(slotName, array);
    }
 
    return "";
+}
+
+
+const char *SimObject::getDataFieldDynamic(StringTableEntry slotName, const char *array)
+{
+   if(!mFieldDictionary)
+      return "";
+
+   if(!array)
+   {
+      if (const char* val = mFieldDictionary->getFieldValue(slotName))
+         return val;
+   }
+   else
+   {
+      static char buf[256];
+      dStrcpy(buf, slotName);
+      dStrcat(buf, array);
+      if (const char* val = mFieldDictionary->getFieldValue(StringTable->insert(buf)))
+         return val;
+   }
 }
 
 //-----------------------------------------------------------------------------

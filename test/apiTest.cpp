@@ -93,11 +93,27 @@ struct MyBase
    StringTableEntry mName; // keep a copy so we can unregister cleanly
 };
 
-static void* MyBase_Create(void* classUser, VMObject* object, const char* name, int argc, char** argv)
+static void* MyBase_Create(void* classUser, VMObject* object)
 {
-   MyBase* b = new MyBase(); 
-   b->mName = StringTable->insert(name);
+   MyBase* b = new MyBase();
+   b->mVMInstance = object;
+   object->flags |= KorkApi::ObjectFlags::ModStaticFields;
    return b;
+}
+
+static bool MyBase_ProcessArgs(Vm* vm, VMObject* object, const char* name, bool isDatablock, bool internalName, int argc, const char** argv)
+{
+    MyBase* b = (MyBase*)object->userPtr;
+    b->mName = StringTable->insert(name);
+    return true;
+}
+
+static ConsoleValue MyBase_GetID(VMObject* object)
+{
+    ConsoleValue cv;
+    cv.typeId = 0; // TODO
+    cv.integer = 0;
+    return cv;
 }
 
 static void  MyBase_Destroy(void* classUser, void* instanceUser)
@@ -120,11 +136,10 @@ struct Player : public MyBase
    MyPoint3F mPosition;
 };
 
-static void* Player_Create(void* classUser, VMObject* object, const char* name, int argc, char** argv)
+static void* Player_Create(void* classUser, VMObject* object)
 {
    Player* b = new Player();
    b->mPosition = {};
-   b->mName = StringTable->insert(name);
    b->mVMObject = object;
    gByName[b->mName] = object;
    return b;
@@ -147,7 +162,6 @@ void cPlayerJump(Player* object, int argc, const char** argv)
 
 int testScript(char* script, const char* filename)
 {
-   // 1) Build config with working iFind
    Config cfg{};
    cfg.iFind = { &FindByName, NULL, NULL };
    Vm* vm = createVM(&cfg);
@@ -156,7 +170,6 @@ int testScript(char* script, const char* filename)
       return -1;
    }
    
-   // 2) Register TypeMyPoint3F
    TypeInfo tInfo{};
    tInfo.name = "MyPoint3F";
    tInfo.userPtr = NULL;
@@ -174,12 +187,11 @@ int testScript(char* script, const char* filename)
    
    // 3) Register MyBase
    ClassInfo myBase{};
-   myBase.name = "MyBase";
+   myBase.name = StringTable->insert("MyBase");
    myBase.userPtr = NULL;
-   myBase.parentClass = -1;
    myBase.numFields = 0;
    myBase.fields = NULL;
-   myBase.iCreate = { &MyBase_Create, &MyBase_Destroy };
+   myBase.iCreate = { &MyBase_Create, &MyBase_Destroy, &MyBase_ProcessArgs, &MyBase_GetID };
    
    myBase.iCustomFields   = {};
    
@@ -187,22 +199,21 @@ int testScript(char* script, const char* filename)
    
    //ConsoleBaseType::registerWithVM(vm);
    
+   AbstractClassRep::registerWithVM(vm);
+   
    // 4) Register Player (derived from MyBase) with a MyPoint3F field
-   static FieldInfo playerFields[] = {
-      { "position",
-         Offset(mPosition, Player),
-         (TypeId)typeMyPoint3F,
-         NULL, NULL, NULL
-      }
-   };
+   static FieldInfo playerFields[1];
+   playerFields[0] = {};
+   playerFields[0].pFieldname = StringTable->insert("position");
+   playerFields[0].offset = Offset(mPosition, Player);
+   playerFields[0].type = typeMyPoint3F;
    
    ClassInfo player{};
-   player.name        = "Player";
+   player.name        = StringTable->insert("Player");
    player.userPtr     = NULL;
-   player.parentClass = myBaseId;
    player.numFields   = 1;
    player.fields      = playerFields;
-   player.iCreate     = { &Player_Create, &Player_Destroy };
+   player.iCreate     = { &Player_Create, &Player_Destroy, &MyBase_ProcessArgs, &MyBase_GetID };
    player.iCustomFields = {};
    
    ClassId playerId = vm->registerClass(player);

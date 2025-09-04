@@ -180,17 +180,18 @@ class TypeValidator;
 /// @nosubgrouping
 //-----------------------------------------------------------------------------
 
+#include "embed/api.h"
+
 class AbstractClassRep
 {
    friend class ConsoleObject;
 
 public:
-   /// This is a function pointer typedef to support get/set callbacks for fields
-   typedef bool (*SetDataNotify)( void *obj, const char *data );
-   typedef const char *(*GetDataNotify)( void *obj, const char *data );
-
-   /// This is a function pointer typedef to support optional writing for fields.
-   typedef bool (*WriteDataNotify)( void* obj, const char* pFieldName );
+   using SetDataNotify = KorkApi::SetDataNotify;
+   using GetDataNotify = KorkApi::GetDataNotify;
+   using WriteDataNotify = KorkApi::WriteDataNotify;
+   
+   static void registerWithVM(KorkApi::Vm* vm);
 
 protected:
    const char *       mClassName;
@@ -207,33 +208,17 @@ protected:
    static ConsoleObject* create(const U32 groupId, const U32 typeId, const U32 in_classId);
 
 public:
-   enum ACRFieldTypes
+   enum ACRFieldTypes : U16
    {
-      StartGroupFieldType = 0xFFFFFFFD,
-      EndGroupFieldType   = 0xFFFFFFFE,
-      DepricatedFieldType = 0xFFFFFFFF
+       StartGroupFieldType = 0xFFFD,  // 65533
+       EndGroupFieldType   = 0xFFFE,  // 65534
+       DepricatedFieldType = 0xFFFF   // 65535
    };
-
-   struct Field {
-      const char* pFieldname;    ///< Name of the field.
-      const char* pGroupname;      ///< Optionally filled field containing the group name.
-      ///
-      ///  This is filled when type is StartField or EndField
-
-      const char*    pFieldDocs;    ///< Documentation about this field; see consoleDoc.cc.
-      bool           groupExpand;   ///< Flag to track expanded/not state of this group in the editor.
-      U32            type;          ///< A type ID. @see ACRFieldTypes
-      dsize_t        offset;        ///< Memory offset from beginning of class for this field.
-      S32            elementCount;  ///< Number of elements, if this is an array.
-      EnumTable *    table;         ///< If this is an enum, this points to the table defining it.
-      BitSet32       flag;          ///< Stores various flags
-      TypeValidator *validator;     ///< Validator, if any.
-      SetDataNotify  setDataFn;     ///< Set data notify Fn
-      GetDataNotify  getDataFn;     ///< Get data notify Fn
-      WriteDataNotify writeDataFn;   ///< Function to determine whether data should be written or not.
-   };
+   
+   using Field = KorkApi::FieldInfo;
    typedef Vector<Field> FieldList;
 
+   KorkApi::ClassInfo mClassInfo;
    FieldList mFieldList;
 
    bool mDynamicGroupExpand;
@@ -289,6 +274,8 @@ public:
    const Field *findField(StringTableEntry fieldName) const;
    AbstractClassRep* findFieldRoot( StringTableEntry fieldName );
    AbstractClassRep* findContainerChildRoot( AbstractClassRep* pChild );
+   
+   void registerWithVm(KorkApi::Vm* vm);
 
 protected:
    virtual void init() const = 0;
