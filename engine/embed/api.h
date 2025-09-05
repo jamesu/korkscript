@@ -5,6 +5,7 @@
 #include "console/simpleLexer.h"
 #include "console/ast.h"
 #include "console/simpleParser.h"
+#include "console/consoleValue.h"
 
 class TypeValidator; // TODO: change to interface
 class Namespace;
@@ -28,17 +29,6 @@ struct APIThunk<C, ThunkFn> {
     static R call(void* user, Args... args) noexcept {
         return (static_cast<const C*>(user)->*ThunkFn)(std::forward<Args>(args)...);
     }
-};
-
-struct ConsoleValue {
-	U32 typeId;
-	union {
-		F64 number;
-		U64 integer;
-		const char* value;
-		void* ptr;
-		bool flag;
-	};
 };
 
 typedef U32 SimObjectId;
@@ -273,6 +263,9 @@ public:
    ConsoleValue getStringReturnBuffer(U32 size);
    ConsoleValue getTypeReturn(TypeId typeId);
 
+   void pushValueFrame();
+   void popValueFrame();
+
 	// Public
 	VMObject* constructObject(ClassId klassId, const char* name, int argc, const char** argv);
    VMObject* setObjectNamespace(VMObject* object, NamespaceId nsId);
@@ -319,6 +312,8 @@ public:
    bool isTracing();
    S32 getTracingStackPos();
    void setTracing(bool value);
+   
+   ConsoleValue::AllocBase getAllocBase() const;
 };
 
 Vm* createVM(Config* cfg);

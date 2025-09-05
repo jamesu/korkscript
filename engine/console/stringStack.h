@@ -27,6 +27,7 @@
 #include "console/console.h"
 #include "console/compiler.h"
 #include "core/stringTable.h"
+#include "console/consoleValue.h"
 
 /// Core stack for interpreter operations.
 ///
@@ -44,6 +45,8 @@ struct StringStack
    const char *mArgV[MaxArgs];
    U32 mFrameOffsets[MaxStackDepth];
    U32 mStartOffsets[MaxStackDepth];
+   
+   KorkApi::ConsoleValue::AllocBase* mAllocBase;
 
    U32 mNumFrames;
    U32 mArgc;
@@ -62,6 +65,7 @@ struct StringStack
       {
          mBufferSize = size + 2048;
          mBuffer = (char *) dRealloc(mBuffer, mBufferSize);
+         if (mAllocBase) mAllocBase->ret = mBuffer;
       }
    }
    void validateArgBufferSize(U32 size)
@@ -70,9 +74,11 @@ struct StringStack
       {
          mArgBufferSize = size + 2048;
          mArgBuffer = (char *) dRealloc(mArgBuffer, mArgBufferSize);
+         if (mAllocBase) mAllocBase->arg = mBuffer;
       }
    }
-   StringStack()
+   
+   StringStack(KorkApi::ConsoleValue::AllocBase* allocBase = NULL)
    {
       mBufferSize = 0;
       mBuffer = NULL;
@@ -81,6 +87,7 @@ struct StringStack
       mLen = 0;
       mStartStackSize = 0;
       mFunctionOffset = 0;
+      mAllocBase = allocBase;
       validateBufferSize(8192);
       validateArgBufferSize(2048);
    }

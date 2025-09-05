@@ -1030,14 +1030,14 @@ const char *getVariable(const char *name)
    }
 
    name = prependDollar(name);
-   return sVM->getGlobalVariable(StringTable->insert(name)).value;
+   return (const char*)sVM->getGlobalVariable(StringTable->insert(name)).evaluatePtr(sVM->getAllocBase());
 }
 
 const char *getLocalVariable(const char *name)
 {
    name = prependPercent(name);
 
-   return sVM->getLocalVariable(StringTable->insert(name)).value;
+   return (const char*)sVM->getLocalVariable(StringTable->insert(name)).evaluatePtr(sVM->getAllocBase());
 }
 
 bool getBoolVariable(const char *varName, bool def)
@@ -1210,7 +1210,7 @@ const char *evaluate(const char* string, bool echo, const char *fileName)
       fileName = StringTable->insert(fileName);
 
    KorkApi::ConsoleValue retValue = sVM->evalCode(string, fileName);
-   return retValue.value;
+   return (const char*)retValue.evaluatePtr(sVM->getAllocBase());
 }
 //------------------------------------------------------------------------------
 const char *evaluatef(const char* string, ...)
@@ -1225,7 +1225,7 @@ const char *evaluatef(const char* string, ...)
       va_end (args);
 
       KorkApi::ConsoleValue retValue = sVM->evalCode(buffer, NULL);
-      result = retValue.value;
+      result = (const char*)retValue.evaluatePtr(sVM->getAllocBase());
 
       delete [] buffer;
       buffer = NULL;
@@ -1245,7 +1245,7 @@ const char *execute(S32 argc, const char *argv[])
       KorkApi::ConsoleValue retValue = KorkApi::ConsoleValue();
       sVM->callNamespaceFunction(sVM->getGlobalNamespace(), funcName, argc, argv, retValue);
 
-      return retValue.value;
+      return (const char*)retValue.evaluatePtr(sVM->getAllocBase());
 
 #ifdef TORQUE_MULTITHREAD
    }
@@ -1276,7 +1276,7 @@ const char *execute(SimObject *object, S32 argc, const char *argv[],bool thisCal
       sVM->callObjectFunction(object->getVMObject(), funcName, argc, argv, retValue);
       object->popScriptCallbackGuard();
 
-      return retValue.value;
+      return (const char*)retValue.evaluatePtr(sVM->getAllocBase());
    }
    warnf(ConsoleLogEntry::Script, "Con::execute - %d has no namespace: %s", object->getId(), argv[0]);
    return "";

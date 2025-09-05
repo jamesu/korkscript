@@ -219,10 +219,7 @@ void AbstractClassRep::registerWithVm(KorkApi::Vm* vm)
          ConsoleObject* consoleObject = static_cast<ConsoleObject*>(vmObject->userPtr);
          SimObject* object = dynamic_cast<SimObject*>(consoleObject);
          
-         KorkApi::ConsoleValue cv;
-         cv.typeId = 0; // TOFIX
-         cv.integer = object->getId();
-         return cv;
+         return KorkApi::ConsoleValue::makeInt(object->getId());
       };
       // Custom fields
       mClassInfo.iCustomFields = {}; // TODO
@@ -258,9 +255,7 @@ void AbstractClassRep::registerWithVm(KorkApi::Vm* vm)
          }
       };
       mClassInfo.iCustomFields.GetFieldByIterator = [](KorkApi::VMObject* object, KorkApi::VMIterator& state){
-         KorkApi::ConsoleValue cv;
-         cv.typeId = 0; // TOFIX
-         cv.integer = 0;
+         KorkApi::ConsoleValue cv = KorkApi::ConsoleValue();
 
          if (state.userObject != NULL)
          {
@@ -272,9 +267,7 @@ void AbstractClassRep::registerWithVm(KorkApi::Vm* vm)
          return cv;
       };
       mClassInfo.iCustomFields.GetFieldByName = [](KorkApi::VMObject* object, const char* name){
-         KorkApi::ConsoleValue cv;
-         cv.typeId = 0; // TOFIX
-         cv.integer = 0;
+         KorkApi::ConsoleValue cv = KorkApi::ConsoleValue(); // TOFIX
          return cv;
       };
       mClassInfo.iCustomFields.SetFieldByName = [](KorkApi::VMObject* vmObject, const char* name, KorkApi::ConsoleValue value){

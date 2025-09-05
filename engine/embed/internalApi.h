@@ -27,6 +27,7 @@ struct VmInternal
    Vector<ClassInfo> mClassList;
    Vector<ConsoleValue> mHardRefs;
    Config mConfig;
+   ConsoleValue::AllocBase mAllocBase;
 
    VmInternal();
    ~VmInternal();

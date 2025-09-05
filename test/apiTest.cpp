@@ -110,10 +110,8 @@ static bool MyBase_ProcessArgs(Vm* vm, VMObject* object, const char* name, bool 
 
 static ConsoleValue MyBase_GetID(VMObject* object)
 {
-    ConsoleValue cv;
-    cv.typeId = 0; // TODO
-    cv.integer = 0;
-    return cv;
+   MyBase* b = (MyBase*)object->userPtr;
+    return ConsoleValue::makeString(b->mName);
 }
 
 static void  MyBase_Destroy(void* classUser, void* instanceUser)

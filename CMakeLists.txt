@@ -61,6 +61,7 @@ set(KS_SRCS
 	./engine/console/astAlloc.cc
 	./engine/console/compiler.cc
 
+	./engine/console/consoleValue.h
 	./engine/console/simpleLexer.h
 	./engine/console/simpleParser.h
 	./engine/embed/api.h

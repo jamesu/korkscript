@@ -12,9 +12,7 @@ namespace KorkApi
 // Small helper to produce a zero-initialized ConsoleValue
 static inline ConsoleValue makeDefaultValue()
 {
-    ConsoleValue v{};
-    v.typeId = 0;
-    v.integer = 0;
+   ConsoleValue v;
     return v;
 }
 
@@ -139,6 +137,16 @@ ConsoleValue Vm::getStringReturnBuffer(U32 size)
 ConsoleValue Vm::getTypeReturn(TypeId typeId)
 {
     return makeDefaultValue();
+}
+
+void Vm::pushValueFrame()
+{
+   return mInternal->STR.pushFrame();
+}
+
+void Vm::popValueFrame()
+{
+   return mInternal->STR.popFrame();
 }
 
 // Public
@@ -316,7 +324,22 @@ bool Vm::callObjectFunction(VMObject* self, StringTableEntry funcName, int argc,
 
    // Twiddle %this argument
    const char *oldArg1 = argv[1];
-   dSprintf(idBuf, sizeof(idBuf), "%d", self->klass->iCreate.GetId(self).value);
+   ConsoleValue cv = self->klass->iCreate.GetId(self);
+   switch (cv.typeId)
+   {
+      case ConsoleValue::TypeInternalFloat:
+         dSprintf(idBuf, sizeof(idBuf), "%g", cv.getFloat());
+         break;
+      case ConsoleValue::TypeInternalInt:
+         dSprintf(idBuf, sizeof(idBuf), "%i", cv.getInt());
+         break;
+      case ConsoleValue::TypeInternalString:
+         dSprintf(idBuf, sizeof(idBuf), "%s", (const char*)cv.evaluatePtr(mInternal->mAllocBase));
+         break;
+      default:
+         idBuf[0] = '\0';
+         break;
+   }
    argv[1] = idBuf;
 
    if (ent->mType == Namespace::Entry::ScriptFunctionType)
@@ -330,6 +353,8 @@ bool Vm::callObjectFunction(VMObject* self, StringTableEntry funcName, int argc,
    mInternal->mEvalState.thisObject = self;
    const char *ret = ent->execute(argc, argv, &mInternal->mEvalState);
    mInternal->mEvalState.thisObject = save;
+   
+   retValue = ConsoleValue::makeString(ret);
 
    if (ent->mType == Namespace::Entry::ScriptFunctionType)
    {
@@ -350,7 +375,6 @@ bool Vm::callNamespaceFunction(NamespaceId nsId, StringTableEntry name, int argc
 {
    Namespace* ns = (Namespace*)nsId;
    Namespace::Entry* ent = ns->lookup(name);
-   ConsoleValue rv = ConsoleValue();
 
    if (!ent)
    {
@@ -366,7 +390,7 @@ bool Vm::callNamespaceFunction(NamespaceId nsId, StringTableEntry name, int argc
    // doesn't continue to grow unnecessarily
    mInternal->STR.clearFunctionOffset();
 
-   rv.value = ret;
+   retValue = ConsoleValue::makeString(ret);
 
    return true;
 }
@@ -410,12 +434,12 @@ bool Vm::getObjectFieldString(VMObject* object, StringTableEntry fieldName, cons
 
 void Vm::setGlobalVariable(StringTableEntry name, const char* value)
 {
-
+   mInternal->mEvalState.globalVars.setVariable(name, value);
 }
 
 void Vm::setLocalVariable(StringTableEntry name, const char* value)
 {
-
+   mInternal->mEvalState.stack.last()->setVariable(name, value);
 }
 
 ConsoleValue Vm::getGlobalVariable(StringTableEntry name)
@@ -439,20 +463,24 @@ bool Vm::removeGlobalVariable(StringTableEntry name)
    return name!=0 && mInternal->mEvalState.globalVars.removeVariable(name);
 }
 
+ConsoleValue::AllocBase Vm::getAllocBase() const
+{
+   return mInternal->mAllocBase;
+}
 
 bool Vm::isTracing()
 {
-   return false;
+   return mInternal->mEvalState.traceOn;
 }
 
 S32 Vm::getTracingStackPos()
 {
-   return 0;
+   return mInternal->mEvalState.stack.size();
 }
 
 void Vm::setTracing(bool value)
 {
-
+   mInternal->mEvalState.traceOn = value;
 }
 
 
@@ -472,7 +500,7 @@ void destroyVm(Vm* vm)
    delete vm;
 }
 
-VmInternal::VmInternal()
+VmInternal::VmInternal() : STR(&mAllocBase)
 {
    mCodeBlockList = NULL;
    mCurrentCodeBlock = NULL;
