@@ -29,15 +29,14 @@
 #include "core/fileStream.h"
 #include "core/stringTable.h"
 #include "core/unicode.h"
+#include "console/consoleNamespace.h"
+#include "embed/internalApi.h"
 
 using namespace Compiler;
 
-CodeBlock *    CodeBlock::smCodeBlockList = NULL;
-CodeBlock *    CodeBlock::smCurrentCodeBlock = NULL;
-
 //-------------------------------------------------------------------------
 
-CodeBlock::CodeBlock()
+CodeBlock::CodeBlock(KorkApi::VmInternal* vm)
 {
    globalStrings = NULL;
    functionStrings = NULL;
@@ -55,12 +54,13 @@ CodeBlock::CodeBlock()
    fullPath = NULL;
    modPath = NULL;
    mRoot = StringTable->EmptyString;
+   mVM = vm;
 }
 
 CodeBlock::~CodeBlock()
 {
    // Make sure we aren't lingering in the current code block...
-   AssertFatal(smCurrentCodeBlock != this, "CodeBlock::~CodeBlock - Caught lingering in smCurrentCodeBlock!")
+   AssertFatal(mVM && mVM->mCurrentCodeBlock != this, "CodeBlock::~CodeBlock - Caught lingering in smCurrentCodeBlock!")
    
    if(name)
       removeFromCodeList();
@@ -74,44 +74,10 @@ CodeBlock::~CodeBlock()
 
 //-------------------------------------------------------------------------
 
-StringTableEntry CodeBlock::getCurrentCodeBlockName()
-{
-   if (CodeBlock::getCurrentBlock())
-      return CodeBlock::getCurrentBlock()->name;
-   else
-      return NULL;
-}
-
-StringTableEntry CodeBlock::getCurrentCodeBlockFullPath()
-{
-   if (CodeBlock::getCurrentBlock())
-      return CodeBlock::getCurrentBlock()->fullPath;
-   else
-      return NULL;
-}
-
-StringTableEntry CodeBlock::getCurrentCodeBlockModName()
-{
-   if (CodeBlock::getCurrentBlock())
-      return CodeBlock::getCurrentBlock()->modPath;
-   else
-      return NULL;
-}
-
-CodeBlock *CodeBlock::find(StringTableEntry name)
-{
-   for(CodeBlock *walk = CodeBlock::getCodeBlockList(); walk; walk = walk->nextFile)
-      if(walk->name == name)
-         return walk;
-   return NULL;
-}
-
-//-------------------------------------------------------------------------
-
 void CodeBlock::addToCodeList()
 {
    // remove any code blocks with my name
-   for(CodeBlock **walk = &smCodeBlockList; *walk;walk = &((*walk)->nextFile))
+   for(CodeBlock **walk = &mVM->mCodeBlockList; *walk;walk = &((*walk)->nextFile))
    {
       if((*walk)->name == name)
       {
@@ -119,8 +85,8 @@ void CodeBlock::addToCodeList()
          break;
       }
    }
-   nextFile = smCodeBlockList;
-   smCodeBlockList = this;
+   nextFile = mVM->mCodeBlockList;
+   mVM->mCodeBlockList = this;
 }
 
 void CodeBlock::clearAllBreaks()
@@ -255,7 +221,7 @@ const char *CodeBlock::getFileLine(U32 ip)
 
 void CodeBlock::removeFromCodeList()
 {
-   for(CodeBlock **walk = &smCodeBlockList; *walk; walk = &((*walk)->nextFile))
+   for(CodeBlock **walk = &mVM->mCodeBlockList; *walk; walk = &((*walk)->nextFile))
    {
       if(*walk == this)
       {
@@ -326,8 +292,8 @@ void CodeBlock::calcBreakList()
    // Let the telnet debugger know that this code
    // block has been loaded and that it can add break
    // points it has for it.
-   if ( TelDebugger )
-      TelDebugger->addAllBreakpoints( this );
+   if ( mVM->mTelDebugger )
+      mVM->mTelDebugger->addAllBreakpoints( this );
 }
 
 bool CodeBlock::read(StringTableEntry fileName, Stream &st)

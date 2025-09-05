@@ -25,6 +25,10 @@
 
 class CodeBlock;
 
+#include "console/consoleNamespace.h"
+#include "embed/api.h"
+#include "embed/internalApi.h"
+
 /// Telnet debug service implementation.
 ///
 /// This is the C++ side of the built-in Torque debugger.
@@ -65,7 +69,10 @@ class TelnetDebugger
    S32 mCurPos;
    bool mWaitForClient;
 
-   TelnetDebugger();
+   KorkApi::VmInternal* mVMInternal;
+
+public:
+   TelnetDebugger(KorkApi::VmInternal* vm);
    ~TelnetDebugger();
 
    struct Breakpoint
@@ -108,8 +115,6 @@ class TelnetDebugger
    void sendBreak();
    void setBreakOnNextStatement( bool enabled );
 public:
-   static void create();
-   static void destroy();
 
    void disconnect();
    bool isConnected() const { return mState == Connected; }
@@ -128,8 +133,6 @@ public:
    void setDebugParameters(S32 port, const char *password, bool waitForClient);
    void processConsoleLine(const char *consoleLine);
 };
-
-extern TelnetDebugger *TelDebugger;
 
 #endif
 

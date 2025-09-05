@@ -14,6 +14,7 @@ bool LinkConsoleFunctions = false;
 // Buffer for expanding script filenames.
 static char scriptFilenameBuffer[1024];
 
+#if TOFIX
 //----------------------------------------------------------------
 
 ConsoleFunction(expandFilename, const char*, 2, 2, "(string filename)")
@@ -599,12 +600,14 @@ ConsoleFunction(NextToken,const char *,4,4,"nextToken(str,token,delim)")
       if (*str)
          *str++ = 0;
 
+#if TOFIX
       // set local variable if inside a function
       if (gEvalState.stack.size() && 
          gEvalState.stack.last()->scopeName)
          Con::setLocalVariable(token,tmp);
       else
          Con::setVariable(token,tmp);
+#endif
 
       // advance str past the 'delim space'
       while (isInSet(*str, delim))
@@ -766,6 +769,7 @@ static U32 journalDepth = 1;
 
 ConsoleFunction(exec, bool, 2, 4, "exec(fileName [, nocalls [,journalScript]])")
 {
+#if TOFIX
    bool journal = false;
 
    execDepth++;
@@ -930,6 +934,9 @@ ConsoleFunction(exec, bool, 2, 4, "exec(fileName [, nocalls [,journalScript]])")
    delete [] script;
    execDepth--;
    return ret;
+#else
+   return "";
+#endif
 }
 
 ConsoleFunction(eval, const char *, 2, 2, "eval(consoleString)")
@@ -1152,3 +1159,5 @@ ConsoleFunction(fileDelete, bool, 2,2, "fileDelete('path')")
 }
 
 ConsoleFunctionGroupEnd( FileSystem );
+
+#endif

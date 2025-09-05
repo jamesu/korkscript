@@ -7,6 +7,7 @@
 #include "console/simpleParser.h"
 
 class TypeValidator; // TODO: change to interface
+class Namespace;
 
 namespace KorkApi
 {
@@ -41,7 +42,7 @@ struct ConsoleValue {
 };
 
 typedef U32 SimObjectId;
-typedef S32 NamespaceId;
+typedef Namespace* NamespaceId;
 typedef S32 CodeBlockId;
 using VMNamespace = Namespace;
 
@@ -246,16 +247,23 @@ public:
    
 public:
    
-	S32 registerNamespace(StringTableEntry name, StringTableEntry package);
-	S32 getNamespace(StringTableEntry name, StringTableEntry package);
-	S32 getGlobalNamespace();
+	NamespaceId findNamespace(StringTableEntry name, StringTableEntry package = NULL);
+   NamespaceId getGlobalNamespace();
+   void setNamespaceUsage(NamespaceId ns, const char* usage);
 	void activatePackage(StringTableEntry pkgName);
 	void deactivatePackage(StringTableEntry pkgName);
-   bool linkNamespace(NamespaceId parent, NamespaceId child);
-   bool unlinkNamespace(NamespaceId parent, NamespaceId child);
+   bool linkNamespace(StringTableEntry parent, StringTableEntry child);
+   bool unlinkNamespace(StringTableEntry parent, StringTableEntry child);
+   bool linkNamespaceById(NamespaceId parent, NamespaceId child);
+   bool unlinkNamespaceById(NamespaceId parent, NamespaceId child);
    
+
+    const char* tabCompleteNamespace(NamespaceId nsId, const char *prevText, S32 baseLen, bool fForward);
+    const char* tabCompleteVariable(const char *prevText, S32 baseLen, bool fForward);
+
 	TypeId registerType(TypeInfo& info);
 	ClassId registerClass(ClassInfo& info);
+    TypeInfo* getTypeInfo(TypeId ident);
 
 	// Hard refs to console values
 	HardConsoleValueRef createHardRef(ConsoleValue value);
@@ -268,6 +276,7 @@ public:
 	// Public
 	VMObject* constructObject(ClassId klassId, const char* name, int argc, const char** argv);
    VMObject* setObjectNamespace(VMObject* object, NamespaceId nsId);
+   NamespaceId getObjectNamespace(VMObject* object);
 	// Internal
 	VMObject* createVMObject(ClassId klassId, void* klassPtr);
     void destroyVMObject(VMObject* object);
@@ -277,13 +286,17 @@ public:
    void addNamespaceFunction(NamespaceId nsId, StringTableEntry name,  FloatCallback, const char *usage, S32 minArgs, S32 maxArgs);
    void addNamespaceFunction(NamespaceId nsId, StringTableEntry name,  VoidCallback, const char *usage, S32 minArgs, S32 maxArgs);
    void addNamespaceFunction(NamespaceId nsId, StringTableEntry name,  BoolCallback, const char *usage, S32 minArgs, S32 maxArgs);
-
+   bool isNamespaceFunction(NamespaceId nsId, StringTableEntry name);
+   
    bool compileCodeBlock(const char* code, const char* filename, U32* outCodeSize, U32** outCode);
    ConsoleValue execCodeBlock(U32 codeSize, U8* code, const char* filename, bool noCalls, int setFrame);
 
    ConsoleValue evalCode(const char* code, const char* filename);
    ConsoleValue call(int argc, const char** argv);
    ConsoleValue callObject(VMObject* h, int argc, const char** argv);
+
+   bool callNamespaceFunction(NamespaceId nsId, StringTableEntry name, int argc, const char** argv, ConsoleValue& retValue);
+    bool callObjectFunction(VMObject* self, StringTableEntry name, int argc, const char** argv, ConsoleValue& retValue);
 
    // Helpers (should call into user funcs)
    VMObject* findObjectByName(const char* name);
@@ -294,6 +307,18 @@ public:
    bool setObjectFieldString(VMObject* object, StringTableEntry fieldName, const char* stringValue, U32* arrayIndex);
    bool getObjectFieldNative(VMObject* object, StringTableEntry fieldName, void* nativeValue, U32* arrayIndex);
    bool getObjectFieldString(VMObject* object, StringTableEntry fieldName, const char** stringValue, U32* arrayIndex);
+
+   void setGlobalVariable(StringTableEntry name, const char* value);
+   void setLocalVariable(StringTableEntry name, const char* value);
+   ConsoleValue getGlobalVariable(StringTableEntry name);
+   ConsoleValue getLocalVariable(StringTableEntry name);
+
+   bool registerGlobalVariable(StringTableEntry name, S32 type, void *dptr, const char* usage);
+   bool removeGlobalVariable(StringTableEntry name);
+
+   bool isTracing();
+   S32 getTracingStackPos();
+   void setTracing(bool value);
 };
 
 Vm* createVM(Config* cfg);

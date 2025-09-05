@@ -25,6 +25,12 @@
 
 #include "console/compiler.h"
 
+namespace KorkApi
+{
+class Vm;
+class VmInternal;
+}
+
 class Stream;
 
 
@@ -34,27 +40,11 @@ class Stream;
 class CodeBlock
 {
 private:
-   static CodeBlock* smCodeBlockList;
-   static CodeBlock* smCurrentCodeBlock;
+   KorkApi::VmInternal* mVM;
    
 public:
    
-   static CodeBlock* getCurrentBlock()
-   {
-      return smCurrentCodeBlock;
-   }
-   
-   static CodeBlock *getCodeBlockList()
-   {
-      return smCodeBlockList;
-   }
-   
-   static StringTableEntry getCurrentCodeBlockName();
-   static StringTableEntry getCurrentCodeBlockFullPath();
-   static StringTableEntry getCurrentCodeBlockModName();
-   static CodeBlock *find(StringTableEntry);
-   
-   CodeBlock();
+   CodeBlock(KorkApi::VmInternal* vm);
    ~CodeBlock();
    
    StringTableEntry name;

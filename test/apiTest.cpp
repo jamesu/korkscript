@@ -220,8 +220,8 @@ int testScript(char* script, const char* filename)
    ClassId playerId = vm->registerClass(player);
    
    // 5) Register a basic echo in the global namespace so the script can print
-   S32 globalNS = vm->getGlobalNamespace(); // or obtain root namespace
-   S32 playerNS = vm->registerNamespace(StringTable->insert("Player"), NULL);
+   NamespaceId globalNS = vm->getGlobalNamespace(); // or obtain root namespace
+   NamespaceId playerNS = vm->findNamespace(StringTable->insert("Player"), NULL);
    
    vm->addNamespaceFunction(playerNS, StringTable->insert("jump"), (VoidCallback)cPlayerJump, "()", 2, 2);
    vm->evalCode(script, filename);

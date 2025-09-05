@@ -33,12 +33,14 @@
 #include "console/consoleObject.h"
 #include "core/fileStream.h"
 #include "console/compiler.h"
+#include "console/consoleNamespace.h"
 
 //--- Information pertaining to this page... ------------------
 /// @file
 ///
 /// For specifics on using the consoleDoc functionality, see @ref console_autodoc
 
+#ifdef TOFIX
 
 ConsoleFunctionGroupBegin(ConsoleDoc, "Console self-documentation functions. These output psuedo C++ suitable for feeeding through Doxygen or another auto documentation tool.");
 
@@ -85,6 +87,8 @@ ConsoleFunction(dumpConsoleFunctions, void, 1, 3, "bool dumpScript = true, bool 
 }
 
 ConsoleFunctionGroupEnd(ConsoleDoc);
+
+#endif
 
 /*! @} */ // group ConsoleOutput
 
@@ -240,35 +244,35 @@ void printClassFooter()
    Con::printf("");
 }
 
-void Namespace::printNamespaceEntries(Namespace * g, bool dumpScript, bool dumpEngine )
+void NamespaceState::printNamespaceEntries(Namespace * g, bool dumpScript, bool dumpEngine )
 {
    static bool inGroup = false;
 
    // Go through all the entries.
    // Iterate through the methods of the namespace...
-   for(Entry *ewalk = g->mEntryList; ewalk; ewalk = ewalk->mNext)
+   for(Namespace::Entry *ewalk = g->mEntryList; ewalk; ewalk = ewalk->mNext)
    {
       char buffer[1024]; //< This will bite you in the butt someday.
       int eType = ewalk->mType;
       const char * funcName = ewalk->mFunctionName;
 
-      if( ( eType == Entry::ScriptFunctionType ) && !dumpScript )
+      if( ( eType == Namespace::Entry::ScriptFunctionType ) && !dumpScript )
          continue;
 
-      if( ( eType != Entry::ScriptFunctionType ) && !dumpEngine )
+      if( ( eType != Namespace::Entry::ScriptFunctionType ) && !dumpEngine )
          continue;
 
       // If it's a function
-      if(eType >= Entry::ScriptFunctionType || eType == Entry::OverloadMarker)
+      if(eType >= Namespace::Entry::ScriptFunctionType || eType == Namespace::Entry::OverloadMarker)
       {
-         if(eType==Entry::OverloadMarker) 
+         if(eType == Namespace::Entry::OverloadMarker)
          {
             // Deal with crap from the OverloadMarker case.
             // It has no type information so we have to "correct" its type.
 
             // Find the original
             eType = 8;
-            for(Entry *eseek = g->mEntryList; eseek; eseek = eseek->mNext)
+            for(Namespace::Entry *eseek = g->mEntryList; eseek; eseek = eseek->mNext)
             {
                if(!dStrcmp(eseek->mFunctionName, ewalk->cb.mGroupName))
                {
@@ -340,7 +344,7 @@ void Namespace::printNamespaceEntries(Namespace * g, bool dumpScript, bool dumpE
          // Default...
          printClassMethod(true, typeNames[eType], funcName, "", ewalk->mUsage);
       }
-      else if(ewalk->mType == Entry::GroupMarker)
+      else if(ewalk->mType == Namespace::Entry::GroupMarker)
       {
          if(!inGroup)
             printGroupStart(ewalk->cb.mGroupName, ewalk->mUsage);
@@ -362,7 +366,7 @@ void Namespace::printNamespaceEntries(Namespace * g, bool dumpScript, bool dumpE
 
 }
 
-void Namespace::dumpClasses( bool dumpScript, bool dumpEngine )
+void NamespaceState::dumpClasses( bool dumpScript, bool dumpEngine )
 {
    VectorPtr<Namespace*> vec;
    trashCache();
@@ -416,9 +420,9 @@ void Namespace::dumpClasses( bool dumpScript, bool dumpEngine )
       if( !dumpScript )
       {
          bool found = false;
-         for(Entry *ewalk = vec[i]->mEntryList; ewalk; ewalk = ewalk->mNext)
+         for(Namespace::Entry *ewalk = vec[i]->mEntryList; ewalk; ewalk = ewalk->mNext)
          {
-            if( ewalk->mType != Entry::ScriptFunctionType )
+            if( ewalk->mType != Namespace::Entry::ScriptFunctionType )
             {
                found = true;
                break;
@@ -432,9 +436,9 @@ void Namespace::dumpClasses( bool dumpScript, bool dumpEngine )
       if( !dumpEngine )
       {
          bool found = false;
-         for(Entry *ewalk = vec[i]->mEntryList; ewalk; ewalk = ewalk->mNext)
+         for(Namespace::Entry *ewalk = vec[i]->mEntryList; ewalk; ewalk = ewalk->mNext)
          {
-            if( ewalk->mType == Entry::ScriptFunctionType )
+            if( ewalk->mType == Namespace::Entry::ScriptFunctionType )
             {
                found = true;
                break;
@@ -608,7 +612,7 @@ void Namespace::dumpClasses( bool dumpScript, bool dumpEngine )
    }
 }
 
-void Namespace::dumpFunctions( bool dumpScript, bool dumpEngine )
+void NamespaceState::dumpFunctions( bool dumpScript, bool dumpEngine )
 {
    // Get the global namespace.
    Namespace* g = find(NULL); //->mParent;

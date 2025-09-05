@@ -27,6 +27,10 @@
 #include "console/console.h"
 #endif
 
+#include "console/consoleNamespace.h"
+#include "embed/api.h"
+#include "embed/internalApi.h"
+
 /// Telnet admin console.
 ///
 /// Torque supports remote access to its console. This is most useful when
@@ -89,10 +93,12 @@ class TelnetConsole
       TelnetClient *nextClient;
    };
    TelnetClient *mClientList;
-   TelnetConsole();
-   ~TelnetConsole();
+   KorkApi::VmInternal* mVMInternal;
 
 public:
+   TelnetConsole(KorkApi::VmInternal* vm);
+   ~TelnetConsole();
+
    static void create();    ///< Initialize the telnet console.
    static void destroy();   ///< Shut down the telnet console.
    void process();          ///< Called by the main loop to let the console process commands

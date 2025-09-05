@@ -28,6 +28,7 @@
 
 #include "core/findMatch.h"
 #include "console/consoleInternal.h"
+#include "console/consoleNamespace.h"
 #include "core/fileStream.h"
 #include "console/compiler.h"
 
@@ -36,6 +37,8 @@
 // TOFIX #include "sim/netStringTable.h"
 
 #include "console/stringStack.h"
+#include "console/consoleNamespace.h"
+#include "embed/internalApi.h"
 
 using namespace Compiler;
 
@@ -304,6 +307,8 @@ void CodeBlock::getFunctionArgs(char buffer[1024], U32 ip)
 U32 gExecCount = 0;
 const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNamespace, U32 argc, const char **argv, bool noCalls, StringTableEntry packageName, S32 setFrame)
 {
+#if TOFIX
+   
 #ifdef TORQUE_DEBUG
    U32 stackStart = STR.mStartStackSize;
    gExecCount++;
@@ -430,8 +435,8 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
    static char curFieldArray[256];
    static char prevFieldArray[256];
    
-   CodeBlock *saveCodeBlock = smCurrentCodeBlock;
-   smCurrentCodeBlock = this;
+   CodeBlock *saveCodeBlock = mVM->mCurrentCodeBlock;
+   mVM->mCurrentCodeBlock = this;
    if(this->name)
    {
       Con::gCurrentFile = this->name;
@@ -1842,7 +1847,8 @@ execFinished:
       globalStrings = NULL;
       globalFloats = NULL;
    }
-   smCurrentCodeBlock = saveCodeBlock;
+   
+   mVM->mCurrentCodeBlock = saveCodeBlock;
    if(saveCodeBlock && saveCodeBlock->name)
    {
       Con::gCurrentFile = saveCodeBlock->name;
@@ -1856,6 +1862,9 @@ execFinished:
    AssertFatal(!(STR.mStartStackSize < stackStart), "String stack popped too much in script exec");
 #endif
    return STR.getStringValue();
+   
+#endif
+   return "";
 }
 
 //------------------------------------------------------------

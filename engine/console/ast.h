@@ -574,6 +574,4 @@ struct FunctionDeclStmtNode : StmtNode
    DBG_STMT_TYPE(FunctionDeclStmtNode);
 };
 
-extern ExprEvalState gEvalState;
-
 #endif

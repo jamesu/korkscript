@@ -47,7 +47,6 @@ KorkApi::Vm* sVM;
 
 extern StringStack STR;
 
-ExprEvalState gEvalState;
 ConsoleConstructor *ConsoleConstructor::first = NULL;
 bool gWarnUndefinedScriptVariables;
 
@@ -56,7 +55,7 @@ static char scratchBuffer[4096];
 // TO-DO: Console debugger stuff to be cleaned up later
 static S32 dbgGetCurrentFrame(void)
 {
-   return gEvalState.stack.size() - 1;
+   return sVM->getTracingStackPos() - 1;
 }
 
 static int charConv(int in)
@@ -313,9 +312,7 @@ void ConsoleConstructor::setup()
          Con::addOverload(walk->className, walk->funcName, walk->usage);
       else if(walk->ns)
       {
-         Namespace* ns = Namespace::find(StringTable->insert(walk->className));
-         if( ns )
-            ns->mUsage = walk->usage;
+         sVM->setNamespaceUsage(sVM->findNamespace(walk->className), walk->usage);
       }
       else
          AssertFatal(false, "Found a ConsoleConstructor with an indeterminate type!");
@@ -452,7 +449,6 @@ void init()
 #endif
 
    // Initialize subsystems.
-   Namespace::init();
    ConsoleConstructor::setup();
 
    // Setup the console types.  (tgemit - needs to be here)
@@ -474,7 +470,7 @@ void init()
    // And finally, the ACR...
    AbstractClassRep::initialize();
 
-   // Register types with VM
+   // Register types with
    ConsoleBaseType::registerWithVM(sVM);
    AbstractClassRep::registerWithVM(sVM);
 }
@@ -487,7 +483,6 @@ void shutdown()
    active = false;
 
    consoleLogFile.close();
-   Namespace::shutdown();
 
    KorkApi::destroyVm(sVM);
    sVM = NULL;
@@ -607,11 +602,11 @@ U32 tabComplete(char* inputBuffer, U32 cursorPos, U32 maxResultLength, bool forw
       // In the global namespace, we can complete on global vars as well as functions.
       if (inputBuffer[completionBaseStart] == '$')
       {
-         newText = gEvalState.globalVars.tabComplete(inputBuffer + completionBaseStart, completionBaseLen, forwardTab);
+         newText = sVM->tabCompleteVariable(inputBuffer + completionBaseStart, completionBaseLen, forwardTab);
       }
       else 
       {
-         newText = Namespace::global()->tabComplete(inputBuffer + completionBaseStart, completionBaseLen, forwardTab);
+         newText = sVM->tabCompleteNamespace(sVM->getGlobalNamespace(), inputBuffer + completionBaseStart, completionBaseLen, forwardTab);
       }
    }
 
@@ -747,9 +742,9 @@ static void _printf(ConsoleLogEntry::Level level, ConsoleLogEntry::Type type, co
 
    char buffer[4096];
    U32 offset = 0;
-   if(gEvalState.traceOn && gEvalState.stack.size())
+   if(sVM->isTracing())
    {
-      offset = gEvalState.stack.size() * 3;
+      offset = sVM->getTracingStackPos() * 3;
       for(U32 i = 0; i < offset; i++)
          buffer[i] = ' ';
    }
@@ -920,13 +915,15 @@ void errorf(const char* fmt,...)
 void setVariable(const char *name, const char *value)
 {
    name = prependDollar(name);
-   gEvalState.globalVars.setVariable(StringTable->insert(name), value);
+   //gEvalState.globalVars.setVariable(StringTable->insert(name), value);
+   sVM->setGlobalVariable(StringTable->insert(name), value);
 }
 
 void setLocalVariable(const char *name, const char *value)
 {
    name = prependPercent(name);
-   gEvalState.stack.last()->setVariable(StringTable->insert(name), value);
+   //gEvalState.stack.last()->setVariable(StringTable->insert(name), value);
+   sVM->setLocalVariable(StringTable->insert(name), value);
 }
 
 void setBoolVariable(const char *varName, bool value)
@@ -1033,14 +1030,14 @@ const char *getVariable(const char *name)
    }
 
    name = prependDollar(name);
-   return gEvalState.globalVars.getVariable(StringTable->insert(name));
+   return sVM->getGlobalVariable(StringTable->insert(name)).value;
 }
 
 const char *getLocalVariable(const char *name)
 {
    name = prependPercent(name);
 
-   return gEvalState.stack.last()->getVariable(StringTable->insert(name));
+   return sVM->getLocalVariable(StringTable->insert(name)).value;
 }
 
 bool getBoolVariable(const char *varName, bool def)
@@ -1063,57 +1060,53 @@ F32 getFloatVariable(const char *varName, F32 def)
 
 //---------------------------------------------------------------------------
 
-bool addVariable(    const char *name,
+bool addVariable(const char *name,
                  S32 type,
                  void *dptr,
                  const char* usage )
 {
-   gEvalState.globalVars.addVariable( name, type, dptr, usage );
-   return true;
+   return sVM->registerGlobalVariable( name, type, dptr, usage );
 }
 
 bool removeVariable(const char *name)
 {
    name = StringTable->lookup(prependDollar(name));
-   return name!=0 && gEvalState.globalVars.removeVariable(name);
+   return name!=0 && sVM->removeGlobalVariable(name);
 }
 
 //---------------------------------------------------------------------------
 
 void addCommand(const char *nsName, const char *name,StringCallback cb, const char *usage, S32 minArgs, S32 maxArgs)
 {
-   Namespace *ns = lookupNamespace(nsName);
-   ns->addCommand(StringTable->insert(name), cb, usage, minArgs, maxArgs);
+   sVM->addNamespaceFunction(lookupNamespace(StringTable->insert(nsName)), StringTable->insert(name), cb, usage, minArgs, maxArgs);
 }
 
 void addCommand(const char *nsName, const char *name,VoidCallback cb, const char *usage, S32 minArgs, S32 maxArgs)
 {
-   Namespace *ns = lookupNamespace(nsName);
-   ns->addCommand(StringTable->insert(name), cb, usage, minArgs, maxArgs);
+   sVM->addNamespaceFunction(lookupNamespace(StringTable->insert(nsName)), StringTable->insert(name), cb, usage, minArgs, maxArgs);
 }
 
 void addCommand(const char *nsName, const char *name,IntCallback cb, const char *usage, S32 minArgs, S32 maxArgs)
 {
-   Namespace *ns = lookupNamespace(nsName);
-   ns->addCommand(StringTable->insert(name), cb, usage, minArgs, maxArgs);
+   sVM->addNamespaceFunction(lookupNamespace(StringTable->insert(nsName)), StringTable->insert(name), cb, usage, minArgs, maxArgs);
 }
 
 void addCommand(const char *nsName, const char *name,FloatCallback cb, const char *usage, S32 minArgs, S32 maxArgs)
 {
-   Namespace *ns = lookupNamespace(nsName);
-   ns->addCommand(StringTable->insert(name), cb, usage, minArgs, maxArgs);
+   sVM->addNamespaceFunction(lookupNamespace(StringTable->insert(nsName)), StringTable->insert(name), cb, usage, minArgs, maxArgs);
 }
 
 void addCommand(const char *nsName, const char *name,BoolCallback cb, const char *usage, S32 minArgs, S32 maxArgs)
 {
-   Namespace *ns = lookupNamespace(nsName);
-   ns->addCommand(StringTable->insert(name), cb, usage, minArgs, maxArgs);
+   sVM->addNamespaceFunction(lookupNamespace(StringTable->insert(nsName)), StringTable->insert(name), cb, usage, minArgs, maxArgs);
 }
 
 void markCommandGroup(const char * nsName, const char *name, const char* usage)
 {
+   #if TOFIX
    Namespace *ns = lookupNamespace(nsName);
    ns->markGroup(name,usage);
+   #endif
 }
 
 void beginCommandGroup(const char * nsName, const char *name, const char* usage)
@@ -1129,38 +1122,38 @@ void endCommandGroup(const char * nsName, const char *name)
 void addOverload(const char * nsName, const char * name, const char * altUsage)
 {
    Namespace *ns = lookupNamespace(nsName);
-   ns->addOverload(name,altUsage);
+   // TOFIX ns->addOverload(name,altUsage);
 }
 
 void addCommand(const char *name,StringCallback cb,const char *usage, S32 minArgs, S32 maxArgs)
 {
-   Namespace::global()->addCommand(StringTable->insert(name), cb, usage, minArgs, maxArgs);
+   sVM->addNamespaceFunction(sVM->getGlobalNamespace(), StringTable->insert(name), cb, usage, minArgs, maxArgs);
 }
 
 void addCommand(const char *name,VoidCallback cb,const char *usage, S32 minArgs, S32 maxArgs)
 {
-   Namespace::global()->addCommand(StringTable->insert(name), cb, usage, minArgs, maxArgs);
+   sVM->addNamespaceFunction(sVM->getGlobalNamespace(), StringTable->insert(name), cb, usage, minArgs, maxArgs);
 }
 
 void addCommand(const char *name,IntCallback cb,const char *usage, S32 minArgs, S32 maxArgs)
 {
-   Namespace::global()->addCommand(StringTable->insert(name), cb, usage, minArgs, maxArgs);
+   sVM->addNamespaceFunction(sVM->getGlobalNamespace(), StringTable->insert(name), cb, usage, minArgs, maxArgs);
 }
 
 void addCommand(const char *name,FloatCallback cb,const char *usage, S32 minArgs, S32 maxArgs)
 {
-   Namespace::global()->addCommand(StringTable->insert(name), cb, usage, minArgs, maxArgs);
+   sVM->addNamespaceFunction(sVM->getGlobalNamespace(), StringTable->insert(name), cb, usage, minArgs, maxArgs);
 }
 
 void addCommand(const char *name,BoolCallback cb,const char *usage, S32 minArgs, S32 maxArgs)
 {
-   Namespace::global()->addCommand(StringTable->insert(name), cb, usage, minArgs, maxArgs);
+   sVM->addNamespaceFunction(sVM->getGlobalNamespace(), StringTable->insert(name), cb, usage, minArgs, maxArgs);
 }
 
 // Known as expandOldScriptFilename in T3D
 bool expandScriptFilename(char *filename, U32 size, const char *src)
 {
-   const StringTableEntry cbName = CodeBlock::getCurrentCodeBlockName();
+   const StringTableEntry cbName = NULL; // TOFIX CodeBlock::getCurrentCodeBlockName();
    if (!cbName)
    {
       dStrcpy(filename, src);
@@ -1216,8 +1209,8 @@ const char *evaluate(const char* string, bool echo, const char *fileName)
    if(fileName)
       fileName = StringTable->insert(fileName);
 
-   CodeBlock *newCodeBlock = new CodeBlock();
-   return newCodeBlock->compileExec(fileName, string, false, fileName ? -1 : 0);
+   KorkApi::ConsoleValue retValue = sVM->evalCode(string, fileName);
+   return retValue.value;
 }
 //------------------------------------------------------------------------------
 const char *evaluatef(const char* string, ...)
@@ -1231,8 +1224,8 @@ const char *evaluatef(const char* string, ...)
       dVsprintf(buffer, 4096, string, args);
       va_end (args);
 
-      CodeBlock *newCodeBlock = new CodeBlock();
-      result = newCodeBlock->compileExec(NULL, buffer, false, 0);
+      KorkApi::ConsoleValue retValue = sVM->evalCode(buffer, NULL);
+      result = retValue.value;
 
       delete [] buffer;
       buffer = NULL;
@@ -1247,26 +1240,12 @@ const char *execute(S32 argc, const char *argv[])
    if(isMainThread())
    {
 #endif
-      Namespace::Entry *ent;
       StringTableEntry funcName = StringTable->insert(argv[0]);
-      ent = Namespace::global()->lookup(funcName);
+      
+      KorkApi::ConsoleValue retValue = KorkApi::ConsoleValue();
+      sVM->callNamespaceFunction(sVM->getGlobalNamespace(), funcName, argc, argv, retValue);
 
-      if(!ent)
-      {
-         warnf(ConsoleLogEntry::Script, "%s: Unknown command.", argv[0]);
-
-         // Clean up arg buffers, if any.
-         STR.clearFunctionOffset();
-         return "";
-      }
-
-      const char *ret = ent->execute(argc, argv, &gEvalState);
-
-      // Reset the function offset so the stack
-      // doesn't continue to grow unnecessarily
-      STR.clearFunctionOffset();
-
-      return ret;
+      return retValue.value;
 
 #ifdef TORQUE_MULTITHREAD
    }
@@ -1291,46 +1270,13 @@ const char *execute(SimObject *object, S32 argc, const char *argv[],bool thisCal
    if(object->getNamespace())
    {
       StringTableEntry funcName = StringTable->insert(argv[0]);
-      Namespace::Entry *ent = object->getNamespace()->lookup(funcName);
 
-      if(ent == NULL)
-      {
-         //warnf(ConsoleLogEntry::Script, "%s: undefined for object '%s' - id %d", funcName, object->getName(), object->getId());
+      KorkApi::ConsoleValue retValue = KorkApi::ConsoleValue();
+      object->pushScriptCallbackGuard();
+      sVM->callObjectFunction(object->getVMObject(), funcName, argc, argv, retValue);
+      object->popScriptCallbackGuard();
 
-         // Clean up arg buffers, if any.
-         STR.clearFunctionOffset();
-         return "";
-      }
-
-      // Twiddle %this argument
-      const char *oldArg1 = argv[1];
-      dSprintf(idBuf, sizeof(idBuf), "%d", object->getId());
-      argv[1] = idBuf;
-
-      if (ent->mType == Namespace::Entry::ScriptFunctionType)
-      {
-         // TODO: need a better way of dealing with this
-         object->pushScriptCallbackGuard();
-      }
-
-      SimObject *save = gEvalState.thisObject;
-      gEvalState.thisObject = object;
-      const char *ret = ent->execute(argc, argv, &gEvalState);
-      gEvalState.thisObject = save;
-
-      if (ent->mType == Namespace::Entry::ScriptFunctionType)
-      {
-         object->popScriptCallbackGuard();
-      }
-
-      // Twiddle it back
-      argv[1] = oldArg1;
-
-      // Reset the function offset so the stack
-      // doesn't continue to grow unnecessarily
-      STR.clearFunctionOffset();
-
-      return ret;
+      return retValue.value;
    }
    warnf(ConsoleLogEntry::Script, "Con::execute - %d has no namespace: %s", object->getId(), argv[0]);
    return "";
@@ -1370,7 +1316,7 @@ bool isFunction(const char *fn)
    if(!string)
       return false;
    else
-      return Namespace::global()->lookup(string) != NULL;
+      return sVM->isNamespaceFunction(sVM->getGlobalNamespace(), string);
 }
 
 //------------------------------------------------------------------------------
@@ -1398,19 +1344,19 @@ void setLogMode(S32 newMode)
    }
 }
 
-Namespace *lookupNamespace(const char *ns)
+KorkApi::NamespaceId lookupNamespace(const char *ns)
 {
    if(!ns)
-      return Namespace::global();
-   return Namespace::find(StringTable->insert(ns));
+      return sVM->getGlobalNamespace();
+   return sVM->findNamespace(StringTable->insert(ns));
 }
 
 bool linkNamespaces(const char *parent, const char *child)
 {
-   Namespace *pns = lookupNamespace(parent);
-   Namespace *cns = lookupNamespace(child);
+   KorkApi::NamespaceId pns = lookupNamespace(parent);
+   KorkApi::NamespaceId cns = lookupNamespace(child);
    if(pns && cns)
-      return cns->classLinkTo(pns);
+      return sVM->linkNamespaceById(pns, cns);
    return false;
 }
 
@@ -1419,15 +1365,13 @@ bool unlinkNamespaces(const char *parent, const char *child)
    Namespace *pns = lookupNamespace(parent);
    Namespace *cns = lookupNamespace(child);
    if(pns && cns)
-      return cns->unlinkClass(pns);
+      return sVM->unlinkNamespaceById(pns, cns);
    return false;
 }
 
-bool classLinkNamespaces(Namespace *parent, Namespace *child)
+bool classLinkNamespaces(KorkApi::NamespaceId parent, KorkApi::NamespaceId child)
 {
-   if(parent && child)
-      return child->classLinkTo(parent);
-   return false;
+   return sVM->linkNamespaceById(parent, child);
 }
 
 void setData(S32 type, void *dptr, S32 index, S32 argc, const char **argv, const EnumTable *tbl, BitSet32 flag)
@@ -1745,7 +1689,7 @@ bool expandPath( char* pDstPath, U32 size, const char* pSrcPath, const char* pWo
    if ( leadingToken == '.' )
    {
       // Fetch the code-block file-path.
-      const StringTableEntry codeblockFullPath = CodeBlock::getCurrentCodeBlockFullPath();
+      const StringTableEntry codeblockFullPath = NULL; // TOFIX CodeBlock::getCurrentCodeBlockFullPath();
       
       // Do we have a code block full path?
       if( codeblockFullPath == NULL )

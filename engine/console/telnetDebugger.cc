@@ -25,6 +25,7 @@
 #include "console/telnetDebugger.h"
 #include "core/stringTable.h"
 #include "console/consoleInternal.h"
+#include "console/consoleNamespace.h"
 #include "console/simpleLexer.h"
 #include "console/ast.h"
 #include "console/compiler.h"
@@ -97,7 +98,7 @@
 // BRKCLR file line - sent when a breakpoint cannot be moved to a breakable line on the client.
 //
 
-
+#if TOFIX
 ConsoleFunction( dbgSetParameters, void, 3, 4, "(int port, string password, bool waitForClient)"
                 "Open a debug server port on the specified port, requiring the specified password, "
                 "and optionally waiting for the debug client to connect.")
@@ -118,17 +119,21 @@ ConsoleFunction( dbgDisconnect, void, 1, 1, "()"
    if (TelDebugger)
       TelDebugger->disconnect();
 }
+#endif
 
+#if TOFIX
 static void debuggerConsumer(ConsoleLogEntry::Level level, const char *line, void* userPtr)
 {
    level;
    if (TelDebugger)
       TelDebugger->processConsoleLine(line);
 }
+#endif
 
-TelnetDebugger::TelnetDebugger()
+TelnetDebugger::TelnetDebugger(KorkApi::VmInternal* vm)
 {
-   Con::addConsumer(debuggerConsumer);
+   // TOFIX Con::addConsumer(debuggerConsumer);
+   mVMInternal = vm;
    
    mAcceptPort = -1;
    mAcceptSocket = NetSocket::INVALID;
@@ -146,7 +151,7 @@ TelnetDebugger::TelnetDebugger()
    // Add the version number in a global so that
    // scripts can detect the presence of the
    // "enhanced" debugger features.
-   Con::evaluatef( "$dbgVersion = %d;", Version );
+   // TOFIX Con::evaluatef( "$dbgVersion = %d;", Version );
 }
 
 TelnetDebugger::Breakpoint **TelnetDebugger::findBreakpoint(StringTableEntry fileName, S32 lineNumber)
@@ -167,25 +172,12 @@ TelnetDebugger::Breakpoint **TelnetDebugger::findBreakpoint(StringTableEntry fil
 
 TelnetDebugger::~TelnetDebugger()
 {
-   Con::removeConsumer(debuggerConsumer);
+   // TOFIX Con::removeConsumer(debuggerConsumer);
    
    if(mAcceptSocket != NetSocket::INVALID)
       Net::closeSocket(mAcceptSocket);
    if(mDebugSocket != NetSocket::INVALID)
       Net::closeSocket(mDebugSocket);
-}
-
-TelnetDebugger *TelDebugger = NULL;
-
-void TelnetDebugger::create()
-{
-   TelDebugger = new TelnetDebugger;
-}
-
-void TelnetDebugger::destroy()
-{
-   delete TelDebugger;
-   TelDebugger = NULL;
 }
 
 void TelnetDebugger::send(const char *str)
@@ -373,8 +365,8 @@ void TelnetDebugger::executionStopped(CodeBlock *code, U32 lineNumber)
    
    Breakpoint *brk = *bp;
    mProgramPaused = true;
-   Con::evaluatef("$Debug::result = %s;", brk->testExpression);
-   if(Con::getBoolVariable("$Debug::result"))
+   // TOFIX Con::evaluatef("$Debug::result = %s;", brk->testExpression);
+   // TOFIX if(Con::getBoolVariable("$Debug::result"))
    {
       brk->curCount++;
       if(brk->curCount >= brk->passCount)
@@ -394,7 +386,7 @@ void TelnetDebugger::pushStackFrame()
       return;
    
    if(mBreakOnNextStatement && mStackPopBreakIndex > -1 &&
-      gEvalState.stack.size() > mStackPopBreakIndex)
+      mVMInternal->mEvalState.stack.size() > mStackPopBreakIndex)
       setBreakOnNextStatement( false );
 }
 
@@ -403,7 +395,7 @@ void TelnetDebugger::popStackFrame()
    if(mState == NotConnected)
       return;
    
-   if(mStackPopBreakIndex > -1 && gEvalState.stack.size()-1 <= mStackPopBreakIndex)
+   if(mStackPopBreakIndex > -1 && mVMInternal->mEvalState.stack.size()-1 <= mStackPopBreakIndex)
       setBreakOnNextStatement( true );
 }
 
@@ -436,14 +428,14 @@ void TelnetDebugger::sendBreak()
    
    S32 last = 0;
    
-   for(S32 i = (S32) gEvalState.stack.size() - 1; i >= last; i--)
+   for(S32 i = (S32) mVMInternal->mEvalState.stack.size() - 1; i >= last; i--)
    {
-      CodeBlock *code = gEvalState.stack[i]->code;
+      CodeBlock *code = mVMInternal->mEvalState.stack[i]->code;
       const char *file = "<none>";
       if (code && code->name && code->name[0])
          file = code->name;
       
-      Namespace *ns = gEvalState.stack[i]->scopeNamespace;
+      Namespace *ns = mVMInternal->mEvalState.stack[i]->scopeNamespace;
       scope[0] = 0;
       if ( ns ) {
          
@@ -457,13 +449,13 @@ void TelnetDebugger::sendBreak()
          }
       }
       
-      const char *function = gEvalState.stack[i]->scopeName;
+      const char *function = mVMInternal->mEvalState.stack[i]->scopeName;
       if ((!function) || (!function[0]))
          function = "<none>";
       dStrcat( scope, function );
       
       U32 line=0, inst;
-      U32 ip = gEvalState.stack[i]->ip;
+      U32 ip = mVMInternal->mEvalState.stack[i]->ip;
       if (code)
          code->findBreakLine(ip, line, inst);
       dSprintf(buffer, MaxCommandSize, " %s %d %s", file, line, scope);
@@ -643,7 +635,7 @@ void TelnetDebugger::addBreakpoint(const char *fileName, S32 line, bool clear, S
    {
       // Note that if the code block is not already
       // loaded it is handled by addAllBreakpoints.
-      CodeBlock* code = CodeBlock::find(fileName);
+      CodeBlock* code = mVMInternal->findCodeBlock(fileName);
       if (code)
       {
          // Find the fist breakline starting from and
@@ -759,7 +751,7 @@ void TelnetDebugger::setBreakOnNextStatement( bool enabled )
    if ( enabled )
    {
       // Apply breaks on all the code blocks.
-      for(CodeBlock *walk = CodeBlock::getCodeBlockList(); walk; walk = walk->nextFile)
+      for(CodeBlock *walk = mVMInternal->mCodeBlockList; walk; walk = walk->nextFile)
          walk->setAllBreaks();
       mBreakOnNextStatement = true;
    }
@@ -767,7 +759,7 @@ void TelnetDebugger::setBreakOnNextStatement( bool enabled )
    {
       // Clear all the breaks on the codeblocks
       // then go reapply the breakpoints.
-      for(CodeBlock *walk = CodeBlock::getCodeBlockList(); walk; walk = walk->nextFile)
+      for(CodeBlock *walk = mVMInternal->mCodeBlockList; walk; walk = walk->nextFile)
          walk->clearAllBreaks();
       for(Breakpoint *w = mBreakpoints; w; w = w->next)
       {
@@ -813,7 +805,7 @@ void TelnetDebugger::debugStepOver()
       return;
    
    setBreakOnNextStatement( true );
-   mStackPopBreakIndex = gEvalState.stack.size();
+   mStackPopBreakIndex = mVMInternal->mEvalState.stack.size();
    mProgramPaused = false;
    send("RUNNING\r\n");
 }
@@ -824,7 +816,7 @@ void TelnetDebugger::debugStepOut()
       return;
    
    setBreakOnNextStatement( false );
-   mStackPopBreakIndex = gEvalState.stack.size() - 1;
+   mStackPopBreakIndex = mVMInternal->mEvalState.stack.size() - 1;
    if ( mStackPopBreakIndex == 0 )
       mStackPopBreakIndex = -1;
    mProgramPaused = false;
@@ -834,8 +826,8 @@ void TelnetDebugger::debugStepOut()
 void TelnetDebugger::evaluateExpression(const char *tag, S32 frame, const char *evalBuffer)
 {
    // Make sure we're passing a valid frame to the eval.
-   if ( frame > gEvalState.stack.size() )
-      frame = gEvalState.stack.size() - 1;
+   if ( frame > mVMInternal->mEvalState.stack.size() )
+      frame = mVMInternal->mEvalState.stack.size() - 1;
    if ( frame < 0 )
       frame = 0;
    
@@ -846,7 +838,7 @@ void TelnetDebugger::evaluateExpression(const char *tag, S32 frame, const char *
    dSprintf( buffer, len, format, evalBuffer );
    
    // Execute the eval.
-   CodeBlock *newCodeBlock = new CodeBlock();
+   CodeBlock *newCodeBlock = new CodeBlock(mVMInternal);
    const char* result = newCodeBlock->compileExec( NULL, buffer, false, frame );
    delete [] buffer;
    
@@ -863,7 +855,7 @@ void TelnetDebugger::evaluateExpression(const char *tag, S32 frame, const char *
 void TelnetDebugger::dumpFileList()
 {
    send("FILELISTOUT ");
-   for(CodeBlock *walk = CodeBlock::getCodeBlockList(); walk; walk = walk->nextFile)
+   for(CodeBlock *walk = mVMInternal->mCodeBlockList; walk; walk = walk->nextFile)
    {
       send(walk->name);
       if(walk->nextFile)
@@ -875,7 +867,7 @@ void TelnetDebugger::dumpFileList()
 void TelnetDebugger::dumpBreakableList(const char *fileName)
 {
    fileName = StringTable->insert(fileName);
-   CodeBlock *file = CodeBlock::find(fileName);
+   CodeBlock *file = mVMInternal->findCodeBlock(fileName);
    char buffer[MaxCommandSize];
    if(file)
    {

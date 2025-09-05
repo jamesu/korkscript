@@ -31,9 +31,15 @@
 #endif
 #include <stdarg.h>
 
+
 class SimObject;
 struct EnumTable;
 class Namespace;
+
+namespace KorkApi
+{
+   typedef Namespace* NamespaceId;
+}
 
 /// Indicates that warnings about undefined script variables should be displayed.
 ///
@@ -636,7 +642,7 @@ namespace Con
    bool unlinkNamespaces(const char *parentName, const char *childName);
 
    /// @note This should only be called from consoleObject.h
-   bool classLinkNamespaces(Namespace *parent, Namespace *child);
+   bool classLinkNamespaces(KorkApi::NamespaceId parent, KorkApi::NamespaceId child);
    /// @}
 
    /// @name Logging

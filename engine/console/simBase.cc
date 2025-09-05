@@ -29,9 +29,11 @@
 #include "core/memStream.h"
 
 #include "console/consoleInternal.h"
+#include "console/consoleNamespace.h"
 #include "console/typeValidators.h"
 #include "console/codeBlock.h"
 
+extern KorkApi::Vm* sVM;
 
 namespace Sim
 {
@@ -235,7 +237,7 @@ SimObject::SimObject( const U8 namespaceLinkMask ) : mNSLinkMask( namespaceLinkM
    mCanSaveFieldDictionary    = true;
    mClassName               = NULL;
    mSuperClassName          = NULL;
-   mProgenitorFile          = CodeBlock::getCurrentCodeBlockFullPath();
+   mProgenitorFile          = ""; // TOFIX CodeBlock::getCurrentCodeBlockFullPath();
    mPeriodicTimerID         = 0;
 }
 
@@ -400,6 +402,11 @@ namespace Sim
 }
 
 //---------------------------------------------------------------------------
+
+KorkApi::NamespaceId SimObject::getNamespace()
+{
+   return sVM->getObjectNamespace(vmObject);
+}
 
 void SimObject::assignDynamicFieldsFrom(SimObject* parent)
 {
@@ -1617,7 +1624,7 @@ ConsoleMethod( SimObject, getField, const char*, 3, 3, "int index")
 
 const char *SimObject::tabComplete(const char *prevText, S32 baseLen, bool fForward)
 {
-   return mNameSpace->tabComplete(prevText, baseLen, fForward);
+   return vm->tabCompleteNamespace(vm->getObjectNamespace(vmObject), prevText, baseLen, fForward);
 }
 
 //-----------------------------------------------------------------------------
@@ -3708,8 +3715,9 @@ void SimConsoleEvent::process(SimObject* object)
          // Move the pointer forward to the function name.
          func += 2;
 
+#if TOFIX
          // Lookup the namespace and function entry.
-         Namespace* ns = Namespace::find( StringTable->insert( mArgv[0] ) );
+         NamespaceId ns = sCon  Namespace::find( StringTable->insert( mArgv[0] ) );
          if( ns )
          {
             Namespace::Entry* nse = ns->lookup( StringTable->insert( func ) );
@@ -3717,6 +3725,7 @@ void SimConsoleEvent::process(SimObject* object)
                // Execute.
                nse->execute( mArgc, (const char**)mArgv, &gEvalState );
          }
+#endif
       }
 
       else

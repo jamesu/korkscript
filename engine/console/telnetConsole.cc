@@ -24,18 +24,7 @@
 #include "console/telnetConsole.h"
 #include "platform/platformNetwork.h"
 
-TelnetConsole *TelConsole = NULL;
-
-void TelnetConsole::create()
-{
-   TelConsole = new TelnetConsole;
-}
-
-void TelnetConsole::destroy()
-{
-   delete TelConsole;
-   TelConsole = NULL;
-}
+#if TOFIX
 
 ConsoleFunction( telnetSetParameters, void, 4, 5, "(int port, string consolePass, string listenPass, bool remoteEcho)"
                 "Initialize and open the telnet console.\n\n"
@@ -49,17 +38,21 @@ ConsoleFunction( telnetSetParameters, void, 4, 5, "(int port, string consolePass
 	   TelConsole->setTelnetParameters(dAtoi(argv[1]), argv[2], argv[3], argc == 5 ? dAtob( argv[4] ) : false);
    }
 }
+#endif
 
+#if TOFIX
 static void telnetCallback(ConsoleLogEntry::Level level, const char *consoleLine, void* userPtr)
 {
    level;
    if (TelConsole)
 	  TelConsole->processConsoleLine(consoleLine);
 }
+#endif
 
-TelnetConsole::TelnetConsole()
+TelnetConsole::TelnetConsole(KorkApi::VmInternal* vm)
 {
-   Con::addConsumer(telnetCallback);
+   // TOFIX Con::addConsumer(telnetCallback);
+   mVMInternal = vm;
 
    mAcceptSocket = NetSocket::INVALID;
    mAcceptPort = -1;
@@ -69,7 +62,7 @@ TelnetConsole::TelnetConsole()
 
 TelnetConsole::~TelnetConsole()
 {
-   Con::removeConsumer(telnetCallback);
+   // TOFIX Con::removeConsumer(telnetCallback);
    if(mAcceptSocket != NetSocket::INVALID)
       Net::closeSocket(mAcceptSocket);
    TelnetClient *walk = mClientList, *temp;

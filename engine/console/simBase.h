@@ -958,7 +958,7 @@ public:
     /// @}
 
     /// Return the object's namespace.
-    Namespace* getNamespace() { return mNameSpace; }
+    KorkApi::NamespaceId getNamespace();
 
     /// Get next matching item in namespace.
     ///

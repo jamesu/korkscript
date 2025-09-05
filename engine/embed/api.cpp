@@ -1,28 +1,13 @@
 #include "embed/api.h"
 #include "core/memStream.h"
 #include "console/consoleInternal.h"
+#include "console/consoleNamespace.h"
+#include "console/telnetDebugger.h"
+#include "console/telnetConsole.h"
+#include "embed/internalApi.h"
 
 namespace KorkApi
 {
-
-struct VmInternal
-{
-   Vector<CodeBlock*> mCodeBlocks;
-   Vector<Namespace*> mNamespaces;
-   Vector<TypeInfo> mTypes;
-   Vector<ClassInfo> mClassList;
-   Vector<ConsoleValue> mHardRefs;
-   Config mConfig;
-   
-   VmInternal()
-   {
-      mNamespaces.push_back(Namespace::global());
-   }
-   
-   ~VmInternal()
-   {
-   }
-};
 
 // Small helper to produce a zero-initialized ConsoleValue
 static inline ConsoleValue makeDefaultValue()
@@ -35,63 +20,93 @@ static inline ConsoleValue makeDefaultValue()
 
 // -------------------- Vm method stubs --------------------
 
-S32 Vm::registerNamespace(StringTableEntry name, StringTableEntry package)
+NamespaceId Vm::findNamespace(StringTableEntry name, StringTableEntry package)
 {
-   Namespace* ns = Namespace::find(name, package);
-   auto itr = std::find(mInternal->mNamespaces.begin(), mInternal->mNamespaces.end(), ns);
-   if (itr == mInternal->mNamespaces.end())
-   {
-      mInternal->mNamespaces.push_back(ns);
-      return mInternal->mNamespaces.size()-1;
-   }
-   return (itr - mInternal->mNamespaces.begin());
+   return (NamespaceId)mInternal->mNSState.find(name, package);
 }
 
-S32 Vm::getNamespace(StringTableEntry name, StringTableEntry package)
+NamespaceId Vm::getObjectNamespace(VMObject* object)
 {
-   auto itr = std::find_if( mInternal->mNamespaces.begin(), mInternal->mNamespaces.end(), [name, package](Namespace* ns){
-      return ns->mName == name && ns->mPackage == package;
-   });
-    return itr == mInternal->mNamespaces.end() ? -1 : itr - mInternal->mNamespaces.begin();
+   return (NamespaceId)object->ns;
 }
 
-S32 Vm::getGlobalNamespace()
+void Vm::setNamespaceUsage(NamespaceId nsId, const char* usage)
 {
-    return 0;
+   Namespace* ns = (Namespace*)nsId;
+   ns->mUsage = usage;
+}
+
+NamespaceId Vm::getGlobalNamespace()
+{
+    return mInternal->mNSState.mGlobalNamespace;
 }
 
 void Vm::activatePackage(StringTableEntry pkgName)
 {
-   Namespace::activatePackage(pkgName);
+   mInternal->mNSState.activatePackage(pkgName);
 }
 
 void Vm::deactivatePackage(StringTableEntry pkgName)
 {
-   Namespace::deactivatePackage(pkgName);
+   mInternal->mNSState.deactivatePackage(pkgName);
 }
 
-bool Vm::linkNamespace(NamespaceId parent, NamespaceId child)
+bool Vm::linkNamespace(StringTableEntry parent, StringTableEntry child)
 {
-   Namespace *pns = mInternal->mNamespaces[parent];
-   Namespace *cns = mInternal->mNamespaces[child];
+   NamespaceId pns = mInternal->mNSState.find(parent);
+   NamespaceId cns = mInternal->mNSState.find(child);
    if(pns && cns)
       return cns->classLinkTo(pns);
    return false;
 }
 
-bool Vm::unlinkNamespace(NamespaceId parent, NamespaceId child)
+bool Vm::unlinkNamespace(StringTableEntry parent, StringTableEntry child)
 {
-   Namespace *pns = mInternal->mNamespaces[parent];
-   Namespace *cns = mInternal->mNamespaces[child];
+   NamespaceId pns = mInternal->mNSState.find(parent);
+   NamespaceId cns = mInternal->mNSState.find(child);
    if(pns && cns)
       return cns->unlinkClass(pns);
    return false;
+}
+
+bool Vm::linkNamespaceById(NamespaceId parent, NamespaceId child)
+{
+   Namespace* pns = (Namespace*)parent;
+   Namespace* cns = (Namespace*)child;
+   if(pns && cns)
+      return cns->classLinkTo(pns);
+   return false;
+}
+
+bool Vm::unlinkNamespaceById(NamespaceId parent, NamespaceId child)
+{
+   Namespace* pns = (Namespace*)parent;
+   Namespace* cns = (Namespace*)child;
+   if(pns && cns)
+      return cns->unlinkClass(pns);
+   return false;
+}
+
+const char* Vm::tabCompleteNamespace(NamespaceId nsId, const char *prevText, S32 baseLen, bool fForward)
+{
+   Namespace* ns = (Namespace*)nsId;
+   return ns->tabComplete(prevText, baseLen, fForward);
+}
+
+const char* Vm::tabCompleteVariable(const char *prevText, S32 baseLen, bool fForward)
+{
+   return mInternal->mEvalState.globalVars.tabComplete(prevText, baseLen, fForward);
 }
 
 TypeId Vm::registerType(TypeInfo& info)
 {
    mInternal->mTypes.push_back(info);
    return mInternal->mTypes.size()-1;
+}
+
+TypeInfo* Vm::getTypeInfo(TypeId ident)
+{
+   return &mInternal->mTypes[ident];
 }
 
 ClassId Vm::registerClass(ClassInfo& info)
@@ -156,7 +171,7 @@ VMObject* Vm::constructObject(ClassId klassId, const char* name, int argc, const
 
 VMObject* Vm::setObjectNamespace(VMObject* object, NamespaceId nsId)
 {
-   object->ns = mInternal->mNamespaces[nsId];
+   object->ns = (Namespace*)nsId;
 }
 
 // Internal
@@ -176,37 +191,43 @@ void Vm::destroyVMObject(VMObject* object)
 
 void Vm::addNamespaceFunction(NamespaceId nsId, StringTableEntry name, StringCallback cb, const char* usage, S32 minArgs, S32 maxArgs)
 {
-   Namespace* ns = mInternal->mNamespaces[nsId];
+   Namespace* ns = (Namespace*)nsId;
    ns->addCommand(name, cb, usage, minArgs, maxArgs);
 }
 
 void Vm::addNamespaceFunction(NamespaceId nsId, StringTableEntry name, IntCallback cb, const char* usage, S32 minArgs, S32 maxArgs)
 {
-   Namespace* ns = mInternal->mNamespaces[nsId];
+   Namespace* ns = (Namespace*)nsId;
    ns->addCommand(name, cb, usage, minArgs, maxArgs);
 }
 
 void Vm::addNamespaceFunction(NamespaceId nsId, StringTableEntry name, FloatCallback cb, const char* usage, S32 minArgs, S32 maxArgs)
 {
-   Namespace* ns = mInternal->mNamespaces[nsId];
+   Namespace* ns = (Namespace*)nsId;
    ns->addCommand(name, cb, usage, minArgs, maxArgs);
 }
 
 void Vm::addNamespaceFunction(NamespaceId nsId, StringTableEntry name, VoidCallback cb, const char* usage, S32 minArgs, S32 maxArgs)
 {
-   Namespace* ns = mInternal->mNamespaces[nsId];
+   Namespace* ns = (Namespace*)nsId;
    ns->addCommand(name, cb, usage, minArgs, maxArgs);
 }
 
 void Vm::addNamespaceFunction(NamespaceId nsId, StringTableEntry name, BoolCallback cb, const char* usage, S32 minArgs, S32 maxArgs)
 {
-   Namespace* ns = mInternal->mNamespaces[nsId];
+   Namespace* ns = (Namespace*)nsId;
    ns->addCommand(name, cb, usage, minArgs, maxArgs);
+}
+
+bool Vm::isNamespaceFunction(NamespaceId nsId, StringTableEntry name)
+{
+   Namespace* ns = (Namespace*)nsId;
+   return ns->lookup(name) != NULL;
 }
 
 bool Vm::compileCodeBlock(const char* code, const char* filename, U32* outCodeSize, U32** outCode)
 {
-   CodeBlock* block = new CodeBlock();
+   CodeBlock* block = new CodeBlock(mInternal);
    
    U32* buffer = new U32[1024 * 1024];
    *outCode = NULL;
@@ -227,7 +248,7 @@ bool Vm::compileCodeBlock(const char* code, const char* filename, U32* outCodeSi
 
 ConsoleValue Vm::execCodeBlock(U32 codeSize, U8* code, const char* filename, bool noCalls, int setFrame)
 {
-   CodeBlock* block = new CodeBlock();
+   CodeBlock* block = new CodeBlock(mInternal);
    
    MemStream stream(codeSize, code, true, false);
    
@@ -243,20 +264,111 @@ ConsoleValue Vm::execCodeBlock(U32 codeSize, U8* code, const char* filename, boo
 
 ConsoleValue Vm::evalCode(const char* code, const char* filename)
 {
-    CodeBlock *newCodeBlock = new CodeBlock();
-    const char* result = newCodeBlock->compileExec(filename, code, false, 0);
+    CodeBlock *newCodeBlock = new CodeBlock(mInternal);
+    const char* result = newCodeBlock->compileExec(filename, code, false, filename ? -1 : 0); // TODO: should this be 0 or -1?
     return makeDefaultValue();
 }
 
 ConsoleValue Vm::call(int argc, const char** argv)
 {
-   const char* result = Con::executef(argc, argv);
-   return ConsoleValue();
+   ConsoleValue retValue = ConsoleValue();
+   callNamespaceFunction(getGlobalNamespace(), StringTable->insert(argv[1]), argc, argv, retValue);
+   return retValue;
 }
 
 ConsoleValue Vm::callObject(VMObject* h, int argc, const char** argv)
 {
-    return makeDefaultValue();
+   ConsoleValue retValue = ConsoleValue();
+   callObjectFunction(h, StringTable->insert(argv[1]), argc, argv, retValue);
+   return retValue;
+}
+
+bool Vm::callObjectFunction(VMObject* self, StringTableEntry funcName, int argc, const char** argv, ConsoleValue& retValue)
+{
+   char idBuf[16];
+   if (argc < 2)
+   {
+      // no args
+      return false;
+   }
+   else if (!self)
+   {
+      // no object
+      return false;
+   }
+   else if (!self->ns)
+   {
+      // no ns
+      //warnf(ConsoleLogEntry::Script, "Con::execute - %d has no namespace: %s", object->getId(), argv[0]);
+      return false;
+   }
+
+   Namespace::Entry *ent = self->ns->lookup(funcName);
+
+   if(ent == NULL)
+   {
+      //warnf(ConsoleLogEntry::Script, "%s: undefined for object '%s' - id %d", funcName, object->getName(), object->getId());
+
+      // Clean up arg buffers, if any.
+      mInternal->STR.clearFunctionOffset();
+      return "";
+   }
+
+   // Twiddle %this argument
+   const char *oldArg1 = argv[1];
+   dSprintf(idBuf, sizeof(idBuf), "%d", self->klass->iCreate.GetId(self).value);
+   argv[1] = idBuf;
+
+   if (ent->mType == Namespace::Entry::ScriptFunctionType)
+   {
+      // TODO: need a better way of dealing with this
+      // TOFIX
+      //object->pushScriptCallbackGuard();
+   }
+
+   KorkApi::VMObject* save = mInternal->mEvalState.thisObject;
+   mInternal->mEvalState.thisObject = self;
+   const char *ret = ent->execute(argc, argv, &mInternal->mEvalState);
+   mInternal->mEvalState.thisObject = save;
+
+   if (ent->mType == Namespace::Entry::ScriptFunctionType)
+   {
+      //object->popScriptCallbackGuard();
+   }
+
+   // Twiddle it back
+   argv[1] = oldArg1;
+
+   // Reset the function offset so the stack
+   // doesn't continue to grow unnecessarily
+   mInternal->STR.clearFunctionOffset();
+
+   return true;
+}
+
+bool Vm::callNamespaceFunction(NamespaceId nsId, StringTableEntry name, int argc, const char** argv, ConsoleValue& retValue)
+{
+   Namespace* ns = (Namespace*)nsId;
+   Namespace::Entry* ent = ns->lookup(name);
+   ConsoleValue rv = ConsoleValue();
+
+   if (!ent)
+   {
+      // warnf(ConsoleLogEntry::Script, "%s: Unknown command.", argv[0]);
+      // Clean up arg buffers, if any.
+      mInternal->STR.clearFunctionOffset();
+      return false;
+   }
+
+   const char *ret = ent->execute(argc, argv, &mInternal->mEvalState);
+
+   // Reset the function offset so the stack
+   // doesn't continue to grow unnecessarily
+   mInternal->STR.clearFunctionOffset();
+
+   rv.value = ret;
+
+   return true;
 }
 
 // Helpers (should call into user funcs)
@@ -296,6 +408,54 @@ bool Vm::getObjectFieldString(VMObject* object, StringTableEntry fieldName, cons
     return false;
 }
 
+void Vm::setGlobalVariable(StringTableEntry name, const char* value)
+{
+
+}
+
+void Vm::setLocalVariable(StringTableEntry name, const char* value)
+{
+
+}
+
+ConsoleValue Vm::getGlobalVariable(StringTableEntry name)
+{
+   return ConsoleValue();
+}
+
+ConsoleValue Vm::getLocalVariable(StringTableEntry name)
+{
+   return ConsoleValue();
+}
+
+
+bool Vm::registerGlobalVariable(StringTableEntry name, S32 type, void *dptr, const char* usage)
+{
+   return mInternal->mEvalState.globalVars.addVariable( name, type, dptr, usage );
+}
+
+bool Vm::removeGlobalVariable(StringTableEntry name)
+{
+   return name!=0 && mInternal->mEvalState.globalVars.removeVariable(name);
+}
+
+
+bool Vm::isTracing()
+{
+   return false;
+}
+
+S32 Vm::getTracingStackPos()
+{
+   return 0;
+}
+
+void Vm::setTracing(bool value)
+{
+
+}
+
+
 // -------------------- factory functions --------------------
 
 Vm* createVM(Config* cfg)
@@ -309,7 +469,55 @@ Vm* createVM(Config* cfg)
 void destroyVm(Vm* vm)
 {
    delete vm->mInternal;
-    delete vm;
+   delete vm;
+}
+
+VmInternal::VmInternal()
+{
+   mCodeBlockList = NULL;
+   mCurrentCodeBlock = NULL;
+   mNSState.init();
+   mTelDebugger = new TelnetDebugger(this);
+   mTelConsole = new TelnetConsole(this);
+}
+
+VmInternal::~VmInternal()
+{
+   delete mTelDebugger;
+   delete mTelConsole;
+   mNSState.shutdown();
+}
+
+StringTableEntry VmInternal::getCurrentCodeBlockName()
+{
+   if (mCurrentCodeBlock)
+      return mCurrentCodeBlock->name;
+   else
+      return NULL;
+}
+
+StringTableEntry VmInternal::getCurrentCodeBlockFullPath()
+{
+   if (mCurrentCodeBlock)
+      return mCurrentCodeBlock->fullPath;
+   else
+      return NULL;
+}
+
+StringTableEntry VmInternal::getCurrentCodeBlockModName()
+{
+   if (mCurrentCodeBlock)
+      return mCurrentCodeBlock->modPath;
+   else
+      return NULL;
+}
+
+CodeBlock *VmInternal::findCodeBlock(StringTableEntry name)
+{
+   for(CodeBlock *walk = mCodeBlockList; walk; walk = walk->nextFile)
+      if(walk->name == name)
+         return walk;
+   return NULL;
 }
 
 } // namespace KorkApi

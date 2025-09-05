@@ -25,6 +25,7 @@
 #include "core/stringTable.h"
 #include "console/console.h"
 #include "console/consoleInternal.h"
+#include "console/consoleNamespace.h"
 #include "console/typeValidators.h"
 #include "console/simBase.h"
 

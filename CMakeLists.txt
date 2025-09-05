@@ -54,6 +54,7 @@ set(KS_SRCS
 	./engine/console/dynamicTypes.cc
 	./engine/console/console.cc
 	./engine/console/consoleInternal.cc
+	./engine/console/consoleNamespace.cc
 	./engine/console/simDictionary.cc
 	./engine/console/astNodes.cc
 	./engine/console/simBase.cc
