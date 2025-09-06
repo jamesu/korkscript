@@ -113,19 +113,56 @@ ClassId Vm::registerClass(ClassInfo& info)
    return mInternal->mClassList.size()-1;
 }
 
-// Hard refs to console values
-HardConsoleValueRef Vm::createHardRef(ConsoleValue value)
+ConsoleHeapAllocRef Vm::createHeapRef(U32 size)
 {
-    HardConsoleValueRef r{};
-    r.hardIndex = mInternal->mHardRefs.size();
-    r.value = makeDefaultValue();
-    mInternal->mHardRefs.push_back(value);
-    return r;
+   mInternal->createHeapRef(size);
 }
 
-void Vm::releaseHardRef(HardConsoleValueRef value)
+void Vm::releaseHeapRef(ConsoleHeapAllocRef value)
 {
-   mInternal->mHardRefs[value.hardIndex] = ConsoleValue();
+   mInternal->releaseHeapRef(value);
+}
+
+ConsoleHeapAllocRef VmInternal::createHeapRef(U32 size)
+{
+   ConsoleHeapAlloc* ref = (ConsoleHeapAlloc*)mConfig.mallocFn(sizeof(ConsoleHeapAllocRef) + size, mConfig.allocUser);
+   ref->size = size;
+
+   if (mHeapAllocs)
+   {
+      ref->prev = NULL;
+      ref->next = mHeapAllocs;
+      mHeapAllocs->prev = ref;
+      mHeapAllocs = ref;
+   }
+   else
+   {
+      ref->prev = NULL;
+      ref->next = NULL;
+      mHeapAllocs = ref;
+   }
+
+   return (ConsoleHeapAllocRef)ref;
+}
+
+void VmInternal::releaseHeapRef(ConsoleHeapAllocRef value)
+{
+   ConsoleHeapAlloc* ref = (ConsoleHeapAlloc*)value;
+   ConsoleHeapAlloc* prev = ref->prev;
+   ConsoleHeapAlloc* next = ref->next;
+   if (prev)
+   {
+      prev->next = next;
+   }
+   if (next)
+   {
+      next->prev = prev;
+   }
+   if (ref == mHeapAllocs)
+   {
+      mHeapAllocs = next;
+   }
+   mConfig.freeFn(ref, mConfig.allocUser);
 }
 
 // Heap values (like strings)
@@ -490,7 +527,7 @@ Vm* createVM(Config* cfg)
 {
     // For stubs, we don't keep state yet.
     Vm* vm = new Vm();
-    vm->mInternal = new VmInternal();
+    vm->mInternal = new VmInternal(cfg);
     return vm;
 }
 
@@ -500,13 +537,42 @@ void destroyVm(Vm* vm)
    delete vm;
 }
 
-VmInternal::VmInternal() : STR(&mAllocBase)
+VmInternal::VmInternal(Config* cfg) : STR(&mAllocBase)
 {
+   mConfig = *cfg;
    mCodeBlockList = NULL;
    mCurrentCodeBlock = NULL;
    mNSState.init();
    mTelDebugger = new TelnetDebugger(this);
    mTelConsole = new TelnetConsole(this);
+   mHeapAllocs = NULL;
+   mConvIndex = 0;
+   
+   TypeInfo typeInfo = {};
+   
+   typeInfo.name = StringTable->insert("string");
+   typeInfo.inspectorFieldType = NULL;
+   typeInfo.userPtr = NULL;
+   typeInfo.size = sizeof(const char*);
+   // TODO
+   
+   mTypes.push_back(typeInfo);
+   
+   typeInfo.name = StringTable->insert("float");
+   typeInfo.inspectorFieldType = NULL;
+   typeInfo.userPtr = NULL;
+   typeInfo.size = sizeof(F64);
+   // TODO
+   
+   mTypes.push_back(typeInfo);
+   
+   typeInfo.name = StringTable->insert("uint");
+   typeInfo.inspectorFieldType = NULL;
+   typeInfo.userPtr = NULL;
+   typeInfo.size = sizeof(U64);
+   // TODO
+   
+   mTypes.push_back(typeInfo);
 }
 
 VmInternal::~VmInternal()
@@ -514,6 +580,12 @@ VmInternal::~VmInternal()
    delete mTelDebugger;
    delete mTelConsole;
    mNSState.shutdown();
+
+   for (ConsoleHeapAlloc* alloc = mHeapAllocs; alloc; alloc = alloc->next)
+   {
+      mConfig.freeFn(alloc, mConfig.allocUser);
+   }
+   mHeapAllocs = NULL;
 }
 
 StringTableEntry VmInternal::getCurrentCodeBlockName()
@@ -546,6 +618,25 @@ CodeBlock *VmInternal::findCodeBlock(StringTableEntry name)
       if(walk->name == name)
          return walk;
    return NULL;
+}
+
+
+const char* VmInternal::tempFloatConv(F64 val)
+{
+   if (mConvIndex == MaxStringConvs)
+      mConvIndex = 0;
+
+   printf(mTempStringConversions[mConvIndex], MaxTempStringSize, "%f", val);
+   return mTempStringConversions[mConvIndex++];
+}
+
+const char* VmInternal::tempIntConv(U64 val)
+{
+   if (mConvIndex == MaxStringConvs)
+      mConvIndex = 0;
+
+   printf(mTempStringConversions[mConvIndex], MaxTempStringSize, "%llu", val);
+   return mTempStringConversions[mConvIndex++];
 }
 
 } // namespace KorkApi

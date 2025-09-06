@@ -32,6 +32,7 @@
 #include "core/fileStream.h"
 #include "console/compiler.h"
 #include "console/consoleNamespace.h"
+#include "embed/internalApi.h"
 
 //#define DEBUG_SPEW
 
@@ -45,40 +46,6 @@ static char scratchBuffer[1024];
 // Dictionary functions
 //
 //---------------------------------------------------------------
-struct StringValue
-{
-   S32 size;
-   char *val;
-   
-   operator char *() { return val; }
-   StringValue &operator=(const char *string);
-   
-   StringValue() { size = 0; val = NULL; }
-   ~StringValue() { dFree(val); }
-};
-
-
-StringValue & StringValue::operator=(const char *string)
-{
-   if(!val)
-   {
-      val = dStrdup(string);
-      size = dStrlen(val);
-   }
-   else
-   {
-      S32 len = dStrlen(string);
-      if(len < size)
-         dStrcpy(val, string);
-      else
-      {
-         size = len;
-         dFree(val);
-         val = dStrdup(string);
-      }
-   }
-   return *this;
-}
 
 static S32 QSORT_CALLBACK varCompare(const void* a,const void* b)
 {
@@ -127,16 +94,16 @@ void Dictionary::exportVariables(const char *varString, const char *fileName, bo
    
    for(s = sortList.begin(); s != sortList.end(); s++)
    {
-      switch((*s)->type)
+      switch((*s)->mConsoleValue.typeId)
       {
-         case Entry::TypeInternalInt:
-            dSprintf(buffer, sizeof(buffer), "%s = %d;%s", (*s)->name, (*s)->ival, cat);
+         case KorkApi::ConsoleValue::TypeInternalInt:
+            dSprintf(buffer, sizeof(buffer), "%s = %d;%s", (*s)->name, (*s)->mConsoleValue.getInt(), cat);
             break;
-         case Entry::TypeInternalFloat:
-            dSprintf(buffer, sizeof(buffer), "%s = %g;%s", (*s)->name, (*s)->fval, cat);
+         case KorkApi::ConsoleValue::TypeInternalFloat:
+            dSprintf(buffer, sizeof(buffer), "%s = %g;%s", (*s)->name, (*s)->mConsoleValue.getFloat(), cat);
             break;
          default:
-            expandEscape(expandBuffer, (*s)->getStringValue());
+            expandEscape(expandBuffer, (const char*)(*s)->mConsoleValue.evaluatePtr(vm->mAllocBase));
             dSprintf(buffer, sizeof(buffer), "%s = \"%s\";%s", (*s)->name, expandBuffer, cat);
             break;
       }
@@ -241,6 +208,7 @@ void Dictionary::remove(Dictionary::Entry *ent)
       walk = &((*walk)->nextEntry);
    
    *walk = (ent->nextEntry);
+   clearEntry(ent);
    delete ent;
    hashTable->count--;
 }
@@ -306,6 +274,7 @@ void Dictionary::reset()
       while(walk)
       {
          temp = walk->nextEntry;
+         clearEntry(walk);
          delete walk;
          walk = temp;
       }
@@ -342,100 +311,178 @@ char *typeValueEmpty = "";
 Dictionary::Entry::Entry(StringTableEntry in_name)
 {
    name = in_name;
-   type = TypeInternalString;
    nextEntry = NULL;
    mUsage = NULL;
    mIsConstant = false;
-   
-   // NOTE: This is data inside a nameless
-   // union, so we don't need to init the rest.
-   ival = 0;
-   fval = 0;
-   sval = typeValueEmpty;
-   bufferLen = 0;
+
+   mConsoleValue = KorkApi::ConsoleValue();
+   mHeapAlloc = NULL;
 }
 
 Dictionary::Entry::~Entry()
 {
-   if (  type <= TypeInternalString &&
-       sval != typeValueEmpty )
-      dFree(sval);
+   AssertFatal(mHeapAlloc == NULL, "Heap alloc still present")
 }
 
-const char *Dictionary::getVariable(StringTableEntry name, bool *entValid)
+Dictionary::Entry* Dictionary::getVariable(StringTableEntry name)
 {
    Entry *ent = lookup(name);
    if(ent)
    {
-      if(entValid)
-         *entValid = true;
-      return ent->getStringValue();
+      return ent;
    }
-   if(entValid)
-      *entValid = false;
    
    // Warn users when they access a variable that isn't defined.
    if(gWarnUndefinedScriptVariables)
       Con::warnf(" *** Accessed undefined variable '%s'", name);
    
-   return "";
+   return NULL;
 }
 
-void Dictionary::Entry::setStringValue(const char * value)
+U32 Dictionary::getEntryIntValue(Entry* e)
 {
-   if( mIsConstant )
+   switch (e->mConsoleValue.typeId)
    {
-      Con::errorf( "Cannot assign value to constant '%s'.", name );
+      case KorkApi::ConsoleValue::TypeInternalInt:
+      return e->mConsoleValue.getInt();
+      break;
+      case KorkApi::ConsoleValue::TypeInternalFloat:
+      return e->mConsoleValue.getFloat();
+      break;
+      case KorkApi::ConsoleValue::TypeInternalString:
+      return atoll((const char*)e->mConsoleValue.evaluatePtr(vm->mAllocBase));
+      break;
+      default:
+      {
+         KorkApi::TypeInfo& info = vm->mTypes[e->mConsoleValue.typeId];
+         void* typePtr = e->mConsoleValue.evaluatePtr(vm->mAllocBase);
+
+         return atoll(info.iFuncs.GetDataFn(info.userPtr,
+                      typePtr,
+                      NULL,
+                      0));
+      }
+      break;
+   }
+}
+
+F32 Dictionary::getEntryFloatValue(Entry* e)
+{
+   switch (e->mConsoleValue.typeId)
+   {
+      case KorkApi::ConsoleValue::TypeInternalInt:
+      return e->mConsoleValue.getInt();
+      break;
+      case KorkApi::ConsoleValue::TypeInternalFloat:
+      return e->mConsoleValue.getFloat();
+      break;
+      case KorkApi::ConsoleValue::TypeInternalString:
+      return atof((const char*)e->mConsoleValue.evaluatePtr(vm->mAllocBase));
+      break;
+      default:
+      {
+         KorkApi::TypeInfo& info = vm->mTypes[e->mConsoleValue.typeId];
+         void* typePtr = e->mConsoleValue.evaluatePtr(vm->mAllocBase);
+
+         return atof(info.iFuncs.GetDataFn(info.userPtr,
+                      typePtr,
+                      NULL,
+                      0));
+      }
+      break;
+   }
+}
+
+const char *Dictionary::getEntryStringValue(Entry* e)
+{
+   switch (e->mConsoleValue.typeId)
+   {
+      case KorkApi::ConsoleValue::TypeInternalInt:
+      return vm->tempIntConv(e->mConsoleValue.getInt());
+      break;
+      case KorkApi::ConsoleValue::TypeInternalFloat:
+      return vm->tempFloatConv(e->mConsoleValue.getFloat());
+      break;
+      case KorkApi::ConsoleValue::TypeInternalString:
+      return (const char*)e->mConsoleValue.evaluatePtr(vm->mAllocBase);
+      break;
+   default:
+      {
+         KorkApi::TypeInfo& info = vm->mTypes[e->mConsoleValue.typeId];
+         void* typePtr = e->mConsoleValue.evaluatePtr(vm->mAllocBase);
+
+         return info.iFuncs.GetDataFn(info.userPtr,
+                      typePtr,
+                      NULL,
+                      0);
+      }
+      break;
+   }
+}
+
+void Dictionary::setEntryIntValue(Entry* e, U32 val)
+{
+   if( e->mIsConstant )
+   {
+      Con::errorf( "Cannot assign value to constant '%s'.", e->name );
       return;
    }
-   
-   if(type <= TypeInternalString)
+
+   if (e->mHeapAlloc)
    {
-      // Let's not remove empty-string-valued global vars from the dict.
-      // If we remove them, then they won't be exported, and sometimes
-      // it could be necessary to export such a global.  There are very
-      // few empty-string global vars so there's no performance-related
-      // need to remove them from the dict.
-      /*
-       if(!value[0] && name[0] == '$')
-       {
-       gEvalState.globalVars.remove(this);
-       return;
-       }
-       */
-      
-      U32 stringLen = dStrlen(value);
-      
-      // If it's longer than 256 bytes, it's certainly not a number.
-      //
-      // (This decision may come back to haunt you. Shame on you if it
-      // does.)
-      if(stringLen < 256)
-      {
-         fval = dAtof(value);
-         ival = dAtoi(value);
-      }
-      else
-      {
-         fval = 0.f;
-         ival = 0;
-      }
-      
-      type = TypeInternalString;
-      
-      // may as well pad to the next cache line
-      U32 newLen = ((stringLen + 1) + 15) & ~15;
-      
-      if(sval == typeValueEmpty)
-         sval = (char *) dMalloc(newLen);
-      else if(newLen > bufferLen)
-         sval = (char *) dRealloc(sval, newLen);
-      
-      bufferLen = newLen;
-      dStrcpy(sval, value);
+      clearEntry(e);
    }
-   else
-      Con::setData(type, dataPtr, 0, 1, &value, enumTable);
+   e->mConsoleValue.setInt(val);
+}
+
+void Dictionary::setEntryFloatValue(Entry* e, F32 val)
+{
+   if( e->mIsConstant )
+   {
+      Con::errorf( "Cannot assign value to constant '%s'.", e->name );
+      return;
+   }
+
+   if (e->mHeapAlloc)
+   {
+      clearEntry(e);
+   }
+   e->mConsoleValue.setFloat(val);
+}
+
+void Dictionary::clearEntry(Entry* e)
+{
+   if (e->mHeapAlloc)
+   {
+      vm->releaseHeapRef(e->mHeapAlloc);
+      e->mHeapAlloc = NULL;
+   }
+}
+
+void Dictionary::setEntryStringValue(Dictionary::Entry* e, const char * value)
+{
+   if( e->mIsConstant )
+   {
+      Con::errorf( "Cannot assign value to constant '%s'.", e->name );
+      return;
+   }
+
+   U32 expectedSize = dStrlen(value)+1;
+   
+   if (e->mHeapAlloc && e->mHeapAlloc->size < expectedSize)
+   {
+      vm->releaseHeapRef(e->mHeapAlloc);
+      e->mHeapAlloc = NULL;
+   }
+
+   if (!e->mHeapAlloc)
+   {
+      e->mHeapAlloc = vm->createHeapRef(expectedSize);
+   }
+
+   memcpy(e->mHeapAlloc->ptr(), value, expectedSize);
+   e->mConsoleValue.setString((const char*)e->mHeapAlloc->ptr(),
+                              KorkApi::ConsoleValue::ZoneVmHeap);
 }
 
 void Dictionary::setVariable(StringTableEntry name, const char *value)
@@ -443,7 +490,7 @@ void Dictionary::setVariable(StringTableEntry name, const char *value)
    Entry *ent = add(name);
    if(!value)
       value = "";
-   ent->setStringValue(value);
+   setEntryStringValue(ent, value);
 }
 
 Dictionary::Entry* Dictionary::addVariable(  const char *name,
@@ -461,20 +508,9 @@ Dictionary::Entry* Dictionary::addVariable(  const char *name,
    }
    
    Entry *ent = add(StringTable->insert(name));
-   
-   if (  ent->type <= Entry::TypeInternalString &&
-       ent->sval != typeValueEmpty )
-      dFree(ent->sval);
-   
-   ent->type = type;
-   ent->dataPtr = dataPtr;
+   clearEntry(ent);
+   ent->mConsoleValue.makeTyped(dataPtr, type);
    ent->mUsage = usage;
-   
-   // Fetch enum table, if any.
-   
-   ConsoleBaseType* conType = ConsoleBaseType::getType( type );
-   AssertFatal( conType, "Dictionary::addVariable - invalid console type" );
-   ent->enumTable = NULL;//conType->getEnumTable();
    
    return ent;
 }
@@ -530,6 +566,12 @@ ExprEvalState::ExprEvalState()
    thisObject = NULL;
    traceOn = false;
    mStackDepth = 0;
+   vmInternal = NULL;
+   
+   currentVariable = NULL;
+   copyVariable = NULL;
+   currentDictionary = NULL;
+   copyDictionary = NULL;
 }
 
 ExprEvalState::~ExprEvalState()

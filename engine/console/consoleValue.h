@@ -16,7 +16,7 @@ struct ConsoleValue
    enum TypeEnum : U16
    {
       TypeInternalString = 0,   // const char*
-      TypeInternalInt    = 1,   // S64
+      TypeInternalInt    = 1,   // U64
       TypeInternalFloat  = 2,   // F64
       TypeBeginCustom    = 3    // void*
    };
@@ -55,7 +55,7 @@ struct ConsoleValue
       flags = static_cast<U16>((flags & ~MaskVMZone) | ((U16)(z)));
    }
    
-   static ConsoleValue makeInt(S64 i)
+   static ConsoleValue makeInt(U64 i)
    {
       ConsoleValue v; v.setInt(i); return v;
    }
@@ -72,11 +72,11 @@ struct ConsoleValue
       ConsoleValue v; v.setTyped(p, typeId, zone); return v;
    }
    
-   inline void setInt(S64 i)
+   inline void setInt(U64 i)
    {
       typeId = TypeInternalInt;
       setZone(ZoneExternal); // zone irrelevant for immediates
-      *((S64*)&cvalue) = i;
+      *((U64*)&cvalue) = i;
    }
    
    inline void setFloat(F64 d)
@@ -100,10 +100,10 @@ struct ConsoleValue
       *((U64*)&cvalue) = *((U64*)p);
    }
    
-   inline S64 getInt(S64 def = 0) const
+   inline U64 getInt(U64 def = 0) const
    {
       if (typeId != TypeInternalInt) return def;
-      return *((S64*)&cvalue);
+      return *((U64*)&cvalue);
    }
    
    inline F64 getFloat(F64 def = 0.0) const

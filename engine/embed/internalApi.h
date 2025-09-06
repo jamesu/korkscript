@@ -12,6 +12,12 @@ namespace KorkApi
 
 struct VmInternal
 {
+   enum
+   {
+      MaxTempStringSize = 16,
+      MaxStringConvs = 16
+   };
+
    CodeBlock*    mCodeBlockList;
    CodeBlock*    mCurrentCodeBlock;
    TelnetDebugger* mTelDebugger;
@@ -25,17 +31,27 @@ struct VmInternal
 
    Vector<TypeInfo> mTypes;
    Vector<ClassInfo> mClassList;
-   Vector<ConsoleValue> mHardRefs;
+
+   KorkApi::ConsoleHeapAlloc* mHeapAllocs;
    Config mConfig;
    ConsoleValue::AllocBase mAllocBase;
 
-   VmInternal();
+   U32 mConvIndex;
+   char mTempStringConversions[MaxTempStringSize][MaxStringConvs];
+
+   VmInternal(Config* cfg);
    ~VmInternal();
+
+   ConsoleHeapAllocRef createHeapRef(U32 size);
+   void releaseHeapRef(ConsoleHeapAllocRef value);
 
    StringTableEntry getCurrentCodeBlockName();
    StringTableEntry getCurrentCodeBlockFullPath();
    StringTableEntry getCurrentCodeBlockModName();
    CodeBlock *findCodeBlock(StringTableEntry name);
+
+   const char* tempFloatConv(F64 val);
+   const char* tempIntConv(U64 val);
 
 };
 

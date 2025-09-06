@@ -198,9 +198,15 @@ namespace Con
 inline void ExprEvalState::setCurVarName(StringTableEntry name)
 {
    if(name[0] == '$')
+   {
       currentVariable = globalVars.lookup(name);
+      currentDictionary = &globalVars;
+   }
    else if(stack.size())
+   {
       currentVariable = stack.last()->lookup(name);
+      currentDictionary = stack.last();
+   }
    if(!currentVariable && gWarnUndefinedScriptVariables)
       Con::warnf(ConsoleLogEntry::Script, "Variable referenced before assignment: %s", name);
 }
@@ -208,9 +214,15 @@ inline void ExprEvalState::setCurVarName(StringTableEntry name)
 inline void ExprEvalState::setCurVarNameCreate(StringTableEntry name)
 {
    if(name[0] == '$')
+   {
       currentVariable = globalVars.add(name);
+      currentDictionary = &globalVars;
+   }
    else if(stack.size())
+   {
       currentVariable = stack.last()->add(name);
+      currentDictionary = stack.last();
+   }
    else
    {
       currentVariable = NULL;
@@ -222,17 +234,17 @@ inline void ExprEvalState::setCurVarNameCreate(StringTableEntry name)
 
 inline S32 ExprEvalState::getIntVariable()
 {
-   return currentVariable ? currentVariable->getIntValue() : 0;
+   return currentVariable ? currentDictionary->getEntryIntValue(currentVariable) : 0;
 }
 
 inline F64 ExprEvalState::getFloatVariable()
 {
-   return currentVariable ? currentVariable->getFloatValue() : 0;
+   return currentVariable ? currentDictionary->getEntryFloatValue(currentVariable) : 0;
 }
 
 inline const char *ExprEvalState::getStringVariable()
 {
-   return currentVariable ? currentVariable->getStringValue() : "";
+   return currentVariable ? currentDictionary->getEntryStringValue(currentVariable) : 0;
 }
 
 //------------------------------------------------------------
@@ -240,41 +252,41 @@ inline const char *ExprEvalState::getStringVariable()
 inline void ExprEvalState::setIntVariable(S32 val)
 {
    AssertFatal(currentVariable != NULL, "Invalid evaluator state - trying to set null variable!");
-   currentVariable->setIntValue(val);
+   currentDictionary->setEntryIntValue(currentVariable, val);
 }
 
 inline void ExprEvalState::setFloatVariable(F64 val)
 {
    AssertFatal(currentVariable != NULL, "Invalid evaluator state - trying to set null variable!");
-   currentVariable->setFloatValue((F32)val);
+   currentDictionary->setEntryFloatValue(currentVariable, val);
 }
 
 inline void ExprEvalState::setStringVariable(const char *val)
 {
    AssertFatal(currentVariable != NULL, "Invalid evaluator state - trying to set null variable!");
-   currentVariable->setStringValue(val);
+   currentDictionary->setEntryStringValue(currentVariable, val);
 }
 
 inline void ExprEvalState::setCopyVariable()
 {
    if (copyVariable)
    {
-      switch (copyVariable->type)
+      switch (copyVariable->mConsoleValue.typeId)
       {
-         case Dictionary::Entry::TypeInternalInt:
-            currentVariable->setIntValue(copyVariable->getIntValue());
+         case KorkApi::ConsoleValue::TypeInternalInt:
+            currentDictionary->setEntryIntValue(currentVariable, copyDictionary->getEntryIntValue(copyVariable));
          break;
-         case Dictionary::Entry::TypeInternalFloat:
-            currentVariable->setFloatValue(copyVariable->getFloatValue());
+         case KorkApi::ConsoleValue::TypeInternalFloat:
+            currentDictionary->setEntryIntValue(currentVariable, copyDictionary->getEntryFloatValue(copyVariable));
          break;
          default:
-            currentVariable->setStringValue(copyVariable->getStringValue());
+            currentDictionary->setEntryStringValue(currentVariable, copyDictionary->getEntryStringValue(copyVariable));
          break;
       }
    }
    else if (currentVariable)
    {
-      currentVariable->setStringValue(""); // needs to be set to blank if copyVariable doesn't exist
+      currentDictionary->setEntryStringValue(currentVariable, ""); // needs to be set to blank if copyVariable doesn't exist
    }
 }
 

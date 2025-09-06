@@ -218,11 +218,19 @@ struct Config {
   FindObjectsInterface iFind;
 };
 
-struct HardConsoleValueRef
+struct ConsoleHeapAlloc
 {
-	S32 hardIndex;
-	ConsoleValue value;
+    ConsoleHeapAlloc* prev;
+    ConsoleHeapAlloc* next;
+    U32 size;
+
+    void* ptr()
+    {
+        return this+1;
+    }
 };
+
+typedef ConsoleHeapAlloc* ConsoleHeapAllocRef;
 
 //
 // VM API
@@ -256,8 +264,8 @@ public:
     TypeInfo* getTypeInfo(TypeId ident);
 
 	// Hard refs to console values
-	HardConsoleValueRef createHardRef(ConsoleValue value);
-	void releaseHardRef(HardConsoleValueRef value);
+	ConsoleHeapAllocRef createHeapRef(U32 size);
+	void releaseHeapRef(ConsoleHeapAllocRef value);
    
    // Heap values (like strings)
    ConsoleValue getStringReturnBuffer(U32 size);
