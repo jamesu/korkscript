@@ -41,6 +41,7 @@ class CodeBlock
 {
 private:
    KorkApi::VmInternal* mVM;
+   KorkApi::Vm* mVMPublic;
    
 public:
    

@@ -44,11 +44,11 @@ class Namespace
       CodeBlock *mCode;
       U32 mFunctionOffset;
       union CallbackUnion {
-         StringCallback mStringCallbackFunc;
-         IntCallback mIntCallbackFunc;
-         VoidCallback mVoidCallbackFunc;
-         FloatCallback mFloatCallbackFunc;
-         BoolCallback mBoolCallbackFunc;
+         KorkApi::StringFuncCallback mStringCallbackFunc;
+         KorkApi::IntFuncCallback mIntCallbackFunc;
+         KorkApi::VoidFuncCallback mVoidCallbackFunc;
+         KorkApi::FloatFuncCallback mFloatCallbackFunc;
+         KorkApi::BoolFuncCallback mBoolCallbackFunc;
          const char* mGroupName;
       } cb;
       Entry();
@@ -69,11 +69,11 @@ class Namespace
 
    void initVM(KorkApi::VmInternal* vm);
    void addFunction(StringTableEntry name, CodeBlock *cb, U32 functionOffset, const char* usage = NULL);
-   void addCommand(StringTableEntry name,StringCallback, const char *usage, S32 minArgs, S32 maxArgs);
-   void addCommand(StringTableEntry name,IntCallback, const char *usage, S32 minArgs, S32 maxArgs);
-   void addCommand(StringTableEntry name,FloatCallback, const char *usage, S32 minArgs, S32 maxArgs);
-   void addCommand(StringTableEntry name,VoidCallback, const char *usage, S32 minArgs, S32 maxArgs);
-   void addCommand(StringTableEntry name,BoolCallback, const char *usage, S32 minArgs, S32 maxArgs);
+   void addCommand(StringTableEntry name, KorkApi::StringFuncCallback, const char *usage, S32 minArgs, S32 maxArgs);
+   void addCommand(StringTableEntry name, KorkApi::IntFuncCallback, const char *usage, S32 minArgs, S32 maxArgs);
+   void addCommand(StringTableEntry name, KorkApi::FloatFuncCallback, const char *usage, S32 minArgs, S32 maxArgs);
+   void addCommand(StringTableEntry name, KorkApi::VoidFuncCallback, const char *usage, S32 minArgs, S32 maxArgs);
+   void addCommand(StringTableEntry name, KorkApi::BoolFuncCallback, const char *usage, S32 minArgs, S32 maxArgs);
 
    void addOverload(const char *name, const char* altUsage);
 

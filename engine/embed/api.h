@@ -13,6 +13,12 @@ class Namespace;
 namespace KorkApi
 {
 
+typedef const char * (*StringFuncCallback)(void *obj, S32 argc, const char *argv[]);
+typedef S32             (*IntFuncCallback)(void *obj, S32 argc, const char *argv[]);
+typedef F32           (*FloatFuncCallback)(void *obj, S32 argc, const char *argv[]);
+typedef void           (*VoidFuncCallback)(void *obj, S32 argc, const char *argv[]); // We have it return a value so things don't break..
+typedef bool           (*BoolFuncCallback)(void *obj, S32 argc, const char *argv[]);
+
 template <typename C, auto ThunkFn> struct APIThunk;
 
 template <typename C, typename R, typename... Args, R(C::*ThunkFn)(Args...)>
@@ -261,6 +267,7 @@ public:
 
 	TypeId registerType(TypeInfo& info);
 	ClassId registerClass(ClassInfo& info);
+    ClassId getClassId(const char* name);
     TypeInfo* getTypeInfo(TypeId ident);
 
 	// Hard refs to console values
@@ -269,6 +276,8 @@ public:
    
    // Heap values (like strings)
    ConsoleValue getStringReturnBuffer(U32 size);
+   ConsoleValue getStringArgBuffer(U32 size);
+   ConsoleValue getTypeVar(TypeId typeId);
    ConsoleValue getTypeReturn(TypeId typeId);
 
    void pushValueFrame();
@@ -282,11 +291,11 @@ public:
 	VMObject* createVMObject(ClassId klassId, void* klassPtr);
     void destroyVMObject(VMObject* object);
 
-   void addNamespaceFunction(NamespaceId nsId, StringTableEntry name,  StringCallback, const char *usage, S32 minArgs, S32 maxArgs);
-   void addNamespaceFunction(NamespaceId nsId, StringTableEntry name,  IntCallback, const char *usage, S32 minArgs, S32 maxArgs);
-   void addNamespaceFunction(NamespaceId nsId, StringTableEntry name,  FloatCallback, const char *usage, S32 minArgs, S32 maxArgs);
-   void addNamespaceFunction(NamespaceId nsId, StringTableEntry name,  VoidCallback, const char *usage, S32 minArgs, S32 maxArgs);
-   void addNamespaceFunction(NamespaceId nsId, StringTableEntry name,  BoolCallback, const char *usage, S32 minArgs, S32 maxArgs);
+   void addNamespaceFunction(NamespaceId nsId, StringTableEntry name,  StringFuncCallback, const char *usage, S32 minArgs, S32 maxArgs);
+   void addNamespaceFunction(NamespaceId nsId, StringTableEntry name,  IntFuncCallback, const char *usage, S32 minArgs, S32 maxArgs);
+   void addNamespaceFunction(NamespaceId nsId, StringTableEntry name,  FloatFuncCallback, const char *usage, S32 minArgs, S32 maxArgs);
+   void addNamespaceFunction(NamespaceId nsId, StringTableEntry name,  VoidFuncCallback, const char *usage, S32 minArgs, S32 maxArgs);
+   void addNamespaceFunction(NamespaceId nsId, StringTableEntry name,  BoolFuncCallback, const char *usage, S32 minArgs, S32 maxArgs);
    bool isNamespaceFunction(NamespaceId nsId, StringTableEntry name);
    
    bool compileCodeBlock(const char* code, const char* filename, U32* outCodeSize, U32** outCode);

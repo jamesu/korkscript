@@ -113,6 +113,19 @@ ClassId Vm::registerClass(ClassInfo& info)
    return mInternal->mClassList.size()-1;
 }
 
+ClassId Vm::getClassId(const char* name)
+{
+   StringTableEntry klassST = StringTable->insert(name);
+   for (U32 i=0; i<mInternal->mClassList.size(); i++)
+   {
+      if (mInternal->mClassList[i].name == klassST)
+      {
+         return i;
+      }
+   }
+   return -1;
+}
+
 ConsoleHeapAllocRef Vm::createHeapRef(U32 size)
 {
    mInternal->createHeapRef(size);
@@ -165,25 +178,34 @@ void VmInternal::releaseHeapRef(ConsoleHeapAllocRef value)
    mConfig.freeFn(ref, mConfig.allocUser);
 }
 
-// Heap values (like strings)
 ConsoleValue Vm::getStringReturnBuffer(U32 size)
 {
     return makeDefaultValue();
 }
 
+ConsoleValue Vm::getStringArgBuffer(U32 size)
+{
+   return makeDefaultValue();
+}
+
 ConsoleValue Vm::getTypeReturn(TypeId typeId)
 {
-    return makeDefaultValue();
+   return makeDefaultValue();
+}
+
+ConsoleValue Vm::getTypeVar(TypeId typeId)
+{
+   return makeDefaultValue();
 }
 
 void Vm::pushValueFrame()
 {
-   return mInternal->STR.pushFrame();
+   return mInternal->mSTR.pushFrame();
 }
 
 void Vm::popValueFrame()
 {
-   return mInternal->STR.popFrame();
+   return mInternal->mSTR.popFrame();
 }
 
 // Public
@@ -234,31 +256,31 @@ void Vm::destroyVMObject(VMObject* object)
    delete object;
 }
 
-void Vm::addNamespaceFunction(NamespaceId nsId, StringTableEntry name, StringCallback cb, const char* usage, S32 minArgs, S32 maxArgs)
+void Vm::addNamespaceFunction(NamespaceId nsId, StringTableEntry name, StringFuncCallback cb, const char* usage, S32 minArgs, S32 maxArgs)
 {
    Namespace* ns = (Namespace*)nsId;
    ns->addCommand(name, cb, usage, minArgs, maxArgs);
 }
 
-void Vm::addNamespaceFunction(NamespaceId nsId, StringTableEntry name, IntCallback cb, const char* usage, S32 minArgs, S32 maxArgs)
+void Vm::addNamespaceFunction(NamespaceId nsId, StringTableEntry name, IntFuncCallback cb, const char* usage, S32 minArgs, S32 maxArgs)
 {
    Namespace* ns = (Namespace*)nsId;
    ns->addCommand(name, cb, usage, minArgs, maxArgs);
 }
 
-void Vm::addNamespaceFunction(NamespaceId nsId, StringTableEntry name, FloatCallback cb, const char* usage, S32 minArgs, S32 maxArgs)
+void Vm::addNamespaceFunction(NamespaceId nsId, StringTableEntry name, FloatFuncCallback cb, const char* usage, S32 minArgs, S32 maxArgs)
 {
    Namespace* ns = (Namespace*)nsId;
    ns->addCommand(name, cb, usage, minArgs, maxArgs);
 }
 
-void Vm::addNamespaceFunction(NamespaceId nsId, StringTableEntry name, VoidCallback cb, const char* usage, S32 minArgs, S32 maxArgs)
+void Vm::addNamespaceFunction(NamespaceId nsId, StringTableEntry name, VoidFuncCallback cb, const char* usage, S32 minArgs, S32 maxArgs)
 {
    Namespace* ns = (Namespace*)nsId;
    ns->addCommand(name, cb, usage, minArgs, maxArgs);
 }
 
-void Vm::addNamespaceFunction(NamespaceId nsId, StringTableEntry name, BoolCallback cb, const char* usage, S32 minArgs, S32 maxArgs)
+void Vm::addNamespaceFunction(NamespaceId nsId, StringTableEntry name, BoolFuncCallback cb, const char* usage, S32 minArgs, S32 maxArgs)
 {
    Namespace* ns = (Namespace*)nsId;
    ns->addCommand(name, cb, usage, minArgs, maxArgs);
@@ -355,7 +377,7 @@ bool Vm::callObjectFunction(VMObject* self, StringTableEntry funcName, int argc,
       //warnf(ConsoleLogEntry::Script, "%s: undefined for object '%s' - id %d", funcName, object->getName(), object->getId());
 
       // Clean up arg buffers, if any.
-      mInternal->STR.clearFunctionOffset();
+      mInternal->mSTR.clearFunctionOffset();
       return "";
    }
 
@@ -403,7 +425,7 @@ bool Vm::callObjectFunction(VMObject* self, StringTableEntry funcName, int argc,
 
    // Reset the function offset so the stack
    // doesn't continue to grow unnecessarily
-   mInternal->STR.clearFunctionOffset();
+   mInternal->mSTR.clearFunctionOffset();
 
    return true;
 }
@@ -417,7 +439,7 @@ bool Vm::callNamespaceFunction(NamespaceId nsId, StringTableEntry name, int argc
    {
       // warnf(ConsoleLogEntry::Script, "%s: Unknown command.", argv[0]);
       // Clean up arg buffers, if any.
-      mInternal->STR.clearFunctionOffset();
+      mInternal->mSTR.clearFunctionOffset();
       return false;
    }
 
@@ -425,7 +447,7 @@ bool Vm::callNamespaceFunction(NamespaceId nsId, StringTableEntry name, int argc
 
    // Reset the function offset so the stack
    // doesn't continue to grow unnecessarily
-   mInternal->STR.clearFunctionOffset();
+   mInternal->mSTR.clearFunctionOffset();
 
    retValue = ConsoleValue::makeString(ret);
 
@@ -527,7 +549,7 @@ Vm* createVM(Config* cfg)
 {
     // For stubs, we don't keep state yet.
     Vm* vm = new Vm();
-    vm->mInternal = new VmInternal(cfg);
+    vm->mInternal = new VmInternal(vm, cfg);
     return vm;
 }
 
@@ -537,8 +559,9 @@ void destroyVm(Vm* vm)
    delete vm;
 }
 
-VmInternal::VmInternal(Config* cfg) : STR(&mAllocBase)
+VmInternal::VmInternal(Vm* vm, Config* cfg) : mSTR(&mAllocBase)
 {
+   mVM = vm;
    mConfig = *cfg;
    mCodeBlockList = NULL;
    mCurrentCodeBlock = NULL;
@@ -618,6 +641,22 @@ CodeBlock *VmInternal::findCodeBlock(StringTableEntry name)
       if(walk->name == name)
          return walk;
    return NULL;
+}
+
+ClassInfo* VmInternal::getClassInfoByName(StringTableEntry name)
+{
+   auto itr = std::find_if(mClassList.begin(), mClassList.end(), [name](ClassInfo& info){
+      return info.name == name;
+   });
+
+   if (itr != mClassList.end())
+   {
+      return itr;
+   }
+   else
+   {
+      return NULL;
+   }
 }
 
 

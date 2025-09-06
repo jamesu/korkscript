@@ -18,6 +18,7 @@ struct VmInternal
       MaxStringConvs = 16
    };
 
+   KorkApi::Vm* mVM;
    CodeBlock*    mCodeBlockList;
    CodeBlock*    mCurrentCodeBlock;
    TelnetDebugger* mTelDebugger;
@@ -27,7 +28,7 @@ struct VmInternal
    NamespaceState mNSState;
 
    ExprEvalState mEvalState;
-   StringStack STR;
+   StringStack mSTR;
 
    Vector<TypeInfo> mTypes;
    Vector<ClassInfo> mClassList;
@@ -39,7 +40,7 @@ struct VmInternal
    U32 mConvIndex;
    char mTempStringConversions[MaxTempStringSize][MaxStringConvs];
 
-   VmInternal(Config* cfg);
+   VmInternal(KorkApi::Vm* vm, Config* cfg);
    ~VmInternal();
 
    ConsoleHeapAllocRef createHeapRef(U32 size);
@@ -49,6 +50,8 @@ struct VmInternal
    StringTableEntry getCurrentCodeBlockFullPath();
    StringTableEntry getCurrentCodeBlockModName();
    CodeBlock *findCodeBlock(StringTableEntry name);
+
+   ClassInfo* getClassInfoByName(StringTableEntry name);
 
    const char* tempFloatConv(F64 val);
    const char* tempIntConv(U64 val);

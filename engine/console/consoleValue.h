@@ -67,6 +67,10 @@ struct ConsoleValue
    {
       ConsoleValue v; v.setString(p, zone); return v;
    }
+   static ConsoleValue makeDynString(char* p, Zone zone=ZoneExternal)
+   {
+      ConsoleValue v; v.setDynString(p, zone); return v;
+   }
    static ConsoleValue makeTyped(void* p, U16 typeId, Zone zone=ZoneExternal)
    {
       ConsoleValue v; v.setTyped(p, typeId, zone); return v;
@@ -93,6 +97,13 @@ struct ConsoleValue
       *((const char**)&cvalue) = p;
    }
    
+   inline void setDynString(char* p, Zone zone=ZoneExternal)
+   {
+      typeId = TypeInternalString;
+      setZone(zone);
+      *((char**)&cvalue) = p;
+   }
+   
    inline void setTyped(void* p, U16 customTypeId, Zone zone=ZoneExternal)
    {
       typeId = customTypeId;
@@ -111,8 +122,13 @@ struct ConsoleValue
       if (typeId != TypeInternalFloat) return def;
       return *((F64*)&cvalue);
    }
+
+   void* ptr() const
+   {
+      return (void*)cvalue;
+   }
    
-   void* evaluatePtr(AllocBase base = {})
+   void* evaluatePtr(AllocBase base = {}) const
    {
       if (!(typeId == TypeInternalString || typeId >= TypeBeginCustom))
       {

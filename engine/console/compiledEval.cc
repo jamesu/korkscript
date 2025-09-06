@@ -61,6 +61,8 @@ struct IterStackRecord
    /// If true, this is a foreach$ loop; if not, it's a foreach loop.
    bool mIsStringIter;
    
+   Dictionary* mDictionary;
+   
    /// The iterator variable.
    Dictionary::Entry* mVariable;
    
@@ -94,8 +96,6 @@ IterStackRecord iterStack[ MaxStackSize ];
 
 F64 floatStack[MaxStackSize];
 S64 intStack[MaxStackSize];
-
-StringStack STR;
 
 U32 _FLT = 0;
 U32 _UINT = 0;
@@ -139,58 +139,6 @@ F64 consoleStringToNumber(const char *str, StringTableEntry file, U32 line)
       return 0;
    }
    return 0;
-}
-
-//------------------------------------------------------------
-
-namespace Con
-{
-   char *getReturnBuffer(U32 bufferSize)
-   {
-      return STR.getReturnBuffer(bufferSize);
-   }
-   
-   char *getReturnBuffer( const char *stringToCopy )
-   {
-      char *ret = STR.getReturnBuffer( dStrlen( stringToCopy ) + 1 );
-      dStrcpy( ret, stringToCopy );
-      ret[dStrlen( stringToCopy )] = '\0';
-      return ret;
-   }
-   
-   char *getArgBuffer(U32 bufferSize)
-   {
-      return STR.getArgBuffer(bufferSize);
-   }
-   
-   char *getFloatArg(F64 arg)
-   {
-      char *ret = STR.getArgBuffer(32);
-      dSprintf(ret, 32, "%g", arg);
-      return ret;
-   }
-   
-   char *getIntArg(S32 arg)
-   {
-      char *ret = STR.getArgBuffer(32);
-      dSprintf(ret, 32, "%d", arg);
-      return ret;
-   }
-   
-   char* getBoolArg(bool arg)
-   {
-      char *ret = STR.getArgBuffer(32);
-      dSprintf(ret, 32, "%d", arg);
-      return ret;
-   }
-
-   char *getStringArg( const char *arg )
-   {
-      U32 len = dStrlen( arg ) + 1;
-      char *ret = STR.getArgBuffer( len );
-      dMemcpy( ret, arg, len );
-      return ret;
-   }
 }
 
 //------------------------------------------------------------
@@ -319,10 +267,9 @@ void CodeBlock::getFunctionArgs(char buffer[1024], U32 ip)
 U32 gExecCount = 0;
 const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNamespace, U32 argc, const char **argv, bool noCalls, StringTableEntry packageName, S32 setFrame)
 {
-#if TOFIX
    
 #ifdef TORQUE_DEBUG
-   U32 stackStart = STR.mStartStackSize;
+   U32 stackStart = mVM->mSTR.mStartStackSize;
    gExecCount++;
 #endif
    
@@ -335,7 +282,7 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
    F64 *curFloatTable;
    char *curStringTable;
    S32 curStringTableLen = 0; //clint to ensure we dont overwrite it
-   STR.clearFunctionOffset();
+   mVM->mSTR.clearFunctionOffset();
    StringTableEntry thisFunctionName = NULL;
    bool popFrame = false;
    if(argv)
@@ -344,7 +291,7 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
       U32 fnArgc = code[ip + 2 + 6];
       thisFunctionName = CodeToSTE(code, ip);
       S32 wantedArgc = getMin(argc-1, fnArgc); // argv[0] is func name
-      if(gEvalState.traceOn)
+      if(mVM->mEvalState.traceOn)
       {
          traceBuffer[0] = 0;
          dStrcat(traceBuffer, "Entering ");
@@ -373,13 +320,13 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
          dStrcat(traceBuffer, ")");
          Con::printf("%s", traceBuffer);
       }
-      gEvalState.pushFrame(thisFunctionName, thisNamespace);
+      mVM->mEvalState.pushFrame(thisFunctionName, thisNamespace);
       popFrame = true;
       for(i = 0; i < wantedArgc; i++)
       {
          StringTableEntry var = CodeToSTE(code, ip + (2 + 6 + 1) + (i * 2));
-         gEvalState.setCurVarNameCreate(var);
-         gEvalState.setStringVariable(argv[i+1]);
+         mVM->mEvalState.setCurVarNameCreate(var);
+         mVM->mEvalState.setStringVariable(argv[i+1]);
       }
       ip = ip + (fnArgc * 2) + (2 + 6 + 1);
       curFloatTable = functionFloats;
@@ -395,26 +342,26 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
       // Do we want this code to execute using a new stack frame?
       if (setFrame < 0)
       {
-         gEvalState.pushFrame(NULL, NULL);
+         mVM->mEvalState.pushFrame(NULL, NULL);
          popFrame = true;
       }
-      else if (!gEvalState.stack.empty())
+      else if (!mVM->mEvalState.stack.empty())
       {
          // We want to copy a reference to an existing stack frame
          // on to the top of the stack.  Any change that occurs to
          // the locals during this new frame will also occur in the
          // original frame.
-         S32 stackIndex = gEvalState.stack.size() - setFrame - 1;
-         gEvalState.pushFrameRef( stackIndex );
+         S32 stackIndex = mVM->mEvalState.stack.size() - setFrame - 1;
+         mVM->mEvalState.pushFrameRef( stackIndex );
          popFrame = true;
       }
    }
    
    // Grab the state of the telenet debugger here once
    // so that the push and pop frames are always balanced.
-   const bool telDebuggerOn = TelDebugger && TelDebugger->isConnected();
+   const bool telDebuggerOn = mVM->mTelDebugger && mVM->mTelDebugger->isConnected();
    if ( telDebuggerOn && setFrame < 0 )
-      TelDebugger->pushStackFrame();
+      mVM->mTelDebugger->pushStackFrame();
    
    StringTableEntry var, objParent;
    U32 failJump;
@@ -424,16 +371,16 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
    static const U32 objectCreationStackSize = 32;
    U32 objectCreationStackIndex = 0;
    struct {
-      SimObject *newObject;
+      KorkApi::VMObject *newObject;
       U32 failJump;
    } objectCreationStack[ objectCreationStackSize ];
    
-   SimObject *currentNewObject = 0;
+   KorkApi::VMObject *currentNewObject = 0;
    StringTableEntry prevField = NULL;
    StringTableEntry curField = NULL;
-   SimObject *prevObject = NULL;
-   SimObject *curObject = NULL;
-   SimObject *saveObject=NULL;
+   KorkApi::VMObject *prevObject = NULL;
+   KorkApi::VMObject *curObject = NULL;
+   KorkApi::VMObject *saveObject=NULL;
    Namespace::Entry *nsEntry;
    Namespace *ns;
    const char* curFNDocBlock = NULL;
@@ -476,8 +423,8 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
                bool hasBody = ( code[ ip + 6 ] & 0x01 ) != 0;
                U32 lineNumber = code[ ip + 6 ] >> 1;
                
-               Namespace::unlinkPackages();
-               ns = Namespace::find(fnNamespace, fnPackage);
+               mVM->mNSState.unlinkPackages();
+               ns = mVM->mNSState.find(fnNamespace, fnPackage);
                ns->addFunction(fnName, this, hasBody ? ip : 0 );// if no body, set the IP to 0
                if( curNSDocBlock )
                {
@@ -490,7 +437,7 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
                      curNSDocBlock = NULL;
                   }
                }
-               Namespace::relinkPackages();
+               mVM->mNSState.relinkPackages();
                
                // If we had a docblock, it's definitely not valid anymore, so clear it out.
                curFNDocBlock = NULL;
@@ -526,7 +473,7 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
             objectCreationStack[ objectCreationStackIndex++ ].failJump = failJump;
             
             // Get the constructor information off the stack.
-            STR.getArgcArgv(NULL, &callArgc, &callArgv);
+            mVM->mSTR.getArgcArgv(NULL, &callArgc, &callArgv);
             const char *objectName = callArgv[ 2 ];
             
             // Con::printf("Creating object...");
@@ -538,10 +485,11 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
             // an old one.
             if(isDataBlock)
             {
+               #if TOFIX
                // Con::printf("  - is a datablock");
                
                // Find the old one if any.
-               SimObject *db = Sim::getDataBlockGroup()->findObject(callArgv[2]);
+               KorkApi::VMObject *db = Sim::getDataBlockGroup()->findObject(callArgv[2]);
                
                // Make sure we're not changing types on ourselves...
                if(db && dStricmp(db->getClassName(), callArgv[1]))
@@ -554,32 +502,50 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
                // If there was one, set the currentNewObject and move on.
                if(db)
                   currentNewObject = db;
+               #endif
             }
 
             // For singletons, delete the old object if it exists
             if ( isSingleton )
             {
-               SimObject *oldObject = Sim::findObject( objectName );
+               KorkApi::VMObject *oldObject = mVMPublic->findObjectByName( objectName );
                if (oldObject)
                {                  
                   // Prevent stack value corruption
-                  STR.pushFrame();
+                  mVM->mSTR.pushFrame();
                   // --
-
-                  oldObject->deleteObject();
+                  
+                  oldObject->klass->iCreate.DestroyClassFn(oldObject->klass->userPtr, oldObject->userPtr);
+                  
+                  delete oldObject;
                   oldObject = NULL;
 
                   // Prevent stack value corruption
-                  STR.popFrame();
+                  mVM->mSTR.popFrame();
                }
             }
             
-            STR.popFrame();
+            mVM->mSTR.popFrame();
             
             if(!currentNewObject)
             {
                // Well, looks like we have to create a new object.
-               ConsoleObject *object = ConsoleObject::create(callArgv[1]);
+               KorkApi::ClassInfo* klassInfo = mVM->getClassInfoByName(name);
+               KorkApi::VMObject *object = NULL;
+
+               if (klassInfo)
+               {
+                  object = new KorkApi::VMObject();
+                  object->klass = klassInfo;
+                  object->ns = NULL;
+                  object->userPtr = klassInfo->iCreate.CreateClassFn(klassInfo->userPtr, object);  
+
+                  if (object->userPtr == NULL)
+                  {
+                     delete object;
+                     object = NULL;
+                  }
+               }
                
                // Deal with failure!
                if(!object)
@@ -589,28 +555,8 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
                   break;
                }
                
-               // Do special datablock init if appropros
-               if(isDataBlock)
-               {
-                  SimDataBlock *dataBlock = dynamic_cast<SimDataBlock *>(object);
-                  if(dataBlock)
-                  {
-                     dataBlock->assignId();
-                  }
-                  else
-                  {
-                     // They tried to make a non-datablock with a datablock keyword!
-                     Con::errorf(ConsoleLogEntry::General, "%s: Unable to instantiate non-datablock class %s.", getFileLine(ip-1), callArgv[1]);
-                     
-                     // Clean up...
-                     delete object;
-                     ip = failJump;
-                     break;
-                  }
-               }
-               
                // Finally, set currentNewObject to point to the new one.
-               currentNewObject = dynamic_cast<SimObject *>(object);
+               currentNewObject = object;//dynamic_cast<SimObject *>(object);
                
                // Deal with the case of a non-SimObject.
                if(!currentNewObject)
@@ -620,16 +566,18 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
                   ip = failJump;
                   break;
                }
-               
+
+               #if TOFIX
                if(*objParent)
                {
                   // Find it!
-                  SimObject *parent;
+                  KorkApi::VMObject *parent;
                   if(Sim::findObject(objParent, parent))
                   {
                      // Con::printf(" - Parent object found: %s", parent->getClassName());
                      
                      // and suck the juices from it!
+                     klassInfo->iCreate
                      currentNewObject->assignFieldsFrom(parent);
                   }
                   else
@@ -637,35 +585,14 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
                   
                   // Mm! Juices!
                }
-               
-               // If a name was passed, assign it.
-               if( objectName[0] )
-               {
-                  {
-                     if(! isInternal)
-                        currentNewObject->assignName(callArgv[2]);
-                     else
-                        currentNewObject->setInternalName(callArgv[2]);
-                  }
+               #endif
 
-                  // Set the original name
-                  //currentNewObject->setOriginalName( objectName );
-               }
-               
-               // Do the constructor parameters.
-               if(!currentNewObject->processArguments(callArgc-3, callArgv+3))
+               if (!klassInfo->iCreate.ProcessArgs(mVMPublic, currentNewObject, objectName, isDataBlock, isInternal, callArgc-3, callArgv+3))
                {
                   delete currentNewObject;
                   currentNewObject = NULL;
                   ip = failJump;
                   break;
-               }
-               
-               // If it's not a datablock, allow people to modify bits of it.
-               if(!isDataBlock)
-               {
-                  currentNewObject->setModStaticFields(true);
-                  currentNewObject->setModDynamicFields(true);
                }
             }
             
@@ -690,10 +617,12 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
             {
                break;
             }
+
+            #if TOFIX
             
             if(currentNewObject->isProperlyAdded() == false)
             {
-               bool ret = currentNewObject->registerObject();;
+               bool ret = currentNewObject->registerObject();
                
                if (!ret)
                {
@@ -763,6 +692,7 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
             else
                intStack[++_UINT] = currentNewObject->getId();
             
+            #endif
             break;
          }
             
@@ -841,7 +771,7 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
             
          // This fixes a bug when not explicitly returning a value.
          case OP_RETURN_VOID:
-            STR.setStringValue("");
+            mVM->mSTR.setStringValue("");
             // We're falling thru here on purpose.
             
          case OP_RETURN:
@@ -855,9 +785,9 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
                   -- iterDepth;
                }
                
-               const char* returnValue = STR.getStringValue();
-               STR.rewind();
-               STR.setStringValue( returnValue ); // Not nice but works.
+               const char* returnValue = mVM->mSTR.getStringValue();
+               mVM->mSTR.rewind();
+               mVM->mSTR.setStringValue( returnValue ); // Not nice but works.
             }
                
             goto execFinished;
@@ -875,7 +805,7 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
                
             }
 
-            STR.setFloatValue( floatStack[_FLT] );
+            mVM->mSTR.setFloatValue( floatStack[_FLT] );
             _FLT--;
                
             goto execFinished;
@@ -892,7 +822,7 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
                }
             }
 
-            STR.setIntValue( intStack[_UINT] );
+            mVM->mSTR.setIntValue( intStack[_UINT] );
             _UINT--;
                
             goto execFinished;
@@ -1023,7 +953,7 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
             prevObject = NULL;
             curObject = NULL;
             
-            gEvalState.setCurVarName(var);
+            mVM->mEvalState.setCurVarName(var);
             
             // In order to let docblocks work properly with variables, we have
             // clear the current docblock when we do an assign. This way it
@@ -1041,7 +971,7 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
             prevObject = NULL;
             curObject = NULL;
             
-            gEvalState.setCurVarNameCreate(var);
+            mVM->mEvalState.setCurVarNameCreate(var);
             
             // See OP_SETCURVAR for why we do this.
             curFNDocBlock = NULL;
@@ -1049,14 +979,14 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
             break;
             
          case OP_SETCURVAR_ARRAY:
-            var = STR.getSTValue();
+            var = mVM->mSTR.getSTValue();
             
             // See OP_SETCURVAR
             prevField = NULL;
             prevObject = NULL;
             curObject = NULL;
             
-            gEvalState.setCurVarName(var);
+            mVM->mEvalState.setCurVarName(var);
             
             // See OP_SETCURVAR for why we do this.
             curFNDocBlock = NULL;
@@ -1064,14 +994,14 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
             break;
             
          case OP_SETCURVAR_ARRAY_CREATE:
-            var = STR.getSTValue();
+            var = mVM->mSTR.getSTValue();
             
             // See OP_SETCURVAR
             prevField = NULL;
             prevObject = NULL;
             curObject = NULL;
             
-            gEvalState.setCurVarNameCreate(var);
+            mVM->mEvalState.setCurVarNameCreate(var);
             
             // See OP_SETCURVAR for why we do this.
             curFNDocBlock = NULL;
@@ -1079,46 +1009,46 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
             break;
             
          case OP_LOADVAR_UINT:
-            intStack[_UINT+1] = gEvalState.getIntVariable();
+            intStack[_UINT+1] = mVM->mEvalState.getIntVariable();
             _UINT++;
             break;
             
          case OP_LOADVAR_FLT:
-            floatStack[_FLT+1] = gEvalState.getFloatVariable();
+            floatStack[_FLT+1] = mVM->mEvalState.getFloatVariable();
             _FLT++;
             break;
             
          case OP_LOADVAR_STR:
-            val = gEvalState.getStringVariable();
-            STR.setStringValue(val);
+            val = mVM->mEvalState.getStringVariable();
+            mVM->mSTR.setStringValue(val);
             break;
             
          case OP_LOADVAR_VAR:
             // Sets current source of OP_SAVEVAR_VAR
-            gEvalState.copyVariable = gEvalState.currentVariable;
+            mVM->mEvalState.copyVariable = mVM->mEvalState.currentVariable;
             break;
             
          case OP_SAVEVAR_UINT:
-            gEvalState.setIntVariable((S32)intStack[_UINT]);
+            mVM->mEvalState.setIntVariable((S32)intStack[_UINT]);
             break;
             
          case OP_SAVEVAR_FLT:
-            gEvalState.setFloatVariable(floatStack[_FLT]);
+            mVM->mEvalState.setFloatVariable(floatStack[_FLT]);
             break;
             
          case OP_SAVEVAR_STR:
-            gEvalState.setStringVariable(STR.getStringValue());
+            mVM->mEvalState.setStringVariable(mVM->mSTR.getStringValue());
             break;
             
          case OP_SAVEVAR_VAR:
             // this basically handles %var1 = %var2
-            gEvalState.setCopyVariable();
+            mVM->mEvalState.setCopyVariable();
             break;
             
          case OP_SETCUROBJECT:
             // Save the previous object for parsing vector fields.
             prevObject = curObject;
-            val = STR.getStringValue();
+            val = mVM->mSTR.getStringValue();
             
             // Sim::findObject will sometimes find valid objects from
             // multi-component strings. This makes sure that doesn't
@@ -1131,19 +1061,20 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
                   break;
                }
             }
-            curObject = Sim::findObject(val);
+            curObject = mVM->mConfig.iFind.FindObjectByPathFn(val);
             break;
             
          case OP_SETCUROBJECT_INTERNAL:
             ++ip; // To skip the recurse flag if the object wasnt found
             if(curObject)
             {
+#if TOFIX
                SimGroup *group = dynamic_cast<SimGroup *>(curObject);
                if(group)
                {
-                  StringTableEntry intName = StringTable->insert(STR.getStringValue());
+                  StringTableEntry intName = StringTable->insert(mVM->mSTR.getStringValue());
                   bool recurse = code[ip-1];
-                  SimObject *obj = group->findObjectByInternalName(intName, recurse);
+                  KorkApi::VMObject *obj = group->findObjectByInternalName(intName, recurse);
                   intStack[_UINT+1] = obj ? obj->getId() : 0;
                   _UINT++;
                }
@@ -1152,6 +1083,7 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
                   Con::errorf(ConsoleLogEntry::Script, "%s: Attempt to use -> on non-group %s of class %s.", getFileLine(ip-2), curObject->getName(), curObject->getClassName());
                   intStack[_UINT] = 0;
                }
+#endif
             }
             break;
             
@@ -1169,7 +1101,7 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
             break;
             
          case OP_SETCURFIELD_ARRAY:
-            dStrcpy(curFieldArray, STR.getStringValue());
+            dStrcpy(curFieldArray, mVM->mSTR.getStringValue());
             break;
 
          case OP_SETCURFIELD_TYPE:
@@ -1178,6 +1110,7 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
             ip++;
             break;
             
+   #if TOFIX
          case OP_LOADFIELD_UINT:
             if(curObject)
                intStack[_UINT+1] = U32(dAtoi(curObject->getDataField(curField, curFieldArray)));
@@ -1209,22 +1142,21 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
             if(curObject)
             {
                val = curObject->getDataField(curField, curFieldArray);
-               STR.setStringValue( val );
+               mVM->mSTR.setStringValue( val );
             }
             else
             {
                // The field is not being retrieved from an object. Maybe it's
                // a special accessor?
                //getFieldComponent( prevObject, prevField, prevFieldArray, curField, valBuffer, VAL_BUFFER_SIZE );
-               STR.setStringValue( ""); //valBuffer );
+               mVM->mSTR.setStringValue( ""); //valBuffer );
             }
-            
             break;
             
          case OP_SAVEFIELD_UINT:
-            STR.setIntValue((U32)intStack[_UINT]);
+            mVM->mSTR.setIntValue((U32)intStack[_UINT]);
             if(curObject)
-               curObject->setDataField(curField, curFieldArray, STR.getStringValue());
+               curObject->setDataField(curField, curFieldArray, mVM->mSTR.getStringValue());
             else
             {
                // The field is not being set on an object. Maybe it's
@@ -1235,9 +1167,9 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
             break;
             
          case OP_SAVEFIELD_FLT:
-            STR.setFloatValue(floatStack[_FLT]);
+            mVM->mSTR.setFloatValue(floatStack[_FLT]);
             if(curObject)
-               curObject->setDataField(curField, curFieldArray, STR.getStringValue());
+               curObject->setDataField(curField, curFieldArray, mVM->mSTR.getStringValue());
             else
             {
                // The field is not being set on an object. Maybe it's
@@ -1249,7 +1181,7 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
             
          case OP_SAVEFIELD_STR:
             if(curObject)
-               curObject->setDataField(curField, curFieldArray, STR.getStringValue());
+               curObject->setDataField(curField, curFieldArray, mVM->mSTR.getStringValue());
             else
             {
                // The field is not being set on an object. Maybe it's
@@ -1259,13 +1191,15 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
             }
             break;
             
+#endif
+            
          case OP_STR_TO_UINT:
-            intStack[_UINT+1] = STR.getIntValue();
+            intStack[_UINT+1] = mVM->mSTR.getIntValue();
             _UINT++;
             break;
             
          case OP_STR_TO_FLT:
-            floatStack[_FLT+1] = STR.getFloatValue();
+            floatStack[_FLT+1] = mVM->mSTR.getFloatValue();
             _FLT++;
             break;
             
@@ -1280,7 +1214,7 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
             break;
             
          case OP_FLT_TO_STR:
-            STR.setFloatValue(floatStack[_FLT]);
+            mVM->mSTR.setFloatValue(floatStack[_FLT]);
             _FLT--;
             break;
             
@@ -1295,7 +1229,7 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
             break;
             
          case OP_UINT_TO_STR:
-            STR.setIntValue((U32)intStack[_UINT]);
+            mVM->mSTR.setIntValue((U32)intStack[_UINT]);
             _UINT--;
             break;
             
@@ -1304,7 +1238,7 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
             break;
          
          case OP_COPYVAR_TO_NONE:
-            gEvalState.copyVariable = NULL;
+            mVM->mEvalState.copyVariable = NULL;
             break;
             
          case OP_LOADIMMED_UINT:
@@ -1327,7 +1261,7 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
                *(curStringTable + code[ip]) = StringTagPrefixByte;
             }
          case OP_LOADIMMED_STR:
-            STR.setStringValue(curStringTable + code[ip++]);
+            mVM->mSTR.setStringValue(curStringTable + code[ip++]);
             break;
             
          case OP_DOCBLOCK_STR:
@@ -1362,7 +1296,7 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
             break;
             
          case OP_LOADIMMED_IDENT:
-            STR.setStringValue(CodeToSTE(code, ip));
+            mVM->mSTR.setStringValue(CodeToSTE(code, ip));
             ip += 2;
             break;
             
@@ -1372,7 +1306,7 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
             fnName      = CodeToSTE(code, ip);
             
             // Try to look it up.
-            ns = Namespace::find(fnNamespace);
+            ns = mVM->mNSState.find(fnNamespace);
             nsEntry = ns->lookup(fnName);
             if(!nsEntry)
             {
@@ -1381,7 +1315,7 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
                           "%s: Unable to find function %s%s%s",
                           getFileLine(ip-4), fnNamespace ? fnNamespace : "",
                           fnNamespace ? "::" : "", fnName);
-               STR.popFrame();
+               mVM->mSTR.popFrame();
                break;
             }
             // Now, rewrite our code a bit (ie, avoid future lookups) and fall
@@ -1393,6 +1327,7 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
 #endif
             code[ip-1] = OP_CALLFUNC;
             
+#if TOFIX
          case OP_CALLFUNC:
          {
             // This routingId is set when we query the object as to whether
@@ -1404,16 +1339,16 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
             fnName = CodeToSTE(code, ip);
             
             //if this is called from inside a function, append the ip and codeptr
-            if (!gEvalState.stack.empty())
+            if (!mVM->mEvalState.stack.empty())
             {
-               gEvalState.stack.last()->code = this;
-               gEvalState.stack.last()->ip = ip - 1;
+               mVM->mEvalState.stack.last()->code = this;
+               mVM->mEvalState.stack.last()->ip = ip - 1;
             }
             
             U32 callType = code[ip+4];
             
             ip += 5;
-            STR.getArgcArgv(fnName, &callArgc, &callArgv);
+            mVM->mSTR.getArgcArgv(fnName, &callArgc, &callArgv);
             
             if(callType == FuncCallExprNode::FunctionCall)
             {
@@ -1426,18 +1361,18 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
             }
             else if(callType == FuncCallExprNode::MethodCall)
             {
-               saveObject = gEvalState.thisObject;
-               gEvalState.thisObject = Sim::findObject(callArgv[1]);
-               if(!gEvalState.thisObject)
+               saveObject = mVM->mEvalState.thisObject;
+               mVM->mEvalState.thisObject = Sim::findObject(callArgv[1]);
+               if(!mVM->mEvalState.thisObject)
                {
-                  gEvalState.thisObject = 0;
+                  mVM->mEvalState.thisObject = 0;
                   Con::warnf(ConsoleLogEntry::General,"%s: Unable to find object: '%s' attempting to call function '%s'", getFileLine(ip-6), callArgv[1], fnName);
-                  STR.popFrame();
-                  STR.setStringValue("");
+                  mVM->mSTR.popFrame();
+                  mVM->mSTR.setStringValue("");
                   break;
                }
                
-               ns = gEvalState.thisObject->getNamespace();
+               ns = mVM->mEvalState.thisObject->getNamespace();
                if(ns)
                   nsEntry = ns->lookup(fnName);
                else
@@ -1468,13 +1403,13 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
                   if(callType == FuncCallExprNode::MethodCall)
                   {
                      Con::warnf(ConsoleLogEntry::General, "  Object %s(%d) %s",
-                                gEvalState.thisObject->getName() ? gEvalState.thisObject->getName() : "",
-                                gEvalState.thisObject->getId(), Con::getNamespaceList(ns) );
+                                mVM->mEvalState.thisObject->getName() ? mVM->mEvalState.thisObject->getName() : "",
+                                mVM->mEvalState.thisObject->getId(), Con::getNamespaceList(ns) );
                   }
                }
-               STR.popFrame();
-               STR.setStringValue("");
-               STR.setStringValue("");
+               mVM->mSTR.popFrame();
+               mVM->mSTR.setStringValue("");
+               mVM->mSTR.setStringValue("");
                break;
             }
             if(nsEntry->mType == Namespace::Entry::ScriptFunctionType)
@@ -1483,10 +1418,10 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
                if(nsEntry->mFunctionOffset)
                   ret = nsEntry->mCode->exec(nsEntry->mFunctionOffset, fnName, nsEntry->mNamespace, callArgc, callArgv, false, nsEntry->mPackage);
                else // no body
-                  STR.setStringValue("");
+                  mVM->mSTR.setStringValue("");
                
-               STR.popFrame();
-               STR.setStringValue(ret);
+               mVM->mSTR.popFrame();
+               mVM->mSTR.setStringValue(ret);
             }
             else
             {
@@ -1495,8 +1430,8 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
                   const char* nsName = ns? ns->mName: "";
                   Con::warnf(ConsoleLogEntry::Script, "%s: %s::%s - wrong number of arguments.", getFileLine(ip-4), nsName, fnName);
                   Con::warnf(ConsoleLogEntry::Script, "%s: usage: %s", getFileLine(ip-4), nsEntry->mUsage);
-                  STR.popFrame();
-                  STR.setStringValue("");
+                  mVM->mSTR.popFrame();
+                  mVM->mSTR.setStringValue("");
                }
                else
                {
@@ -1504,18 +1439,18 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
                   {
                      case Namespace::Entry::StringCallbackType:
                      {
-                        const char *ret = nsEntry->cb.mStringCallbackFunc(gEvalState.thisObject, callArgc, callArgv);
-                        STR.popFrame();
-                        if(ret != STR.getStringValue())
-                           STR.setStringValue(ret);
+                        const char *ret = nsEntry->cb.mStringCallbackFunc(mVM->mEvalState.thisObject, callArgc, callArgv);
+                        mVM->mSTR.popFrame();
+                        if(ret != mVM->mSTR.getStringValue())
+                           mVM->mSTR.setStringValue(ret);
                         else
-                           STR.setLen(dStrlen(ret));
+                           mVM->mSTR.setLen(dStrlen(ret));
                         break;
                      }
                      case Namespace::Entry::IntCallbackType:
                      {
-                        S32 result = nsEntry->cb.mIntCallbackFunc(gEvalState.thisObject, callArgc, callArgv);
-                        STR.popFrame();
+                        S32 result = nsEntry->cb.mIntCallbackFunc(mVM->mEvalState.thisObject, callArgc, callArgv);
+                        mVM->mSTR.popFrame();
                         if(code[ip] == OP_STR_TO_UINT)
                         {
                            ip++;
@@ -1531,13 +1466,13 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
                         else if(code[ip] == OP_STR_TO_NONE)
                            ip++;
                         else
-                           STR.setIntValue(result);
+                           mVM->mSTR.setIntValue(result);
                         break;
                      }
                      case Namespace::Entry::FloatCallbackType:
                      {
-                        F64 result = nsEntry->cb.mFloatCallbackFunc(gEvalState.thisObject, callArgc, callArgv);
-                        STR.popFrame();
+                        F64 result = nsEntry->cb.mFloatCallbackFunc(mVM->mEvalState.thisObject, callArgc, callArgv);
+                        mVM->mSTR.popFrame();
                         if(code[ip] == OP_STR_TO_UINT)
                         {
                            ip++;
@@ -1553,20 +1488,20 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
                         else if(code[ip] == OP_STR_TO_NONE)
                            ip++;
                         else
-                           STR.setFloatValue(result);
+                           mVM->mSTR.setFloatValue(result);
                         break;
                      }
                      case Namespace::Entry::VoidCallbackType:
-                        nsEntry->cb.mVoidCallbackFunc(gEvalState.thisObject, callArgc, callArgv);
+                        nsEntry->cb.mVoidCallbackFunc(mVM->mEvalState.thisObject, callArgc, callArgv);
                         if(code[ip] != OP_STR_TO_NONE)
                            Con::warnf(ConsoleLogEntry::General, "%s: Call to %s in %s uses result of void function call.", getFileLine(ip-4), fnName, functionName);
-                        STR.popFrame();
-                        STR.setStringValue("");
+                        mVM->mSTR.popFrame();
+                        mVM->mSTR.setStringValue("");
                         break;
                      case Namespace::Entry::BoolCallbackType:
                      {
-                        bool result = nsEntry->cb.mBoolCallbackFunc(gEvalState.thisObject, callArgc, callArgv);
-                        STR.popFrame();
+                        bool result = nsEntry->cb.mBoolCallbackFunc(mVM->mEvalState.thisObject, callArgc, callArgv);
+                        mVM->mSTR.popFrame();
                         if(code[ip] == OP_STR_TO_UINT)
                         {
                            ip++;
@@ -1582,7 +1517,7 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
                         else if(code[ip] == OP_STR_TO_NONE)
                            ip++;
                         else
-                           STR.setIntValue(result);
+                           mVM->mSTR.setIntValue(result);
                         break;
                      }
                   }
@@ -1590,60 +1525,61 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
             }
             
             if(callType == FuncCallExprNode::MethodCall)
-               gEvalState.thisObject = saveObject;
+               mVM->mEvalState.thisObject = saveObject;
             break;
          }
+#endif
          case OP_ADVANCE_STR:
-            STR.advance();
+            mVM->mSTR.advance();
             break;
          case OP_ADVANCE_STR_APPENDCHAR:
-            STR.advanceChar(code[ip++]);
+            mVM->mSTR.advanceChar(code[ip++]);
             break;
             
          case OP_ADVANCE_STR_COMMA:
-            STR.advanceChar('_');
+            mVM->mSTR.advanceChar('_');
             break;
             
          case OP_ADVANCE_STR_NUL:
-            STR.advanceChar(0);
+            mVM->mSTR.advanceChar(0);
             break;
             
          case OP_REWIND_STR:
-            STR.rewind();
+            mVM->mSTR.rewind();
             break;
             
          case OP_TERMINATE_REWIND_STR:
-            STR.rewindTerminate();
+            mVM->mSTR.rewindTerminate();
             break;
             
          case OP_COMPARE_STR:
-            intStack[++_UINT] = STR.compare();
+            intStack[++_UINT] = mVM->mSTR.compare();
             break;
          case OP_PUSH:
-            STR.push();
+            mVM->mSTR.push();
             break;
             
          case OP_PUSH_UINT:
             // OP_UINT_TO_STR, OP_PUSH
-            STR.setIntValue((U32)intStack[_UINT]);
+            mVM->mSTR.setIntValue((U32)intStack[_UINT]);
             _UINT--;
-            STR.push();
+            mVM->mSTR.push();
             break;
          case OP_PUSH_FLT:
             // OP_FLT_TO_STR, OP_PUSH
-            STR.setFloatValue(floatStack[_FLT]);
+            mVM->mSTR.setFloatValue(floatStack[_FLT]);
             _FLT--;
-            STR.push();
+            mVM->mSTR.push();
             break;
          case OP_PUSH_VAR:
             // OP_LOADVAR_STR, OP_PUSH
-            val = gEvalState.getStringVariable();
-            STR.setStringValue(val);
-            STR.push();
+            val = mVM->mEvalState.getStringVariable();
+            mVM->mSTR.setStringValue(val);
+            mVM->mSTR.push();
             break;
 
          case OP_PUSH_FRAME:
-            STR.pushFrame();
+            mVM->mSTR.pushFrame();
             break;
 
          case OP_ASSERT:
@@ -1660,9 +1596,9 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
                                                    breakLine,  
                                                    message ) )
                {
-                  if ( TelDebugger && TelDebugger->isConnected() && breakLine > 0 )
+                  if ( mVM->mTelDebugger && mVM->mTelDebugger->isConnected() && breakLine > 0 )
                   {
-                     TelDebugger->breakProcess();
+                     mVM->mTelDebugger->breakProcess();
                   }
                   else
                      Platform::debugBreak();
@@ -1676,15 +1612,15 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
          case OP_BREAK:
          {
             //append the ip and codeptr before managing the breakpoint!
-            AssertFatal( !gEvalState.stack.empty(), "Empty eval stack on break!");
-            gEvalState.stack.last()->code = this;
-            gEvalState.stack.last()->ip = ip - 1;
+            AssertFatal( !mVM->mEvalState.stack.empty(), "Empty eval stack on break!");
+            mVM->mEvalState.stack.last()->code = this;
+            mVM->mEvalState.stack.last()->ip = ip - 1;
             
             U32 breakLine;
             findBreakLine(ip-1, breakLine, instruction);
             if(!breakLine)
                goto breakContinue;
-            TelDebugger->executionStopped(this, breakLine);
+            mVM->mTelDebugger->executionStopped(this, breakLine);
             
             goto breakContinue;
          }
@@ -1702,11 +1638,12 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
             
             IterStackRecord& iter = iterStack[ _ITER ];
             
-            iter.mVariable = gEvalState.getCurrentFrame().add( varName );
+            iter.mVariable = mVM->mEvalState.getCurrentFrame().add( varName );
+            iter.mDictionary = &mVM->mEvalState.getCurrentFrame();
             
             if( iter.mIsStringIter )
             {
-               iter.mData.mStr.mString = STR.getStringValue();
+               iter.mData.mStr.mString = mVM->mSTR.getStringValue();
                iter.mData.mStr.mIndex = 0;
             }
             else
@@ -1714,9 +1651,9 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
                // Look up the object.
                
                SimSet* set;
-               if( !Sim::findObject( STR.getStringValue(), set ) )
+               if( !Sim::findObject( mVM->mSTR.getStringValue(), set ) )
                {
-                  Con::errorf( ConsoleLogEntry::General, "No SimSet object '%s'", STR.getStringValue() );
+                  Con::errorf( ConsoleLogEntry::General, "No SimSet object '%s'", mVM->mSTR.getStringValue() );
                   Con::errorf( ConsoleLogEntry::General, "Did you mean to use 'foreach$' instead of 'foreach'?" );
                   ip = failIp;
                   continue;
@@ -1731,7 +1668,7 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
             _ITER ++;
             iterDepth ++;
             
-            STR.push();
+            mVM->mSTR.push();
             
             ip += 3;
             break;
@@ -1769,11 +1706,11 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
                {
                   char savedChar = str[ endIndex ];
                   const_cast< char* >( str )[ endIndex ] = '\0'; // We are on the string stack so this is okay.
-                  iter.mVariable->setStringValue( &str[ startIndex ] );
-                  const_cast< char* >( str )[ endIndex ] = savedChar;                  
+                  iter.mDictionary->setEntryStringValue(iter.mVariable, &str[ startIndex ] );
+                  const_cast< char* >( str )[ endIndex ] = savedChar;
                }
                else
-                  iter.mVariable->setStringValue( "" );
+                  iter.mDictionary->setEntryStringValue( iter.mVariable, "" );
 
                // Skip separator.
                if( str[ endIndex ] != '\0' )
@@ -1792,7 +1729,7 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
                   continue;
                }
                
-               iter.mVariable->setIntValue( set->at( index )->getId() );
+               iter.mDictionary->setEntryIntValue(iter.mVariable, set->at( index )->getId() );
                iter.mData.mObj.mIndex = index + 1;
             }
             
@@ -1805,7 +1742,7 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
             -- _ITER;
             -- iterDepth;
             
-            STR.rewind();
+            mVM->mSTR.rewind();
             
             iterStack[ _ITER ].mIsStringIter = false;
             break;
@@ -1821,14 +1758,14 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
 execFinished:
    
    if ( telDebuggerOn && setFrame < 0 )
-      TelDebugger->popStackFrame();
+      mVM->mTelDebugger->popStackFrame();
    
    if ( popFrame )
-      gEvalState.popFrame();
+      mVM->mEvalState.popFrame();
    
    if(argv)
    {
-      if(gEvalState.traceOn)
+      if(mVM->mEvalState.traceOn)
       {
          traceBuffer[0] = 0;
          dStrcat(traceBuffer, "Leaving ");
@@ -1842,12 +1779,12 @@ execFinished:
          if(thisNamespace && thisNamespace->mName)
          {
             dSprintf(traceBuffer + dStrlen(traceBuffer), sizeof(traceBuffer) - dStrlen(traceBuffer),
-                     "%s::%s() - return %s", thisNamespace->mName, thisFunctionName, STR.getStringValue());
+                     "%s::%s() - return %s", thisNamespace->mName, thisFunctionName, mVM->mSTR.getStringValue());
          }
          else
          {
             dSprintf(traceBuffer + dStrlen(traceBuffer), sizeof(traceBuffer) - dStrlen(traceBuffer),
-                     "%s() - return %s", thisFunctionName, STR.getStringValue());
+                     "%s() - return %s", thisFunctionName, mVM->mSTR.getStringValue());
          }
          Con::printf("%s", traceBuffer);
       }
@@ -1870,12 +1807,11 @@ execFinished:
    decRefCount();
    
 #ifdef TORQUE_DEBUG
-   AssertFatal(!(STR.mStartStackSize > stackStart), "String stack not popped enough in script exec");
-   AssertFatal(!(STR.mStartStackSize < stackStart), "String stack popped too much in script exec");
+   AssertFatal(!(mVM->mSTR.mStartStackSize > stackStart), "String stack not popped enough in script exec");
+   AssertFatal(!(mVM->mSTR.mStartStackSize < stackStart), "String stack popped too much in script exec");
 #endif
-   return STR.getStringValue();
+   return mVM->mSTR.getStringValue();
    
-#endif
    return "";
 }
 

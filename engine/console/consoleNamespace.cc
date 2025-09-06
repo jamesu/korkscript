@@ -415,7 +415,7 @@ void Namespace::addFunction(StringTableEntry name, CodeBlock *cb, U32 functionOf
    ent->mType = Entry::ScriptFunctionType;
 }
 
-void Namespace::addCommand(StringTableEntry name,StringCallback cb, const char *usage, S32 minArgs, S32 maxArgs)
+void Namespace::addCommand(StringTableEntry name, KorkApi::StringFuncCallback cb, const char *usage, S32 minArgs, S32 maxArgs)
 {
    Entry *ent = createLocalEntry(name);
    mVmInternal->mNSState.trashCache();
@@ -428,7 +428,7 @@ void Namespace::addCommand(StringTableEntry name,StringCallback cb, const char *
    ent->cb.mStringCallbackFunc = cb;
 }
 
-void Namespace::addCommand(StringTableEntry name,IntCallback cb, const char *usage, S32 minArgs, S32 maxArgs)
+void Namespace::addCommand(StringTableEntry name, KorkApi::IntFuncCallback cb, const char *usage, S32 minArgs, S32 maxArgs)
 {
    Entry *ent = createLocalEntry(name);
    mVmInternal->mNSState.trashCache();
@@ -441,7 +441,7 @@ void Namespace::addCommand(StringTableEntry name,IntCallback cb, const char *usa
    ent->cb.mIntCallbackFunc = cb;
 }
 
-void Namespace::addCommand(StringTableEntry name,VoidCallback cb, const char *usage, S32 minArgs, S32 maxArgs)
+void Namespace::addCommand(StringTableEntry name, KorkApi::VoidFuncCallback cb, const char *usage, S32 minArgs, S32 maxArgs)
 {
    Entry *ent = createLocalEntry(name);
    mVmInternal->mNSState.trashCache();
@@ -454,7 +454,7 @@ void Namespace::addCommand(StringTableEntry name,VoidCallback cb, const char *us
    ent->cb.mVoidCallbackFunc = cb;
 }
 
-void Namespace::addCommand(StringTableEntry name,FloatCallback cb, const char *usage, S32 minArgs, S32 maxArgs)
+void Namespace::addCommand(StringTableEntry name, KorkApi::FloatFuncCallback cb, const char *usage, S32 minArgs, S32 maxArgs)
 {
    Entry *ent = createLocalEntry(name);
    mVmInternal->mNSState.trashCache();
@@ -467,7 +467,7 @@ void Namespace::addCommand(StringTableEntry name,FloatCallback cb, const char *u
    ent->cb.mFloatCallbackFunc = cb;
 }
 
-void Namespace::addCommand(StringTableEntry name,BoolCallback cb, const char *usage, S32 minArgs, S32 maxArgs)
+void Namespace::addCommand(StringTableEntry name, KorkApi::BoolFuncCallback cb, const char *usage, S32 minArgs, S32 maxArgs)
 {
    Entry *ent = createLocalEntry(name);
    mVmInternal->mNSState.trashCache();

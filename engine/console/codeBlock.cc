@@ -55,6 +55,7 @@ CodeBlock::CodeBlock(KorkApi::VmInternal* vm)
    modPath = NULL;
    mRoot = StringTable->EmptyString;
    mVM = vm;
+   mVMPublic = vm->mVM;
 }
 
 CodeBlock::~CodeBlock()

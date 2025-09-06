@@ -1074,31 +1074,80 @@ bool removeVariable(const char *name)
    return name!=0 && sVM->removeGlobalVariable(name);
 }
 
+
+//---------------------------------------------------------------------------
+char *getReturnBuffer(U32 bufferSize)
+{
+   return (char*)sVM->getStringReturnBuffer(bufferSize).ptr();
+}
+
+char *getReturnBuffer( const char *stringToCopy )
+{
+   char *ret = (char*)sVM->getStringReturnBuffer( dStrlen( stringToCopy ) + 1 ).ptr();
+   dStrcpy( ret, stringToCopy );
+   ret[dStrlen( stringToCopy )] = '\0';
+   return ret;
+}
+
+char *getArgBuffer(U32 bufferSize)
+{
+   return (char*)sVM->getStringArgBuffer(bufferSize).ptr();
+}
+
+char *getFloatArg(F64 arg)
+{
+   char *ret = (char*)sVM->getStringArgBuffer( 32 ).ptr();
+   dSprintf(ret, 32, "%g", arg);
+   return ret;
+}
+
+char *getIntArg(S32 arg)
+{
+   char *ret = (char*)sVM->getStringArgBuffer( 32 ).ptr();
+   dSprintf(ret, 32, "%d", arg);
+   return ret;
+}
+
+char* getBoolArg(bool arg)
+{
+   char *ret = (char*)sVM->getStringArgBuffer( 32 ).ptr();
+   dSprintf(ret, 32, "%d", arg);
+   return ret;
+}
+
+char *getStringArg( const char *arg )
+{
+   U32 len = dStrlen( arg ) + 1;
+   char *ret = (char*)sVM->getStringArgBuffer( len ).ptr();
+   dMemcpy( ret, arg, len );
+   return ret;
+}
+
 //---------------------------------------------------------------------------
 
 void addCommand(const char *nsName, const char *name,StringCallback cb, const char *usage, S32 minArgs, S32 maxArgs)
 {
-   sVM->addNamespaceFunction(lookupNamespace(StringTable->insert(nsName)), StringTable->insert(name), cb, usage, minArgs, maxArgs);
+   sVM->addNamespaceFunction(lookupNamespace(StringTable->insert(nsName)), StringTable->insert(name), (KorkApi::StringFuncCallback)cb, usage, minArgs, maxArgs);
 }
 
 void addCommand(const char *nsName, const char *name,VoidCallback cb, const char *usage, S32 minArgs, S32 maxArgs)
 {
-   sVM->addNamespaceFunction(lookupNamespace(StringTable->insert(nsName)), StringTable->insert(name), cb, usage, minArgs, maxArgs);
+   sVM->addNamespaceFunction(lookupNamespace(StringTable->insert(nsName)), StringTable->insert(name), (KorkApi::VoidFuncCallback)cb, usage, minArgs, maxArgs);
 }
 
 void addCommand(const char *nsName, const char *name,IntCallback cb, const char *usage, S32 minArgs, S32 maxArgs)
 {
-   sVM->addNamespaceFunction(lookupNamespace(StringTable->insert(nsName)), StringTable->insert(name), cb, usage, minArgs, maxArgs);
+   sVM->addNamespaceFunction(lookupNamespace(StringTable->insert(nsName)), StringTable->insert(name), (KorkApi::IntFuncCallback)cb, usage, minArgs, maxArgs);
 }
 
 void addCommand(const char *nsName, const char *name,FloatCallback cb, const char *usage, S32 minArgs, S32 maxArgs)
 {
-   sVM->addNamespaceFunction(lookupNamespace(StringTable->insert(nsName)), StringTable->insert(name), cb, usage, minArgs, maxArgs);
+   sVM->addNamespaceFunction(lookupNamespace(StringTable->insert(nsName)), StringTable->insert(name), (KorkApi::FloatFuncCallback)cb, usage, minArgs, maxArgs);
 }
 
 void addCommand(const char *nsName, const char *name,BoolCallback cb, const char *usage, S32 minArgs, S32 maxArgs)
 {
-   sVM->addNamespaceFunction(lookupNamespace(StringTable->insert(nsName)), StringTable->insert(name), cb, usage, minArgs, maxArgs);
+   sVM->addNamespaceFunction(lookupNamespace(StringTable->insert(nsName)), StringTable->insert(name), (KorkApi::BoolFuncCallback)cb, usage, minArgs, maxArgs);
 }
 
 void markCommandGroup(const char * nsName, const char *name, const char* usage)
@@ -1127,27 +1176,27 @@ void addOverload(const char * nsName, const char * name, const char * altUsage)
 
 void addCommand(const char *name,StringCallback cb,const char *usage, S32 minArgs, S32 maxArgs)
 {
-   sVM->addNamespaceFunction(sVM->getGlobalNamespace(), StringTable->insert(name), cb, usage, minArgs, maxArgs);
+   sVM->addNamespaceFunction(sVM->getGlobalNamespace(), StringTable->insert(name), (KorkApi::StringFuncCallback)cb, usage, minArgs, maxArgs);
 }
 
 void addCommand(const char *name,VoidCallback cb,const char *usage, S32 minArgs, S32 maxArgs)
 {
-   sVM->addNamespaceFunction(sVM->getGlobalNamespace(), StringTable->insert(name), cb, usage, minArgs, maxArgs);
+   sVM->addNamespaceFunction(sVM->getGlobalNamespace(), StringTable->insert(name), (KorkApi::VoidFuncCallback)cb, usage, minArgs, maxArgs);
 }
 
 void addCommand(const char *name,IntCallback cb,const char *usage, S32 minArgs, S32 maxArgs)
 {
-   sVM->addNamespaceFunction(sVM->getGlobalNamespace(), StringTable->insert(name), cb, usage, minArgs, maxArgs);
+   sVM->addNamespaceFunction(sVM->getGlobalNamespace(), StringTable->insert(name), (KorkApi::IntFuncCallback)cb, usage, minArgs, maxArgs);
 }
 
 void addCommand(const char *name,FloatCallback cb,const char *usage, S32 minArgs, S32 maxArgs)
 {
-   sVM->addNamespaceFunction(sVM->getGlobalNamespace(), StringTable->insert(name), cb, usage, minArgs, maxArgs);
+   sVM->addNamespaceFunction(sVM->getGlobalNamespace(), StringTable->insert(name), (KorkApi::FloatFuncCallback)cb, usage, minArgs, maxArgs);
 }
 
 void addCommand(const char *name,BoolCallback cb,const char *usage, S32 minArgs, S32 maxArgs)
 {
-   sVM->addNamespaceFunction(sVM->getGlobalNamespace(), StringTable->insert(name), cb, usage, minArgs, maxArgs);
+   sVM->addNamespaceFunction(sVM->getGlobalNamespace(), StringTable->insert(name), (KorkApi::BoolFuncCallback)cb, usage, minArgs, maxArgs);
 }
 
 // Known as expandOldScriptFilename in T3D
