@@ -201,9 +201,9 @@ struct ClassInfo {
 // Finding objects
 struct FindObjectsInterface
 {
-	VMObject* (*FindObjectByNameFn)(StringTableEntry name);
-   VMObject* (*FindObjectByPathFn)(const char* path);
-	VMObject* (*FindObjectByInternalNameFn)(StringTableEntry internalName);
+	VMObject* (*FindObjectByNameFn)(StringTableEntry name, VMObject* parent);
+    VMObject* (*FindObjectByPathFn)(const char* path);
+	VMObject* (*FindObjectByInternalNameFn)(StringTableEntry internalName, bool recursive, VMObject* parent);
 	VMObject* (*FindObjectByIdFn)(SimObjectId objectId);
 };
 

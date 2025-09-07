@@ -290,18 +290,16 @@ const char *Dictionary::tabComplete(const char *prevText, S32 baseLen, bool fFor
    S32 i;
    
    const char *bestMatch = NULL;
-#if TOFIX
    for(i = 0; i < hashTable->size; i++)
    {
       Entry *walk = hashTable->data[i];
       while(walk)
       {
-         if(Namespace::canTabComplete(prevText, bestMatch, walk->name, baseLen, fForward))
+         if (vm->mNSState.canTabComplete(prevText, bestMatch, walk->name, baseLen, fForward))
             bestMatch = walk->name;
          walk = walk->nextEntry;
       }
    }
-#endif
    return bestMatch;
 }
 

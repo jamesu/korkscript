@@ -457,7 +457,7 @@ bool Vm::callNamespaceFunction(NamespaceId nsId, StringTableEntry name, int argc
 // Helpers (should call into user funcs)
 VMObject* Vm::findObjectByName(const char* name)
 {
-    return mInternal->mConfig.iFind.FindObjectByNameFn(name);
+    return mInternal->mConfig.iFind.FindObjectByNameFn(name, NULL);
 }
 
 VMObject* Vm::findObjectByPath(const char* path)

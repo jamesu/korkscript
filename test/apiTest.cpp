@@ -25,7 +25,7 @@ void MyLogger(ConsoleLogEntry::Level level, const char *consoleLine, void* userP
 
 static std::unordered_map<StringTableEntry, VMObject*> gByName;
 
-static VMObject* FindByName(StringTableEntry name)
+static VMObject* FindByName(StringTableEntry name, VMObject* parent)
 {
    if (!name) return NULL;
    auto it = gByName.find(name);
@@ -230,7 +230,7 @@ int testScript(char* script, const char* filename)
    vm->evalCode(script, filename);
    
    // Optionally, prove C++ side can Find it as well:
-   VMObject* found = cfg.iFind.FindObjectByNameFn("player1");
+   VMObject* found = cfg.iFind.FindObjectByNameFn("player1", NULL);
    AssertFatal(found, "player1 should be registered in iFind");
    
    destroyVm(vm);
