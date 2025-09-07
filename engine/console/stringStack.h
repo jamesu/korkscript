@@ -157,6 +157,29 @@ struct StringStack
       dStrcpy(mBuffer + mStart, s);
    }
 
+   /// Set a string value on the top of the stack.
+   void setStringValue(KorkApi::ConsoleValue v)
+   {
+      char shortBuf[16];
+      switch (v.typeId)
+      {
+         case KorkApi::ConsoleValue::TypeInternalFloat:
+         dSprintf(shortBuf, sizeof(shortBuf), "%g", v.getFloat());
+         setStringValue(shortBuf);
+         break;
+         case KorkApi::ConsoleValue::TypeInternalInt:
+         dSprintf(shortBuf, sizeof(shortBuf), "%i", v.getInt());
+         setStringValue(shortBuf);
+         break;
+         case KorkApi::ConsoleValue::TypeInternalString:
+         setStringValue((const char*)v.evaluatePtr(*mAllocBase));
+         break;
+      default:
+         // TOFIX
+         break;
+      }
+   }
+
    /// Get the top of the stack, as a StringTableEntry.
    ///
    /// @note Don't free this memory!

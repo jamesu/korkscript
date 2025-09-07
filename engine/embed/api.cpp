@@ -678,4 +678,14 @@ const char* VmInternal::tempIntConv(U64 val)
    return mTempStringConversions[mConvIndex++];
 }
 
+void VmInternal::setObjectField(StringTableEntry name, const char* array, ConsoleValue value)
+{
+   
+}
+
+ConsoleValue VmInternal::getObjectField(StringTableEntry name, const char* array)
+{
+   
+}
+
 } // namespace KorkApi

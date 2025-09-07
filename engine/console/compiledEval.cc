@@ -264,6 +264,37 @@ void CodeBlock::getFunctionArgs(char buffer[1024], U32 ip)
 
 //-----------------------------------------------------------------------------
 
+
+static U32 castValueToU32(KorkApi::ConsoleValue retValue, KorkApi::ConsoleValue::AllocBase& allocBase)
+{
+   switch (retValue.typeId)
+   {
+      case KorkApi::ConsoleValue::TypeInternalInt:
+         return (U32)retValue.getInt();
+      case KorkApi::ConsoleValue::TypeInternalFloat:
+         return (F32)retValue.getFloat();
+      case KorkApi::ConsoleValue::TypeInternalString:
+         return (U32)atoll((const char*)retValue.evaluatePtr(allocBase));
+      default:
+         return 0; // TOFIX
+   }
+}
+
+static F32 castValueToF32(KorkApi::ConsoleValue retValue, KorkApi::ConsoleValue::AllocBase& allocBase)
+{
+   switch (retValue.typeId)
+   {
+      case KorkApi::ConsoleValue::TypeInternalInt:
+         return (U32)retValue.getInt();
+      case KorkApi::ConsoleValue::TypeInternalFloat:
+         return (F32)retValue.getFloat();
+      case KorkApi::ConsoleValue::TypeInternalString:
+         return atoll((const char*)retValue.evaluatePtr(allocBase));
+      default:
+         return 0.0f; // TOFIX
+   }
+}
+
 U32 gExecCount = 0;
 const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNamespace, U32 argc, const char **argv, bool noCalls, StringTableEntry packageName, S32 setFrame)
 {
@@ -1110,10 +1141,12 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
             ip++;
             break;
             
-   #if TOFIX
          case OP_LOADFIELD_UINT:
             if(curObject)
-               intStack[_UINT+1] = U32(dAtoi(curObject->getDataField(curField, curFieldArray)));
+            {
+               KorkApi::ConsoleValue retValue = mVM->getObjectField(curField, curFieldArray);
+               intStack[_UINT+1] = castValueToU32(retValue, mVM->mAllocBase);
+            }
             else
             {
                // The field is not being retrieved from an object. Maybe it's
@@ -1127,7 +1160,10 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
             
          case OP_LOADFIELD_FLT:
             if(curObject)
-               floatStack[_FLT+1] = dAtof(curObject->getDataField(curField, curFieldArray));
+            {
+               KorkApi::ConsoleValue retValue = mVM->getObjectField(curField, curFieldArray);
+               floatStack[_FLT+1] = castValueToF32(retValue, mVM->mAllocBase);
+            }
             else
             {
                // The field is not being retrieved from an object. Maybe it's
@@ -1141,8 +1177,9 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
          case OP_LOADFIELD_STR:
             if(curObject)
             {
-               val = curObject->getDataField(curField, curFieldArray);
-               mVM->mSTR.setStringValue( val );
+               KorkApi::ConsoleValue retValue = mVM->getObjectField(curField, curFieldArray);
+               floatStack[_FLT+1] = castValueToF32(retValue, mVM->mAllocBase);
+               mVM->mSTR.setStringValue(retValue);
             }
             else
             {
@@ -1156,7 +1193,10 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
          case OP_SAVEFIELD_UINT:
             mVM->mSTR.setIntValue((U32)intStack[_UINT]);
             if(curObject)
-               curObject->setDataField(curField, curFieldArray, mVM->mSTR.getStringValue());
+            {
+               KorkApi::ConsoleValue cv = KorkApi::ConsoleValue::makeString(mVM->mSTR.getStringValue());
+               mVM->setObjectField(curField, curFieldArray, cv);
+            }
             else
             {
                // The field is not being set on an object. Maybe it's
@@ -1169,7 +1209,10 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
          case OP_SAVEFIELD_FLT:
             mVM->mSTR.setFloatValue(floatStack[_FLT]);
             if(curObject)
-               curObject->setDataField(curField, curFieldArray, mVM->mSTR.getStringValue());
+            {
+               KorkApi::ConsoleValue cv = KorkApi::ConsoleValue::makeString(mVM->mSTR.getStringValue());
+               mVM->setObjectField(curField, curFieldArray, cv);
+            }
             else
             {
                // The field is not being set on an object. Maybe it's
@@ -1181,7 +1224,10 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
             
          case OP_SAVEFIELD_STR:
             if(curObject)
-               curObject->setDataField(curField, curFieldArray, mVM->mSTR.getStringValue());
+            {
+               KorkApi::ConsoleValue cv = KorkApi::ConsoleValue::makeString(mVM->mSTR.getStringValue());
+               mVM->setObjectField(curField, curFieldArray, cv);
+            }
             else
             {
                // The field is not being set on an object. Maybe it's
@@ -1190,8 +1236,6 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
                prevObject = NULL;
             }
             break;
-            
-#endif
             
          case OP_STR_TO_UINT:
             intStack[_UINT+1] = mVM->mSTR.getIntValue();

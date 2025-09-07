@@ -56,6 +56,9 @@ struct VmInternal
    const char* tempFloatConv(F64 val);
    const char* tempIntConv(U64 val);
 
+   void setObjectField(StringTableEntry name, const char* array, ConsoleValue value);
+   ConsoleValue getObjectField(StringTableEntry name, const char* array);
+
 };
 
 }
