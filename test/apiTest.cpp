@@ -101,6 +101,11 @@ static void* MyBase_Create(void* classUser, VMObject* object)
    return b;
 }
 
+static bool MyBase_AddObject(Vm* vm, VMObject* object, bool placeAtRoot, U32 groupAddId)
+{
+   return true;
+}
+
 static bool MyBase_ProcessArgs(Vm* vm, VMObject* object, const char* name, bool isDatablock, bool internalName, int argc, const char** argv)
 {
     MyBase* b = (MyBase*)object->userPtr;
@@ -190,7 +195,7 @@ int testScript(char* script, const char* filename)
    myBase.userPtr = NULL;
    myBase.numFields = 0;
    myBase.fields = NULL;
-   myBase.iCreate = { &MyBase_Create, &MyBase_Destroy, &MyBase_ProcessArgs, &MyBase_GetID };
+   myBase.iCreate = { &MyBase_Create, &MyBase_Destroy, &MyBase_ProcessArgs, &MyBase_AddObject, &MyBase_GetID };
    
    myBase.iCustomFields   = {};
    
@@ -212,7 +217,7 @@ int testScript(char* script, const char* filename)
    player.userPtr     = NULL;
    player.numFields   = 1;
    player.fields      = playerFields;
-   player.iCreate     = { &Player_Create, &Player_Destroy, &MyBase_ProcessArgs, &MyBase_GetID };
+   player.iCreate     = { &Player_Create, &Player_Destroy, &MyBase_ProcessArgs, &MyBase_AddObject, &MyBase_GetID };
    player.iCustomFields = {};
    
    ClassId playerId = vm->registerClass(player);

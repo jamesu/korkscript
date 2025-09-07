@@ -648,82 +648,28 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
             {
                break;
             }
-
-            #if TOFIX
             
-            if(currentNewObject->isProperlyAdded() == false)
+            U32 groupAddId = (U32)intStack[_UINT];
+            if(!currentNewObject->klass->iCreate.AddObject(mVMPublic, currentNewObject, placeAtRoot, groupAddId))
             {
-               bool ret = currentNewObject->registerObject();
-               
-               if (!ret)
-               {
-                  // This error is usually caused by failing to call Parent::initPersistFields in the class' initPersistFields().
-                  Con::warnf(ConsoleLogEntry::General, "%s: Register object failed for object %s of class %s.", getFileLine(ip-2), currentNewObject->getName(), currentNewObject->getClassName());
-                  delete currentNewObject;
-                  ip = failJump;
-                  break;
-               }
-            }
-            
-            // Are we dealing with a datablock?
-            SimDataBlock *dataBlock = dynamic_cast<SimDataBlock *>(currentNewObject);
-            static char errorBuffer[256];
-            
-            // If so, preload it.
-            if(dataBlock && !dataBlock->preload(true, errorBuffer))
-            {
-               Con::errorf(ConsoleLogEntry::General, "%s: preload failed for %s: %s.", getFileLine(ip-2),
-                           currentNewObject->getName(), errorBuffer);
-               dataBlock->deleteObject();
+#if TOFIX
+               // This error is usually caused by failing to call Parent::initPersistFields in the class' initPersistFields().
+               Con::warnf(ConsoleLogEntry::General, "%s: Register object failed for object %s of class %s.", getFileLine(ip-2), currentNewObject->getName(), currentNewObject->getClassName());
+#endif
+               currentNewObject->klass->iCreate.DestroyClassFn(currentNewObject->klass->userPtr, currentNewObject->userPtr);
+               delete currentNewObject;
+               currentNewObject = NULL;
                ip = failJump;
                break;
-            }
-            
-            // What group will we be added to, if any?
-            U32 groupAddId = (U32)intStack[_UINT];
-            SimGroup *grp = NULL;
-            SimSet   *set = NULL;
-            
-            if(!placeAtRoot || !currentNewObject->getGroup())
-            {
-               {
-                  if(! placeAtRoot)
-                  {
-                     // Otherwise just add to the requested group or set.
-                     if(!Sim::findObject(groupAddId, grp))
-                        Sim::findObject(groupAddId, set);
-                  }
-                  
-                  if(placeAtRoot)
-                  {
-                     // Deal with the instantGroup if we're being put at the root or we're adding to a component.
-                     const char *addGroupName = Con::getVariable("instantGroup");
-                     if(!Sim::findObject(addGroupName, grp))
-                        Sim::findObject(RootGroupId, grp);
-                  }
-               }
-               
-               // If we didn't get a group, then make sure we have a pointer to
-               // the rootgroup.
-               if(!grp)
-                  Sim::findObject(RootGroupId, grp);
-               
-               // add to the parent group
-               grp->addObject(currentNewObject);
-               
-               // add to any set we might be in
-               if(set)
-                  set->addObject(currentNewObject);
             }
             
             // store the new object's ID on the stack (overwriting the group/set
             // id, if one was given, otherwise getting pushed)
             if(placeAtRoot)
-               intStack[_UINT] = currentNewObject->getId();
+               intStack[_UINT] = currentNewObject->klass->iCreate.GetId(currentNewObject).getInt();
             else
-               intStack[++_UINT] = currentNewObject->getId();
+               intStack[++_UINT] = currentNewObject->klass->iCreate.GetId(currentNewObject).getInt();
             
-            #endif
             break;
          }
             
@@ -1371,7 +1317,6 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
 #endif
             code[ip-1] = OP_CALLFUNC;
             
-#if TOFIX
          case OP_CALLFUNC:
          {
             // This routingId is set when we query the object as to whether
@@ -1406,7 +1351,8 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
             else if(callType == FuncCallExprNode::MethodCall)
             {
                saveObject = mVM->mEvalState.thisObject;
-               mVM->mEvalState.thisObject = Sim::findObject(callArgv[1]);
+               mVM->mEvalState.thisObject = mVM->mConfig.iFind.FindObjectByPathFn(callArgv[1]);
+               
                if(!mVM->mEvalState.thisObject)
                {
                   mVM->mEvalState.thisObject = 0;
@@ -1416,7 +1362,7 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
                   break;
                }
                
-               ns = mVM->mEvalState.thisObject->getNamespace();
+               ns = mVM->mEvalState.thisObject->ns;
                if(ns)
                   nsEntry = ns->lookup(fnName);
                else
@@ -1446,9 +1392,11 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
                   Con::warnf(ConsoleLogEntry::General,"%s: Unknown command %s.", getFileLine(ip-4), fnName);
                   if(callType == FuncCallExprNode::MethodCall)
                   {
+#if TOFIX
                      Con::warnf(ConsoleLogEntry::General, "  Object %s(%d) %s",
                                 mVM->mEvalState.thisObject->getName() ? mVM->mEvalState.thisObject->getName() : "",
                                 mVM->mEvalState.thisObject->getId(), Con::getNamespaceList(ns) );
+#endif
                   }
                }
                mVM->mSTR.popFrame();
@@ -1572,7 +1520,6 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
                mVM->mEvalState.thisObject = saveObject;
             break;
          }
-#endif
          case OP_ADVANCE_STR:
             mVM->mSTR.advance();
             break;

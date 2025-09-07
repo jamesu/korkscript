@@ -164,6 +164,8 @@ struct CreateObjectInterface
     void (*DestroyClassFn)(void* user, void* createdPtr);
     // Process args (happens next; usually: name set, then args processed)
     bool (*ProcessArgs)(Vm* vm, VMObject* object, const char* name, bool isDatablock, bool internalName, int argc, const char** argv);
+    // i.e. OP_ADD_OBJECT
+    bool (*AddObject)(Vm* vm, VMObject* object, bool placeAtRoot, U32 groupAddId);
     // Get identifier (used for return value)
     ConsoleValue (*GetId)(VMObject* object);
 };

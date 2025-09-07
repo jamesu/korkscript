@@ -215,6 +215,65 @@ void AbstractClassRep::registerWithVm(KorkApi::Vm* vm)
          
          return false;
       };
+      mClassInfo.iCreate.AddObject = [](KorkApi::Vm* vm, KorkApi::VMObject* vmObject, bool placeAtRoot, U32 groupAddId) {
+         ConsoleObject* consoleObject = static_cast<ConsoleObject*>(vmObject->userPtr);
+         SimObject* currentNewObject = dynamic_cast<SimObject*>(consoleObject);
+
+         if (!currentNewObject->isProperlyAdded())
+         {
+            return currentNewObject->registerObject();
+         }
+
+         // Are we dealing with a datablock?
+         SimDataBlock *dataBlock = dynamic_cast<SimDataBlock *>(currentNewObject);
+         static char errorBuffer[256];
+         
+         // If so, preload it.
+         if(dataBlock && !dataBlock->preload(true, errorBuffer))
+         {
+            Con::errorf(ConsoleLogEntry::General, "%s: preload failed for %s: %s.", "",//getFileLine(ip-2),
+                        currentNewObject->getName(), errorBuffer);
+            return false;
+         }
+         
+         // What group will we be added to, if any?
+         SimGroup *grp = NULL;
+         SimSet   *set = NULL;
+         
+         if(!placeAtRoot || !currentNewObject->getGroup())
+         {
+            {
+               if(! placeAtRoot)
+               {
+                  // Otherwise just add to the requested group or set.
+                  if(!Sim::findObject(groupAddId, grp))
+                     Sim::findObject(groupAddId, set);
+               }
+               
+               if(placeAtRoot)
+               {
+                  // Deal with the instantGroup if we're being put at the root or we're adding to a component.
+                  const char *addGroupName = Con::getVariable("instantGroup");
+                  if(!Sim::findObject(addGroupName, grp))
+                     Sim::findObject(RootGroupId, grp);
+               }
+            }
+            
+            // If we didn't get a group, then make sure we have a pointer to
+            // the rootgroup.
+            if(!grp)
+               Sim::findObject(RootGroupId, grp);
+            
+            // add to the parent group
+            grp->addObject(currentNewObject);
+            
+            // add to any set we might be in
+            if(set)
+               set->addObject(currentNewObject);
+         }
+
+         return true;
+      };
       mClassInfo.iCreate.GetId = [](KorkApi::VMObject* vmObject){
          ConsoleObject* consoleObject = static_cast<ConsoleObject*>(vmObject->userPtr);
          SimObject* object = dynamic_cast<SimObject*>(consoleObject);
