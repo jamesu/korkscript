@@ -1,5 +1,12 @@
 #pragma once
 #include "console/consoleInternal.h"
+#include "embed/api.h"
+#include "embed/internalApi.h"
+
+namespace KorkApi
+{
+class VmInternal;
+}
 
 class Namespace
 {
@@ -11,7 +18,7 @@ class Namespace
 
    Namespace *mParent;
    Namespace *mNext;
-   AbstractClassRep *mClassRep;
+   //AbstractClassRep *mClassRep;
    U32 mRefCountToParent;
    const char* mUsage;
    // Script defined usage strings need to be cleaned up. This

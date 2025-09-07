@@ -21,10 +21,13 @@
 //-----------------------------------------------------------------------------
 
 #include "platform/platform.h"
-#include "console/console.h"
 
+
+#include "embed/api.h"
+#include "embed/internalApi.h"
 #include "console/simpleLexer.h"
 #include "console/ast.h"
+#include "console/consoleNamespace.h"
 
 #include "core/findMatch.h"
 #include "console/consoleInternal.h"
@@ -32,13 +35,10 @@
 #include "core/fileStream.h"
 #include "console/compiler.h"
 
-#include "console/simBase.h"
-#include "console/telnetDebugger.h"
 // TOFIX #include "sim/netStringTable.h"
-
 #include "console/stringStack.h"
-#include "console/consoleNamespace.h"
-#include "embed/internalApi.h"
+
+#include "console/telnetDebugger.h"
 
 using namespace Compiler;
 
@@ -46,14 +46,6 @@ enum EvalConstants {
    MaxStackSize = 1024,
    MethodOnComponent = -2
 };
-
-namespace Con
-{
-   // Current script file name and root, these are registered as
-   // console variables.
-   extern StringTableEntry gCurrentFile;
-   extern StringTableEntry gCurrentRoot;
-}
 
 /// Frame data for a foreach/foreach$ loop.
 struct IterStackRecord
@@ -70,7 +62,7 @@ struct IterStackRecord
    struct ObjectPos
    {
       /// The set being iterated over.
-      SimSet* mSet;
+      KorkApi::VMObject* mSet;
 
       /// Current index in the set.
       U32 mIndex;
@@ -92,6 +84,8 @@ struct IterStackRecord
    } mData;
 };
 
+bool gWarnUndefinedScriptVariables;
+
 IterStackRecord iterStack[ MaxStackSize ];
 
 F64 floatStack[MaxStackSize];
@@ -101,24 +95,22 @@ U32 _FLT = 0;
 U32 _UINT = 0;
 U32 _ITER = 0;    ///< Stack pointer for iterStack.
 
-namespace Con
+
+const char *ExprEvalState::getNamespaceList(Namespace *ns)
 {
-   const char *getNamespaceList(Namespace *ns)
+   U32 size = 1;
+   Namespace * walk;
+   for(walk = ns; walk; walk = walk->mParent)
+      size += dStrlen(walk->mName) + 4;
+   char *ret = (char*)vmInternal->getStringReturnBuffer(size).ptr();
+   ret[0] = 0;
+   for(walk = ns; walk; walk = walk->mParent)
    {
-      U32 size = 1;
-      Namespace * walk;
-      for(walk = ns; walk; walk = walk->mParent)
-         size += dStrlen(walk->mName) + 4;
-      char *ret = Con::getReturnBuffer(size);
-      ret[0] = 0;
-      for(walk = ns; walk; walk = walk->mParent)
-      {
-         dStrcat(ret, walk->mName);
-         if(walk->mParent)
-            dStrcat(ret, " -> ");
-      }
-      return ret;
+      dStrcat(ret, walk->mName);
+      if(walk->mParent)
+         dStrcat(ret, " -> ");
    }
+   return ret;
 }
 
 
@@ -135,7 +127,7 @@ F64 consoleStringToNumber(const char *str, StringTableEntry file, U32 line)
       return 0;
    else if(file)
    {
-      Con::warnf(ConsoleLogEntry::General, "%s (%d): string always evaluates to 0.", file, line);
+      // TOFIX Con::warnf(ConsoleLogEntry::General, "%s (%d): string always evaluates to 0.", file, line);
       return 0;
    }
    return 0;
@@ -156,7 +148,9 @@ inline void ExprEvalState::setCurVarName(StringTableEntry name)
       currentDictionary = stack.last();
    }
    if(!currentVariable && gWarnUndefinedScriptVariables)
-      Con::warnf(ConsoleLogEntry::Script, "Variable referenced before assignment: %s", name);
+   {
+      // TOFX Con::warnf(ConsoleLogEntry::Script, "Variable referenced before assignment: %s", name);
+   }
 }
 
 inline void ExprEvalState::setCurVarNameCreate(StringTableEntry name)
@@ -174,7 +168,7 @@ inline void ExprEvalState::setCurVarNameCreate(StringTableEntry name)
    else
    {
       currentVariable = NULL;
-      Con::warnf(ConsoleLogEntry::Script, "Accessing local variable in global scope... failed: %s", name);
+      // TOFIX Con::warnf(ConsoleLogEntry::Script, "Accessing local variable in global scope... failed: %s", name);
    }
 }
 
@@ -349,7 +343,7 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
                dStrcat(traceBuffer, ", ");
          }
          dStrcat(traceBuffer, ")");
-         Con::printf("%s", traceBuffer);
+         // TOFIX Con::printf("%s", traceBuffer);
       }
       mVM->mEvalState.pushFrame(thisFunctionName, thisNamespace);
       popFrame = true;
@@ -429,8 +423,8 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
    mVM->mCurrentCodeBlock = this;
    if(this->name)
    {
-      Con::gCurrentFile = this->name;
-      Con::gCurrentRoot = mRoot;
+      mVM->mCurrentFile = this->name;
+      mVM->mCurrentRoot = mRoot;
    }
    const char * val;
    
@@ -581,7 +575,7 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
                // Deal with failure!
                if(!object)
                {
-                  Con::errorf(ConsoleLogEntry::General, "%s: Unable to instantiate non-conobject class %s.", getFileLine(ip-1), callArgv[1]);
+                  // TOFIX Con::errorf(ConsoleLogEntry::General, "%s: Unable to instantiate non-conobject class %s.", getFileLine(ip-1), callArgv[1]);
                   ip = failJump;
                   break;
                }
@@ -592,7 +586,7 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
                // Deal with the case of a non-SimObject.
                if(!currentNewObject)
                {
-                  Con::errorf(ConsoleLogEntry::General, "%s: Unable to instantiate non-SimObject class %s.", getFileLine(ip-1), callArgv[1]);
+                  // TOFIX Con::errorf(ConsoleLogEntry::General, "%s: Unable to instantiate non-SimObject class %s.", getFileLine(ip-1), callArgv[1]);
                   delete object;
                   ip = failJump;
                   break;
@@ -1244,11 +1238,11 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
          case OP_TAG_TO_STR:
             code[ip-1] = OP_LOADIMMED_STR;
             // it's possible the string has already been converted
-            if(U8(curStringTable[code[ip]]) != StringTagPrefixByte)
+            if(U8(curStringTable[code[ip]]) != KorkApi::StringTagPrefixByte)
             {
                U32 id = 0;// TOFIX GameAddTaggedString(curStringTable + code[ip]);
                dSprintf(curStringTable + code[ip] + 1, 7, "%d", id);
-               *(curStringTable + code[ip]) = StringTagPrefixByte;
+               *(curStringTable + code[ip]) = KorkApi::StringTagPrefixByte;
             }
          case OP_LOADIMMED_STR:
             mVM->mSTR.setStringValue(curStringTable + code[ip++]);
@@ -1301,10 +1295,10 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
             if(!nsEntry)
             {
                ip+= 5;
-               Con::warnf(ConsoleLogEntry::General,
-                          "%s: Unable to find function %s%s%s",
-                          getFileLine(ip-4), fnNamespace ? fnNamespace : "",
-                          fnNamespace ? "::" : "", fnName);
+               // TOFIX Con::warnf(ConsoleLogEntry::General,
+               //           "%s: Unable to find function %s%s%s",
+               //           getFileLine(ip-4), fnNamespace ? fnNamespace : "",
+               //           fnNamespace ? "::" : "", fnName);
                mVM->mSTR.popFrame();
                break;
             }
@@ -1356,7 +1350,7 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
                if(!mVM->mEvalState.thisObject)
                {
                   mVM->mEvalState.thisObject = 0;
-                  Con::warnf(ConsoleLogEntry::General,"%s: Unable to find object: '%s' attempting to call function '%s'", getFileLine(ip-6), callArgv[1], fnName);
+                  // TOFIX Con::warnf(ConsoleLogEntry::General,"%s: Unable to find object: '%s' attempting to call function '%s'", getFileLine(ip-6), callArgv[1], fnName);
                   mVM->mSTR.popFrame();
                   mVM->mSTR.setStringValue("");
                   break;
@@ -1389,13 +1383,13 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
             {
                if(!noCalls)
                {
-                  Con::warnf(ConsoleLogEntry::General,"%s: Unknown command %s.", getFileLine(ip-4), fnName);
+                  // TOFIX Con::warnf(ConsoleLogEntry::General,"%s: Unknown command %s.", getFileLine(ip-4), fnName);
                   if(callType == FuncCallExprNode::MethodCall)
                   {
 #if TOFIX
                      Con::warnf(ConsoleLogEntry::General, "  Object %s(%d) %s",
                                 mVM->mEvalState.thisObject->getName() ? mVM->mEvalState.thisObject->getName() : "",
-                                mVM->mEvalState.thisObject->getId(), Con::getNamespaceList(ns) );
+                                mVM->mEvalState.thisObject->getId(), getNamespaceList(ns) );
 #endif
                   }
                }
@@ -1420,8 +1414,8 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
                if((nsEntry->mMinArgs && S32(callArgc) < nsEntry->mMinArgs) || (nsEntry->mMaxArgs && S32(callArgc) > nsEntry->mMaxArgs))
                {
                   const char* nsName = ns? ns->mName: "";
-                  Con::warnf(ConsoleLogEntry::Script, "%s: %s::%s - wrong number of arguments.", getFileLine(ip-4), nsName, fnName);
-                  Con::warnf(ConsoleLogEntry::Script, "%s: usage: %s", getFileLine(ip-4), nsEntry->mUsage);
+                  // TOFIX Con::warnf(ConsoleLogEntry::Script, "%s: %s::%s - wrong number of arguments.", getFileLine(ip-4), nsName, fnName);
+                  // TOFIX Con::warnf(ConsoleLogEntry::Script, "%s: usage: %s", getFileLine(ip-4), nsEntry->mUsage);
                   mVM->mSTR.popFrame();
                   mVM->mSTR.setStringValue("");
                }
@@ -1486,7 +1480,9 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
                      case Namespace::Entry::VoidCallbackType:
                         nsEntry->cb.mVoidCallbackFunc(mVM->mEvalState.thisObject, callArgc, callArgv);
                         if(code[ip] != OP_STR_TO_NONE)
-                           Con::warnf(ConsoleLogEntry::General, "%s: Call to %s in %s uses result of void function call.", getFileLine(ip-4), fnName, functionName);
+                        {
+                           // TOFIX Con::warnf(ConsoleLogEntry::General, "%s: Call to %s in %s uses result of void function call.", getFileLine(ip-4), fnName, functionName);
+                        }
                         mVM->mSTR.popFrame();
                         mVM->mSTR.setStringValue("");
                         break;
@@ -1640,7 +1636,7 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
             else
             {
                // Look up the object.
-               
+               #if TOFIX
                SimSet* set;
                if( !Sim::findObject( mVM->mSTR.getStringValue(), set ) )
                {
@@ -1649,10 +1645,11 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
                   ip = failIp;
                   continue;
                }
+               #endif
                
                // Set up.
                
-               iter.mData.mObj.mSet = set;
+               iter.mData.mObj.mSet = NULL; // TOFIX set;
                iter.mData.mObj.mIndex = 0;
             }
             
@@ -1712,6 +1709,7 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
             else
             {
                U32 index = iter.mData.mObj.mIndex;
+               #if TOFIX
                SimSet* set = iter.mData.mObj.mSet;
                
                if( index >= set->size() )
@@ -1722,6 +1720,7 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
                
                iter.mDictionary->setEntryIntValue(iter.mVariable, set->at( index )->getId() );
                iter.mData.mObj.mIndex = index + 1;
+               #endif
             }
             
             ++ ip;
@@ -1777,7 +1776,7 @@ execFinished:
             dSprintf(traceBuffer + dStrlen(traceBuffer), sizeof(traceBuffer) - dStrlen(traceBuffer),
                      "%s() - return %s", thisFunctionName, mVM->mSTR.getStringValue());
          }
-         Con::printf("%s", traceBuffer);
+         // TOFIX Con::printf("%s", traceBuffer);
       }
    }
    else
@@ -1791,8 +1790,8 @@ execFinished:
    mVM->mCurrentCodeBlock = saveCodeBlock;
    if(saveCodeBlock && saveCodeBlock->name)
    {
-      Con::gCurrentFile = saveCodeBlock->name;
-      Con::gCurrentRoot = saveCodeBlock->mRoot;
+      mVM->mCurrentFile = saveCodeBlock->name;
+      mVM->mCurrentRoot = saveCodeBlock->mRoot;
    }
    
    decRefCount();
@@ -1807,3 +1806,4 @@ execFinished:
 }
 
 //------------------------------------------------------------
+

@@ -21,7 +21,6 @@
 //-----------------------------------------------------------------------------
 
 #include "platform/platformAssert.h"
-#include "console/console.h"
 #include <stdarg.h>
 
 /*! @addtogroup ConsoleOutput Console Output
@@ -33,12 +32,13 @@
  @param condition if false, exit the program
  @param message message to print on assertion
  */
-
+#if TOFIX
 ConsoleFunction( Assert, void, 3, 3, "condition, message")
 {
    // Process Assertion.
    AssertISV( dAtob(argv[1]), argv[2] );
 }
+#endif
 
 /*! @} */ // group ConsoleOutput
 
@@ -114,6 +114,7 @@ bool PlatformAssert::process(Type         assertType,
    processing = true;
    bool ret = true;
 
+#if TOFIX
    // always dump to the Assert to the Console
    if (Con::isActive())
    {
@@ -144,7 +145,8 @@ bool PlatformAssert::process(Type         assertType,
       
       ret = askToEnterDebugger(message);
    }
-
+   
+#endif
    processing = false;
 
    return ret;

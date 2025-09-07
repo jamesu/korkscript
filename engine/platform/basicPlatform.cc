@@ -4,7 +4,6 @@
 #include "platform/threads/thread.h"
 #include "platform/threads/mutex.h"
 #include "platform/threads/semaphore.h"
-#include "console/console.h"
 #include "core/safeDelete.h"
 
 #include <filesystem>
@@ -64,7 +63,7 @@ File::Status File::open(const char *filename, const AccessMode openMode)
    if (fp == NULL)
    {
       // handle not created successfully
-      Con::errorf("Can't open file: %s", filename);
+      // TOFIX Con::errorf("Can't open file: %s", filename);
       return setStatus();
    }
    else

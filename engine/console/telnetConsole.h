@@ -24,7 +24,7 @@
 #define _TELNETCONSOLE_H_
 
 #ifndef _CONSOLE_H_
-#include "console/console.h"
+#include "console/consoleInternal.h"
 #endif
 
 #include "console/consoleNamespace.h"
@@ -86,7 +86,7 @@ class TelnetConsole
    struct TelnetClient
    {
       NetSocket socket;
-      char curLine[Con::MaxLineLength];
+      char curLine[KorkApi::MaxLineLength];
       S32 curPos;
       S32 state;                       ///< State of the client.
                                        ///  @see TelnetConsole::State

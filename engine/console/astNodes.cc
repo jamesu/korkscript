@@ -21,19 +21,17 @@
 //-----------------------------------------------------------------------------
 
 #include "platform/platform.h"
-#include "console/console.h"
-#include "console/telnetDebugger.h"
 
 #include "console/simpleLexer.h"
 #include "console/ast.h"
 
+#include "embed/api.h"
+#include "embed/internalApi.h"
 
 #include "core/findMatch.h"
 #include "console/consoleInternal.h"
 #include "core/fileStream.h"
 #include "console/compiler.h"
-
-#include "console/simBase.h"
 
 using TT = SimpleLexer::TokenType;
 
@@ -177,7 +175,7 @@ U32 BreakStmtNode::compileStmt(CodeStream &codeStream, U32 ip)
    }
    else
    {
-      Con::warnf(ConsoleLogEntry::General, "%s (%d): break outside of loop... ignoring.", codeStream.getFilename(), dbgLineNumber);
+      // Con::warnf(ConsoleLogEntry::General, "%s (%d): break outside of loop... ignoring.", codeStream.getFilename(), dbgLineNumber);
    }
    return codeStream.tell();
 }
@@ -194,7 +192,7 @@ U32 ContinueStmtNode::compileStmt(CodeStream &codeStream, U32 ip)
    }
    else
    {
-      Con::warnf(ConsoleLogEntry::General, "%s (%d): continue outside of loop... ignoring.", codeStream.getFilename(), dbgLineNumber);
+      // Con::warnf(ConsoleLogEntry::General, "%s (%d): continue outside of loop... ignoring.", codeStream.getFilename(), dbgLineNumber);
    }
    return codeStream.tell();
 }
@@ -637,7 +635,9 @@ U32 CommaCatExprNode::compile(CodeStream &codeStream, U32 ip, TypeReq type)
 
    // But we're paranoid, so accept (but whine) if we get an oddity...
    if(type == TypeReqUInt || type == TypeReqFloat)
-      Con::warnf(ConsoleLogEntry::General, "%s (%d): converting comma string to a number... probably wrong.", codeStream.getFilename(), dbgLineNumber);
+   {
+      // TOFIX Con::warnf(ConsoleLogEntry::General, "%s (%d): converting comma string to a number... probably wrong.", codeStream.getFilename(), dbgLineNumber);
+   }
    if(type == TypeReqUInt)
       codeStream.emit(OP_STR_TO_UINT);
    else if(type == TypeReqFloat)

@@ -1,4 +1,4 @@
-cmake_minimum_required (VERSION 2.8.8)
+cmake_minimum_required (VERSION 3.5)
 
 project(korkscript C CXX)
 
@@ -32,6 +32,7 @@ set(KS_SRCS
 	./engine/core/nStream.cc
 	./engine/core/unicode.cc
 	./engine/core/stringUnit.cc
+	./engine/core/escape.cc
 
 	./engine/platform/platformFileIO.cc
 	./engine/platform/platform.cc
@@ -40,24 +41,14 @@ set(KS_SRCS
 	./engine/platform/platformStrings.cc
 	./engine/platform/basicPlatform.cc
 
-	./engine/console/simManager.cc
 	./engine/console/typeValidators.cc
-	./engine/console/consoleLogger.cc
-	./engine/console/consoleFunctions.cc
 	./engine/console/compiledEval.cc
-	./engine/console/scriptObject.cc
-	./engine/console/consoleTypes.cc
 	./engine/console/codeBlock.cc
 	./engine/console/consoleDoc.cc
-	./engine/console/consoleObject.cc
 	./engine/console/stringStack.cc
-	./engine/console/dynamicTypes.cc
-	./engine/console/console.cc
 	./engine/console/consoleInternal.cc
 	./engine/console/consoleNamespace.cc
-	./engine/console/simDictionary.cc
 	./engine/console/astNodes.cc
-	./engine/console/simBase.cc
 	./engine/console/astAlloc.cc
 	./engine/console/compiler.cc
 
@@ -66,6 +57,25 @@ set(KS_SRCS
 	./engine/console/simpleParser.h
 	./engine/embed/api.h
 	./engine/embed/api.cpp
+)
+
+set(TORQUESIM_SRCS
+	./torqueSim/console/console.cc
+	./torqueSim/console/console.h
+	./torqueSim/console/consoleFunctions.cc
+	./torqueSim/console/consoleLogger.cc
+	./torqueSim/console/consoleLogger.h
+	./torqueSim/console/consoleObject.cc
+	./torqueSim/console/consoleObject.h
+	./torqueSim/console/consoleTypes.cc
+	./torqueSim/console/consoleTypes.h
+	./torqueSim/sim/dynamicTypes.cc
+	./torqueSim/sim/scriptObject.cc
+	./torqueSim/sim/simBase.cc
+	./torqueSim/sim/simBase.h
+	./torqueSim/sim/simDictionary.cc
+	./torqueSim/sim/simDictionary.h
+	./torqueSim/sim/simManager.cc
 )
 
 set(KS_TEST_SRCS
@@ -86,6 +96,16 @@ set(KS_AST_PRINT_SRCS
 )
 
 
+set(KS_TORQUE_TEST_SRCS
+	${KS_SRCS}
+	${KS_NETWORK_SRCS}
+	${TORQUESIM_SRCS}
+	test/torqueTest.cpp
+)
+
+
+
 add_executable(cstest ${KS_TEST_SRCS})
 add_executable(csprintast ${KS_AST_PRINT_SRCS})
 add_executable(csapitest ${KS_API_TEST_SRCS})
+add_executable(torquetest ${KS_TORQUE_TEST_SRCS})

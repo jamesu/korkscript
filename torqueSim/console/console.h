@@ -46,11 +46,6 @@ namespace KorkApi
 /// @note This is set and controlled by script.
 extern bool gWarnUndefinedScriptVariables;
 
-enum StringTableConstants
-{
-   StringTagPrefixByte = 0x01 ///< Magic value prefixed to tagged strings.
-};
-
 /// Represents an entry in the log.
 struct ConsoleLogEntry
 {
@@ -163,7 +158,7 @@ typedef F32           (*FloatCallback)(SimObject *obj, S32 argc, const char *arg
 typedef void           (*VoidCallback)(SimObject *obj, S32 argc, const char *argv[]); // We have it return a value so things don't break..
 typedef bool           (*BoolCallback)(SimObject *obj, S32 argc, const char *argv[]);
 
-typedef void (*ConsumerCallback)(ConsoleLogEntry::Level level, const char *consoleLine, void* userPtr);
+using ConsumerCallback = KorkApi::ConsumerCallback;
 /// @}
 
 /// @defgroup console_types Scripting Engine Type Functions
@@ -185,35 +180,6 @@ typedef void        (*SetDataFunction)(void *dptr, S32 argc, const char **argv, 
 /// @nosubgrouping
 namespace Con
 {
-   /// Various configuration constants.
-   enum Constants 
-   {
-      /// This is the version number associated with DSO files.
-      ///
-      /// If you make any changes to the way the scripting language works
-      /// (such as DSO format changes, adding/removing op-codes) that would
-      /// break compatibility, then you should increment this.
-      ///
-      /// If you make a really major change, increment it to the next multiple
-      /// of ten.
-      ///
-      /// 12/29/04 - BJG - 33->34 Removed some opcodes, part of namespace upgrade.
-      /// 12/30/04 - BJG - 34->35 Reordered some things, further general shuffling.
-      /// 11/03/05 - BJG - 35->36 Integrated new debugger code.
-      //  09/08/06 - THB - 36->37 New opcode for internal names
-      //  09/15/06 - THB - 37->38 Added unit conversions
-      //  11/23/06 - THB - 38->39 Added recursive internal name operator
-      //  02/15/07 - THB - 39->40 Bumping to 40 for TGB since the console has been majorly hacked without the version number being bumped
-      //  02/16/07 - THB - 40->41 newmsg operator
-      //  02/16/07 - PAUP - 41->42 DSOs are read with a pointer before every string(ASTnodes changed). Namespace and HashTable revamped
-      //  05/17/10 - Luma - 42-43 Adding proper sceneObject physics flags, fixes in general
-      //  02/07/13 - JU   - 43->44 Expanded the width of stringtable entries to  64bits 
-      //  tgemit - 77 set for now just to make it distinct
-      DSOVersion = 77,
-      MaxLineLength = 512,  ///< Maximum length of a line of console input.
-      MaxDataTypes = 256    ///< Maximum number of registered data types.
-   };
-
    /// @name Control Functions
    ///
    /// The console must be initialized and shutdown appropriately during the

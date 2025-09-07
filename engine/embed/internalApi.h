@@ -6,6 +6,8 @@ class TelnetDebugger;
 class TelnetConsole;
 
 #include "console/stringStack.h"
+#include "console/consoleNamespace.h"
+#include "console/consoleInternal.h"
 
 namespace KorkApi
 {
@@ -23,6 +25,9 @@ struct VmInternal
    CodeBlock*    mCurrentCodeBlock;
    TelnetDebugger* mTelDebugger;
    TelnetConsole* mTelConsole;
+
+   StringTableEntry mCurrentFile;
+   StringTableEntry mCurrentRoot;
    
    // Namespace stuff
    NamespaceState mNSState;
@@ -45,6 +50,12 @@ struct VmInternal
 
    ConsoleHeapAllocRef createHeapRef(U32 size);
    void releaseHeapRef(ConsoleHeapAllocRef value);
+
+   // Heap values (like strings)
+   ConsoleValue getStringReturnBuffer(U32 size);
+   ConsoleValue getStringArgBuffer(U32 size);
+   ConsoleValue getTypeVar(TypeId typeId);
+   ConsoleValue getTypeReturn(TypeId typeId);
 
    StringTableEntry getCurrentCodeBlockName();
    StringTableEntry getCurrentCodeBlockFullPath();

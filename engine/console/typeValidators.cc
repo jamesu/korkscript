@@ -21,14 +21,13 @@
 //-----------------------------------------------------------------------------
 
 #include "platform/platform.h"
-#include "console/console.h"
-#include "console/consoleObject.h"
+class SimObject;
 #include "console/typeValidators.h"
-#include "console/simBase.h"
 #include <stdarg.h>
 
 void TypeValidator::consoleError(SimObject *object, const char *format, ...)
 {
+#if TOFIX
    char buffer[1024];
    va_list argptr;
    va_start(argptr, format);
@@ -44,10 +43,12 @@ void TypeValidator::consoleError(SimObject *object, const char *format, ...)
 
    Con::warnf("%s - %s(%d) - invalid value for %s: %s",
       rep->getClassName(), objectName, object->getId(), fld.pFieldname, buffer);
+#endif
 }
 
 void FRangeValidator::validateType(SimObject *object, void *typePtr)
 {
+#if TOFIX
     F32 *v = (F32 *) typePtr;
     if(*v < minV || *v > maxV)
     {
@@ -57,10 +58,12 @@ void FRangeValidator::validateType(SimObject *object, void *typePtr)
         else if(*v > maxV)
             *v = maxV;
     }
+#endif
 }
 
 void IRangeValidator::validateType(SimObject *object, void *typePtr)
 {
+#if TOFIX
     S32 *v = (S32 *) typePtr;
     if(*v < minV || *v > maxV)
     {
@@ -70,10 +73,12 @@ void IRangeValidator::validateType(SimObject *object, void *typePtr)
         else if(*v > maxV)
             *v = maxV;
     }
+#endif
 }
 
 void IRangeValidatorScaled::validateType(SimObject *object, void *typePtr)
 {
+#if TOFIX
     S32 *v = (S32 *) typePtr;
     *v /= factor;
     if(*v < minV || *v > maxV)
@@ -84,4 +89,5 @@ void IRangeValidatorScaled::validateType(SimObject *object, void *typePtr)
         else if(*v > maxV)
             *v = maxV;
     }
+#endif
 }

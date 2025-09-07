@@ -21,9 +21,9 @@
 //-----------------------------------------------------------------------------
 
 #include "platform/platform.h"
-#include "console/console.h"
-#include "console/telnetDebugger.h"
 #include "core/stringTable.h"
+#include "embed/api.h"
+#include "embed/internalApi.h"
 #include "console/consoleInternal.h"
 #include "console/consoleNamespace.h"
 #include "console/simpleLexer.h"
@@ -31,6 +31,7 @@
 #include "console/compiler.h"
 #include "core/tempAlloc.h"
 #include "platform/platformNetwork.h"
+#include "console/telnetDebugger.h"
 
 
 //
@@ -263,7 +264,7 @@ void TelnetDebugger::process()
       {
          char buffer[256];
          Net::addressToString(&address, buffer);
-         Con::printf("Debugger connection from %s", buffer);
+         // TOFIX Con::printf("Debugger connection from %s", buffer);
          
          mState = PasswordTry;
          mDebugSocket = newConnection;

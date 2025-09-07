@@ -23,7 +23,6 @@
 #include "platform/platform.h"
 #include "platform/platformFileIO.h"
 #include "core/tVector.h"
-#include "console/console.h"
 #include "core/stringTable.h"
 
 
@@ -33,6 +32,7 @@
  @{
  */
 
+#if TOFIX
 /*! Gets the path to the system's temporary directory
  @return Returns the path to the temporary directory as a string
  */
@@ -65,6 +65,7 @@ ConsoleFunction(getUserHomeDirectory, const char*, 1, 1, "")
 {
    return Platform::getUserHomeDirectory();
 }
+#endif
 
 /*! @} */ // group FileSystem
 
@@ -106,7 +107,7 @@ static bool deleteDirectoryRecusrive( const char* pPath )
     if ( !Platform::dumpDirectories( pPath, directories, 0 ) )
     {
         // Warn.
-        Con::warnf( "Could not retrieve sub-directories of '%s'.", pPath );
+        // TOFIX Con::warnf( "Could not retrieve sub-directories of '%s'.", pPath );
         return false;
     }
 
@@ -130,7 +131,7 @@ static bool deleteDirectoryRecusrive( const char* pPath )
     if ( !Platform::dumpPath( pPath, files, 0 ) )
     {
         // Warn.
-        Con::warnf( "Could not retrieve files for directory '%s'.", pPath );
+        // TOFIX Con::warnf( "Could not retrieve files for directory '%s'.", pPath );
         return false;
     }
 
@@ -144,7 +145,7 @@ static bool deleteDirectoryRecusrive( const char* pPath )
         if ( !Platform::fileDelete( filePathBuffer ) )
         {
             // Warn.
-            Con::warnf( "Could not delete file '%s'.", filePathBuffer );
+            // TOFIX Con::warnf( "Could not delete file '%s'.", filePathBuffer );
             return false;
         }
     }
@@ -153,7 +154,7 @@ static bool deleteDirectoryRecusrive( const char* pPath )
     if ( !Platform::fileDelete( pPath ) )
     {
         // Warn.
-        Con::warnf( "Could not delete directory '%s'.", pPath );
+        // TOFIX Con::warnf( "Could not delete directory '%s'.", pPath );
         return false;
     }
 
@@ -171,16 +172,17 @@ bool Platform::deleteDirectory( const char* pPath )
     if ( Platform::isFile( pPath ) )
     {
         // Yes, so warn.
-        Con::warnf( "Cannot delete directory '%s' as it specifies a file.", pPath );
+        // TOFIX Con::warnf( "Cannot delete directory '%s' as it specifies a file.", pPath );
         return false;
     }
-
+#if TOFIX
     // Expand module location.
-    char pathBuffer[1024];
+    char pathBuffer[1024] ]
     Con::expandPath( pathBuffer, sizeof(pathBuffer), pPath, NULL, true );
 
     // Delete directory recursively.
     return deleteDirectoryRecusrive( pathBuffer );
+#endif
 }
 
 //-----------------------------------------------------------------------------
@@ -452,6 +454,7 @@ StringTableEntry Platform::stripBasePath(const char *path)
 
 StringTableEntry Platform::getPrefsPath(const char *file /* = NULL */)
 {
+#if TOFIX
     char buf[1024];
 #if defined(TORQUE_OS_IOS) || defined(TORQUE_OS_ANDROID)
     
@@ -497,6 +500,8 @@ StringTableEntry Platform::getPrefsPath(const char *file /* = NULL */)
       dSprintf(buf, sizeof(buf), "%s/%s/%s", Platform::getUserDataDirectory(), company, appName);
 
    return StringTable->insert(buf, true);
+#endif
+   return "";
 }
 
 //-----------------------------------------------------------------------------

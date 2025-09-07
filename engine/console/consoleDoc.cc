@@ -21,19 +21,20 @@
 //-----------------------------------------------------------------------------
 
 #include "platform/platform.h"
-#include "console/console.h"
 
+#include "embed/api.h"
+#include "embed/internalApi.h"
 #include "console/simpleLexer.h"
 #include "console/ast.h"
+#include "console/consoleNamespace.h"
+
 #include "core/tempAlloc.h"
 
 
 #include "core/findMatch.h"
 #include "console/consoleInternal.h"
-#include "console/consoleObject.h"
 #include "core/fileStream.h"
 #include "console/compiler.h"
-#include "console/consoleNamespace.h"
 
 //--- Information pertaining to this page... ------------------
 /// @file
@@ -111,10 +112,10 @@ void printClassHeader(const char* usage, const char * className, const char * su
 {
    if(stub) 
    {
-      Con::printf("/// Stub class");
-      Con::printf("/// ");
-      Con::printf("/// @note This is a stub class to ensure a proper class hierarchy. No ");
-      Con::printf("///       information was available for this class.");
+      printf("/// Stub class");
+      printf("/// ");
+      printf("/// @note This is a stub class to ensure a proper class hierarchy. No ");
+      printf("///       information was available for this class.");
    }
 
    if( usage != NULL )
@@ -125,7 +126,7 @@ void printClassHeader(const char* usage, const char * className, const char * su
       dStrcpy( usageStr, usage );
 
       // Print Header
-      Con::printf( "/*!" );
+      printf( "/*!" );
 
       // Print line by line, skipping the @field lines.
       //
@@ -168,7 +169,7 @@ void printClassHeader(const char* usage, const char * className, const char * su
 
          // Print all fields that aren't associated with the 'field' keyword.
          if( dStrcmp( keyword, "field" ) )
-            Con::printf( lineStr );
+            printf( lineStr );
 
 
          // Fetch next line ending
@@ -176,72 +177,72 @@ void printClassHeader(const char* usage, const char * className, const char * su
       } while( newLine != NULL );
 
       // DocBlock Footer
-      Con::printf( " */" );
+      printf( " */" );
 
    }
 
    // Print out appropriate class header
    if(superClassName)
-      Con::printf("class  %s : public %s {", className, superClassName ? superClassName : "");
+      printf("class  %s : public %s {", className, superClassName ? superClassName : "");
    else if(!className)
-      Con::printf("namespace Global {");
+      printf("namespace Global {");
    else
-      Con::printf("class  %s {", className);
+      printf("class  %s {", className);
 
    if(className)
-      Con::printf("  public:");
+      printf("  public:");
 
 }
 
 void printClassMethod(const bool isVirtual, const char *retType, const char *methodName, const char* args, const char*usage)
 {
    if(usage && usage[0] != ';' && usage[0] != 0)
-      Con::printf("   /*! %s */", usage);
-   Con::printf("   %s%s %s(%s) {}", isVirtual ? "virtual " : "", retType, methodName, args);
+      printf("   /*! %s */", usage);
+   printf("   %s%s %s(%s) {}", isVirtual ? "virtual " : "", retType, methodName, args);
 }
 
 void printGroupStart(const char * aName, const char * aDocs)
 {
-   Con::printf("");
-   Con::printf("   /*! @name %s", aName);
+   printf("");
+   printf("   /*! @name %s", aName);
 
    if(aDocs)
    {
-      Con::printf("   ");
-      Con::printf("   %s", aDocs);
+      printf("   ");
+      printf("   %s", aDocs);
    }
 
-   Con::printf("   @{ */");
+   printf("   @{ */");
 }
 
 void printClassMember(const bool isDeprec, const char * aType, const char * aName, const char * aDocs)
 {
-   Con::printf("   /*!");
+   printf("   /*!");
 
    if(aDocs)
    {
-      Con::printf("   %s", aDocs);
-      Con::printf("   ");
+      printf("   %s", aDocs);
+      printf("   ");
    }
 
    if(isDeprec)
-      Con::printf("   @deprecated This member is deprecated, which means that its value is always undefined.");
+      printf("   @deprecated This member is deprecated, which means that its value is always undefined.");
 
-   Con::printf("    */");
+   printf("    */");
 
-   Con::printf("   %s %s;", isDeprec ? "deprecated" : aType, aName);
+   printf("   %s %s;", isDeprec ? "deprecated" : aType, aName);
 }
 
 void printGroupEnd()
 {
-   Con::printf("   /// @}");
-   Con::printf("");
+   printf("   /// @}");
+   printf("");
 }
 
 void printClassFooter()
 {
-   Con::printf("};");
-   Con::printf("");
+   printf("};");
+   printf("");
 }
 
 void NamespaceState::printNamespaceEntries(Namespace * g, bool dumpScript, bool dumpEngine )
@@ -360,7 +361,7 @@ void NamespaceState::printNamespaceEntries(Namespace * g, bool dumpScript, bool 
       }
       else
       {
-         Con::printf("   // got an unknown thing?? %d", ewalk->mType );
+         printf("   // got an unknown thing?? %d", ewalk->mType );
       }
    }
 
@@ -368,6 +369,7 @@ void NamespaceState::printNamespaceEntries(Namespace * g, bool dumpScript, bool 
 
 void NamespaceState::dumpClasses( bool dumpScript, bool dumpEngine )
 {
+   #if TOFIX
    VectorPtr<Namespace*> vec;
    trashCache();
    vec.reserve( 1024 );
@@ -600,16 +602,17 @@ void NamespaceState::dumpClasses( bool dumpScript, bool dumpEngine )
             field += docLen;
 
             // Print
-            Con::printf( "   /*!" );
-            Con::printf( "   %s", fieldDoc );
-            Con::printf( "    */" );
-            Con::printf( "   %s;", fieldName );
+            printf( "   /*!" );
+            printf( "   %s", fieldDoc );
+            printf( "    */" );
+            printf( "   %s;", fieldName );
          }
       }
 
       // Close the class/namespace.
       printClassFooter();
    }
+   #endif
 }
 
 void NamespaceState::dumpFunctions( bool dumpScript, bool dumpEngine )

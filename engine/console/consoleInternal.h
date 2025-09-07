@@ -29,14 +29,12 @@
 #ifndef _TVECTOR_H_
 #include "core/tVector.h"
 #endif
-#ifndef _CONSOLETYPES_H_
-#include "console/consoleTypes.h"
-#endif
 #ifndef _DATACHUNKER_H_
 #include "core/dataChunker.h"
 #endif
 
 #include "console/consoleValue.h"
+
 
 /// @ingroup console_system Console System
 /// @{
@@ -180,6 +178,9 @@ public:
    
    ExprEvalState();
    ~ExprEvalState();
+   
+   
+   const char *getNamespaceList(Namespace *ns);
    
    /// @}
    

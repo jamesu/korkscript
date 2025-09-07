@@ -20,7 +20,9 @@
 // IN THE SOFTWARE.
 //-----------------------------------------------------------------------------
 
-#include "console/console.h"
+
+#include "embed/api.h"
+#include "embed/internalApi.h"
 #include "console/compiler.h"
 #include "console/consoleInternal.h"
 

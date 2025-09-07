@@ -24,7 +24,6 @@
 #include "platform/threads/mutex.h"
 #include "platform/threads/thread.h"
 #include "platform/platformNetAsync.h"
-#include "console/console.h"
 
 #if defined(TORQUE_OS_WIN32)
 #  include <winsock.h>
@@ -211,9 +210,10 @@ void NetAsync::startAsync()
 
   // create the thread...
    Thread *zThread = new Thread((ThreadRunFunction)StartThreadFunc, 0, true);
-
+#if TOFIX
   if (!zThread)
      Con::errorf("Error starting net async thread.");
+#endif
 }
 
 void NetAsync::stopAsync()

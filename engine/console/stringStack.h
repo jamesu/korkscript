@@ -24,8 +24,6 @@
 #define _STRINGSTACK_H_
 
 #include "platform/platform.h"
-#include "console/console.h"
-#include "console/compiler.h"
 #include "core/stringTable.h"
 #include "console/consoleValue.h"
 

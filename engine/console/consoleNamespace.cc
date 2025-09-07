@@ -1,7 +1,10 @@
-#include "console/consoleNamespace.h"
+#include "embed/api.h"
 #include "embed/internalApi.h"
+#include "console/consoleNamespace.h"
+#include "console/consoleInternal.h"
 
 extern KorkApi::Vm* sVM;
+extern U32 HashPointer(StringTableEntry ptr);
 
 NamespaceState::NamespaceState()
 {
@@ -76,7 +79,7 @@ void NamespaceState::activatePackage(StringTableEntry name)
 {
    if(mNumActivePackages == MaxActivePackages)
    {
-      Con::printf("ActivatePackage(%s) failed - Max package limit reached: %d", name, MaxActivePackages);
+      // TOFIX Con::printf("ActivatePackage(%s) failed - Max package limit reached: %d", name, MaxActivePackages);
       return;
    }
    if(!name)
@@ -204,7 +207,7 @@ Namespace::Namespace()
    mHashTable = 0;
    mHashSequence = 0;
    mRefCountToParent = 0;
-   mClassRep = 0;
+   //mClassRep = 0;
    mVmInternal = NULL;
 }
 
@@ -242,8 +245,8 @@ bool Namespace::unlinkClass(Namespace *parent)
 
    if(walk->mParent && walk->mParent != parent)
    {
-      Con::errorf(ConsoleLogEntry::General, "Error, cannot unlink namespace parent linkage for %s for %s.",
-         walk->mName, walk->mParent->mName);
+      // TOFIX Con::errorf(ConsoleLogEntry::General, "Error, cannot unlink namespace parent linkage for %s for %s.",
+      //   walk->mName, walk->mParent->mName);
       return false;
    }
 
@@ -265,8 +268,8 @@ bool Namespace::classLinkTo(Namespace *parent)
 
    if(walk->mParent && walk->mParent != parent)
    {
-      Con::errorf(ConsoleLogEntry::General, "Error: cannot change namespace parent linkage for %s from %s to %s.",
-         walk->mName, walk->mParent->mName, parent->mName);
+      // TOFIX Con::errorf(ConsoleLogEntry::General, "Error: cannot change namespace parent linkage for %s from %s to %s.",
+      //   walk->mName, walk->mParent->mName, parent->mName);
       return false;
    }
    mRefCountToParent++;
@@ -538,8 +541,8 @@ const char *Namespace::Entry::execute(S32 argc, const char **argv, ExprEvalState
 
    if((mMinArgs && argc < mMinArgs) || (mMaxArgs && argc > mMaxArgs))
    {
-      Con::warnf(ConsoleLogEntry::Script, "%s::%s - wrong number of arguments.", mNamespace->mName, mFunctionName);
-      Con::warnf(ConsoleLogEntry::Script, "usage: %s", mUsage);
+      // TOFIX Con::warnf(ConsoleLogEntry::Script, "%s::%s - wrong number of arguments.", mNamespace->mName, mFunctionName);
+      //Con::warnf(ConsoleLogEntry::Script, "usage: %s", mUsage);
       return "";
    }
 

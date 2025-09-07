@@ -841,7 +841,7 @@ ConsoleFunction(exec, bool, 2, 4, "exec(fileName [, nocalls [,journalScript]])")
       {
          // Check the version!
          compiledStream.read(&version);
-         if(version != Con::DSOVersion)
+         if(version != KorkApi::DSOVersion)
          {
             Con::warnf("exec: Found an old DSO (%s, ver %d < %d), ignoring.", nameBuffer, version, Con::DSOVersion);
             compiledStream.close();

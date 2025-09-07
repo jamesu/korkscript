@@ -21,8 +21,8 @@
 //-----------------------------------------------------------------------------
 
 #include "platform/platformString.h"
+#include "platform/platformAssert.h"
 #include "core/stringUnit.h"
-#include "console/console.h"
 
 namespace StringUnit
 {

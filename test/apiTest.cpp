@@ -1,6 +1,4 @@
-#include "embed/api.h"
 #include "platform/platform.h"
-#include "console/console.h"
 #include "console/simpleLexer.h"
 #include "console/ast.h"
 #include "console/compiler.h"
@@ -8,7 +6,6 @@
 #include "core/fileStream.h"
 #include <stdio.h>
 #include "embed/api.h"
-#include "console/dynamicTypes.h"
 
 /*
  Example for new API
@@ -17,7 +14,7 @@
 
 using namespace KorkApi;
 
-void MyLogger(ConsoleLogEntry::Level level, const char *consoleLine, void* userPtr)
+void MyLogger(U32 level, const char *consoleLine, void* userPtr)
 {
    printf("%s\n", consoleLine);
 }
@@ -203,7 +200,7 @@ int testScript(char* script, const char* filename)
    
    //ConsoleBaseType::registerWithVM(vm);
    
-   AbstractClassRep::registerWithVM(vm);
+   //AbstractClassRep::registerWithVM(vm);
    
    // 4) Register Player (derived from MyBase) with a MyPoint3F field
    static FieldInfo playerFields[1];

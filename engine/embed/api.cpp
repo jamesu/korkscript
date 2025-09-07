@@ -1,10 +1,14 @@
 #include "embed/api.h"
+#include "embed/internalApi.h"
+#include "console/simpleLexer.h"
+#include "console/ast.h"
+#include "console/consoleNamespace.h"
+
 #include "core/memStream.h"
 #include "console/consoleInternal.h"
-#include "console/consoleNamespace.h"
 #include "console/telnetDebugger.h"
 #include "console/telnetConsole.h"
-#include "embed/internalApi.h"
+
 
 namespace KorkApi
 {
@@ -198,6 +202,28 @@ ConsoleValue Vm::getTypeVar(TypeId typeId)
    return makeDefaultValue();
 }
 
+ConsoleValue VmInternal::getStringReturnBuffer(U32 size)
+{
+    return makeDefaultValue();
+}
+
+ConsoleValue VmInternal::getStringArgBuffer(U32 size)
+{
+   return makeDefaultValue();
+}
+
+ConsoleValue VmInternal::getTypeReturn(TypeId typeId)
+{
+   return makeDefaultValue();
+}
+
+ConsoleValue VmInternal::getTypeVar(TypeId typeId)
+{
+   return makeDefaultValue();
+}
+
+
+
 void Vm::pushValueFrame()
 {
    return mInternal->mSTR.pushFrame();
@@ -319,7 +345,7 @@ ConsoleValue Vm::execCodeBlock(U32 codeSize, U8* code, const char* filename, boo
    
    MemStream stream(codeSize, code, true, false);
    
-   if (!block->read(filename, stream))
+   if (!block->read(filename, true, stream))
    {
       delete block;
       return ConsoleValue();

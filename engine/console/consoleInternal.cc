@@ -21,18 +21,18 @@
 //-----------------------------------------------------------------------------
 
 #include "platform/platform.h"
-#include "console/console.h"
 
+#include "embed/api.h"
+#include "embed/internalApi.h"
 #include "console/simpleLexer.h"
 #include "console/ast.h"
-
+#include "console/consoleNamespace.h"
 
 #include "core/findMatch.h"
 #include "console/consoleInternal.h"
 #include "core/fileStream.h"
 #include "console/compiler.h"
-#include "console/consoleNamespace.h"
-#include "embed/internalApi.h"
+#include "core/escape.h"
 
 //#define DEBUG_SPEW
 
@@ -82,7 +82,7 @@ void Dictionary::exportVariables(const char *varString, const char *fileName, bo
    {
       if(!strm.open(fileName, append ? FileStream::ReadWrite : FileStream::Write))
       {
-         Con::errorf(ConsoleLogEntry::General, "Unable to open file '%s for writing.", fileName);
+         // TOFIX Con::errorf(ConsoleLogEntry::General, "Unable to open file '%s for writing.", fileName);
          return;
       }
       if(append)
@@ -108,9 +108,14 @@ void Dictionary::exportVariables(const char *varString, const char *fileName, bo
             break;
       }
       if(fileName)
+      {
          strm.write(dStrlen(buffer), buffer);
+      }
       else
-         Con::printf("%s", buffer);
+      {
+         // TOFIX
+         //Con::printf("%s", buffer);
+      }
    }
    if(fileName)
       strm.close();
@@ -331,9 +336,9 @@ Dictionary::Entry* Dictionary::getVariable(StringTableEntry name)
    }
    
    // Warn users when they access a variable that isn't defined.
-   if(gWarnUndefinedScriptVariables)
+   /* TOFIX if(gWarnUndefinedScriptVariables)
       Con::warnf(" *** Accessed undefined variable '%s'", name);
-   
+   */
    return NULL;
 }
 
@@ -422,7 +427,7 @@ void Dictionary::setEntryIntValue(Entry* e, U32 val)
 {
    if( e->mIsConstant )
    {
-      Con::errorf( "Cannot assign value to constant '%s'.", e->name );
+// TOFIX      Con::errorf( "Cannot assign value to constant '%s'.", e->name );
       return;
    }
 
@@ -437,7 +442,7 @@ void Dictionary::setEntryFloatValue(Entry* e, F32 val)
 {
    if( e->mIsConstant )
    {
-      Con::errorf( "Cannot assign value to constant '%s'.", e->name );
+// TOFIX      Con::errorf( "Cannot assign value to constant '%s'.", e->name );
       return;
    }
 
@@ -461,7 +466,7 @@ void Dictionary::setEntryStringValue(Dictionary::Entry* e, const char * value)
 {
    if( e->mIsConstant )
    {
-      Con::errorf( "Cannot assign value to constant '%s'.", e->name );
+// TOFIX      Con::errorf( "Cannot assign value to constant '%s'.", e->name );
       return;
    }
 

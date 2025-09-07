@@ -21,6 +21,9 @@
 //-----------------------------------------------------------------------------
 
 #include "platform/platform.h"
+#include "embed/api.h"
+#include "embed/internalApi.h"
+#include "console/consoleNamespace.h"
 #include "console/telnetConsole.h"
 #include "platform/platformNetwork.h"
 
@@ -138,7 +141,7 @@ void TelnetConsole::process()
       {
          char buffer[256];
          Net::addressToString(&address, buffer);
-         Con::printf("Telnet connection from %s", buffer);
+         printf("Telnet connection from %s", buffer);
          
          TelnetClient *cl = new TelnetClient;
          cl->socket = newConnection;
@@ -154,7 +157,7 @@ void TelnetConsole::process()
          
          Net::setBlocking(newConnection, false);
          
-         const char *prompt = Con::getVariable("Con::Prompt");
+         const char *prompt = "";// TOFIX Con::getVariable("Con::Prompt");
          char connectMessage[1024];
          dSprintf(connectMessage, sizeof(connectMessage),
                   "Torque Telnet Remote Console\r\n\r\n%s",
@@ -212,7 +215,7 @@ void TelnetConsole::process()
                */
                
                // note - send prompt next
-               const char *prompt = Con::getVariable("Con::Prompt");
+               const char *prompt = ""; // TOFIX Con::getVariable("Con::Prompt");
                if ( client->socket != NetSocket::INVALID )
                   Net::send(client->socket, (const unsigned char*)prompt, dStrlen(prompt));
             }
@@ -232,7 +235,7 @@ void TelnetConsole::process()
                   replyPos = 0;
                   
                   // send prompt
-                  const char *prompt = Con::getVariable("Con::Prompt");
+                  const char *prompt = ""; // TOFIX Con::getVariable("Con::Prompt");
                   if ( client->socket != NetSocket::INVALID )
                      Net::send(client->socket, (const unsigned char*)prompt, dStrlen(prompt));
                   client->state = FullAccessConnected;
@@ -280,7 +283,7 @@ void TelnetConsole::process()
                }
             }
          }
-         else if(client->curPos < Con::MaxLineLength-1)
+         else if(client->curPos < KorkApi::MaxLineLength-1)
          {
             client->curLine[client->curPos++] = recvBuf[i];
             // don't echo password chars...
