@@ -199,7 +199,6 @@ static bool Player_AddObject(Vm* vm, VMObject* object, bool placeAtRoot, U32 gro
    }
    return false;
 }
-static
 
 static void  Player_Destroy(void* classUser, void* instanceUser)
 {
