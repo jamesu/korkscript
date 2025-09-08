@@ -316,7 +316,7 @@ public:
    // Heap values (like strings)
    ConsoleValue getStringReturnBuffer(U32 size);
    ConsoleValue getStringArgBuffer(U32 size);
-   ConsoleValue getTypeVar(TypeId typeId);
+   ConsoleValue getTypeArg(TypeId typeId);
    ConsoleValue getTypeReturn(TypeId typeId);
 
    void pushValueFrame();

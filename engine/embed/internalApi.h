@@ -54,7 +54,7 @@ struct VmInternal
    // Heap values (like strings)
    ConsoleValue getStringReturnBuffer(U32 size);
    ConsoleValue getStringArgBuffer(U32 size);
-   ConsoleValue getTypeVar(TypeId typeId);
+   ConsoleValue getTypeArg(TypeId typeId);
    ConsoleValue getTypeReturn(TypeId typeId);
 
    StringTableEntry getCurrentCodeBlockName();
@@ -69,6 +69,9 @@ struct VmInternal
 
    void setObjectField(StringTableEntry name, const char* array, ConsoleValue value);
    ConsoleValue getObjectField(StringTableEntry name, const char* array);
+
+   void printf(int level, const char* fmt, ...);
+   void print(int level, const char* buf);
 
 };
 

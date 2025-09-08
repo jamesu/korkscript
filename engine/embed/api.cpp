@@ -184,42 +184,48 @@ void VmInternal::releaseHeapRef(ConsoleHeapAllocRef value)
 
 ConsoleValue Vm::getStringReturnBuffer(U32 size)
 {
-    return makeDefaultValue();
+    return mInternal->getStringReturnBuffer(size);
 }
 
 ConsoleValue Vm::getStringArgBuffer(U32 size)
 {
-   return makeDefaultValue();
+    return mInternal->getStringArgBuffer(size);
 }
 
 ConsoleValue Vm::getTypeReturn(TypeId typeId)
 {
-   return makeDefaultValue();
+    return mInternal->getTypeReturn(typeId);
 }
 
-ConsoleValue Vm::getTypeVar(TypeId typeId)
+ConsoleValue Vm::getTypeArg(TypeId typeId)
 {
-   return makeDefaultValue();
+    return mInternal->getTypeArg(typeId);
 }
 
 ConsoleValue VmInternal::getStringReturnBuffer(U32 size)
 {
-    return makeDefaultValue();
+   char* data = mSTR.getReturnBuffer(size);
+   return ConsoleValue::makeString((char*)(data - mSTR.mBuffer), ConsoleValue::ZoneReturn);
 }
 
 ConsoleValue VmInternal::getStringArgBuffer(U32 size)
 {
-   return makeDefaultValue();
+   char* data = mSTR.getArgBuffer(size);
+   return ConsoleValue::makeString((char*)(data - mSTR.mArgBuffer), ConsoleValue::ZoneArg);
 }
 
 ConsoleValue VmInternal::getTypeReturn(TypeId typeId)
 {
-   return makeDefaultValue();
+   U32 size = mTypes[typeId].size;
+   char* data = mSTR.getReturnBuffer(size);
+   return ConsoleValue::makeTyped((char*)(data - mSTR.mArgBuffer), typeId, ConsoleValue::ZoneReturn);
 }
 
-ConsoleValue VmInternal::getTypeVar(TypeId typeId)
+ConsoleValue VmInternal::getTypeArg(TypeId typeId)
 {
-   return makeDefaultValue();
+   U32 size = mTypes[typeId].size;
+   char* data = mSTR.getArgBuffer(size);
+   return ConsoleValue::makeTyped((char*)(data - mSTR.mArgBuffer), typeId, ConsoleValue::ZoneArg);
 }
 
 
@@ -691,7 +697,7 @@ const char* VmInternal::tempFloatConv(F64 val)
    if (mConvIndex == MaxStringConvs)
       mConvIndex = 0;
 
-   printf(mTempStringConversions[mConvIndex], MaxTempStringSize, "%f", val);
+   snprintf(mTempStringConversions[mConvIndex], MaxTempStringSize, "%f", val);
    return mTempStringConversions[mConvIndex++];
 }
 
@@ -700,7 +706,7 @@ const char* VmInternal::tempIntConv(U64 val)
    if (mConvIndex == MaxStringConvs)
       mConvIndex = 0;
 
-   printf(mTempStringConversions[mConvIndex], MaxTempStringSize, "%llu", val);
+   snprintf(mTempStringConversions[mConvIndex], MaxTempStringSize, "%llu", val);
    return mTempStringConversions[mConvIndex++];
 }
 
@@ -712,6 +718,29 @@ void VmInternal::setObjectField(StringTableEntry name, const char* array, Consol
 ConsoleValue VmInternal::getObjectField(StringTableEntry name, const char* array)
 {
    
+}
+
+void VmInternal::printf(int level, const char* fmt, ...)
+{
+   if (mConfig.logFn == NULL)
+      return;
+
+   char buffer[4096];
+   va_list args;
+   va_start(args, fmt);
+   vsnprintf(buffer, sizeof(buffer), fmt, args);
+   va_end(args);
+   
+   mConfig.logFn(level, buffer, mConfig.logUser);
+}
+
+void VmInternal::print(int level, const char* buf)
+{
+   if (mConfig.logFn == NULL)
+      return;
+   
+   mConfig.logFn(level, buf, mConfig.logUser);
+
 }
 
 } // namespace KorkApi
