@@ -13,10 +13,11 @@ NamespaceState::NamespaceState()
    mGlobalNamespace = NULL;
 }
 
-void NamespaceState::init()
+void NamespaceState::init(KorkApi::VmInternal* vmInternal)
 {
    mNumActivePackages = 0;
    mOldNumActivePackages = 0;
+   mVmInternal = vmInternal;
    mGlobalNamespace = find(NULL);
 }
 
@@ -230,6 +231,7 @@ Namespace *NamespaceState::find(StringTableEntry name, StringTableEntry package)
 
    Namespace *ret = (Namespace *) mAllocator.alloc(sizeof(Namespace));
    constructInPlace(ret);
+   ret->mVmInternal = mVmInternal;
    ret->mPackage = package;
    ret->mName = name;
    ret->mNext = mNamespaceList;

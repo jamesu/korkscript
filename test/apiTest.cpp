@@ -160,6 +160,15 @@ void cPlayerJump(Player* object, int argc, const char** argv)
    object->mPosition.z += 10;
 }
 
+void cEcho(void* object, int argc, const char** argv)
+{
+   for (int i=1; i<argc; i++)
+   {
+      printf("%s", argv[i]);
+   }
+   printf("\n");
+}
+
 int testScript(char* script, const char* filename)
 {
    Config cfg{};
@@ -223,8 +232,10 @@ int testScript(char* script, const char* filename)
    NamespaceId globalNS = vm->getGlobalNamespace(); // or obtain root namespace
    NamespaceId playerNS = vm->findNamespace(StringTable->insert("Player"), NULL);
    
+   vm->addNamespaceFunction(vm->getGlobalNamespace(), StringTable->insert("echo"), cEcho, "", 1, 32);
    vm->addNamespaceFunction(playerNS, StringTable->insert("jump"), (KorkApi::VoidFuncCallback)cPlayerJump, "()", 2, 2);
    vm->evalCode(script, filename);
+   
    
    // Optionally, prove C++ side can Find it as well:
    VMObject* found = cfg.iFind.FindObjectByNameFn("player1", NULL);

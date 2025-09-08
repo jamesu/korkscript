@@ -1791,15 +1791,15 @@ execFinished:
       mVM->mCurrentRoot = saveCodeBlock->mRoot;
    }
    
-   decRefCount();
+   const char* retValue = mVM->mSTR.getStringValue();
    
 #ifdef TORQUE_DEBUG
    AssertFatal(!(mVM->mSTR.mStartStackSize > stackStart), "String stack not popped enough in script exec");
    AssertFatal(!(mVM->mSTR.mStartStackSize < stackStart), "String stack popped too much in script exec");
 #endif
-   return mVM->mSTR.getStringValue();
    
-   return "";
+   decRefCount();
+   return retValue;
 }
 
 //------------------------------------------------------------

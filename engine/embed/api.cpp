@@ -591,13 +591,13 @@ void destroyVm(Vm* vm)
    delete vm;
 }
 
-VmInternal::VmInternal(Vm* vm, Config* cfg) : mSTR(&mAllocBase)
+VmInternal::VmInternal(Vm* vm, Config* cfg) : mSTR(&mAllocBase), mEvalState(this)
 {
    mVM = vm;
    mConfig = *cfg;
    mCodeBlockList = NULL;
    mCurrentCodeBlock = NULL;
-   mNSState.init();
+   mNSState.init(this);
    mTelDebugger = new TelnetDebugger(this);
    mTelConsole = new TelnetConsole(this);
    mHeapAllocs = NULL;

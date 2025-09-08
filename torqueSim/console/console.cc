@@ -46,8 +46,6 @@ static Mutex* sLogMutex;
 
 KorkApi::Vm* sVM;
 
-extern StringStack STR;
-
 ConsoleConstructor *ConsoleConstructor::first = NULL;
 extern bool gWarnUndefinedScriptVariables;
 

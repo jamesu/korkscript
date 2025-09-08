@@ -241,6 +241,7 @@ ip( 0 )
 void Dictionary::setState(ExprEvalState *state, Dictionary* ref)
 {
    exprState = state;
+   vm = state->vmInternal;
    
    if (ref)
       hashTable = ref->hashTable;
@@ -561,14 +562,14 @@ void ExprEvalState::pushFrameRef(S32 stackIndex)
    //Con::printf("ExprEvalState::pushFrameRef");
 }
 
-ExprEvalState::ExprEvalState()
+ExprEvalState::ExprEvalState(KorkApi::VmInternal* vm)
 {
    VECTOR_SET_ASSOCIATION(stack);
+   vmInternal = vm;
    globalVars.setState(this);
    thisObject = NULL;
    traceOn = false;
    mStackDepth = 0;
-   vmInternal = NULL;
    
    currentVariable = NULL;
    copyVariable = NULL;

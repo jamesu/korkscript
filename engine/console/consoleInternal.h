@@ -176,7 +176,7 @@ public:
    
    U32 mStackDepth;
    
-   ExprEvalState();
+   ExprEvalState(KorkApi::VmInternal* vm);
    ~ExprEvalState();
    
    

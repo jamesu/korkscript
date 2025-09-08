@@ -572,9 +572,9 @@ const char *CodeBlock::compileExec(StringTableEntry fileName, const char *inStri
       if(Platform::isFullPath(fileName))
          fullPath = fileName;
       
-      if(dStrnicmp(exePath, fileName, dStrlen(exePath)) == 0)
+      if(exePath && dStrnicmp(exePath, fileName, dStrlen(exePath)) == 0)
          name = StringTable->insert(fileName + dStrlen(exePath) + 1, true);
-      else if(dStrnicmp(cwd, fileName, dStrlen(cwd)) == 0)
+      else if(cwd && dStrnicmp(cwd, fileName, dStrlen(cwd)) == 0)
          name = StringTable->insert(fileName + dStrlen(cwd) + 1, true);
       
       if(fullPath == NULL)

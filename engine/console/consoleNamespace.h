@@ -107,6 +107,7 @@ struct NamespaceState
         MaxActivePackages = 512,
    };
 
+   KorkApi::VmInternal* mVmInternal;
    Namespace *mNamespaceList;
    Namespace *mGlobalNamespace;
    DataChunker mCacheAllocator;
@@ -135,7 +136,7 @@ struct NamespaceState
    void printNamespaceEntries(Namespace * g, bool dumpScript = true, bool dumpEngine = true);
 
    Namespace* global();
-   void init();
+   void init(KorkApi::VmInternal* vmInternal);
    void shutdown();
 };
 
