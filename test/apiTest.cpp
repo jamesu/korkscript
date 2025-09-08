@@ -29,6 +29,13 @@ static VMObject* FindByName(StringTableEntry name, VMObject* parent)
    return it == gByName.end() ? NULL : it->second;
 }
 
+static VMObject* FindByPath(const char* path)
+{
+   if (!path) return NULL;
+   auto it = gByName.find(StringTable->insert(path));
+   return it == gByName.end() ? NULL : it->second;
+}
+
 //
 // MyPoint3F
 //
@@ -64,7 +71,8 @@ static void MyPoint3F_SetValue(void*,
       else if (argv[0].typeId == KorkApi::ConsoleValue::TypeInternalString)
       {
          *p = {};
-         sscanf((const char*)(argv[0].evaluatePtr(vm->getAllocBase())), "%f %f %f", &p->x, &p->y, &p->z);
+         const char* inputStr = (const char*)(argv[0].evaluatePtr(vm->getAllocBase()));
+         sscanf(inputStr, "%f %f %f", &p->x, &p->y, &p->z);
       }
       else
       {
@@ -96,6 +104,10 @@ static ConsoleValue MyPoint3F_CopyData(void* userPtr,
          {
             return;
          }
+      }
+      else
+      {
+         cv = KorkApi::ConsoleValue::makeString(destPtr);
       }
       
       dSprintf(destPtr, 256, "%g %g %g", pt->x, pt->y, pt->z);
@@ -131,6 +143,9 @@ static void* MyBase_Create(void* classUser, VMObject* object)
 
 static bool MyBase_AddObject(Vm* vm, VMObject* object, bool placeAtRoot, U32 groupAddId)
 {
+   MyBase* b = (MyBase*)object->userPtr;
+   gByName[b->mName] = object;
+   
    return true;
 }
 
@@ -163,7 +178,6 @@ static void  MyBase_Destroy(void* classUser, void* instanceUser)
 
 struct Player : public MyBase
 {
-   VMObject* mVMObject;
    MyPoint3F mPosition;
 };
 
@@ -171,10 +185,21 @@ static void* Player_Create(void* classUser, VMObject* object)
 {
    Player* b = new Player();
    b->mPosition = {};
-   b->mVMObject = object;
-   gByName[b->mName] = object;
+   b->mVMInstance = object;
+   object->flags |= KorkApi::ModStaticFields;
    return b;
 }
+
+static bool Player_AddObject(Vm* vm, VMObject* object, bool placeAtRoot, U32 groupAddId)
+{
+   if (MyBase_AddObject(vm, object, placeAtRoot, groupAddId))
+   {
+      vm->setObjectNamespace(object, vm->findNamespace(StringTable->insert("Player")));
+      return true;
+   }
+   return false;
+}
+static
 
 static void  Player_Destroy(void* classUser, void* instanceUser)
 {
@@ -204,7 +229,7 @@ int testScript(char* script, const char* filename)
 {
    Config cfg{};
    cfg.logFn = MyLogger;
-   cfg.iFind = { &FindByName, NULL, NULL };
+   cfg.iFind = { &FindByName, &FindByPath, NULL };
    Vm* vm = createVM(&cfg);
    if (!vm)
    {
@@ -251,7 +276,7 @@ int testScript(char* script, const char* filename)
    player.userPtr     = NULL;
    player.numFields   = 1;
    player.fields      = playerFields;
-   player.iCreate     = { &Player_Create, &Player_Destroy, &MyBase_ProcessArgs, &MyBase_AddObject, &MyBase_GetID };
+   player.iCreate     = { &Player_Create, &Player_Destroy, &MyBase_ProcessArgs, &Player_AddObject, &MyBase_GetID };
    player.iCustomFields = {};
    
    ClassId playerId = vm->registerClass(player);

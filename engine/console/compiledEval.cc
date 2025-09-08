@@ -289,6 +289,11 @@ static F32 castValueToF32(KorkApi::ConsoleValue retValue, KorkApi::ConsoleValue:
    }
 }
 
+inline void* safeObjectUserPtr(KorkApi::VMObject* obj)
+{
+   return obj ? obj->userPtr : NULL;
+}
+
 U32 gExecCount = 0;
 const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNamespace, U32 argc, const char **argv, bool noCalls, StringTableEntry packageName, S32 setFrame)
 {
@@ -555,7 +560,7 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
             if(!currentNewObject)
             {
                // Well, looks like we have to create a new object.
-               KorkApi::ClassInfo* klassInfo = mVM->getClassInfoByName(name);
+               KorkApi::ClassInfo* klassInfo = mVM->getClassInfoByName(StringTable->insert(callArgv[1]));
                KorkApi::VMObject *object = NULL;
 
                if (klassInfo)
@@ -1421,7 +1426,7 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
                   {
                      case Namespace::Entry::StringCallbackType:
                      {
-                        const char *ret = nsEntry->cb.mStringCallbackFunc(mVM->mEvalState.thisObject, callArgc, callArgv);
+                        const char *ret = nsEntry->cb.mStringCallbackFunc(safeObjectUserPtr(mVM->mEvalState.thisObject), callArgc, callArgv);
                         mVM->mSTR.popFrame();
                         if(ret != mVM->mSTR.getStringValue())
                            mVM->mSTR.setStringValue(ret);
@@ -1431,7 +1436,7 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
                      }
                      case Namespace::Entry::IntCallbackType:
                      {
-                        S32 result = nsEntry->cb.mIntCallbackFunc(mVM->mEvalState.thisObject, callArgc, callArgv);
+                        S32 result = nsEntry->cb.mIntCallbackFunc(safeObjectUserPtr(mVM->mEvalState.thisObject), callArgc, callArgv);
                         mVM->mSTR.popFrame();
                         if(code[ip] == OP_STR_TO_UINT)
                         {
@@ -1453,7 +1458,7 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
                      }
                      case Namespace::Entry::FloatCallbackType:
                      {
-                        F64 result = nsEntry->cb.mFloatCallbackFunc(mVM->mEvalState.thisObject, callArgc, callArgv);
+                        F64 result = nsEntry->cb.mFloatCallbackFunc(safeObjectUserPtr(mVM->mEvalState.thisObject), callArgc, callArgv);
                         mVM->mSTR.popFrame();
                         if(code[ip] == OP_STR_TO_UINT)
                         {
@@ -1474,7 +1479,7 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
                         break;
                      }
                      case Namespace::Entry::VoidCallbackType:
-                        nsEntry->cb.mVoidCallbackFunc(mVM->mEvalState.thisObject, callArgc, callArgv);
+                        nsEntry->cb.mVoidCallbackFunc(safeObjectUserPtr(mVM->mEvalState.thisObject), callArgc, callArgv);
                         if(code[ip] != OP_STR_TO_NONE)
                         {
                            mVM->printf(0, "%s: Call to %s in %s uses result of void function call.", getFileLine(ip-4), fnName, functionName);
@@ -1484,7 +1489,7 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
                         break;
                      case Namespace::Entry::BoolCallbackType:
                      {
-                        bool result = nsEntry->cb.mBoolCallbackFunc(mVM->mEvalState.thisObject, callArgc, callArgv);
+                        bool result = nsEntry->cb.mBoolCallbackFunc(safeObjectUserPtr(mVM->mEvalState.thisObject), callArgc, callArgv);
                         mVM->mSTR.popFrame();
                         if(code[ip] == OP_STR_TO_UINT)
                         {
