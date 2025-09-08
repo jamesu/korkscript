@@ -49,33 +49,38 @@ typedef S32 TypeId;
 
 struct TypeInterface
 {
-void(*SetDataFn)(void* userPtr,
-                          void* dptr,
-                          S32 argc,
-                          const char** argv,
-                          const EnumTable* tbl,
-                          BitSet32 flag);
+// argv[] -> dptr
+// foo = bar
+// foo = b1, b2, b3
 void(*SetValueFn)(void* userPtr,
+                  Vm* vm,
                           void* dptr,
                           S32 argc,
                           ConsoleValue* argv,
                           const EnumTable* tbl,
-                          BitSet32 flag);
-const char*(*GetDataFn)(void* userPtr,
-                                 void* dptr,
-                                 const EnumTable* tbl,
-                                 BitSet32 flag);
-ConsoleValue(*ExtractValueFn)(void* userPtr,
-                              void* dptr,
-                              const EnumTable* tbl,
-                              BitSet32 flag);
+                          BitSet32 flag,
+                          U32 typeId);
+
+// sptr -> [return]
+// destVal = srcVal
+ConsoleValue(*CopyValue)(void* userPtr,
+                  Vm* vm,
+                         void* sptr,
+                         const EnumTable* tbl,
+                         BitSet32 flag,
+                         U32 requestedType,
+                         U32 requestedZone);
+
+// TypeName
 const char*(*GetTypeClassNameFn)(void* userPtr);
 
+// For string types: compress paths
 const char*(*PrepDataFn)(void* userPtr,
+                  Vm* vm,
                                   const char* data,
                                   char* buffer,
                                   U32 bufferLen);
-StringTableEntry(*GetTypePrefixFn)(void* userPtr);
+
 };
 
 struct TypeInfo
@@ -131,6 +136,12 @@ enum ObjectFlags : U32
     Expanded  = BIT(5),   ///< This object has been marked as expanded. (in editor)
     ModStaticFields  = BIT(6),    ///< The object allows you to read/modify static fields
     ModDynamicFields = BIT(7)     ///< The object allows you to read/modify dynamic fields
+};
+
+enum TypeFlags : U32
+{
+    TypeDirectCopy = BIT(30),
+    TypeDirectCopyMask = ~TypeDirectCopy
 };
 
 struct VMObject {
@@ -318,6 +329,8 @@ public:
    ConsoleValue getStringArgBuffer(U32 size);
    ConsoleValue getTypeArg(TypeId typeId);
    ConsoleValue getTypeReturn(TypeId typeId);
+   ConsoleValue getStringInZone(U16 zone, U32 size);
+   ConsoleValue getTypeInZone(U16 zone, TypeId typeId);
 
    void pushValueFrame();
    void popValueFrame();
@@ -370,6 +383,11 @@ public:
    void setTracing(bool value);
    
    ConsoleValue::AllocBase getAllocBase() const;
+
+   // Conversion helpers
+   F64 valueAsFloat(ConsoleValue v);
+   S64 valueAsInt(ConsoleValue v);
+   const char* valueAsString(ConsoleValue v);
 };
 
 Vm* createVM(Config* cfg);

@@ -57,6 +57,9 @@ struct VmInternal
    ConsoleValue getTypeArg(TypeId typeId);
    ConsoleValue getTypeReturn(TypeId typeId);
 
+   ConsoleValue getStringInZone(U16 zone, U32 size);
+   ConsoleValue getTypeInZone(U16 zone, TypeId typeId);
+
    StringTableEntry getCurrentCodeBlockName();
    StringTableEntry getCurrentCodeBlockFullPath();
    StringTableEntry getCurrentCodeBlockModName();
@@ -67,11 +70,16 @@ struct VmInternal
    const char* tempFloatConv(F64 val);
    const char* tempIntConv(U64 val);
 
-   void setObjectField(StringTableEntry name, const char* array, ConsoleValue value);
-   ConsoleValue getObjectField(StringTableEntry name, const char* array);
+   void setObjectField(VMObject* object, StringTableEntry name, const char* array, ConsoleValue value);
+   ConsoleValue getObjectField(VMObject* object, StringTableEntry name, const char* array, U32 requestedType, U32 requestedZone);
 
    void printf(int level, const char* fmt, ...);
    void print(int level, const char* buf);
+
+   // Conversion helpers
+   F64 valueAsFloat(ConsoleValue v);
+   S64 valueAsInt(ConsoleValue v);
+   const char* valueAsString(ConsoleValue v);
 
 };
 

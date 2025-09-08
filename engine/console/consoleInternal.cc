@@ -360,10 +360,13 @@ U32 Dictionary::getEntryIntValue(Entry* e)
          KorkApi::TypeInfo& info = vm->mTypes[e->mConsoleValue.typeId];
          void* typePtr = e->mConsoleValue.evaluatePtr(vm->mAllocBase);
 
-         return atoll(info.iFuncs.GetDataFn(info.userPtr,
+         return info.iFuncs.CopyValue(info.userPtr,
+                                            vm->mVM,
                       typePtr,
                       NULL,
-                      0));
+                      0,
+                                            KorkApi::ConsoleValue::TypeInternalFloat,
+                                            KorkApi::ConsoleValue::ZoneExternal).getInt();
       }
       break;
    }
@@ -387,10 +390,13 @@ F32 Dictionary::getEntryFloatValue(Entry* e)
          KorkApi::TypeInfo& info = vm->mTypes[e->mConsoleValue.typeId];
          void* typePtr = e->mConsoleValue.evaluatePtr(vm->mAllocBase);
 
-         return atof(info.iFuncs.GetDataFn(info.userPtr,
+         return info.iFuncs.CopyValue(info.userPtr,
+                                            vm->mVM,
                       typePtr,
                       NULL,
-                      0));
+                      0,
+                                            KorkApi::ConsoleValue::TypeInternalInt,
+                                            KorkApi::ConsoleValue::ZoneExternal).getFloat();
       }
       break;
    }
@@ -414,10 +420,13 @@ const char *Dictionary::getEntryStringValue(Entry* e)
          KorkApi::TypeInfo& info = vm->mTypes[e->mConsoleValue.typeId];
          void* typePtr = e->mConsoleValue.evaluatePtr(vm->mAllocBase);
 
-         return info.iFuncs.GetDataFn(info.userPtr,
+         return (const char*)info.iFuncs.CopyValue(info.userPtr,
+                                            vm->mVM,
                       typePtr,
                       NULL,
-                      0);
+                      0,
+                                            KorkApi::ConsoleValue::TypeInternalString,
+                                            KorkApi::ConsoleValue::ZoneArg).evaluatePtr(vm->mAllocBase);
       }
       break;
    }

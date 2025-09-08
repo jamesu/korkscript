@@ -38,47 +38,78 @@ struct MyPoint3F
    F32 x,y,z;
 };
 
-static void MyPoint3F_SetData(void*, void* dptr,
-                              S32 argc, const char** argv,
-                              const EnumTable*, BitSet32) {
+static void MyPoint3F_SetValue(void*, 
+                               KorkApi::Vm* vm,
+                               void* dptr,
+                              S32 argc, ConsoleValue* argv,
+                              const EnumTable*, 
+                              BitSet32,
+                              U32 typeId) {
    MyPoint3F* p = reinterpret_cast<MyPoint3F*>(dptr);
    if (!p)
       return;
    
-   if (argc >= 3) {
-      p->x = (float)std::atof(argv[0]);
-      p->y = (float)std::atof(argv[1]);
-      p->z = (float)std::atof(argv[2]);
-   } else if (argc == 1) {
-      *p = {};
-      sscanf(argv[0], "%f %f %f", &p->x, &p->y, &p->z);
+   if (argc >= 3) 
+   {
+      p->x = vm->valueAsFloat(argv[0]);
+      p->y = vm->valueAsFloat(argv[1]);
+      p->z = vm->valueAsFloat(argv[2]);
+   } 
+   else if (argc == 1) 
+   {
+      if (argv[0].typeId == typeId)
+      {
+         *p = *((MyPoint3F*)(argv[0].evaluatePtr(vm->getAllocBase())));
+      }
+      else if (argv[0].typeId == KorkApi::ConsoleValue::TypeInternalString)
+      {
+         *p = {};
+         sscanf((const char*)(argv[0].evaluatePtr(vm->getAllocBase())), "%f %f %f", &p->x, &p->y, &p->z);
+      }
+      else
+      {
+         *((MyPoint3F*)dptr) = {};
+      }
    }
 }
 
-static void MyPoint3F_SetDataCV(void*, void* dptr,
-                                S32 argc, ConsoleValue* argv,
-                                const EnumTable*, BitSet32) {
+static ConsoleValue MyPoint3F_CopyData(void* userPtr,
+                         KorkApi::Vm* vm,
+                         void* sptr,
+                         const EnumTable* tbl,
+                         BitSet32 flag,
+                         U32 requestedType,
+                         U32 requestedZone) {
+   static char buf[96];
+   MyPoint3F* pt = reinterpret_cast<MyPoint3F*>(sptr);
+   ConsoleValue cv;
+   U32 realRequestedType = requestedZone & KorkApi::TypeDirectCopyMask;
+
+   if (realRequestedType == KorkApi::ConsoleValue::TypeInternalString)
+   {
+      char* destPtr = buf;
+      
+      if (requestedZone != KorkApi::ConsoleValue::ZoneExternal)
+      {
+         cv = vm->getStringInZone(requestedZone, 256);
+         if (cv.isNull())
+         {
+            return;
+         }
+      }
+      
+      dSprintf(destPtr, 256, "%g %g %g", pt->x, pt->y, pt->z);
+      return cv;
+   }
+   else if ((requestedType & KorkApi::TypeDirectCopy) != 0) // i.e. same type
+   {
+      cv = vm->getTypeInZone(requestedZone, realRequestedType);
+      *((MyPoint3F*)cv.ptr()) = *pt;
+      return cv;
+   }
 }
 
-static const char* MyPoint3F_GetData(void*, void* dptr,
-                                     const EnumTable*, BitSet32) {
-   static char buf[96];
-   MyPoint3F* p = reinterpret_cast<MyPoint3F*>(dptr);
-   std::snprintf(buf, sizeof(buf), "%g %g %g", p->x, p->y, p->z);
-   return buf;
-}
-static ConsoleValue MyPoint3F_GetDataCV(void*, void* dptr,
-                                        const EnumTable*, BitSet32) {
-   return ConsoleValue();
-}
 static const char* MyPoint3F_GetTypeClassName(void*) { return "MyPoint3F"; }
-static const char* MyPoint3F_Prep(void*, const char* in, char* out, U32 len) {
-   if (!in || !out || !len) return in;
-   std::strncpy(out, in, len);
-   out[len-1] = '\0';
-   return out;
-}
-static StringTableEntry MyPoint3F_Prefix(void*) { return "p3f"; }
 
 //
 // MyBase
@@ -185,13 +216,10 @@ int testScript(char* script, const char* filename)
    tInfo.userPtr = NULL;
    tInfo.size = sizeof(MyPoint3F);
    tInfo.iFuncs = {
-      &MyPoint3F_SetData,
-      &MyPoint3F_SetDataCV,
-      &MyPoint3F_GetData,
-      &MyPoint3F_GetDataCV,
+      &MyPoint3F_SetValue,
+      &MyPoint3F_CopyData,
       &MyPoint3F_GetTypeClassName,
-      &MyPoint3F_Prep,
-      &MyPoint3F_Prefix
+      NULL
    };
    TypeId typeMyPoint3F = vm->registerType(tInfo);
    

@@ -23,11 +23,11 @@ struct ConsoleValue
    
    enum Zone : U16
    {
-      ZoneExternal = 0,
-      ZonePacked   = 1,
-      ZoneVmHeap   = 2,
-      ZoneArg      = 3,
-      ZoneReturn   = 4
+      ZoneExternal = 0, // externally managed pointer
+      ZonePacked   = 1, // packed into CV
+      ZoneVmHeap   = 2, // pointer managed by a ConsoleHeapAlloc
+      ZoneArg      = 3, // allocated inside VM arg buffer
+      ZoneReturn   = 4  // allocated inside VM return buffer
    };
    
    // flags

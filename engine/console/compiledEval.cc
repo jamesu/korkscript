@@ -1083,7 +1083,7 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
          case OP_LOADFIELD_UINT:
             if(curObject)
             {
-               KorkApi::ConsoleValue retValue = mVM->getObjectField(curField, curFieldArray);
+               KorkApi::ConsoleValue retValue = mVM->getObjectField(curObject, curField, curFieldArray, KorkApi::ConsoleValue::TypeInternalInt, KorkApi::ConsoleValue::ZoneExternal);
                intStack[_UINT+1] = castValueToU32(retValue, mVM->mAllocBase);
             }
             else
@@ -1100,7 +1100,7 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
          case OP_LOADFIELD_FLT:
             if(curObject)
             {
-               KorkApi::ConsoleValue retValue = mVM->getObjectField(curField, curFieldArray);
+               KorkApi::ConsoleValue retValue =  mVM->getObjectField(curObject, curField, curFieldArray, KorkApi::ConsoleValue::TypeInternalFloat, KorkApi::ConsoleValue::ZoneExternal);
                floatStack[_FLT+1] = castValueToF32(retValue, mVM->mAllocBase);
             }
             else
@@ -1116,8 +1116,7 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
          case OP_LOADFIELD_STR:
             if(curObject)
             {
-               KorkApi::ConsoleValue retValue = mVM->getObjectField(curField, curFieldArray);
-               floatStack[_FLT+1] = castValueToF32(retValue, mVM->mAllocBase);
+               KorkApi::ConsoleValue retValue =  mVM->getObjectField(curObject, curField, curFieldArray, KorkApi::ConsoleValue::TypeInternalString, KorkApi::ConsoleValue::ZoneExternal);
                mVM->mSTR.setStringValue(retValue);
             }
             else
@@ -1134,7 +1133,7 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
             if(curObject)
             {
                KorkApi::ConsoleValue cv = KorkApi::ConsoleValue::makeString(mVM->mSTR.getStringValue());
-               mVM->setObjectField(curField, curFieldArray, cv);
+               mVM->setObjectField(curObject, curField, curFieldArray, cv);
             }
             else
             {
@@ -1150,7 +1149,7 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
             if(curObject)
             {
                KorkApi::ConsoleValue cv = KorkApi::ConsoleValue::makeString(mVM->mSTR.getStringValue());
-               mVM->setObjectField(curField, curFieldArray, cv);
+               mVM->setObjectField(curObject, curField, curFieldArray, cv);
             }
             else
             {
@@ -1165,7 +1164,7 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
             if(curObject)
             {
                KorkApi::ConsoleValue cv = KorkApi::ConsoleValue::makeString(mVM->mSTR.getStringValue());
-               mVM->setObjectField(curField, curFieldArray, cv);
+               mVM->setObjectField(curObject, curField, curFieldArray, cv);
             }
             else
             {

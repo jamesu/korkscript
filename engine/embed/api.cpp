@@ -202,6 +202,36 @@ ConsoleValue Vm::getTypeArg(TypeId typeId)
     return mInternal->getTypeArg(typeId);
 }
 
+ConsoleValue Vm::getStringInZone(U16 zone, U32 size)
+{
+   return mInternal->getStringInZone(zone, size);
+}
+
+ConsoleValue Vm::getTypeInZone(U16 zone, TypeId typeId)
+{
+   return mInternal->getTypeInZone(zone, typeId);
+}
+
+ConsoleValue VmInternal::getStringInZone(U16 zone, U32 size)
+{
+   if (zone == ConsoleValue::ZoneArg)
+      return getStringArgBuffer(size);
+   else if (zone == ConsoleValue::ZoneReturn)
+      return getStringReturnBuffer(size);
+   else
+      return ConsoleValue();
+}
+
+ConsoleValue VmInternal::getTypeInZone(U16 zone, TypeId typeId)
+{
+   if (zone == ConsoleValue::ZoneArg)
+      return getTypeArg(typeId);
+   else if (zone == ConsoleValue::ZoneReturn)
+      return getTypeReturn(typeId);
+   else
+      return ConsoleValue();
+}
+
 ConsoleValue VmInternal::getStringReturnBuffer(U32 size)
 {
    char* data = mSTR.getReturnBuffer(size);
@@ -710,14 +740,124 @@ const char* VmInternal::tempIntConv(U64 val)
    return mTempStringConversions[mConvIndex++];
 }
 
-void VmInternal::setObjectField(StringTableEntry name, const char* array, ConsoleValue value)
+void VmInternal::setObjectField(VMObject* obj, StringTableEntry name, const char* array, ConsoleValue value)
 {
+   if ((obj->flags & KorkApi::ModStaticFields) != 0)
+   {
+      for (U32 i=0; i<obj->klass->numFields; i++)
+      {
+         FieldInfo& f = obj->klass->fields[i];
+         
+         if (f.pFieldname != name)
+            continue;
+         
+         U32 idx = dAtoi(array);
+         U32 elemCount = f.elementCount > 0 ? (U32)f.elementCount : 1;
+         if (idx >= elemCount)
+            break;
+         
+         TypeId tid = f.type;
+         if (tid < 0 || (U32)tid >= mTypes.size())
+            break;
+         
+         TypeInfo& tinfo = mTypes[tid];
+         if (!tinfo.iFuncs.SetValueFn || tinfo.size == 0)
+            break;
+         
+         U8* base = static_cast<std::uint8_t*>(obj->userPtr);
+         U8* dptr = base + f.offset + (idx * (U32)tinfo.size);
+         
+         tinfo.iFuncs.SetValueFn(
+                                 tinfo.userPtr,
+                                 mVM,
+                                 dptr,
+                                 1,
+                                 &value,
+                                 f.table,
+                                 f.flag,
+                                 tid);
+      }
+      return;
+   }
+
+   if ((obj->flags & KorkApi::ModDynamicFields) != 0)
+   {
+      obj->klass->iCustomFields.SetFieldByName(obj, name, value);
+   }
+}
+
+ConsoleValue VmInternal::getObjectField(VMObject* obj, StringTableEntry name, const char* array, U32 requestedType, U32 requestedZone)
+{
+   
+   // Default result if nothing matches.
+   ConsoleValue def;
+   if (!obj || !obj->klass || !obj->klass->fields)
+      return def;
+   
+   for (U32 i = 0; i < obj->klass->numFields; ++i)
+   {
+      FieldInfo& f = obj->klass->fields[i];
+
+      if (f.pFieldname != name)
+         continue;
+      
+      U32 idx = dAtoi(array);
+      U32 elemCount = f.elementCount > 0 ? (U32)f.elementCount : 1;
+      if (idx >= elemCount)
+         break;
+
+      TypeId tid = (TypeId)f.type;
+      if (tid < 0 || (U32)tid >= mTypes.size())
+         break;
+
+      TypeInfo& tinfo = mTypes[tid];
+      if (!tinfo.iFuncs.CopyValue || tinfo.size == 0)
+         return def;
+
+      U8* base = static_cast<U8*>(obj->userPtr);
+      U8* dptr = base + f.offset + (idx * (U32)tinfo.size);
+
+      return tinfo.iFuncs.CopyValue(
+         tinfo.userPtr,
+                                    mVM,
+         dptr,
+         f.table,
+         f.flag,
+         requestedType,
+         requestedZone
+      );
+   }
    
 }
 
-ConsoleValue VmInternal::getObjectField(StringTableEntry name, const char* array)
+F64 Vm::valueAsFloat(ConsoleValue v)
 {
-   
+   return mInternal->valueAsFloat(v);
+}
+
+S64 Vm::valueAsInt(ConsoleValue v)
+{
+   return mInternal->valueAsInt(v);
+}
+
+const char* Vm::valueAsString(ConsoleValue v)
+{
+   return mInternal->valueAsString(v);
+}
+
+F64 VmInternal::valueAsFloat(ConsoleValue v)
+{
+   return 0.0f;
+}
+
+S64 VmInternal::valueAsInt(ConsoleValue v)
+{
+   return 0;
+}
+
+const char* VmInternal::valueAsString(ConsoleValue v)
+{
+   return "";
 }
 
 void VmInternal::printf(int level, const char* fmt, ...)
