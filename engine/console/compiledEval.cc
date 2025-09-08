@@ -127,7 +127,7 @@ F64 consoleStringToNumber(const char *str, StringTableEntry file, U32 line)
       return 0;
    else if(file)
    {
-      // TOFIX Con::warnf(ConsoleLogEntry::General, "%s (%d): string always evaluates to 0.", file, line);
+      // TOFIX mVM->printf(0, "%s (%d): string always evaluates to 0.", file, line);
       return 0;
    }
    return 0;
@@ -149,7 +149,7 @@ inline void ExprEvalState::setCurVarName(StringTableEntry name)
    }
    if(!currentVariable && gWarnUndefinedScriptVariables)
    {
-      // TOFX Con::warnf(ConsoleLogEntry::Script, "Variable referenced before assignment: %s", name);
+      vmInternal->printf(1, "Variable referenced before assignment: %s", name);
    }
 }
 
@@ -168,7 +168,7 @@ inline void ExprEvalState::setCurVarNameCreate(StringTableEntry name)
    else
    {
       currentVariable = NULL;
-      // TOFIX Con::warnf(ConsoleLogEntry::Script, "Accessing local variable in global scope... failed: %s", name);
+      vmInternal->printf(1, "Accessing local variable in global scope... failed: %s", name);
    }
 }
 
@@ -343,7 +343,7 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
                dStrcat(traceBuffer, ", ");
          }
          dStrcat(traceBuffer, ")");
-         // TOFIX Con::printf("%s", traceBuffer);
+         mVM->printf(0, "%s", traceBuffer);
       }
       mVM->mEvalState.pushFrame(thisFunctionName, thisNamespace);
       popFrame = true;
@@ -575,7 +575,7 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
                // Deal with failure!
                if(!object)
                {
-                  // TOFIX Con::errorf(ConsoleLogEntry::General, "%s: Unable to instantiate non-conobject class %s.", getFileLine(ip-1), callArgv[1]);
+                  mVM->printf(0, "%s: Unable to instantiate non-conobject class %s.", getFileLine(ip-1), callArgv[1]);
                   ip = failJump;
                   break;
                }
@@ -586,7 +586,7 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
                // Deal with the case of a non-SimObject.
                if(!currentNewObject)
                {
-                  // TOFIX Con::errorf(ConsoleLogEntry::General, "%s: Unable to instantiate non-SimObject class %s.", getFileLine(ip-1), callArgv[1]);
+                  mVM->printf(0, "%s: Unable to instantiate non-SimObject class %s.", getFileLine(ip-1), callArgv[1]);
                   delete object;
                   ip = failJump;
                   break;
@@ -646,10 +646,9 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
             U32 groupAddId = (U32)intStack[_UINT];
             if(!currentNewObject->klass->iCreate.AddObject(mVMPublic, currentNewObject, placeAtRoot, groupAddId))
             {
-#if TOFIX
                // This error is usually caused by failing to call Parent::initPersistFields in the class' initPersistFields().
-               Con::warnf(ConsoleLogEntry::General, "%s: Register object failed for object %s of class %s.", getFileLine(ip-2), currentNewObject->getName(), currentNewObject->getClassName());
-#endif
+               /* TOFIX mVM->printf(0, "%s: Register object failed for object %s of class %s.", getFileLine(ip-2), currentNewObject->getName(), currentNewObject->getClassName());*/
+
                currentNewObject->klass->iCreate.DestroyClassFn(currentNewObject->klass->userPtr, currentNewObject->userPtr);
                delete currentNewObject;
                currentNewObject = NULL;
@@ -1295,10 +1294,10 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
             if(!nsEntry)
             {
                ip+= 5;
-               // TOFIX Con::warnf(ConsoleLogEntry::General,
-               //           "%s: Unable to find function %s%s%s",
-               //           getFileLine(ip-4), fnNamespace ? fnNamespace : "",
-               //           fnNamespace ? "::" : "", fnName);
+               mVM->printf(0,
+                          "%s: Unable to find function %s%s%s",
+                          getFileLine(ip-4), fnNamespace ? fnNamespace : "",
+                          fnNamespace ? "::" : "", fnName);
                mVM->mSTR.popFrame();
                break;
             }
@@ -1350,7 +1349,7 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
                if(!mVM->mEvalState.thisObject)
                {
                   mVM->mEvalState.thisObject = 0;
-                  // TOFIX Con::warnf(ConsoleLogEntry::General,"%s: Unable to find object: '%s' attempting to call function '%s'", getFileLine(ip-6), callArgv[1], fnName);
+                  mVM->printf(0,"%s: Unable to find object: '%s' attempting to call function '%s'", getFileLine(ip-6), callArgv[1], fnName);
                   mVM->mSTR.popFrame();
                   mVM->mSTR.setStringValue("");
                   break;
@@ -1383,14 +1382,12 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
             {
                if(!noCalls)
                {
-                  // TOFIX Con::warnf(ConsoleLogEntry::General,"%s: Unknown command %s.", getFileLine(ip-4), fnName);
+                  mVM->printf(0,"%s: Unknown command %s.", getFileLine(ip-4), fnName);
                   if(callType == FuncCallExprNode::MethodCall)
                   {
-#if TOFIX
-                     Con::warnf(ConsoleLogEntry::General, "  Object %s(%d) %s",
+                     /* TOFIXmVM->printf(0, "  Object %s(%d) %s",
                                 mVM->mEvalState.thisObject->getName() ? mVM->mEvalState.thisObject->getName() : "",
-                                mVM->mEvalState.thisObject->getId(), getNamespaceList(ns) );
-#endif
+                                mVM->mEvalState.thisObject->getId(), getNamespaceList(ns) ); */
                   }
                }
                mVM->mSTR.popFrame();
@@ -1414,8 +1411,8 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
                if((nsEntry->mMinArgs && S32(callArgc) < nsEntry->mMinArgs) || (nsEntry->mMaxArgs && S32(callArgc) > nsEntry->mMaxArgs))
                {
                   const char* nsName = ns? ns->mName: "";
-                  // TOFIX Con::warnf(ConsoleLogEntry::Script, "%s: %s::%s - wrong number of arguments.", getFileLine(ip-4), nsName, fnName);
-                  // TOFIX Con::warnf(ConsoleLogEntry::Script, "%s: usage: %s", getFileLine(ip-4), nsEntry->mUsage);
+                  mVM->printf(0, "%s: %s::%s - wrong number of arguments.", getFileLine(ip-4), nsName, fnName);
+                  mVM->printf(0, "%s: usage: %s", getFileLine(ip-4), nsEntry->mUsage);
                   mVM->mSTR.popFrame();
                   mVM->mSTR.setStringValue("");
                }
@@ -1481,7 +1478,7 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
                         nsEntry->cb.mVoidCallbackFunc(mVM->mEvalState.thisObject, callArgc, callArgv);
                         if(code[ip] != OP_STR_TO_NONE)
                         {
-                           // TOFIX Con::warnf(ConsoleLogEntry::General, "%s: Call to %s in %s uses result of void function call.", getFileLine(ip-4), fnName, functionName);
+                           mVM->printf(0, "%s: Call to %s in %s uses result of void function call.", getFileLine(ip-4), fnName, functionName);
                         }
                         mVM->mSTR.popFrame();
                         mVM->mSTR.setStringValue("");
@@ -1776,7 +1773,7 @@ execFinished:
             dSprintf(traceBuffer + dStrlen(traceBuffer), sizeof(traceBuffer) - dStrlen(traceBuffer),
                      "%s() - return %s", thisFunctionName, mVM->mSTR.getStringValue());
          }
-         // TOFIX Con::printf("%s", traceBuffer);
+         mVM->printf(0, "%s", traceBuffer);
       }
    }
    else

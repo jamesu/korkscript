@@ -472,9 +472,7 @@ bool CodeBlock::compileToStream(Stream &st, StringTableEntry fileName, const cha
    }
    catch (SimpleParser::TokenError& e)
    {
-#if TOFIX
-      Con::errorf("Error parsing (%s :: %s)", e.what(), lex.toString(e.token()).c_str());
-#endif
+      mVM->printf(0, "Error parsing (%s :: %s)", e.what(), lex.toString(e.token()).c_str());
    }
    
    if(!rootNode)
@@ -520,10 +518,10 @@ bool CodeBlock::compileToStream(Stream &st, StringTableEntry fileName, const cha
    getGlobalFloatTable().write(st);
    getFunctionFloatTable().write(st);
    
-#if TOFIX
    if(lastIp != codeSize)
-      Con::errorf(ConsoleLogEntry::General, "CodeBlock::compile - precompile size mismatch, a precompile/compile function pair is probably mismatched.");
-#endif
+   {
+      mVM->printf(0, "CodeBlock::compile - precompile size mismatch, a precompile/compile function pair is probably mismatched.");
+   }
    
    U32 totSize = codeSize + codeStream.getNumLineBreaks() * 2;
    st.write(codeSize);
@@ -603,9 +601,7 @@ const char *CodeBlock::compileExec(StringTableEntry fileName, const char *inStri
    }
    catch (SimpleParser::TokenError& e)
    {
-#if TOFIX
-      Con::errorf("Error parsing (%s :: %s)", e.what(), lex.toString(e.token()).c_str());
-#endif
+      mVM->printf(0, "Error parsing (%s :: %s)", e.what(), lex.toString(e.token()).c_str());
    }
    
    if(!rootNode)
@@ -641,7 +637,7 @@ const char *CodeBlock::compileExec(StringTableEntry fileName, const char *inStri
    
    if(lastIp+1 != codeSize)
    {
-      // TOFIX Con::warnf(ConsoleLogEntry::General, "precompile size mismatch");
+      mVM->printf(0, "precompile size mismatch");
    }
    
    return exec(0, fileName, NULL, 0, 0, noCalls, NULL, setFrame);

@@ -82,7 +82,7 @@ void Dictionary::exportVariables(const char *varString, const char *fileName, bo
    {
       if(!strm.open(fileName, append ? FileStream::ReadWrite : FileStream::Write))
       {
-         // TOFIX Con::errorf(ConsoleLogEntry::General, "Unable to open file '%s for writing.", fileName);
+         vm->printf(0, "Unable to open file '%s for writing.", fileName);
          return;
       }
       if(append)
@@ -113,8 +113,7 @@ void Dictionary::exportVariables(const char *varString, const char *fileName, bo
       }
       else
       {
-         // TOFIX
-         //Con::printf("%s", buffer);
+         vm->printf(0, "%s", buffer);
       }
    }
    if(fileName)
@@ -427,7 +426,7 @@ void Dictionary::setEntryIntValue(Entry* e, U32 val)
 {
    if( e->mIsConstant )
    {
-// TOFIX      Con::errorf( "Cannot assign value to constant '%s'.", e->name );
+      vm->printf(0, "Cannot assign value to constant '%s'.", e->name );
       return;
    }
 
@@ -442,7 +441,7 @@ void Dictionary::setEntryFloatValue(Entry* e, F32 val)
 {
    if( e->mIsConstant )
    {
-// TOFIX      Con::errorf( "Cannot assign value to constant '%s'.", e->name );
+      vm->printf(0, "Cannot assign value to constant '%s'.", e->name );
       return;
    }
 
@@ -466,7 +465,7 @@ void Dictionary::setEntryStringValue(Dictionary::Entry* e, const char * value)
 {
    if( e->mIsConstant )
    {
-// TOFIX      Con::errorf( "Cannot assign value to constant '%s'.", e->name );
+      vm->printf(0, "Cannot assign value to constant '%s'.", e->name );
       return;
    }
 
