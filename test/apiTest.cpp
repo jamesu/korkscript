@@ -21,6 +21,8 @@ void MyLogger(U32 level, const char *consoleLine, void* userPtr)
 
 
 static std::unordered_map<StringTableEntry, VMObject*> gByName;
+static std::unordered_map<U32, VMObject*> gById;
+static KorkApi::SimObjectId gCurrentId = 1;
 
 static VMObject* FindByName(void* userPtr, StringTableEntry name, VMObject* parent)
 {
@@ -29,11 +31,26 @@ static VMObject* FindByName(void* userPtr, StringTableEntry name, VMObject* pare
    return it == gByName.end() ? NULL : it->second;
 }
 
+static VMObject* FindById(void* userPtr, KorkApi::SimObjectId ident)
+{
+   auto it = gById.find(ident);
+   return it == gById.end() ? NULL : it->second;
+}
+
 static VMObject* FindByPath(void* userPtr, const char* path)
 {
    if (!path) return NULL;
-   auto it = gByName.find(StringTable->insert(path));
-   return it == gByName.end() ? NULL : it->second;
+   
+   if (path[0] >= '0' && path[0] < '9')
+   {
+      auto numIt = gById.find(atoi(path));
+      return numIt == gById.end() ? NULL : numIt->second;
+   }
+   else
+   {
+      auto it = gByName.find(StringTable->insert(path));
+      return it == gByName.end() ? NULL : it->second;
+   }
 }
 
 //
@@ -131,6 +148,7 @@ struct MyBase
 {
    VMObject* mVMInstance;  // will be set post-construction
    StringTableEntry mName; // keep a copy so we can unregister cleanly
+   U32 mId;
 };
 
 static void* MyBase_Create(void* classUser, VMObject* object)
@@ -144,7 +162,10 @@ static void* MyBase_Create(void* classUser, VMObject* object)
 static bool MyBase_AddObject(Vm* vm, VMObject* object, bool placeAtRoot, U32 groupAddId)
 {
    MyBase* b = (MyBase*)object->userPtr;
+   
+   b->mId = gCurrentId++;
    gByName[b->mName] = object;
+   gById[b->mId] = object;
    
    return true;
 }
@@ -168,6 +189,10 @@ static void  MyBase_Destroy(void* classUser, void* instanceUser)
    if (base && base->mVMInstance)
    {
       gByName.erase(base->mName);
+      if (base->mId != 0)
+      {
+         gById.erase(base->mId);
+      }
    }
    delete base;
 }
@@ -227,8 +252,14 @@ void cEcho(void* object, int argc, const char** argv)
 int testScript(char* script, const char* filename)
 {
    Config cfg{};
+   cfg.mallocFn = [](size_t sz, void* user) {
+      return (void*)malloc(sz);
+   };
+   cfg.freeFn = [](void* ptr, void* user){
+      free(ptr);
+   };
    cfg.logFn = MyLogger;
-   cfg.iFind = { &FindByName, &FindByPath, NULL };
+   cfg.iFind = { &FindByName, &FindByPath, NULL, &FindById };
    Vm* vm = createVM(&cfg);
    if (!vm)
    {
