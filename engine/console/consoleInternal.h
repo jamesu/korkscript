@@ -135,7 +135,6 @@ public:
    
    void setVariable(StringTableEntry name, const char *value);
    void setVariableValue(StringTableEntry name, KorkApi::ConsoleValue value);
-   const char *getVariable(StringTableEntry name, bool *valid = NULL);
    
    U32 getCount() const
    {

@@ -559,12 +559,26 @@ void Vm::setLocalVariable(StringTableEntry name, KorkApi::ConsoleValue value)
 
 ConsoleValue Vm::getGlobalVariable(StringTableEntry name)
 {
-   return ConsoleValue();
+   Dictionary::Entry* e = mInternal->mEvalState.globalVars.getVariable(name);
+   
+   if (!e)
+   {
+      return ConsoleValue();
+   }
+   
+   return mInternal->mEvalState.globalVars.getEntryValue(e);
 }
 
 ConsoleValue Vm::getLocalVariable(StringTableEntry name)
 {
-   return ConsoleValue();
+   Dictionary::Entry* e = mInternal->mEvalState.stack.last()->getVariable(name);
+   
+   if (!e)
+   {
+      return ConsoleValue();
+   }
+   
+   return mInternal->mEvalState.stack.last()->getEntryValue(e);
 }
 
 
