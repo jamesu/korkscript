@@ -13,14 +13,6 @@
 namespace KorkApi
 {
 
-// Small helper to produce a zero-initialized ConsoleValue
-static inline ConsoleValue makeDefaultValue()
-{
-   ConsoleValue v;
-    return v;
-}
-
-// -------------------- Vm method stubs --------------------
 
 NamespaceId Vm::findNamespace(StringTableEntry name, StringTableEntry package)
 {
@@ -395,7 +387,7 @@ ConsoleValue Vm::evalCode(const char* code, const char* filename)
 {
     CodeBlock *newCodeBlock = new CodeBlock(mInternal);
     const char* result = newCodeBlock->compileExec(filename, code, false, filename ? -1 : 0); // TODO: should this be 0 or -1?
-    return makeDefaultValue();
+    return ConsoleValue();
 }
 
 ConsoleValue Vm::call(int argc, const char** argv)
@@ -428,7 +420,7 @@ bool Vm::callObjectFunction(VMObject* self, StringTableEntry funcName, int argc,
    else if (!self->ns)
    {
       // no ns
-      //warnf(ConsoleLogEntry::Script, "Con::execute - %d has no namespace: %s", object->getId(), argv[0]);
+      // TOFIX mInternal->printf(0, " Vm::callObjectFunction - %d has no namespace: %s", object->getId(), argv[0]);
       return false;
    }
 
@@ -436,7 +428,7 @@ bool Vm::callObjectFunction(VMObject* self, StringTableEntry funcName, int argc,
 
    if(ent == NULL)
    {
-      //warnf(ConsoleLogEntry::Script, "%s: undefined for object '%s' - id %d", funcName, object->getName(), object->getId());
+      // TOFIX mInternal->printf(0, "%s: undefined for object '%s' - id %d", funcName, object->getName(), object->getId());
 
       // Clean up arg buffers, if any.
       mInternal->mSTR.clearFunctionOffset();
@@ -499,7 +491,7 @@ bool Vm::callNamespaceFunction(NamespaceId nsId, StringTableEntry name, int argc
 
    if (!ent)
    {
-      // warnf(ConsoleLogEntry::Script, "%s: Unknown command.", argv[0]);
+      mInternal->printf(0, "%s: Unknown command.", argv[0]);
       // Clean up arg buffers, if any.
       mInternal->mSTR.clearFunctionOffset();
       return false;
@@ -532,25 +524,27 @@ VMObject* Vm::findObjectById(SimObjectId ident)
    return mInternal->mConfig.iFind.FindObjectByIdFn(ident);
 }
 
-bool Vm::setObjectFieldNative(VMObject* object, StringTableEntry fieldName, void* nativeValue, U32* arrayIndex)
+bool Vm::setObjectField(VMObject* object, StringTableEntry fieldName, ConsoleValue nativeValue, const char* arrayIndex)
 {
-   // try normal fields
-   // try custom fields
+   return mInternal->setObjectField(object, fieldName, arrayIndex, nativeValue);
 }
 
-bool Vm::setObjectFieldString(VMObject* object, StringTableEntry fieldName, const char* stringValue, U32* arrayIndex)
+bool Vm::setObjectFieldString(VMObject* object, StringTableEntry fieldName, const char* stringValue, const char* arrayIndex)
 {
-    // no-op
+   ConsoleValue val = ConsoleValue::makeString(stringValue);
+   return mInternal->setObjectField(object, fieldName, arrayIndex, val);
 }
 
-bool Vm::getObjectFieldNative(VMObject* object, StringTableEntry fieldName, void* nativeValue, U32* arrayIndex)
+ConsoleValue Vm::getObjectField(VMObject* object, StringTableEntry fieldName, ConsoleValue nativeValue, const char* arrayIndex)
 {
-    return false;
+    return mInternal->getObjectField(object, fieldName, arrayIndex, KorkApi::TypeDirectCopy, KorkApi::ConsoleValue::ZoneExternal);
 }
 
-bool Vm::getObjectFieldString(VMObject* object, StringTableEntry fieldName, const char** stringValue, U32* arrayIndex)
+const char* Vm::getObjectFieldString(VMObject* object, StringTableEntry fieldName, const char** stringValue, const char* arrayIndex)
 {
-    return false;
+   ConsoleValue foundValue = mInternal->getObjectField(object, fieldName, arrayIndex, KorkApi::TypeDirectCopy, KorkApi::ConsoleValue::ZoneReturn);
+   
+   return (const char*)foundValue.evaluatePtr(mInternal->mAllocBase);
 }
 
 void Vm::setGlobalVariable(StringTableEntry name, const char* value)
@@ -740,7 +734,7 @@ const char* VmInternal::tempIntConv(U64 val)
    return mTempStringConversions[mConvIndex++];
 }
 
-void VmInternal::setObjectField(VMObject* obj, StringTableEntry name, const char* array, ConsoleValue value)
+bool VmInternal::setObjectField(VMObject* obj, StringTableEntry name, const char* array, ConsoleValue value)
 {
    if ((obj->flags & KorkApi::ModStaticFields) != 0)
    {
@@ -777,13 +771,16 @@ void VmInternal::setObjectField(VMObject* obj, StringTableEntry name, const char
                                  f.flag,
                                  tid);
       }
-      return;
+      return true;
    }
 
    if ((obj->flags & KorkApi::ModDynamicFields) != 0)
    {
       obj->klass->iCustomFields.SetFieldByName(obj, name, value);
+      return true;
    }
+   
+   return false;
 }
 
 ConsoleValue VmInternal::getObjectField(VMObject* obj, StringTableEntry name, const char* array, U32 requestedType, U32 requestedZone)
@@ -816,6 +813,12 @@ ConsoleValue VmInternal::getObjectField(VMObject* obj, StringTableEntry name, co
 
       U8* base = static_cast<U8*>(obj->userPtr);
       U8* dptr = base + f.offset + (idx * (U32)tinfo.size);
+      
+      // Add requested type
+      if ((requestedType & KorkApi::TypeDirectCopy) != 0)
+      {
+         requestedType |= f.type;
+      }
 
       return tinfo.iFuncs.CopyValue(
          tinfo.userPtr,
@@ -828,6 +831,7 @@ ConsoleValue VmInternal::getObjectField(VMObject* obj, StringTableEntry name, co
       );
    }
    
+   return def;
 }
 
 F64 Vm::valueAsFloat(ConsoleValue v)

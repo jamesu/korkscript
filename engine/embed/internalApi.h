@@ -70,7 +70,7 @@ struct VmInternal
    const char* tempFloatConv(F64 val);
    const char* tempIntConv(U64 val);
 
-   void setObjectField(VMObject* object, StringTableEntry name, const char* array, ConsoleValue value);
+   bool setObjectField(VMObject* object, StringTableEntry name, const char* array, ConsoleValue value);
    ConsoleValue getObjectField(VMObject* object, StringTableEntry name, const char* array, U32 requestedType, U32 requestedZone);
 
    void printf(int level, const char* fmt, ...);
