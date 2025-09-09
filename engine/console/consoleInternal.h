@@ -115,9 +115,13 @@ public:
    U32 getEntryIntValue(Entry* e);   
    F32 getEntryFloatValue(Entry* e);
    const char *getEntryStringValue(Entry* e);
+   KorkApi::ConsoleValue getEntryValue(Entry* e);
+
    void setEntryIntValue(Entry* e, U32 val);
    void setEntryFloatValue(Entry* e, F32 val);
    void setEntryStringValue(Entry* e, const char *value);
+   void setEntryTypeValue(Entry* e, U32 typeId, void * value);
+   void setEntryValue(Entry* e, KorkApi::ConsoleValue value);
    
    Entry *lookup(StringTableEntry name);
    Entry* getVariable(StringTableEntry name);
@@ -130,6 +134,7 @@ public:
    void deleteVariables( const char *varString );
    
    void setVariable(StringTableEntry name, const char *value);
+   void setVariableValue(StringTableEntry name, KorkApi::ConsoleValue value);
    const char *getVariable(StringTableEntry name, bool *valid = NULL);
    
    U32 getCount() const

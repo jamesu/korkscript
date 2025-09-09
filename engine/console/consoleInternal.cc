@@ -432,6 +432,11 @@ const char *Dictionary::getEntryStringValue(Entry* e)
    }
 }
 
+KorkApi::ConsoleValue Dictionary::getEntryValue(Entry* e)
+{
+   return e->mConsoleValue;
+}
+
 void Dictionary::setEntryIntValue(Entry* e, U32 val)
 {
    if( e->mIsConstant )
@@ -497,12 +502,68 @@ void Dictionary::setEntryStringValue(Dictionary::Entry* e, const char * value)
                               KorkApi::ConsoleValue::ZoneVmHeap);
 }
 
+void Dictionary::setEntryTypeValue(Dictionary::Entry* e, U32 typeId, void * value)
+{
+   if( e->mIsConstant )
+   {
+      vm->printf(0, "Cannot assign value to constant '%s'.", e->name );
+      return;
+   }
+
+   KorkApi::TypeInfo& info = vm->mTypes[e->mConsoleValue.typeId];
+   U32 expectedSize = info.size;
+   
+   if (e->mHeapAlloc && e->mHeapAlloc->size < expectedSize)
+   {
+      vm->releaseHeapRef(e->mHeapAlloc);
+      e->mHeapAlloc = NULL;
+   }
+
+   if (!e->mHeapAlloc)
+   {
+      e->mHeapAlloc = vm->createHeapRef(expectedSize);
+   }
+
+   memcpy(e->mHeapAlloc->ptr(), value, expectedSize);
+   e->mConsoleValue.setString((const char*)e->mHeapAlloc->ptr(),
+                              KorkApi::ConsoleValue::ZoneVmHeap);
+}
+
+void Dictionary::setEntryValue(Entry* e, KorkApi::ConsoleValue value)
+{
+   if (value.typeId == KorkApi::ConsoleValue::TypeInternalString)
+   {
+      setEntryStringValue(e, (const char*)value.evaluatePtr(vm->mAllocBase));
+   }
+   else if (value.typeId >= KorkApi::ConsoleValue::TypeBeginCustom)
+   {
+      setEntryTypeValue(e, value.typeId, value.evaluatePtr(vm->mAllocBase));
+   }
+   else
+   {
+      e->mConsoleValue = value;
+
+      if (e->mHeapAlloc)
+      {
+         vm->releaseHeapRef(e->mHeapAlloc);
+         e->mHeapAlloc = NULL;
+      }
+   }
+}
+
+
 void Dictionary::setVariable(StringTableEntry name, const char *value)
 {
    Entry *ent = add(name);
    if(!value)
       value = "";
    setEntryStringValue(ent, value);
+}
+
+void Dictionary::setVariableValue(StringTableEntry name, KorkApi::ConsoleValue value)
+{
+   Entry *ent = add(name);
+   setEntryValue(ent, value);
 }
 
 Dictionary::Entry* Dictionary::addVariable(  const char *name,

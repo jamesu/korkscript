@@ -372,8 +372,8 @@ public:
    ConsoleValue getObjectField(VMObject* object, StringTableEntry fieldName, ConsoleValue nativeValue, const char* arrayIndex);
    const char* getObjectFieldString(VMObject* object, StringTableEntry fieldName, const char** stringValue, const char* arrayIndex);
 
-   void setGlobalVariable(StringTableEntry name, const char* value);
-   void setLocalVariable(StringTableEntry name, const char* value);
+   void setGlobalVariable(StringTableEntry name, ConsoleValue value);
+   void setLocalVariable(StringTableEntry name, ConsoleValue value);
    ConsoleValue getGlobalVariable(StringTableEntry name);
    ConsoleValue getLocalVariable(StringTableEntry name);
 

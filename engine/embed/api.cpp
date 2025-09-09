@@ -547,14 +547,14 @@ const char* Vm::getObjectFieldString(VMObject* object, StringTableEntry fieldNam
    return (const char*)foundValue.evaluatePtr(mInternal->mAllocBase);
 }
 
-void Vm::setGlobalVariable(StringTableEntry name, const char* value)
+void Vm::setGlobalVariable(StringTableEntry name, KorkApi::ConsoleValue value)
 {
-   mInternal->mEvalState.globalVars.setVariable(name, value);
+   mInternal->mEvalState.globalVars.setVariableValue(name, value);
 }
 
-void Vm::setLocalVariable(StringTableEntry name, const char* value)
+void Vm::setLocalVariable(StringTableEntry name, KorkApi::ConsoleValue value)
 {
-   mInternal->mEvalState.stack.last()->setVariable(name, value);
+   mInternal->mEvalState.stack.last()->setVariableValue(name, value);
 }
 
 ConsoleValue Vm::getGlobalVariable(StringTableEntry name)
