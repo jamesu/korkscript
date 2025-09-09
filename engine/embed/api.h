@@ -47,12 +47,7 @@ using VMNamespace = Namespace;
 
 typedef S32 TypeId;
 
-struct TypeInterface
-{
-// argv[] -> dptr
-// foo = bar
-// foo = b1, b2, b3
-void(*SetValueFn)(void* userPtr,
+typedef void(*SetValueFn)(void* userPtr,
                   Vm* vm,
                           void* dptr,
                           S32 argc,
@@ -63,13 +58,24 @@ void(*SetValueFn)(void* userPtr,
 
 // sptr -> [return]
 // destVal = srcVal
-ConsoleValue(*CopyValue)(void* userPtr,
+typedef ConsoleValue(*CopyValueFn)(void* userPtr,
                   Vm* vm,
                          void* sptr,
                          const EnumTable* tbl,
                          BitSet32 flag,
                          U32 requestedType,
                          U32 requestedZone);
+
+struct TypeInterface
+{
+// argv[] -> dptr
+// foo = bar
+// foo = b1, b2, b3
+SetValueFn SetValue;
+
+// sptr -> [return]
+// destVal = srcVal
+CopyValueFn CopyValue;
 
 // TypeName
 const char*(*GetTypeClassNameFn)(void* userPtr);
@@ -96,12 +102,8 @@ struct TypeInfo
 // Class Field Info
 //
 
-/// This is a function pointer typedef to support get/set callbacks for fields
-typedef bool (*SetDataNotify)( void *obj, const char *data );
-typedef const char *(*GetDataNotify)( void *obj, const char *data );
-
 /// This is a function pointer typedef to support optional writing for fields.
-typedef bool (*WriteDataNotify)( void* obj, const char* pFieldName );
+typedef bool (*WriteDataNotifyFn)( void* obj, StringTableEntry pFieldName );
 
 struct FieldInfo {
    const char* pFieldname;    ///< Name of the field.
@@ -111,9 +113,9 @@ struct FieldInfo {
    EnumTable *     table;         ///< If this is an enum, this points to the table defining it.
    const char*     pFieldDocs;    ///< Documentation about this field; see consoleDoc.cc.
    TypeValidator*  validator;     ///< Validator, if any.
-   SetDataNotify   setDataFn;     ///< Set data notify Fn
-   GetDataNotify   getDataFn;     ///< Get data notify Fn
-   WriteDataNotify writeDataFn;   ///< Function to determine whether data should be written or not.
+   SetValueFn        ovrSetValue;   ///< Set data notify Fn
+   CopyValueFn       ovrCopyValue;  ///< Get data notify Fn
+   WriteDataNotifyFn writeDataFn;   ///< Function to determine whether data should be written or not.
    S32             elementCount;  ///< Number of elements, if this is an array.
    U32             offset;        ///< Memory offset from beginning of class for this field.
    BitSet32        flag;          ///< Stores various flags

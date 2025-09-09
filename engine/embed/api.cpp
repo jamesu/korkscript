@@ -755,21 +755,22 @@ bool VmInternal::setObjectField(VMObject* obj, StringTableEntry name, const char
             break;
          
          TypeInfo& tinfo = mTypes[tid];
-         if (!tinfo.iFuncs.SetValueFn || tinfo.size == 0)
+         if (!tinfo.iFuncs.SetValue || tinfo.size == 0)
             break;
          
-         U8* base = static_cast<std::uint8_t*>(obj->userPtr);
+         U8* base = static_cast<U8*>(obj->userPtr);
          U8* dptr = base + f.offset + (idx * (U32)tinfo.size);
          
-         tinfo.iFuncs.SetValueFn(
-                                 tinfo.userPtr,
-                                 mVM,
-                                 dptr,
-                                 1,
-                                 &value,
-                                 f.table,
-                                 f.flag,
-                                 tid);
+         SetValueFn setFn = f.ovrSetValue ? f.ovrSetValue : tinfo.iFuncs.SetValue;
+
+         setFn(f.ovrSetValue ? obj->userPtr : tinfo.userPtr,
+               mVM,
+               dptr,
+               1,
+               &value,
+               f.table,
+               f.flag,
+               tid);
       }
       return true;
    }
@@ -785,7 +786,6 @@ bool VmInternal::setObjectField(VMObject* obj, StringTableEntry name, const char
 
 ConsoleValue VmInternal::getObjectField(VMObject* obj, StringTableEntry name, const char* array, U32 requestedType, U32 requestedZone)
 {
-   
    // Default result if nothing matches.
    ConsoleValue def;
    if (!obj || !obj->klass || !obj->klass->fields)
@@ -820,9 +820,11 @@ ConsoleValue VmInternal::getObjectField(VMObject* obj, StringTableEntry name, co
          requestedType |= f.type;
       }
 
-      return tinfo.iFuncs.CopyValue(
-         tinfo.userPtr,
-                                    mVM,
+      CopyValueFn copyFn = f.ovrCopyValue ? f.ovrCopyValue : tinfo.iFuncs.CopyValue;
+
+      return copyFn(
+         f.ovrCopyValue ? obj->userPtr : tinfo.userPtr,
+         mVM,
          dptr,
          f.table,
          f.flag,
