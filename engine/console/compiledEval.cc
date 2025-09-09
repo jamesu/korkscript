@@ -1036,7 +1036,7 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
                   break;
                }
             }
-            curObject = mVM->mConfig.iFind.FindObjectByPathFn(val);
+            curObject = mVM->mConfig.iFind.FindObjectByPathFn(mVM->mConfig.findUser, val);
             break;
             
          case OP_SETCUROBJECT_INTERNAL:
@@ -1348,7 +1348,7 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
             else if(callType == FuncCallExprNode::MethodCall)
             {
                saveObject = mVM->mEvalState.thisObject;
-               mVM->mEvalState.thisObject = mVM->mConfig.iFind.FindObjectByPathFn(callArgv[1]);
+               mVM->mEvalState.thisObject = mVM->mConfig.iFind.FindObjectByPathFn(mVM->mConfig.findUser, callArgv[1]);
                
                if(!mVM->mEvalState.thisObject)
                {

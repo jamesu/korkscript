@@ -22,14 +22,14 @@ void MyLogger(U32 level, const char *consoleLine, void* userPtr)
 
 static std::unordered_map<StringTableEntry, VMObject*> gByName;
 
-static VMObject* FindByName(StringTableEntry name, VMObject* parent)
+static VMObject* FindByName(void* userPtr, StringTableEntry name, VMObject* parent)
 {
    if (!name) return NULL;
    auto it = gByName.find(name);
    return it == gByName.end() ? NULL : it->second;
 }
 
-static VMObject* FindByPath(const char* path)
+static VMObject* FindByPath(void* userPtr, const char* path)
 {
    if (!path) return NULL;
    auto it = gByName.find(StringTable->insert(path));
@@ -288,9 +288,7 @@ int testScript(char* script, const char* filename)
    vm->addNamespaceFunction(playerNS, StringTable->insert("jump"), (KorkApi::VoidFuncCallback)cPlayerJump, "()", 2, 2);
    vm->evalCode(script, filename);
    
-   
-   // Optionally, prove C++ side can Find it as well:
-   VMObject* found = cfg.iFind.FindObjectByNameFn("player1", NULL);
+   VMObject* found = cfg.iFind.FindObjectByNameFn(cfg.findUser, "player1", NULL);
    AssertFatal(found, "player1 should be registered in iFind");
    
    destroyVm(vm);

@@ -95,6 +95,38 @@ const char* Vm::tabCompleteVariable(const char *prevText, S32 baseLen, bool fFor
 TypeId Vm::registerType(TypeInfo& info)
 {
    mInternal->mTypes.push_back(info);
+   
+   TypeInfo& chkFunc = mInternal->mTypes.last();
+   
+   // stubs
+   
+   if (chkFunc.iFuncs.CopyValue == NULL)
+   {
+      chkFunc.iFuncs.CopyValue = [](void* userPtr,
+                                    Vm* vm,
+                                           void* sptr,
+                                           const EnumTable* tbl,
+                                           BitSet32 flag,
+                                           U32 requestedType,
+                                           U32 requestedZone){
+         return ConsoleValue();
+      };
+   }
+   
+   if (chkFunc.iFuncs.SetValue == NULL)
+   {
+      chkFunc.iFuncs.SetValue = [](void* userPtr,
+                                   Vm* vm,
+                                           void* dptr,
+                                           S32 argc,
+                                           ConsoleValue* argv,
+                                           const EnumTable* tbl,
+                                           BitSet32 flag,
+                                           U32 typeId){
+         
+      };
+   }
+   
    return mInternal->mTypes.size()-1;
 }
 
@@ -106,6 +138,78 @@ TypeInfo* Vm::getTypeInfo(TypeId ident)
 ClassId Vm::registerClass(ClassInfo& info)
 {
    mInternal->mClassList.push_back(info);
+   
+   ClassInfo& chkFunc = mInternal->mClassList.last();
+   
+   // iCreate stubs
+   
+   if (chkFunc.iCreate.CreateClassFn == NULL)
+   {
+      chkFunc.iCreate.CreateClassFn = [](void* user, VMObject* object) {
+         return (void*)NULL;
+      };
+   }
+   if (chkFunc.iCreate.DestroyClassFn == NULL)
+   {
+      chkFunc.iCreate.DestroyClassFn = [](void* user, void* createdPtr) {
+      };
+   }
+   if (chkFunc.iCreate.ProcessArgs == NULL)
+   {
+      chkFunc.iCreate.ProcessArgs = [](Vm* vm, VMObject* object, const char* name, bool isDatablock, bool internalName, int argc, const char** argv) {
+         return false;
+      };
+   }
+   if (chkFunc.iCreate.AddObject == NULL)
+   {
+      chkFunc.iCreate.AddObject = [](Vm* vm, VMObject* object, bool placeAtRoot, U32 groupAddId) {
+         return false;
+      };
+   }
+   if (chkFunc.iCreate.GetId == NULL)
+   {
+      chkFunc.iCreate.GetId = [](VMObject* object) {
+         return ConsoleValue();
+      };
+   }
+   
+   // iEnum stubs
+   
+   if (chkFunc.iEnum.GetSize == NULL)
+   {
+      chkFunc.iEnum.GetSize = [](VMObject* object) { return (U32)0; };
+   }
+   if (chkFunc.iEnum.GetObjectAtIndex == NULL)
+   {
+      chkFunc.iEnum.GetObjectAtIndex = [](VMObject* object, U32 index) { return (VMObject*)NULL; };
+   }
+   
+   // iCustomFields stubs
+   if (chkFunc.iCustomFields.IterateFields == NULL)
+   {
+      chkFunc.iCustomFields.IterateFields = [](KorkApi::VMObject* object, VMIterator& state, StringTableEntry* name){
+         return false;
+      };
+   }
+   if (chkFunc.iCustomFields.GetFieldByIterator == NULL)
+   {
+      chkFunc.iCustomFields.GetFieldByIterator = [](VMObject* object, VMIterator& state){
+         return ConsoleValue();
+      };
+   }
+   if (chkFunc.iCustomFields.GetFieldByName == NULL)
+   {
+      chkFunc.iCustomFields.GetFieldByName = [](VMObject* object, const char* name){
+         return ConsoleValue();
+      };
+   }
+   if (chkFunc.iCustomFields.SetFieldByName == NULL)
+   {
+      chkFunc.iCustomFields.SetFieldByName = [](VMObject* object, const char* name, ConsoleValue value){
+      };
+   }
+      
+   
    return mInternal->mClassList.size()-1;
 }
 
@@ -511,17 +615,17 @@ bool Vm::callNamespaceFunction(NamespaceId nsId, StringTableEntry name, int argc
 // Helpers (should call into user funcs)
 VMObject* Vm::findObjectByName(const char* name)
 {
-    return mInternal->mConfig.iFind.FindObjectByNameFn(name, NULL);
+    return mInternal->mConfig.iFind.FindObjectByNameFn(mInternal->mConfig.findUser, name, NULL);
 }
 
 VMObject* Vm::findObjectByPath(const char* path)
 {
-    return mInternal->mConfig.iFind.FindObjectByPathFn(path);
+    return mInternal->mConfig.iFind.FindObjectByPathFn(mInternal->mConfig.findUser, path);
 }
 
 VMObject* Vm::findObjectById(SimObjectId ident)
 {
-   return mInternal->mConfig.iFind.FindObjectByIdFn(ident);
+   return mInternal->mConfig.iFind.FindObjectByIdFn(mInternal->mConfig.findUser, ident);
 }
 
 bool Vm::setObjectField(VMObject* object, StringTableEntry fieldName, ConsoleValue nativeValue, const char* arrayIndex)
@@ -617,10 +721,14 @@ void Vm::setTracing(bool value)
 
 Vm* createVM(Config* cfg)
 {
-    // For stubs, we don't keep state yet.
-    Vm* vm = new Vm();
-    vm->mInternal = new VmInternal(vm, cfg);
-    return vm;
+   if (cfg->mallocFn == NULL || cfg->freeFn == NULL)
+   {
+      return NULL;
+   }
+   
+   Vm* vm = new Vm();
+   vm->mInternal = new VmInternal(vm, cfg);
+   return vm;
 }
 
 void destroyVm(Vm* vm)
@@ -666,6 +774,37 @@ VmInternal::VmInternal(Vm* vm, Config* cfg) : mSTR(&mAllocBase), mEvalState(this
    // TODO
    
    mTypes.push_back(typeInfo);
+   
+   // Config Stubs
+   
+   if (mConfig.logFn == NULL) {
+      mConfig.logFn = [](U32 level, const char* buffer, void* user) {
+      };
+   }
+
+   if (mConfig.iFind.FindObjectByNameFn == NULL) {
+      mConfig.iFind.FindObjectByNameFn = [](void* userPtr, StringTableEntry name, VMObject* parent) {
+           return (VMObject*)NULL;
+       };
+   }
+
+   if (mConfig.iFind.FindObjectByPathFn == NULL) {
+      mConfig.iFind.FindObjectByPathFn = [](void* userPtr, const char* path) {
+         return (VMObject*)NULL;
+       };
+   }
+
+   if (mConfig.iFind.FindObjectByInternalNameFn == NULL) {
+      mConfig.iFind.FindObjectByInternalNameFn = [](void* userPtr, StringTableEntry name, bool recursive, VMObject* parent) {
+         return (VMObject*)NULL;
+       };
+   }
+
+   if (mConfig.iFind.FindObjectByIdFn == NULL) {
+      mConfig.iFind.FindObjectByIdFn = [](void* userPtr, SimObjectId ident) {
+         return (VMObject*)NULL;
+       };
+   }
 }
 
 VmInternal::~VmInternal()

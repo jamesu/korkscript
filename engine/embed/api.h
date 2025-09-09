@@ -102,25 +102,23 @@ struct TypeInfo
 // Class Field Info
 //
 
-/// This is a function pointer typedef to support optional writing for fields.
 typedef bool (*WriteDataNotifyFn)( void* obj, StringTableEntry pFieldName );
 
 struct FieldInfo {
-   const char* pFieldname;    ///< Name of the field.
-   const char* pGroupname;    ///< Optionally filled field containing the group name.
-   ///
-   ///  This is filled when type is StartField or EndField
-   EnumTable *     table;         ///< If this is an enum, this points to the table defining it.
-   const char*     pFieldDocs;    ///< Documentation about this field; see consoleDoc.cc.
-   TypeValidator*  validator;     ///< Validator, if any.
-   SetValueFn        ovrSetValue;   ///< Set data notify Fn
-   CopyValueFn       ovrCopyValue;  ///< Get data notify Fn
-   WriteDataNotifyFn writeDataFn;   ///< Function to determine whether data should be written or not.
-   S32             elementCount;  ///< Number of elements, if this is an array.
-   U32             offset;        ///< Memory offset from beginning of class for this field.
-   BitSet32        flag;          ///< Stores various flags
-   U16             type;          ///< A type ID. @see ACRFieldTypes
-   bool            groupExpand;   ///< Flag to track expanded/not state of this group in the editor.
+   const char* pFieldname;
+   const char* pGroupname;
+   
+   EnumTable *     table;
+   const char*     pFieldDocs;
+   TypeValidator*  validator;
+   SetValueFn        ovrSetValue;
+   CopyValueFn       ovrCopyValue;
+   WriteDataNotifyFn writeDataFn;
+   S32             elementCount;
+   U32             offset;
+   BitSet32        flag;
+   U16             type;
+   bool            groupExpand;
 };
 
 //
@@ -131,13 +129,13 @@ struct ClassInfo;
 
 enum ObjectFlags : U32
 {
-    Deleted   = BIT(0),   ///< This object is marked for deletion.
-    Removed   = BIT(1),   ///< This object has been unregistered from the object system.
-    Added     = BIT(3),   ///< This object has been registered with the object system.
-    Selected  = BIT(4),   ///< This object has been marked as selected. (in editor)
-    Expanded  = BIT(5),   ///< This object has been marked as expanded. (in editor)
-    ModStaticFields  = BIT(6),    ///< The object allows you to read/modify static fields
-    ModDynamicFields = BIT(7)     ///< The object allows you to read/modify dynamic fields
+    Deleted   = BIT(0),
+    Removed   = BIT(1),
+    Added     = BIT(3),
+    Selected  = BIT(4),
+    Expanded  = BIT(5),
+    ModStaticFields  = BIT(6),
+    ModDynamicFields = BIT(7)
 };
 
 enum TypeFlags : U32
@@ -216,10 +214,10 @@ struct ClassInfo {
 // Finding objects
 struct FindObjectsInterface
 {
-	VMObject* (*FindObjectByNameFn)(StringTableEntry name, VMObject* parent);
-    VMObject* (*FindObjectByPathFn)(const char* path);
-	VMObject* (*FindObjectByInternalNameFn)(StringTableEntry internalName, bool recursive, VMObject* parent);
-	VMObject* (*FindObjectByIdFn)(SimObjectId objectId);
+	VMObject* (*FindObjectByNameFn)(void* userPtr, StringTableEntry name, VMObject* parent);
+    VMObject* (*FindObjectByPathFn)(void* userPtr, const char* path);
+	VMObject* (*FindObjectByInternalNameFn)(void* userPtr, StringTableEntry internalName, bool recursive, VMObject* parent);
+	VMObject* (*FindObjectByIdFn)(void* userPtr, SimObjectId objectId);
 };
 
 
@@ -239,6 +237,7 @@ struct Config {
   void*            logUser;
 
   FindObjectsInterface iFind;
+   void* findUser;
 };
 
 struct ConsoleHeapAlloc
@@ -262,33 +261,11 @@ typedef ConsoleHeapAlloc* ConsoleHeapAllocRef;
 struct VmInternal;
 
 
-/// Various configuration constants.
 enum Constants 
 {
-  /// This is the version number associated with DSO files.
-  ///
-  /// If you make any changes to the way the scripting language works
-  /// (such as DSO format changes, adding/removing op-codes) that would
-  /// break compatibility, then you should increment this.
-  ///
-  /// If you make a really major change, increment it to the next multiple
-  /// of ten.
-  ///
-  /// 12/29/04 - BJG - 33->34 Removed some opcodes, part of namespace upgrade.
-  /// 12/30/04 - BJG - 34->35 Reordered some things, further general shuffling.
-  /// 11/03/05 - BJG - 35->36 Integrated new debugger code.
-  //  09/08/06 - THB - 36->37 New opcode for internal names
-  //  09/15/06 - THB - 37->38 Added unit conversions
-  //  11/23/06 - THB - 38->39 Added recursive internal name operator
-  //  02/15/07 - THB - 39->40 Bumping to 40 for TGB since the console has been majorly hacked without the version number being bumped
-  //  02/16/07 - THB - 40->41 newmsg operator
-  //  02/16/07 - PAUP - 41->42 DSOs are read with a pointer before every string(ASTnodes changed). Namespace and HashTable revamped
-  //  05/17/10 - Luma - 42-43 Adding proper sceneObject physics flags, fixes in general
-  //  02/07/13 - JU   - 43->44 Expanded the width of stringtable entries to  64bits 
-  //  tgemit - 77 set for now just to make it distinct
   DSOVersion = 77,
-  MaxLineLength = 512,  ///< Maximum length of a line of console input.
-  MaxDataTypes = 256    ///< Maximum number of registered data types.
+  MaxLineLength = 512,
+  MaxDataTypes = 256
 };
 
 enum
