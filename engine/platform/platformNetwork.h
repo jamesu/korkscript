@@ -57,7 +57,9 @@ struct NetAddress
       IPV6Address,
       
       IPBroadcastAddress,
-      IPV6MulticastAddress
+      IPV6MulticastAddress,
+
+      Invalid
    };
    
    union
@@ -153,6 +155,11 @@ struct NetAddress
       
       return false;
    }
+
+   const U32 getIPV4Code() const
+   {
+      return *((U32*)address.ipv4.netNum);
+   }
    
    U32 getHash() const;
 };
@@ -228,7 +235,7 @@ struct Net
    static Error sendtoSocket(NetSocket socket, const U8 *buffer, S32 bufferSize, S32 *bytesWritten=NULL);
 
    static bool compareAddresses(const NetAddress *a1, const NetAddress *a2);
-   static Net::Error stringToAddress(const char *addressString, NetAddress *address, bool hostLookup=true, int family=0);
+   static Net::Error stringToAddress(const char *addressString, NetAddress *address, bool hostLookup=true, NetAddress::Type requiredType = NetAddress::Invalid);
    static void addressToString(const NetAddress *address, char addressString[256]);
 
    // lower level socked based network functions

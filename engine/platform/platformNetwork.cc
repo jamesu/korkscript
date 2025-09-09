@@ -23,17 +23,124 @@
 #include "core/torqueConfig.h"
 #include "platform/platformNetwork.h"
 #include "platform/threads/mutex.h"
+//#include "platform/event.h"
 #include "core/hashFunction.h"
+//#include "console/console.h"
 #include "core/fileStream.h"
 #include "core/tVector.h"
 #include "platform/platformNetAsync.h"
+//#include "platform/gameInterface.h"
 #include <string.h>
+#include <stdio.h>
+#include "core/freeListHandleHelpers.h"
+#include <algorithm>
 
 // jamesu - debug DNS
 //#define TORQUE_DEBUG_LOOKUPS
 
+namespace PlatformNetState
+{
 
-#if defined (TORQUE_OS_WIN32)
+   /// Extracts core address parts from an address string. Returns false if it's malformed.
+   bool extractAddressParts(const char *addressString, char outAddress[256], int &outPort, NetAddress::Type &outType)
+   {
+      outPort = 0;
+      outType = NetAddress::Invalid;
+      
+      if (!dStrnicmp(addressString, "ipx:", 4))
+         // ipx support deprecated
+         return false;
+      
+      if (!dStrnicmp(addressString, "ip:", 3))
+      {
+         addressString += 3;  // eat off the ip:
+         outType = NetAddress::IPAddress;
+      }
+      else if (!dStrnicmp(addressString, "ip6:", 4))
+      {
+         addressString += 4;  // eat off the ip6:
+         outType = NetAddress::IPV6Address;
+      }
+      
+      if (strlen(addressString) > 255)
+         return false;
+      
+      char *portString = NULL;
+      
+      if (addressString[0] == '[')
+      {
+         // Must be ipv6 notation
+         dStrcpy(outAddress, addressString+1);
+         addressString = outAddress;
+         
+         portString = dStrchr(outAddress, ']');
+         if (portString)
+         {
+            // Sort out the :port after the ]
+            *portString++ = '\0';
+            if (*portString != ':')
+            {
+               portString = NULL;
+            }
+            else
+            {
+               *portString++ = '\0';
+            }
+         }
+         
+         if (outType == NetAddress::Invalid)
+         {
+            outType = NetAddress::IPV6Address;
+         }
+      }
+      else
+      {
+         dStrcpy(outAddress, addressString);
+         addressString = outAddress;
+         
+         // Check to see if we have multiple ":" which would indicate this is an ipv6 address
+         char* scan = outAddress;
+         int colonCount = 0;
+         while (*scan != '\0' && colonCount < 2)
+         {
+            if (*scan++ == ':')
+               colonCount++;
+         }
+         if (colonCount <= 1)
+         {
+            // either ipv4 or host
+            portString = dStrchr(outAddress, ':');
+            
+            if (portString)
+            {
+               *portString++ = '\0';
+            }
+         }
+         else if (outType == NetAddress::Invalid)
+         {
+            // Must be ipv6
+            outType = NetAddress::IPV6Address;
+         }
+      }
+      
+      if (portString)
+      {
+         outPort = dAtoi(portString);
+      }
+      
+      return true;
+   }
+   
+}
+
+
+#if defined (TORQUE_NO_SOCKETS)
+
+typedef S32 SOCKET;
+
+#define STUB_NETWORK
+
+#elif defined (TORQUE_OS_WIN32)
 #define TORQUE_USE_WINSOCK
 #include <errno.h>
 #include <ws2tcpip.h>
@@ -195,11 +302,15 @@ public:
 
 const SOCKET InvalidSocketHandle = -1;
 
+
+#ifndef STUB_NETWORK
 static void IPSocketToNetAddress(const struct sockaddr_in *sockAddr, NetAddress *address);
 static void IPSocket6ToNetAddress(const struct sockaddr_in6 *sockAddr, NetAddress *address);
+#endif
 
 namespace PlatformNetState
 {
+#ifndef STUB_NETWORK
    static S32 initCount = 0;
    
    static const S32 defaultPort = 28000;
@@ -210,9 +321,10 @@ namespace PlatformNetState
    static NetSocket multicast6Socket = NetSocket::INVALID;
    
    static ipv6_mreq multicast6Group;
-   
+
    static ReservedSocketList<SOCKET> smReservedSocketList;
    
+
    Net::Error getLastError()
    {
 #if defined(TORQUE_USE_WINSOCK)
@@ -265,97 +377,7 @@ namespace PlatformNetState
       
       return NULL;
    }
-   
-   /// Extracts core address parts from an address string. Returns false if it's malformed.
-   bool extractAddressParts(const char *addressString, char outAddress[256], int &outPort, int &outFamily)
-   {
-      outPort = 0;
-      outFamily = AF_UNSPEC;
-      
-      if (!dStrnicmp(addressString, "ipx:", 4))
-         // ipx support deprecated
-         return false;
-      
-      if (!dStrnicmp(addressString, "ip:", 3))
-      {
-         addressString += 3;  // eat off the ip:
-         outFamily = AF_INET;
-      }
-      else if (!dStrnicmp(addressString, "ip6:", 4))
-      {
-         addressString += 4;  // eat off the ip6:
-         outFamily = AF_INET6;
-      }
-      
-      if (strlen(addressString) > 255)
-         return false;
-      
-      char *portString = NULL;
-      
-      if (addressString[0] == '[')
-      {
-         // Must be ipv6 notation
-         dStrcpy(outAddress, addressString+1);
-         addressString = outAddress;
-         
-         portString = dStrchr(outAddress, ']');
-         if (portString)
-         {
-            // Sort out the :port after the ]
-            *portString++ = '\0';
-            if (*portString != ':')
-            {
-               portString = NULL;
-            }
-            else
-            {
-               *portString++ = '\0';
-            }
-         }
-         
-         if (outFamily == AF_UNSPEC)
-         {
-            outFamily = AF_INET6;
-         }
-      }
-      else
-      {
-         dStrcpy(outAddress, addressString);
-         addressString = outAddress;
-         
-         // Check to see if we have multiple ":" which would indicate this is an ipv6 address
-         char* scan = outAddress;
-         int colonCount = 0;
-         while (*scan != '\0' && colonCount < 2)
-         {
-            if (*scan++ == ':')
-               colonCount++;
-         }
-         if (colonCount <= 1)
-         {
-            // either ipv4 or host
-            portString = dStrchr(outAddress, ':');
-            
-            if (portString)
-            {
-               *portString++ = '\0';
-            }
-         }
-         else if (outFamily == AF_UNSPEC)
-         {
-            // Must be ipv6
-            outFamily = AF_INET6;
-         }
-      }
-      
-      if (portString)
-      {
-         outPort = dAtoi(portString);
-      }
-      
-      return true;
-   }
-   
+
    Net::Error getSocketAddress(SOCKET socketFd, int requiredFamily, NetAddress *outAddress)
    {
       Net::Error error = Net::UnknownError;
@@ -391,9 +413,12 @@ namespace PlatformNetState
       
       return error;
    }
+
+#endif // STUB_NETWORK
 };
 
 
+#ifndef STUB_NETWORK
 
 template<class T> NetSocket ReservedSocketList<T>::reserve(SOCKET reserveId, bool doLock)
 {
@@ -830,8 +855,8 @@ NetSocket Net::openConnectTo(const char *addressString)
       // to the polled list
       char addr[256];
       int port = 0;
-      int actualFamily = AF_UNSPEC;
-      if (PlatformNetState::extractAddressParts(addressString, addr, port, actualFamily))
+      NetAddress::Type actualType = NetAddress::Invalid;
+      if (PlatformNetState::extractAddressParts(addressString, addr, port, actualType))
       {
          addPolledSocket(handleFd, InvalidSocketHandle, PolledSocket::NameLookupRequired, addr, port);
          // queue the lookup
@@ -919,9 +944,9 @@ bool Net::openPort(S32 port, bool doBind)
    }
    
    // Update prefs
-   Net::smMulticastEnabled = false; // TOFIX Con::getBoolVariable("pref::Net::Multicast6Enabled", true);
-   Net::smIpv4Enabled = false; // TOFIX Con::getBoolVariable("pref::Net::IPV4Enabled", true);
-   Net::smIpv6Enabled = false; // TOFIX Con::getBoolVariable("pref::Net::IPV6Enabled", false);
+   Net::smMulticastEnabled = false;// TOFIX Con::getBoolVariable("pref::Net::Multicast6Enabled", true);
+   Net::smIpv4Enabled = false;// TOFIX Con::getBoolVariable("pref::Net::IPV4Enabled", true);
+   Net::smIpv6Enabled = false;// TOFIX Con::getBoolVariable("pref::Net::IPV6Enabled", false);
    
    // we turn off VDP in non-release builds because VDP does not support broadcast packets
    // which are required for LAN queries (PC->Xbox connectivity).  The wire protocol still
@@ -1112,8 +1137,7 @@ Net::Error Net::sendto(const NetAddress *address, const U8 *buffer, S32  bufferS
 
 void Net::process()
 {
-   #if 0
-   // TOFIX
+   #if TOFIX
    // Process listening sockets
    processListenSocket(PlatformNetState::udpSocket);
    processListenSocket(PlatformNetState::udp6Socket);
@@ -1155,14 +1179,14 @@ void Net::process()
       switch (currentSock->state)
       {
          case PolledSocket::InvalidState:
-            Con::errorf("Error, InvalidState socket in polled sockets  list");
+            // TOFIX Con::errorf("Error, InvalidState socket in polled sockets  list");
             break;
          case PolledSocket::ConnectionPending:
             // see if it is now connected
             if (getsockopt(currentSock->fd, SOL_SOCKET, SO_ERROR,
                            (char*)&optval, &optlen) == -1)
             {
-               Con::errorf("Error getting socket options: %s",  strerror(errno));
+               // TOFIX Con::errorf("Error getting socket options: %s",  strerror(errno));
                
                removeSock = true;
                removeSockHandle = currentSock->handleFd;
@@ -1192,7 +1216,7 @@ void Net::process()
                else
                {
                   // some kind of error
-                  Con::errorf("Error connecting: %s", strerror(errno));
+                  // TOFIX Con::errorf("Error connecting: %s", strerror(errno));
                   
                   removeSock = true;
                   removeSockHandle = currentSock->handleFd;
@@ -1222,7 +1246,9 @@ void Net::process()
                {
                   // ack! this shouldn't happen
                   if (bytesRead < 0)
-                     Con::errorf("Unexpected error on socket: %s", strerror(errno));
+                  {
+                     // TOFIX Con::errorf("Unexpected error on socket: %s", strerror(errno));
+                  }
                   
                   removeSock = true;
                   removeSockHandle = currentSock->handleFd;
@@ -1236,7 +1262,7 @@ void Net::process()
             }
             else if (err != Net::NoError && err != Net::WouldBlock)
             {
-               Con::errorf("Error reading from socket: %s",  strerror(errno));
+               // TOFIX Con::errorf("Error reading from socket: %s",  strerror(errno));
                
                removeSock = true;
                removeSockHandle = currentSock->handleFd;
@@ -1257,7 +1283,7 @@ void Net::process()
             
             if (out_h_length == -1)
             {
-               Con::errorf("DNS lookup failed: %s", currentSock->remoteAddr);
+               // TOFIX Con::errorf("DNS lookup failed: %s", currentSock->remoteAddr);
                notifyEvent.state = Net::DNSFailed;
                newState = Net::DNSFailed;
                removeSock = true;
@@ -1286,7 +1312,7 @@ void Net::process()
                   NetAddress addr;
                   IPSocketToNetAddress(&socketAddress, &addr);
                   Net::addressToString(&addr, addrString);
-                  Con::printf("DNS: lookup resolved to %s", addrString);
+                  // TOFIX Con::printf("DNS: lookup resolved to %s", addrString);
 #endif
                }
                else if (out_h_addr.type == NetAddress::IPV6Address)
@@ -1303,13 +1329,13 @@ void Net::process()
                   NetAddress addr;
                   IPSocket6ToNetAddress(&socketAddress6, &addr);
                   Net::addressToString(&addr, addrString);
-                  Con::printf("DNS: lookup resolved to %s", addrString);
+                  // TOFIX Con::printf("DNS: lookup resolved to %s", addrString);
 #endif
                }
                else
                {
-                  Con::errorf("Error connecting to %s: Invalid Protocol",
-                              currentSock->remoteAddr);
+                  // TOFIX Con::errorf("Error connecting to %s: Invalid Protocol",
+                  //            currentSock->remoteAddr);
                   notifyEvent.state = Net::ConnectFailed;
                   newState = Net::ConnectFailed;
                   removeSock = true;
@@ -1324,8 +1350,8 @@ void Net::process()
                      err = PlatformNetState::getLastError();
                      if (err != Net::WouldBlock)
                      {
-                        Con::errorf("Error connecting to %s: %u",
-                                    currentSock->remoteAddr, err);
+                        // TOFIX Con::errorf("Error connecting to %s: %u",
+                        //            currentSock->remoteAddr, err);
                         notifyEvent.state = Net::ConnectFailed;
                         newState = Net::ConnectFailed;
                         removeSock = true;
@@ -1375,8 +1401,7 @@ void Net::process()
 
 void Net::processListenSocket(NetSocket socketHandle)
 {
-   #if 0
-   // TOFIX
+   #if TOFIX
    if (socketHandle == NetSocket::INVALID)
       return;
    PacketReceiveEvent receiveEvent;
@@ -1596,7 +1621,7 @@ Net::Error Net::getListenAddress(const NetAddress::Type type, NetAddress *addres
 {
    if (type == NetAddress::IPAddress)
    {
-      const char* serverIP = NULL; // TOFIX forceDefaults ? NULL : Con::getVariable("pref::Net::BindAddress");
+      const char* serverIP = forceDefaults ? NULL : // TOFIX Con::getVariable("pref::Net::BindAddress");
       if (!serverIP || serverIP[0] == '\0')
       {
          address->type = type;
@@ -1618,7 +1643,7 @@ Net::Error Net::getListenAddress(const NetAddress::Type type, NetAddress *addres
    }
    else if (type == NetAddress::IPV6Address)
    {
-      const char* serverIP6 = NULL; // TOFIX forceDefaults ? NULL : Con::getVariable("pref::Net::BindAddress6");
+      const char* serverIP6 = forceDefaults ? NULL : // TOFIX Con::getVariable("pref::Net::BindAddress6");
       if (!serverIP6 || serverIP6[0] == '\0')
       {
          sockaddr_in6 addr;
@@ -1637,7 +1662,7 @@ Net::Error Net::getListenAddress(const NetAddress::Type type, NetAddress *addres
    }
    else if (type == NetAddress::IPV6MulticastAddress)
    {
-      const char* multicastAddressValue = NULL; // TOFIX forceDefaults ? NULL : Con::getVariable("pref::Net::Multicast6Address");
+      const char* multicastAddressValue = forceDefaults ? NULL : // TOFIX Con::getVariable("pref::Net::Multicast6Address");
       if (!multicastAddressValue || multicastAddressValue[0] == '\0')
       {
          multicastAddressValue = TORQUE_NET_DEFAULT_MULTICAST_ADDRESS;
@@ -1713,25 +1738,40 @@ bool Net::compareAddresses(const NetAddress *a1, const NetAddress *a2)
    return a1->isSameAddressAndPort(*a2);
 }
 
-Net::Error Net::stringToAddress(const char *addressString, NetAddress  *address, bool hostLookup, int requiredFamily)
+static inline int NetAddressTypeToIpType(NetAddress::Type natype)
+{
+   switch (natype)
+   {
+   case NetAddress::IPAddress:
+   case NetAddress::IPBroadcastAddress:
+      return AF_INET;
+   case NetAddress::IPV6Address:
+   case NetAddress::IPV6MulticastAddress:
+      return AF_INET6;
+   default:
+      return AF_UNSPEC;
+   }
+}
+
+Net::Error Net::stringToAddress(const char *addressString, NetAddress  *address, bool hostLookup, NetAddress::Type requiredType)
 {
    char addr[256];
    int port = 0;
-   int actualFamily = AF_UNSPEC;
-   if (!PlatformNetState::extractAddressParts(addressString, addr, port, actualFamily))
+   NetAddress::Type actualType = NetAddress::Invalid;
+   if (!PlatformNetState::extractAddressParts(addressString, addr, port, actualType))
    {
       return WrongProtocolType;
    }
    
    // Make sure family matches (in cast we have IP: stuff in address)
-   if (requiredFamily != AF_UNSPEC && actualFamily != AF_UNSPEC && (actualFamily != requiredFamily))
+   if (requiredType != NetAddress::Invalid && actualType != NetAddress::Invalid && (actualType != requiredType))
    {
       return WrongProtocolType;
    }
    
-   if (actualFamily == AF_UNSPEC)
+   if (actualType == NetAddress::Invalid)
    {
-      actualFamily = requiredFamily;
+      actualType = requiredType;
    }
    
    addressString = addr;
@@ -1740,7 +1780,8 @@ Net::Error Net::stringToAddress(const char *addressString, NetAddress  *address,
    if (!dStricmp(addressString, "broadcast"))
    {
       address->type = NetAddress::IPBroadcastAddress;
-      if (!(actualFamily == AF_UNSPEC || actualFamily == AF_INET))
+      if (!(actualType == NetAddress::Invalid || 
+            actualType == NetAddress::IPAddress))
          return WrongProtocolType;
       
       if (port != 0)
@@ -1751,7 +1792,8 @@ Net::Error Net::stringToAddress(const char *addressString, NetAddress  *address,
    else if (!dStricmp(addressString, "multicast"))
    {
       address->type = NetAddress::IPV6MulticastAddress;
-      if (!(actualFamily == AF_UNSPEC || actualFamily == AF_INET6))
+      if (!(actualType == NetAddress::Invalid || 
+            actualType == NetAddress::IPV6Address))
          return WrongProtocolType;
       
       if (port != 0)
@@ -1773,8 +1815,9 @@ Net::Error Net::stringToAddress(const char *addressString, NetAddress  *address,
       
       if (inet_pton(AF_INET, addressString, &ipAddr.sin_addr) == 1)
       {
-         if (!(actualFamily == AF_UNSPEC || actualFamily == AF_INET))
-            return WrongProtocolType;
+         if (!(actualType == NetAddress::Invalid || 
+               actualType == NetAddress::IPAddress))
+               return WrongProtocolType;
          IPSocketToNetAddress(((struct sockaddr_in*)&ipAddr), address);
          
          if (port != 0)
@@ -1786,7 +1829,8 @@ Net::Error Net::stringToAddress(const char *addressString, NetAddress  *address,
       }
       else if (!hasInterface && inet_pton(AF_INET6, addressString, &ipAddr6.sin6_addr) == 1)
       {
-         if (!(actualFamily == AF_UNSPEC || actualFamily == AF_INET6))
+         if (!(actualType == NetAddress::Invalid || 
+               actualType == NetAddress::IPV6Address))
             return WrongProtocolType;
          IPSocket6ToNetAddress(((struct sockaddr_in6*)&ipAddr6), address);
          
@@ -1804,15 +1848,15 @@ Net::Error Net::stringToAddress(const char *addressString, NetAddress  *address,
          
          struct addrinfo hint, *res = NULL;
          dMemset(&hint, 0, sizeof(hint));
-         hint.ai_family = actualFamily;
+         hint.ai_family = NetAddressTypeToIpType(actualType);
          hint.ai_flags = hostLookup ? 0 : AI_NUMERICHOST;
          
          if (getaddrinfo(addressString, NULL, &hint, &res) == 0)
          {
-            if (actualFamily != AF_UNSPEC)
+            if (hint.ai_family != AF_UNSPEC)
             {
                // Prefer desired protocol
-               res = PlatformNetState::pickAddressByProtocol(res, actualFamily);
+               res = PlatformNetState::pickAddressByProtocol(res, hint.ai_family);
             }
             
             if (res && res->ai_family == AF_INET)
@@ -1925,7 +1969,7 @@ void Net::enableMulticast()
          NetAddress multicastAddress;
          sockaddr_in6 multicastSocketAddress;
          
-         const char *multicastAddressValue = NULL; // TOFIX Con::getVariable("pref::Net::Multicast6Address");
+         const char *multicastAddressValue = // TOFIX Con::getVariable("pref::Net::Multicast6Address");
          if (!multicastAddressValue || multicastAddressValue[0] == '\0')
          {
             multicastAddressValue = TORQUE_NET_DEFAULT_MULTICAST_ADDRESS;
@@ -1944,7 +1988,7 @@ void Net::enableMulticast()
          
          if (error == NoError)
          {
-            const char *multicastInterface = NULL;// TOFIX Con::getVariable("pref::Net::Multicast6Interface");
+            const char *multicastInterface = // TOFIX Con::getVariable("pref::Net::Multicast6Interface");
             
             if (multicastInterface && multicastInterface[0] != '\0')
             {
@@ -2038,3 +2082,614 @@ bool Net::isAddressTypeAvailable(NetAddress::Type addressType)
          return false;
    }
 }
+
+
+
+
+#else
+
+
+
+// STUB NETWORK
+
+#define STUB_BUFFER_SIZE 65536
+
+struct PlatformStubSocket
+{
+   U32 mAllocNumber;
+   U8 mGeneration : 7;
+
+   U8* mBuffer;
+   U32 mHead;
+   U32 mTail;
+   NetAddress mAddress;
+   bool mIsListening;
+
+   enum
+   {
+      PacketMarker = 0xB0FCF0F1
+   };
+
+   PlatformStubSocket() : mAllocNumber(0), mGeneration(0)
+   {
+      reset();
+      mBuffer = new U8[STUB_BUFFER_SIZE];
+   }
+
+   ~PlatformStubSocket()
+   {
+      delete[] mBuffer;
+   }
+
+   inline void reset()
+   {
+      mHead = mTail = 0;
+      mIsListening = false;
+      memset(&mAddress, 0, sizeof(NetAddress));
+   }
+
+   bool readPacket(NetAddress &origin, U8* outBuffer, U16* outSize)
+   {
+      U32 marker = 0;
+      if (read(&marker, sizeof(U32)) != sizeof(U32))
+      {
+         return false;
+      }
+
+      if (marker != PacketMarker)
+         return false;
+
+      if (read(&origin, sizeof(NetAddress)) != sizeof(NetAddress))
+      {
+         return false;
+      }
+
+      if (read(outSize, sizeof(U16)) != sizeof(U16))
+      {
+         return false;
+      }
+
+      if (read(outBuffer, *outSize) != *outSize)
+      {
+         return false;
+      }
+
+      return true;
+   }
+
+   bool writePacket(NetAddress src, const U8 *data, size_t size)
+   {
+      U32 oldHead = mHead;
+
+      U32 marker = PacketMarker;
+      if (write(&marker, sizeof(U32)) != sizeof(U32))
+      {
+         return false;
+      }
+
+      if (write(&src, sizeof(NetAddress)) != sizeof(NetAddress))
+      {
+         mHead = oldHead;
+         return false;
+      }
+
+      U16 sz = (U16)size;
+      if (write(&sz, sizeof(U16)) != sizeof(U16))
+      {
+         mHead = oldHead;
+         return false;
+      }
+
+      if (write(data, sz) != sz)
+      {
+         mHead = oldHead;
+         return false;
+      }
+
+      return true;
+   }
+
+   S32 write(const void *data, size_t size)
+   {
+      const U8* cdata = (U8*)data;
+       for (size_t i = 0; i < size; i++)
+       {
+           if ((mHead + 1) % STUB_BUFFER_SIZE == mTail)
+           {
+               // Full
+               return i;
+           }
+           mBuffer[mHead] = cdata[i];
+           mHead = (mHead + 1) % STUB_BUFFER_SIZE;
+       }
+       return size;
+   }
+
+   S32 read(void *data, size_t size)
+   {
+      U8* cdata = (U8*)data;
+       for (size_t i = 0; i < size; i++)
+       {
+           if (mHead == mTail)
+           {
+               // Empty
+               return i;
+           }
+           cdata[i] = mBuffer[mTail];
+           mTail = (mTail + 1) % STUB_BUFFER_SIZE;
+       }
+       return size;
+   }
+};
+
+
+namespace PlatformNetState
+{
+   static S32 initCount = 0;
+   
+   static const S32 defaultPort = 28000;
+   static S32 netPort = 0;
+   
+   static NetSocket udpSocket = NetSocket::INVALID;
+
+   typedef FreeListStruct<PlatformStubSocket, FreeListHandle::Basic32> SocketPool;
+
+   SocketPool smSocketPool;
+}
+
+
+bool Net::init()
+{
+   return true;
+}
+
+void Net::shutdown()
+{
+}
+
+//
+
+// TCP listen handler; not needed
+NetSocket Net::openListenPort(U16 port, NetAddress::Type addressType)
+{
+   return NetSocket::INVALID;
+}
+
+// TCP handler; not needed
+NetSocket Net::openConnectTo(const char *addressString)
+{
+   return NetSocket::INVALID;
+}
+
+// TCP handler; not needed
+void Net::closeConnectTo(NetSocket handleFd)
+{
+}
+
+// TCP send handler; not needed
+Net::Error Net::sendtoSocket(NetSocket handleFd, const U8 *buffer, S32  bufferSize, S32 *outBufferWritten)
+{
+   return NotASocket;
+}
+
+static U16 pickUnusedPort(NetAddress address)
+{
+   bool found = false;
+   U16 portID = 0;
+
+   // TOFIX Con::printf("pickUnusedPort");
+   
+   while (!found)
+   {
+      portID = (rand()+1) % 65536;
+      address.port = portID;
+   // TOFIX Con::printf("port %u", portID);
+      
+      auto itr = std::find_if(PlatformNetState::smSocketPool.mItems.begin(), PlatformNetState::smSocketPool.mItems.end(), [address](PlatformStubSocket& socket) {
+         return socket.mAllocNumber != 0 && socket.mAddress.isEqual(address);
+      });
+      
+      if (itr == PlatformNetState::smSocketPool.mItems.end())
+      {
+         found = true;
+      }
+   }
+   return portID;
+}
+
+bool Net::openPort(S32 port, bool doBind)
+{
+   if (PlatformNetState::udpSocket != NetSocket::INVALID)
+   {
+      closeSocket(PlatformNetState::udpSocket);
+      PlatformNetState::udpSocket = NetSocket::INVALID;
+   }
+   
+   NetAddress address;
+   NetAddress listenAddress;
+   char listenAddressStr[256];
+
+   if (Net::getListenAddress(NetAddress::IPAddress, &address) == Net::NoError)
+   {
+
+      // Alloc new socket
+      PlatformStubSocket* socketPtr = NULL;
+      printf("SocketPool::allocItem\n");
+      FreeListHandle::Basic32 ret = PlatformNetState::smSocketPool.allocItem(&socketPtr);
+      printf("SocketPool::allocItem DONE\n");
+      if (port == 0)
+         address.port = pickUnusedPort(address);
+      
+      socketPtr->mAddress = address;
+      PlatformNetState::udpSocket.setHandle(ret.value);
+      
+      Net::Error error = NoError;
+      if (doBind)
+      {
+         error = bindAddress(address, PlatformNetState::udpSocket, true);
+      }
+      
+      if (error == NoError)
+      {
+         listenAddress = socketPtr->mAddress;
+         if (error == NoError)
+         {
+            Net::addressToString(&listenAddress, listenAddressStr);
+            // TOFIX Con::printf("UDP initialized on ipv4 %s", listenAddressStr);
+         }
+      }
+      
+      if (error != NoError)
+      {
+         closeSocket(PlatformNetState::udpSocket);
+         PlatformNetState::udpSocket = NetSocket::INVALID;
+         // TOFIX Con::printf("Unable to initialize UDP on ipv4 - error %d", error);
+      }
+   }
+   else
+   {
+      // TOFIX Con::errorf("Unable to initialize UDP on ipv4 - invalid address.");
+      PlatformNetState::udpSocket = NetSocket::INVALID;
+      return false;
+   }
+
+   return true;
+}
+
+NetSocket Net::getPort()
+{
+   return PlatformNetState::udpSocket;
+}
+
+void Net::closePort()
+{
+   if (PlatformNetState::udpSocket != NetSocket::INVALID)
+      closeSocket(PlatformNetState::udpSocket);
+}
+
+Net::Error Net::sendto(const NetAddress *address, const U8 *buffer, S32 bufferSize)
+{
+   // Find corresponding socket for address
+   auto itr = std::find_if(PlatformNetState::smSocketPool.mItems.begin(), PlatformNetState::smSocketPool.mItems.end(), [address](PlatformStubSocket& socket) {
+      return socket.mAllocNumber != 0 && socket.mAddress.isEqual(*address);
+   });
+   
+   PlatformStubSocket* outSocket = itr != PlatformNetState::smSocketPool.mItems.end() ? itr : NULL;
+   PlatformStubSocket* serverSocket = PlatformNetState::smSocketPool.getItem(PlatformNetState::udpSocket.getHandle());
+
+   if (outSocket == NULL || serverSocket == NULL)
+      return NoError;
+
+   // Send packet to inbox of socket
+   if (!outSocket->writePacket(serverSocket->mAddress, buffer, bufferSize))
+      return NoError;
+
+   return NoError;
+}
+
+void Net::process()
+{
+   processListenSocket(PlatformNetState::udpSocket);
+}
+
+void Net::processListenSocket(NetSocket socketHandle)
+{
+   #if TOFIX
+   if (socketHandle == NetSocket::INVALID)
+      return;
+   PacketReceiveEvent receiveEvent;
+
+   for (;;)
+   {
+      // We store the packet header in the ring buffer in this case
+      PlatformStubSocket* inSocket = PlatformNetState::smSocketPool.getItem(socketHandle.getHandle());
+      if (inSocket == NULL)
+         continue;
+
+      U16 bytesRead = 0;
+      if (!inSocket->readPacket(receiveEvent.sourceAddress, (U8 *)receiveEvent.data, &bytesRead))
+         break;
+      
+      if (bytesRead == 0)
+         break;
+      
+      if (receiveEvent.sourceAddress.type == NetAddress::IPAddress &&
+          receiveEvent.sourceAddress.address.ipv4.netNum[0] == 127 &&
+          receiveEvent.sourceAddress.address.ipv4.netNum[1] == 0 &&
+          receiveEvent.sourceAddress.address.ipv4.netNum[2] == 0 &&
+          receiveEvent.sourceAddress.address.ipv4.netNum[3] == 1 &&
+          receiveEvent.sourceAddress.port == PlatformNetState::netPort)
+         continue;
+      
+      receiveEvent.size = PacketReceiveEventHeaderSize + bytesRead;
+      Game->postEvent(receiveEvent);
+   }
+   #endif
+}
+
+// TCP socket handler; not needed
+NetSocket Net::openSocket()
+{
+   return NetSocket::INVALID;
+}
+
+// TCP socket handler; not needed
+Net::Error Net::closeSocket(NetSocket handleFd)
+{
+   return NotASocket;
+}
+
+// TCP socket handler; not needed
+Net::Error Net::connect(NetSocket handleFd, const NetAddress *address)
+{
+   return NoError;
+}
+
+// Enabled listening on TCP/UDP socket
+Net::Error Net::listen(NetSocket handleFd, S32 backlog)
+{
+   // Grab socket
+   PlatformStubSocket* inSocket = PlatformNetState::smSocketPool.getItem(handleFd.getHandle());
+   if (inSocket == NULL)
+      return NotASocket;
+
+   // All stub sockets listen by default
+   return NoError;
+}
+
+// TCP socket handler; not needed
+NetSocket Net::accept(NetSocket handleFd, NetAddress *remoteAddress)
+{
+   return NetSocket::INVALID;
+}
+
+// Binds UDP/TCP socket address
+Net::Error Net::bindAddress(const NetAddress &address, NetSocket handleFd, bool useUDP)
+{
+   // Grab socket
+   PlatformStubSocket* inSocket = PlatformNetState::smSocketPool.getItem(handleFd.getHandle());
+   if (inSocket == NULL)
+      return NotASocket;
+
+   // See if address is free
+
+   auto itr = std::find_if(PlatformNetState::smSocketPool.mItems.begin(), PlatformNetState::smSocketPool.mItems.end(), [address](PlatformStubSocket& socket) {
+      return socket.mAllocNumber != 0 && socket.mIsListening == true && socket.mAddress.getIPV4Code() == address.getIPV4Code() && socket.mAddress.port == address.port;
+   });
+
+   if (itr != PlatformNetState::smSocketPool.mItems.end())
+   {
+      // TOFIX Con::printf("Unable to open listen port %u, already used", address.port);
+      return NotASocket;
+   }
+
+   // Set it!
+   inSocket->mAddress = address;
+   inSocket->mIsListening = true;
+   return NoError;
+}
+
+Net::Error Net::setBufferSize(NetSocket handleFd, S32 bufferSize)
+{
+   return NoError;
+}
+
+Net::Error Net::setBroadcast(NetSocket handleFd, bool broadcast)
+{
+   return NoError;
+}
+
+Net::Error Net::setBlocking(NetSocket handleFd, bool blockingIO)
+{
+   return NotASocket;
+}
+
+Net::Error Net::getListenAddress(const NetAddress::Type type, NetAddress *address, bool forceDefaults)
+{
+   if (type == NetAddress::IPAddress)
+   {
+      const char* serverIP = forceDefaults ? NULL : ""; // TOFIX Con::getVariable("pref::Net::BindAddress");
+      if (!serverIP || serverIP[0] == '\0')
+      {
+         address->type = type;
+         address->port = PlatformNetState::defaultPort;
+         *((U32*)address->address.ipv4.netNum) = 0x0; // INADDR_ANY
+         return Net::NoError;
+      }
+      else
+      {
+         return Net::stringToAddress(serverIP, address, false);
+      }
+   }
+   else
+   {
+      return Net::WrongProtocolType;
+   }
+}
+
+void Net::getIdealListenAddress(NetAddress *address)
+{
+   dMemset(address, '\0', sizeof(NetAddress));
+   if (Net::getListenAddress(NetAddress::IPAddress, address) == NeedHostLookup)
+   {
+      Net::getListenAddress(NetAddress::IPAddress, address, true);
+   }
+}
+
+// TCP send
+Net::Error Net::send(NetSocket handleFd, const U8 *buffer, S32 bufferSize, S32 *outBytesWritten)
+{
+   return NotASocket;
+}
+
+// TCP recv
+Net::Error Net::recv(NetSocket handleFd, U8 *buffer, S32 bufferSize, S32  *bytesRead)
+{
+   return NotASocket;
+}
+
+bool Net::compareAddresses(const NetAddress *a1, const NetAddress *a2)
+{
+   return a1->isSameAddressAndPort(*a2);
+}
+
+Net::Error Net::stringToAddress(const char *addressString, NetAddress  *address, bool hostLookup, NetAddress::Type requiredType)
+{
+   char addr[256];
+   int port = 0;
+   NetAddress::Type actualType = NetAddress::Invalid;
+   if (!PlatformNetState::extractAddressParts(addressString, addr, port, actualType))
+   {
+      return WrongProtocolType;
+   }
+   
+   // Make sure family matches (in cast we have IP: stuff in address)
+   if (requiredType != NetAddress::Invalid && actualType != NetAddress::Invalid && (actualType != requiredType))
+   {
+      return WrongProtocolType;
+   }
+   
+   if (actualType == NetAddress::Invalid)
+   {
+      actualType = requiredType;
+   }
+   
+   addressString = addr;
+   dMemset(address, '\0', sizeof(NetAddress));
+   
+   if (!dStricmp(addressString, "broadcast"))
+   {
+      address->type = NetAddress::IPBroadcastAddress;
+      if (!(actualType == NetAddress::Invalid || actualType == NetAddress::IPAddress))
+         return WrongProtocolType;
+      
+      if (port != 0)
+         address->port = port;
+      else
+         address->port = PlatformNetState::defaultPort;
+   }
+   else if (!dStricmp(addressString, "multicast"))
+   {
+      address->type = NetAddress::IPV6MulticastAddress;
+      if (!(actualType == NetAddress::Invalid || actualType == NetAddress::IPV6Address))
+         return WrongProtocolType;
+      
+      if (port != 0)
+         address->port = port;
+      else
+         address->port = PlatformNetState::defaultPort;
+   }
+   else
+   {
+      // Just do ipv4 here
+      U32 parts[4] = {};
+      int result = sscanf(addr, "%u.%u.%u.%u", &parts[0], &parts[1], &parts[2], &parts[3]);
+      for (U32 i=0; i<4; i++)
+      {
+         address->address.ipv4.netNum[i] = parts[i];
+      }
+
+      address->type = NetAddress::IPAddress;
+      
+      if (port != 0)
+         address->port = port;
+      else
+         address->port = PlatformNetState::defaultPort;
+   }
+   
+   return NoError;
+}
+
+void Net::addressToString(const NetAddress *address, char  addressString[256])
+{
+   if(address->type == NetAddress::IPAddress || address->type == NetAddress::IPBroadcastAddress)
+   {  
+      if (address->getIPV4Code() == 0xffffffff || address->type == NetAddress::IPBroadcastAddress)
+      {
+         if (address->port == 0)
+            dSprintf(addressString, 256, "IP:Broadcast");
+         else
+            dSprintf(addressString, 256, "IP:Broadcast:%d", address->port);
+      }
+      else
+      {
+         if (address->port == 0)
+            dSprintf(addressString, 256, "IP:%u.%u.%u.%u",
+               address->address.ipv4.netNum[0], address->address.ipv4.netNum[1],
+               address->address.ipv4.netNum[2], address->address.ipv4.netNum[3]);
+         else
+            dSprintf(addressString, 256, "IP:%u.%u.%u.%u:%u",
+               address->address.ipv4.netNum[0], address->address.ipv4.netNum[1],
+               address->address.ipv4.netNum[2], address->address.ipv4.netNum[3], address->port);
+      }
+   }
+   else
+   {
+      *addressString = 0;
+      return;
+   }
+}
+
+void Net::enableMulticast()
+{
+}
+
+void Net::disableMulticast()
+{
+}
+
+bool Net::isMulticastEnabled()
+{
+   return false;
+}
+
+U32 NetAddress::getHash() const
+{
+   U32 value = 0;
+   switch (type)
+   {
+      case NetAddress::IPAddress:
+         value = hash((U8*)&address.ipv4.netNum, sizeof(address.ipv4.netNum), 0);
+         break;
+      default:
+         value = 0;
+         break;
+   }
+   return value;
+}
+
+bool Net::isAddressTypeAvailable(NetAddress::Type addressType)
+{
+   switch (addressType)
+   {
+      case NetAddress::IPAddress:
+         return PlatformNetState::udpSocket != NetSocket::INVALID;
+      default:
+         return false;
+   }
+}
+
+
+#endif
+
+
