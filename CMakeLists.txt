@@ -78,6 +78,12 @@ set(TORQUESIM_SRCS
 	./torqueSim/sim/simManager.cc
 )
 
+set(KS_WASM_SRCS
+	${KS_SRCS}
+	${KS_NETWORK_SRCS}
+	wasm/wasmModule.cpp
+)
+
 set(KS_TEST_SRCS
 	${KS_SRCS}
 	${KS_NETWORK_SRCS}
@@ -95,7 +101,6 @@ set(KS_AST_PRINT_SRCS
 	test/astPrint.cpp
 )
 
-
 set(KS_TORQUE_TEST_SRCS
 	${KS_SRCS}
 	${KS_NETWORK_SRCS}
@@ -104,8 +109,26 @@ set(KS_TORQUE_TEST_SRCS
 )
 
 
+if (EMSCRIPTEN)
 
+add_definitions(-DTORQUE_NO_SOCKETS)
+add_executable(korkscript ${KS_WASM_SRCS})
+
+target_link_options(korkscript PRIVATE
+    "-sENVIRONMENT=web"
+    "-sALLOW_MEMORY_GROWTH"
+    "-sMODULARIZE=1"
+    "-sEXPORT_ES6=1"
+    "-sSTACK_SIZE=1048576"
+    "-sASSERTIONS=0"
+    "-Os"
+    "-lembind"
+    "-sERROR_ON_UNDEFINED_SYMBOLS=1"
+  )
+
+else()
 add_executable(cstest ${KS_TEST_SRCS})
 add_executable(csprintast ${KS_AST_PRINT_SRCS})
 add_executable(csapitest ${KS_API_TEST_SRCS})
 add_executable(torquetest ${KS_TORQUE_TEST_SRCS})
+endif()
