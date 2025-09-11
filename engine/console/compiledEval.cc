@@ -1426,7 +1426,7 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
                   {
                      case Namespace::Entry::StringCallbackType:
                      {
-                        const char *ret = nsEntry->cb.mStringCallbackFunc(safeObjectUserPtr(mVM->mEvalState.thisObject), callArgc, callArgv);
+                        const char *ret = nsEntry->cb.mStringCallbackFunc(safeObjectUserPtr(mVM->mEvalState.thisObject), nsEntry->mUserPtr, callArgc, callArgv);
                         mVM->mSTR.popFrame();
                         if(ret != mVM->mSTR.getStringValue())
                            mVM->mSTR.setStringValue(ret);
@@ -1436,7 +1436,7 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
                      }
                      case Namespace::Entry::IntCallbackType:
                      {
-                        S32 result = nsEntry->cb.mIntCallbackFunc(safeObjectUserPtr(mVM->mEvalState.thisObject), callArgc, callArgv);
+                        S32 result = nsEntry->cb.mIntCallbackFunc(safeObjectUserPtr(mVM->mEvalState.thisObject), nsEntry->mUserPtr, callArgc, callArgv);
                         mVM->mSTR.popFrame();
                         if(code[ip] == OP_STR_TO_UINT)
                         {
@@ -1458,7 +1458,7 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
                      }
                      case Namespace::Entry::FloatCallbackType:
                      {
-                        F64 result = nsEntry->cb.mFloatCallbackFunc(safeObjectUserPtr(mVM->mEvalState.thisObject), callArgc, callArgv);
+                        F64 result = nsEntry->cb.mFloatCallbackFunc(safeObjectUserPtr(mVM->mEvalState.thisObject), nsEntry->mUserPtr, callArgc, callArgv);
                         mVM->mSTR.popFrame();
                         if(code[ip] == OP_STR_TO_UINT)
                         {
@@ -1479,7 +1479,7 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
                         break;
                      }
                      case Namespace::Entry::VoidCallbackType:
-                        nsEntry->cb.mVoidCallbackFunc(safeObjectUserPtr(mVM->mEvalState.thisObject), callArgc, callArgv);
+                        nsEntry->cb.mVoidCallbackFunc(safeObjectUserPtr(mVM->mEvalState.thisObject), nsEntry->mUserPtr, callArgc, callArgv);
                         if(code[ip] != OP_STR_TO_NONE)
                         {
                            mVM->printf(0, "%s: Call to %s in %s uses result of void function call.", getFileLine(ip-4), fnName, functionName);
@@ -1489,7 +1489,7 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
                         break;
                      case Namespace::Entry::BoolCallbackType:
                      {
-                        bool result = nsEntry->cb.mBoolCallbackFunc(safeObjectUserPtr(mVM->mEvalState.thisObject), callArgc, callArgv);
+                        bool result = nsEntry->cb.mBoolCallbackFunc(safeObjectUserPtr(mVM->mEvalState.thisObject), nsEntry->mUserPtr, callArgc, callArgv);
                         mVM->mSTR.popFrame();
                         if(code[ip] == OP_STR_TO_UINT)
                         {

@@ -185,6 +185,7 @@ void NamespaceState::trashCache()
 Namespace::Entry::Entry()
 {
    mCode = NULL;
+   mUserPtr = NULL;
    mType = InvalidFunctionType;
 }
 
@@ -195,6 +196,7 @@ void Namespace::Entry::clear()
       mCode->decRefCount();
       mCode = NULL;
    }
+   mUserPtr = NULL;
 }
 
 Namespace::Namespace()
@@ -420,7 +422,7 @@ void Namespace::addFunction(StringTableEntry name, CodeBlock *cb, U32 functionOf
    ent->mType = Entry::ScriptFunctionType;
 }
 
-void Namespace::addCommand(StringTableEntry name, KorkApi::StringFuncCallback cb, const char *usage, S32 minArgs, S32 maxArgs)
+void Namespace::addCommand(StringTableEntry name, KorkApi::StringFuncCallback cb, void* userPtr, const char* usage, S32 minArgs, S32 maxArgs)
 {
    Entry *ent = createLocalEntry(name);
    mVmInternal->mNSState.trashCache();
@@ -433,7 +435,7 @@ void Namespace::addCommand(StringTableEntry name, KorkApi::StringFuncCallback cb
    ent->cb.mStringCallbackFunc = cb;
 }
 
-void Namespace::addCommand(StringTableEntry name, KorkApi::IntFuncCallback cb, const char *usage, S32 minArgs, S32 maxArgs)
+void Namespace::addCommand(StringTableEntry name, KorkApi::IntFuncCallback cb, void* userPtr, const char* usage, S32 minArgs, S32 maxArgs)
 {
    Entry *ent = createLocalEntry(name);
    mVmInternal->mNSState.trashCache();
@@ -446,7 +448,7 @@ void Namespace::addCommand(StringTableEntry name, KorkApi::IntFuncCallback cb, c
    ent->cb.mIntCallbackFunc = cb;
 }
 
-void Namespace::addCommand(StringTableEntry name, KorkApi::VoidFuncCallback cb, const char *usage, S32 minArgs, S32 maxArgs)
+void Namespace::addCommand(StringTableEntry name, KorkApi::VoidFuncCallback cb, void* userPtr, const char* usage, S32 minArgs, S32 maxArgs)
 {
    Entry *ent = createLocalEntry(name);
    mVmInternal->mNSState.trashCache();
@@ -459,7 +461,7 @@ void Namespace::addCommand(StringTableEntry name, KorkApi::VoidFuncCallback cb, 
    ent->cb.mVoidCallbackFunc = cb;
 }
 
-void Namespace::addCommand(StringTableEntry name, KorkApi::FloatFuncCallback cb, const char *usage, S32 minArgs, S32 maxArgs)
+void Namespace::addCommand(StringTableEntry name, KorkApi::FloatFuncCallback cb, void* userPtr, const char* usage, S32 minArgs, S32 maxArgs)
 {
    Entry *ent = createLocalEntry(name);
    mVmInternal->mNSState.trashCache();
@@ -472,7 +474,7 @@ void Namespace::addCommand(StringTableEntry name, KorkApi::FloatFuncCallback cb,
    ent->cb.mFloatCallbackFunc = cb;
 }
 
-void Namespace::addCommand(StringTableEntry name, KorkApi::BoolFuncCallback cb, const char *usage, S32 minArgs, S32 maxArgs)
+void Namespace::addCommand(StringTableEntry name, KorkApi::BoolFuncCallback cb, void* userPtr, const char* usage, S32 minArgs, S32 maxArgs)
 {
    Entry *ent = createLocalEntry(name);
    mVmInternal->mNSState.trashCache();
@@ -553,21 +555,21 @@ const char *Namespace::Entry::execute(S32 argc, const char **argv, ExprEvalState
    {
          // TOFIX
       case StringCallbackType:
-         return cb.mStringCallbackFunc((SimObject*)state->thisObject->userPtr, argc, argv);
+         return cb.mStringCallbackFunc((SimObject*)state->thisObject->userPtr, mUserPtr, argc, argv);
       case IntCallbackType:
          dSprintf(returnBuffer, sizeof(returnBuffer), "%d",
-            cb.mIntCallbackFunc((SimObject*)state->thisObject->userPtr, argc, argv));
+            cb.mIntCallbackFunc((SimObject*)state->thisObject->userPtr, mUserPtr, argc, argv));
          return returnBuffer;
       case FloatCallbackType:
          dSprintf(returnBuffer, sizeof(returnBuffer), "%g",
-            cb.mFloatCallbackFunc((SimObject*)state->thisObject->userPtr, argc, argv));
+            cb.mFloatCallbackFunc((SimObject*)state->thisObject->userPtr, mUserPtr, argc, argv));
          return returnBuffer;
       case VoidCallbackType:
-         cb.mVoidCallbackFunc((SimObject*)state->thisObject->userPtr, argc, argv);
+         cb.mVoidCallbackFunc((SimObject*)state->thisObject->userPtr, mUserPtr, argc, argv);
          return "";
       case BoolCallbackType:
          dSprintf(returnBuffer, sizeof(returnBuffer), "%d",
-            (U32)cb.mBoolCallbackFunc((SimObject*)state->thisObject->userPtr, argc, argv));
+            (U32)cb.mBoolCallbackFunc((SimObject*)state->thisObject->userPtr, mUserPtr, argc, argv));
          return returnBuffer;
    }
 

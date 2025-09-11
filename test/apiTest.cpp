@@ -240,7 +240,7 @@ void cPlayerJump(Player* object, int argc, const char** argv)
    object->mPosition.z += 10;
 }
 
-void cEcho(void* object, int argc, const char** argv)
+void cEcho(void* object, void* userPtr, int argc, const char** argv)
 {
    for (int i=1; i<argc; i++)
    {

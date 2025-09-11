@@ -414,34 +414,34 @@ void Vm::destroyVMObject(VMObject* object)
    delete object;
 }
 
-void Vm::addNamespaceFunction(NamespaceId nsId, StringTableEntry name, StringFuncCallback cb, const char* usage, S32 minArgs, S32 maxArgs)
+void Vm::addNamespaceFunction(NamespaceId nsId, StringTableEntry name, StringFuncCallback cb, void* userPtr, const char* usage, S32 minArgs, S32 maxArgs)
 {
    Namespace* ns = (Namespace*)nsId;
-   ns->addCommand(name, cb, usage, minArgs, maxArgs);
+   ns->addCommand(name, cb, userPtr, usage, minArgs, maxArgs);
 }
 
-void Vm::addNamespaceFunction(NamespaceId nsId, StringTableEntry name, IntFuncCallback cb, const char* usage, S32 minArgs, S32 maxArgs)
+void Vm::addNamespaceFunction(NamespaceId nsId, StringTableEntry name, IntFuncCallback cb, void* userPtr, const char* usage, S32 minArgs, S32 maxArgs)
 {
    Namespace* ns = (Namespace*)nsId;
-   ns->addCommand(name, cb, usage, minArgs, maxArgs);
+   ns->addCommand(name, cb, userPtr, usage, minArgs, maxArgs);
 }
 
-void Vm::addNamespaceFunction(NamespaceId nsId, StringTableEntry name, FloatFuncCallback cb, const char* usage, S32 minArgs, S32 maxArgs)
+void Vm::addNamespaceFunction(NamespaceId nsId, StringTableEntry name, FloatFuncCallback cb, void* userPtr, const char* usage, S32 minArgs, S32 maxArgs)
 {
    Namespace* ns = (Namespace*)nsId;
-   ns->addCommand(name, cb, usage, minArgs, maxArgs);
+   ns->addCommand(name, cb, userPtr, usage, minArgs, maxArgs);
 }
 
-void Vm::addNamespaceFunction(NamespaceId nsId, StringTableEntry name, VoidFuncCallback cb, const char* usage, S32 minArgs, S32 maxArgs)
+void Vm::addNamespaceFunction(NamespaceId nsId, StringTableEntry name, VoidFuncCallback cb, void* userPtr, const char* usage, S32 minArgs, S32 maxArgs)
 {
    Namespace* ns = (Namespace*)nsId;
-   ns->addCommand(name, cb, usage, minArgs, maxArgs);
+   ns->addCommand(name, cb, userPtr, usage, minArgs, maxArgs);
 }
 
-void Vm::addNamespaceFunction(NamespaceId nsId, StringTableEntry name, BoolFuncCallback cb, const char* usage, S32 minArgs, S32 maxArgs)
+void Vm::addNamespaceFunction(NamespaceId nsId, StringTableEntry name, BoolFuncCallback cb, void* userPtr, const char* usage, S32 minArgs, S32 maxArgs)
 {
    Namespace* ns = (Namespace*)nsId;
-   ns->addCommand(name, cb, usage, minArgs, maxArgs);
+   ns->addCommand(name, cb, userPtr, usage, minArgs, maxArgs);
 }
 
 bool Vm::isNamespaceFunction(NamespaceId nsId, StringTableEntry name)
