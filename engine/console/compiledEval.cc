@@ -545,7 +545,7 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
                   mVM->mSTR.pushFrame();
                   // --
                   
-                  oldObject->klass->iCreate.DestroyClassFn(oldObject->klass->userPtr, oldObject->userPtr);
+                  oldObject->klass->iCreate.DestroyClassFn(oldObject->klass->userPtr, mVMPublic, oldObject->userPtr);
                   
                   delete oldObject;
                   oldObject = NULL;
@@ -568,7 +568,7 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
                   object = new KorkApi::VMObject();
                   object->klass = klassInfo;
                   object->ns = NULL;
-                  object->userPtr = klassInfo->iCreate.CreateClassFn(klassInfo->userPtr, object);  
+                  object->userPtr = klassInfo->iCreate.CreateClassFn(klassInfo->userPtr, mVMPublic, object);  
 
                   if (object->userPtr == NULL)
                   {
@@ -654,7 +654,7 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
                // This error is usually caused by failing to call Parent::initPersistFields in the class' initPersistFields().
                /* TOFIX mVM->printf(0, "%s: Register object failed for object %s of class %s.", getFileLine(ip-2), currentNewObject->getName(), currentNewObject->getClassName());*/
 
-               currentNewObject->klass->iCreate.DestroyClassFn(currentNewObject->klass->userPtr, currentNewObject->userPtr);
+               currentNewObject->klass->iCreate.DestroyClassFn(currentNewObject->klass->userPtr, mVMPublic, currentNewObject->userPtr);
                delete currentNewObject;
                currentNewObject = NULL;
                ip = failJump;
@@ -664,9 +664,9 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
             // store the new object's ID on the stack (overwriting the group/set
             // id, if one was given, otherwise getting pushed)
             if(placeAtRoot)
-               intStack[_UINT] = currentNewObject->klass->iCreate.GetId(currentNewObject).getInt();
+               intStack[_UINT] = currentNewObject->klass->iCreate.GetId(currentNewObject);
             else
-               intStack[++_UINT] = currentNewObject->klass->iCreate.GetId(currentNewObject).getInt();
+               intStack[++_UINT] = currentNewObject->klass->iCreate.GetId(currentNewObject);
             
             break;
          }

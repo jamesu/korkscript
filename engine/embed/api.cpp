@@ -145,13 +145,13 @@ ClassId Vm::registerClass(ClassInfo& info)
    
    if (chkFunc.iCreate.CreateClassFn == NULL)
    {
-      chkFunc.iCreate.CreateClassFn = [](void* user, VMObject* object) {
+      chkFunc.iCreate.CreateClassFn = [](void* user, Vm* vm, VMObject* object) {
          return (void*)NULL;
       };
    }
    if (chkFunc.iCreate.DestroyClassFn == NULL)
    {
-      chkFunc.iCreate.DestroyClassFn = [](void* user, void* createdPtr) {
+      chkFunc.iCreate.DestroyClassFn = [](void* user, Vm* vm, void* createdPtr) {
       };
    }
    if (chkFunc.iCreate.ProcessArgs == NULL)
@@ -169,7 +169,7 @@ ClassId Vm::registerClass(ClassInfo& info)
    if (chkFunc.iCreate.GetId == NULL)
    {
       chkFunc.iCreate.GetId = [](VMObject* object) {
-         return ConsoleValue();
+         return (SimObjectId)0;
       };
    }
    
@@ -187,25 +187,25 @@ ClassId Vm::registerClass(ClassInfo& info)
    // iCustomFields stubs
    if (chkFunc.iCustomFields.IterateFields == NULL)
    {
-      chkFunc.iCustomFields.IterateFields = [](KorkApi::VMObject* object, VMIterator& state, StringTableEntry* name){
+      chkFunc.iCustomFields.IterateFields = [](KorkApi::Vm* vm, KorkApi::VMObject* object, VMIterator& state, StringTableEntry* name){
          return false;
       };
    }
    if (chkFunc.iCustomFields.GetFieldByIterator == NULL)
    {
-      chkFunc.iCustomFields.GetFieldByIterator = [](VMObject* object, VMIterator& state){
+      chkFunc.iCustomFields.GetFieldByIterator = [](KorkApi::Vm* vm, VMObject* object, VMIterator& state){
          return ConsoleValue();
       };
    }
    if (chkFunc.iCustomFields.GetFieldByName == NULL)
    {
-      chkFunc.iCustomFields.GetFieldByName = [](VMObject* object, const char* name){
+      chkFunc.iCustomFields.GetFieldByName = [](KorkApi::Vm* vm, VMObject* object, const char* name){
          return ConsoleValue();
       };
    }
    if (chkFunc.iCustomFields.SetFieldByName == NULL)
    {
-      chkFunc.iCustomFields.SetFieldByName = [](VMObject* object, const char* name, ConsoleValue value){
+      chkFunc.iCustomFields.SetFieldByName = [](KorkApi::Vm* vm, VMObject* object, const char* name, ConsoleValue value){
       };
    }
       
@@ -376,12 +376,12 @@ VMObject* Vm::constructObject(ClassId klassId, const char* name, int argc, const
    {
       object->klass = ci;
       object->ns = NULL;
-      object->userPtr = ci->iCreate.CreateClassFn(ci->userPtr, object);
+      object->userPtr = ci->iCreate.CreateClassFn(ci->userPtr, this, object);
       if (object->userPtr)
       {
          if (!ci->iCreate.ProcessArgs(this, object, name, false, false, argc, argv))
          {
-            ci->iCreate.DestroyClassFn(ci->userPtr, object);
+            ci->iCreate.DestroyClassFn(ci->userPtr, this, object);
          }
          else
          {
@@ -541,22 +541,8 @@ bool Vm::callObjectFunction(VMObject* self, StringTableEntry funcName, int argc,
 
    // Twiddle %this argument
    const char *oldArg1 = argv[1];
-   ConsoleValue cv = self->klass->iCreate.GetId(self);
-   switch (cv.typeId)
-   {
-      case ConsoleValue::TypeInternalFloat:
-         dSprintf(idBuf, sizeof(idBuf), "%g", cv.getFloat());
-         break;
-      case ConsoleValue::TypeInternalInt:
-         dSprintf(idBuf, sizeof(idBuf), "%i", cv.getInt());
-         break;
-      case ConsoleValue::TypeInternalString:
-         dSprintf(idBuf, sizeof(idBuf), "%s", (const char*)cv.evaluatePtr(mInternal->mAllocBase));
-         break;
-      default:
-         idBuf[0] = '\0';
-         break;
-   }
+   SimObjectId cv = self->klass->iCreate.GetId(self);
+   dSprintf(idBuf, sizeof(idBuf), "%u", cv);
    argv[1] = idBuf;
 
    if (ent->mType == Namespace::Entry::ScriptFunctionType)
@@ -930,7 +916,7 @@ bool VmInternal::setObjectField(VMObject* obj, StringTableEntry name, const char
 
    if ((obj->flags & KorkApi::ModDynamicFields) != 0)
    {
-      obj->klass->iCustomFields.SetFieldByName(obj, name, value);
+      obj->klass->iCustomFields.SetFieldByName(mVM, obj, name, value);
       return true;
    }
    

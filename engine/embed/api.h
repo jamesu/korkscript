@@ -172,15 +172,15 @@ struct Vm;
 struct CreateObjectInterface
 {
     // Create object
-	void* (*CreateClassFn)(void* user, VMObject* object);
+	void* (*CreateClassFn)(void* user, Vm* vm, VMObject* object);
     // Destroy
-    void (*DestroyClassFn)(void* user, void* createdPtr);
+    void (*DestroyClassFn)(void* user, Vm* vm, void* createdPtr);
     // Process args (happens next; usually: name set, then args processed)
     bool (*ProcessArgs)(Vm* vm, VMObject* object, const char* name, bool isDatablock, bool internalName, int argc, const char** argv);
     // i.e. OP_ADD_OBJECT
     bool (*AddObject)(Vm* vm, VMObject* object, bool placeAtRoot, U32 groupAddId);
     // Get identifier (used for return value)
-    ConsoleValue (*GetId)(VMObject* object);
+    SimObjectId (*GetId)(VMObject* object);
 };
 
 // handles sub object enum
@@ -193,10 +193,10 @@ struct EnumerateObjectInterface
 // handles field get & set
 struct CustomFieldsInterface
 {
-    bool (*IterateFields)(KorkApi::VMObject* object, VMIterator& state, StringTableEntry* name);
-	ConsoleValue (*GetFieldByIterator)(VMObject* object, VMIterator& state);
-	ConsoleValue (*GetFieldByName)(VMObject* object, const char* name);
-	void (*SetFieldByName)(VMObject* object, const char* name, ConsoleValue value);
+    bool (*IterateFields)(Vm* vm, VMObject* object, VMIterator& state, StringTableEntry* name);
+	ConsoleValue (*GetFieldByIterator)(Vm* vm, VMObject* object, VMIterator& state);
+	ConsoleValue (*GetFieldByName)(Vm* vm, VMObject* object, const char* name);
+	void (*SetFieldByName)(Vm* vm, VMObject* object, const char* name, ConsoleValue value);
 };
 
 struct ClassInfo {

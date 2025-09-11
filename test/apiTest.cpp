@@ -151,7 +151,7 @@ struct MyBase
    U32 mId;
 };
 
-static void* MyBase_Create(void* classUser, VMObject* object)
+static void* MyBase_Create(void* classUser, Vm* vm, VMObject* object)
 {
    MyBase* b = new MyBase();
    b->mVMInstance = object;
@@ -177,13 +177,13 @@ static bool MyBase_ProcessArgs(Vm* vm, VMObject* object, const char* name, bool 
     return true;
 }
 
-static ConsoleValue MyBase_GetID(VMObject* object)
+static SimObjectId MyBase_GetID(VMObject* object)
 {
    MyBase* b = (MyBase*)object->userPtr;
-    return ConsoleValue::makeString(b->mName);
+   return b->mId;
 }
 
-static void  MyBase_Destroy(void* classUser, void* instanceUser)
+static void  MyBase_Destroy(void* classUser, Vm* vm, void* instanceUser)
 {
    auto* base = reinterpret_cast<MyBase*>(instanceUser);
    if (base && base->mVMInstance)
@@ -206,7 +206,7 @@ struct Player : public MyBase
    MyPoint3F mPosition;
 };
 
-static void* Player_Create(void* classUser, VMObject* object)
+static void* Player_Create(void* classUser, Vm* vm, VMObject* object)
 {
    Player* b = new Player();
    b->mPosition = {};
@@ -225,7 +225,7 @@ static bool Player_AddObject(Vm* vm, VMObject* object, bool placeAtRoot, U32 gro
    return false;
 }
 
-static void  Player_Destroy(void* classUser, void* instanceUser)
+static void  Player_Destroy(void* classUser, Vm* vm, void* instanceUser)
 {
    auto* p = reinterpret_cast<Player*>(instanceUser);
    if (p && p->mVMInstance) 
