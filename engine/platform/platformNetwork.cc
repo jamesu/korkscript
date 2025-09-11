@@ -1621,7 +1621,7 @@ Net::Error Net::getListenAddress(const NetAddress::Type type, NetAddress *addres
 {
    if (type == NetAddress::IPAddress)
    {
-      const char* serverIP = forceDefaults ? NULL : // TOFIX Con::getVariable("pref::Net::BindAddress");
+      const char* serverIP = forceDefaults ? NULL : "";// TOFIX Con::getVariable("pref::Net::BindAddress");
       if (!serverIP || serverIP[0] == '\0')
       {
          address->type = type;
@@ -1643,7 +1643,7 @@ Net::Error Net::getListenAddress(const NetAddress::Type type, NetAddress *addres
    }
    else if (type == NetAddress::IPV6Address)
    {
-      const char* serverIP6 = forceDefaults ? NULL : // TOFIX Con::getVariable("pref::Net::BindAddress6");
+      const char* serverIP6 = forceDefaults ? NULL : "";// TOFIX Con::getVariable("pref::Net::BindAddress6");
       if (!serverIP6 || serverIP6[0] == '\0')
       {
          sockaddr_in6 addr;
@@ -1662,7 +1662,7 @@ Net::Error Net::getListenAddress(const NetAddress::Type type, NetAddress *addres
    }
    else if (type == NetAddress::IPV6MulticastAddress)
    {
-      const char* multicastAddressValue = forceDefaults ? NULL : // TOFIX Con::getVariable("pref::Net::Multicast6Address");
+      const char* multicastAddressValue = forceDefaults ? NULL : "";// TOFIX Con::getVariable("pref::Net::Multicast6Address");
       if (!multicastAddressValue || multicastAddressValue[0] == '\0')
       {
          multicastAddressValue = TORQUE_NET_DEFAULT_MULTICAST_ADDRESS;
@@ -1969,7 +1969,7 @@ void Net::enableMulticast()
          NetAddress multicastAddress;
          sockaddr_in6 multicastSocketAddress;
          
-         const char *multicastAddressValue = // TOFIX Con::getVariable("pref::Net::Multicast6Address");
+         const char *multicastAddressValue = "";// TOFIX Con::getVariable("pref::Net::Multicast6Address");
          if (!multicastAddressValue || multicastAddressValue[0] == '\0')
          {
             multicastAddressValue = TORQUE_NET_DEFAULT_MULTICAST_ADDRESS;
@@ -1988,7 +1988,7 @@ void Net::enableMulticast()
          
          if (error == NoError)
          {
-            const char *multicastInterface = // TOFIX Con::getVariable("pref::Net::Multicast6Interface");
+            const char *multicastInterface = "";// TOFIX Con::getVariable("pref::Net::Multicast6Interface");
             
             if (multicastInterface && multicastInterface[0] != '\0')
             {
