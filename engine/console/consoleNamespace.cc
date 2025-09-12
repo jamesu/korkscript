@@ -358,6 +358,9 @@ Namespace::Entry *Namespace::lookup(StringTableEntry name)
    if(mHashSequence != mVmInternal->mNSState.mCacheSequence)
       buildHashTable();
 
+   if (mHashSize == 0)
+      return NULL;
+
    U32 index = HashPointer(name) % mHashSize;
    while(mHashTable[index] && mHashTable[index]->mFunctionName != name)
    {
@@ -430,6 +433,7 @@ void Namespace::addCommand(StringTableEntry name, KorkApi::StringFuncCallback cb
    ent->mUsage = usage;
    ent->mMinArgs = minArgs;
    ent->mMaxArgs = maxArgs;
+   ent->mUserPtr = userPtr;
 
    ent->mType = Entry::StringCallbackType;
    ent->cb.mStringCallbackFunc = cb;
@@ -443,6 +447,7 @@ void Namespace::addCommand(StringTableEntry name, KorkApi::IntFuncCallback cb, v
    ent->mUsage = usage;
    ent->mMinArgs = minArgs;
    ent->mMaxArgs = maxArgs;
+   ent->mUserPtr = userPtr;
 
    ent->mType = Entry::IntCallbackType;
    ent->cb.mIntCallbackFunc = cb;
@@ -456,6 +461,7 @@ void Namespace::addCommand(StringTableEntry name, KorkApi::VoidFuncCallback cb, 
    ent->mUsage = usage;
    ent->mMinArgs = minArgs;
    ent->mMaxArgs = maxArgs;
+   ent->mUserPtr = userPtr;
 
    ent->mType = Entry::VoidCallbackType;
    ent->cb.mVoidCallbackFunc = cb;
@@ -469,6 +475,7 @@ void Namespace::addCommand(StringTableEntry name, KorkApi::FloatFuncCallback cb,
    ent->mUsage = usage;
    ent->mMinArgs = minArgs;
    ent->mMaxArgs = maxArgs;
+   ent->mUserPtr = userPtr;
 
    ent->mType = Entry::FloatCallbackType;
    ent->cb.mFloatCallbackFunc = cb;
@@ -482,6 +489,7 @@ void Namespace::addCommand(StringTableEntry name, KorkApi::BoolFuncCallback cb, 
    ent->mUsage = usage;
    ent->mMinArgs = minArgs;
    ent->mMaxArgs = maxArgs;
+   ent->mUserPtr = userPtr;
 
    ent->mType = Entry::BoolCallbackType;
    ent->cb.mBoolCallbackFunc = cb;
