@@ -315,8 +315,8 @@ int testScript(char* script, const char* filename)
    NamespaceId globalNS = vm->getGlobalNamespace(); // or obtain root namespace
    NamespaceId playerNS = vm->findNamespace(StringTable->insert("Player"), NULL);
    
-   vm->addNamespaceFunction(vm->getGlobalNamespace(), StringTable->insert("echo"), cEcho, "", 1, 32);
-   vm->addNamespaceFunction(playerNS, StringTable->insert("jump"), (KorkApi::VoidFuncCallback)cPlayerJump, "()", 2, 2);
+   vm->addNamespaceFunction(vm->getGlobalNamespace(), StringTable->insert("echo"), cEcho, NULL, "", 1, 32);
+   vm->addNamespaceFunction(playerNS, StringTable->insert("jump"), (KorkApi::VoidFuncCallback)cPlayerJump, NULL, "()", 2, 2);
    vm->evalCode(script, filename);
    
    VMObject* found = cfg.iFind.FindObjectByNameFn(cfg.findUser, "player1", NULL);
