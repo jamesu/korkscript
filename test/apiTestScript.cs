@@ -1,0 +1,10 @@
+$foo = 1;
+echo($foo);
+new Player(jello) { position = "5 6 5"; };
+new Player(trello) { position = "1 0 1"; };
+jello.jump();
+echo(jello.position);
+jello.position = "10 11 12";
+echo(jello.position);
+echo(trello.position);
+nofunc(err);
