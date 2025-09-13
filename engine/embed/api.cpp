@@ -990,6 +990,11 @@ const char* Vm::valueAsString(ConsoleValue v)
    return mInternal->valueAsString(v);
 }
 
+void* Vm::getUserPtr() const
+{
+   return mInternal->mConfig.vmUser;
+}
+
 F64 VmInternal::valueAsFloat(ConsoleValue v)
 {
    switch (v.typeId)

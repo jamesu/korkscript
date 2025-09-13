@@ -238,6 +238,8 @@ struct Config {
 
   FindObjectsInterface iFind;
    void* findUser;
+
+   void* vmUser;
 };
 
 struct ConsoleHeapAlloc
@@ -367,6 +369,8 @@ public:
    F64 valueAsFloat(ConsoleValue v);
    S64 valueAsInt(ConsoleValue v);
    const char* valueAsString(ConsoleValue v);
+
+   void* getUserPtr() const;
 };
 
 Vm* createVM(Config* cfg);
