@@ -115,8 +115,10 @@ add_definitions(-DTORQUE_NO_SOCKETS)
 add_executable(korkscript ${KS_WASM_SRCS})
 
 target_link_options(korkscript PRIVATE
-    "-sENVIRONMENT=web"
+    "-g"
+    "-sENVIRONMENT=node,web"
     "-sALLOW_MEMORY_GROWTH"
+    "-sDEMANGLE_SUPPORT=1"
     "-sMODULARIZE=1"
     "-sEXPORT_ES6=1"
     "-sSTACK_SIZE=1048576"
