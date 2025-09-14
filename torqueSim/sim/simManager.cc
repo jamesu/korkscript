@@ -468,10 +468,11 @@ bool SimObject::registerObject()
    Sim::gIdDictionary->insert(this);
    Sim::gNameDictionary->insert(this);
    
-   // Register this with the VM
+   // Register this with the VM if not already registered
    if (vm == NULL || vmObject == NULL)
    {
-      // TOFIX: create vm object
+      vm = Con::getVM();
+      vmObject = vm->createVMObject(getClassRep()->getRegisteredId(), this);
    }
    
    // Notify object

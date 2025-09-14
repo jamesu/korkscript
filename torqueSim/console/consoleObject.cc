@@ -362,7 +362,7 @@ void AbstractClassRep::registerClassWithVm(KorkApi::Vm* vm)
       };
    }
    
-   vm->registerClass(mClassInfo);
+   mLastRegisteredVmId = vm->registerClass(mClassInfo);
 }
 
 //--------------------------------------

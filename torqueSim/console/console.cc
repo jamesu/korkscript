@@ -1267,6 +1267,12 @@ const char *getData(S32 type, void *dptr, S32 index, const EnumTable *tbl, BitSe
 #endif
    return "";
 }
+
+
+KorkApi::Vm* getVM()
+{
+   return sVM;
+}
    
 //------------------------------------------------------------------------------
 

@@ -633,6 +633,7 @@ namespace Con
 
    const char *getTypeName(S32 type);
    bool isDatablockType( S32 type ); */
+KorkApi::Vm* getVM();
 
    void setData(S32 type, void *dptr, S32 index, S32 argc, const char **argv, const EnumTable *tbl = NULL, BitSet32 flag = 0);
    const char *getData(S32 type, void *dptr, S32 index, const EnumTable *tbl = NULL, BitSet32 flag = 0);

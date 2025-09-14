@@ -244,6 +244,9 @@ public:
    S32 mNetEventDir;                   ///< Stores the NetDirection of this class.
    S32 mClassId[NetClassGroupsCount];  ///< Stores the IDs assigned to this class for each group.
 
+   KorkApi::ClassId mLastRegisteredVmId;
+   
+   KorkApi::ClassId  getRegisteredId() const { return mLastRegisteredVmId; }
    S32                          getClassId  (U32 netClassGroup)   const;
    static U32                   getClassCRC (U32 netClassGroup);
    const char*                  getClassName() const;

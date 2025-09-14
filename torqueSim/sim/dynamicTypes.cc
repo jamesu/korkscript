@@ -24,7 +24,7 @@
 
 // Init the globals.
 ConsoleBaseType *ConsoleBaseType::smListHead = NULL;
-S32              ConsoleBaseType::smConsoleTypeCount = 0; // tge
+S32              ConsoleBaseType::smConsoleTypeCount = KorkApi::ConsoleValue::TypeBeginCustom; // tge
 
 // And, we also privately store the types lookup table.
 VectorPtr<ConsoleBaseType*> gConsoleTypeTable;
