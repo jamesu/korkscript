@@ -20,7 +20,7 @@
 // IN THE SOFTWARE.
 //-----------------------------------------------------------------------------
 
-#include "console/simBase.h"
+#include "sim/simBase.h"
 #include "console/console.h"
 #include "core/fileStream.h"
 
@@ -95,7 +95,7 @@ class ConsoleLogger : public SimObject
       /// @param   level   Log level. Only items of the specified level or
       ///                  lower are logged.
       /// @see ConsoleLogEntry::Level
-      void setLogLevel( ConsoleLogEntry::Level level );
+      void setLogLevel( U32 level );
 
       /// Returns the level of console messages to log
       ConsoleLogEntry::Level getLogLevel() const;
@@ -104,7 +104,7 @@ class ConsoleLogger : public SimObject
       ///
       /// @note This is a global callback, not executed per-instance.
       /// @see Con::addConsumer
-      static void logCallback( ConsoleLogEntry::Level level, const char *consoleLine, void* userPtr );
+      static void logCallback( U32 level, const char *consoleLine, void* userPtr );
 };
 
 #endif

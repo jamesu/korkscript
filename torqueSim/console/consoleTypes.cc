@@ -23,7 +23,7 @@
 #include "console/console.h"
 #include "console/consoleTypes.h"
 #include "core/stringTable.h"
-#include "console/simBase.h"
+#include "sim/simBase.h"
 #include "core/stringUnit.h"
 
 //////////////////////////////////////////////////////////////////////////
@@ -33,13 +33,13 @@ ConsoleType( string, TypeString, sizeof(const char*), "" )
 
 ConsoleGetType( TypeString )
 {
-   return *((const char **)(dptr));
+   return KorkApi::ConsoleValue::makeString(*((const char **)(dptr)));
 }
 
 ConsoleSetType( TypeString )
 {
    if(argc == 1)
-      *((const char **) dptr) = StringTable->insert(argv[0]);
+      *((const char **) dptr) = StringTable->insert((const char*)argv[0].evaluatePtr(vmPtr->getAllocBase()));
    else
       Con::printf("(TypeString) Cannot set multiple args to a single string.");
 }
@@ -52,7 +52,8 @@ ConsoleType( string, TypeStringTableEntryVector, sizeof(Vector<StringTableEntry>
 ConsoleGetType( TypeStringTableEntryVector )
 {
    Vector<StringTableEntry> *vec = (Vector<StringTableEntry>*)dptr;
-   char* returnBuffer = Con::getReturnBuffer(1024);
+   KorkApi::ConsoleValue returnValue = Con::getReturnBuffer(1024);
+   char* returnBuffer = (char*)returnValue.evaluatePtr(vmPtr->getAllocBase());
    S32 maxReturn = 1024;
    returnBuffer[0] = '\0';
    S32 returnLeng = 0;
@@ -69,7 +70,7 @@ ConsoleGetType( TypeStringTableEntryVector )
        }
       returnLeng = dStrlen(returnBuffer);
    }
-   return (returnBuffer);
+   return returnValue;
 }
 
 ConsoleSetType( TypeStringTableEntryVector )
@@ -79,7 +80,8 @@ ConsoleSetType( TypeStringTableEntryVector )
    vec->clear();
    if (argc == 1)
    {
-       const char* arg = argv[0];
+       KorkApi::ConsoleValue argV = argv[0];
+       const char* arg = (const char*)argV.evaluatePtr(vmPtr->getAllocBase());
        const U32 unitCount = StringUnit::getUnitCount(arg, ",");
        for( U32 unitIndex = 0; unitIndex < unitCount; ++unitIndex )
        {
@@ -90,7 +92,8 @@ ConsoleSetType( TypeStringTableEntryVector )
    {
       for (S32 i = 0; i < argc; i++)
       {
-            vec->push_back( StringTable->insert( argv[i] ) );
+            KorkApi::ConsoleValue argV = argv[i];
+            vec->push_back( StringTable->insert( (const char*)argV.evaluatePtr(vmPtr->getAllocBase()) ) );
       }
    }
    else
@@ -106,16 +109,17 @@ ConsoleType( caseString, TypeCaseString, sizeof(const char*), "" )
 ConsoleSetType( TypeCaseString )
 {
    if(argc == 1)
-      *((const char **) dptr) = StringTable->insert(argv[0], true);
+      *((const char **) dptr) = StringTable->insert((const char*)argv[0].evaluatePtr(vmPtr->getAllocBase()), true);
    else
       Con::printf("(TypeCaseString) Cannot set multiple args to a single string.");
 }
 
 ConsoleGetType( TypeCaseString )
 {
-   return *((const char **)(dptr));
+   return KorkApi::ConsoleValue::makeString(*((const char **)(dptr)));
 }
 
+#if TOFIX
 //////////////////////////////////////////////////////////////////////////
 // TypeFileName
 //////////////////////////////////////////////////////////////////////////
@@ -150,6 +154,7 @@ ConsolePrepData( TypeFilename )
       return data;
    }
 }
+#endif
 
 //////////////////////////////////////////////////////////////////////////
 // TypeS8
@@ -158,15 +163,16 @@ ConsoleType( char, TypeS8, sizeof(U8), "" )
 
 ConsoleGetType( TypeS8 )
 {
-   char* returnBuffer = Con::getReturnBuffer(256);
+   KorkApi::ConsoleValue returnBufferV = Con::getReturnBuffer(256);
+   char* returnBuffer = (char*)returnBufferV.evaluatePtr(vmPtr->getAllocBase());
    dSprintf(returnBuffer, 256, "%d", *((U8 *) dptr) );
-   return returnBuffer;
+   return returnBufferV;
 }
 
 ConsoleSetType( TypeS8 )
 {
    if(argc == 1)
-      *((U8 *) dptr) = dAtoi(argv[0]);
+      *((U8 *) dptr) = vmPtr->valueAsInt(argv[0]);
    else
       Con::printf("(TypeU8) Cannot set multiple args to a single S32.");
 }
@@ -178,19 +184,21 @@ ConsoleType( int, TypeS32, sizeof(S32), "" )
 
 ConsoleGetType( TypeS32 )
 {
-   char* returnBuffer = Con::getReturnBuffer(256);
+   KorkApi::ConsoleValue returnBufferV = Con::getReturnBuffer(256);
+   char* returnBuffer = (char*)returnBufferV.evaluatePtr(vmPtr->getAllocBase());
    dSprintf(returnBuffer, 256, "%d", *((S32 *) dptr) );
-   return returnBuffer;
+   return returnBufferV;
 }
 
 ConsoleSetType( TypeS32 )
 {
    if(argc == 1)
-      *((S32 *) dptr) = dAtoi(argv[0]);
+      *((S32 *) dptr) = vmPtr->valueAsInt(argv[0]);
    else
       Con::printf("(TypeS32) Cannot set multiple args to a single S32.");
 }
 
+#if TOFIX
 //////////////////////////////////////////////////////////////////////////
 // TypeS32Vector
 //////////////////////////////////////////////////////////////////////////
@@ -247,6 +255,8 @@ ConsoleSetType( TypeS32Vector )
       Con::printf("Vector<S32> must be set as { a, b, c, ... } or \"a b c ...\"");
 }
 
+#endif
+
 //////////////////////////////////////////////////////////////////////////
 // TypeF32
 //////////////////////////////////////////////////////////////////////////
@@ -254,18 +264,20 @@ ConsoleType( float, TypeF32, sizeof(F32), "" )
 
 ConsoleGetType( TypeF32 )
 {
-   char* returnBuffer = Con::getReturnBuffer(256);
+   KorkApi::ConsoleValue returnBufferV = Con::getReturnBuffer(256);
+   char* returnBuffer = (char*)returnBufferV.evaluatePtr(vmPtr->getAllocBase());
    dSprintf(returnBuffer, 256, "%.9g", *((F32 *) dptr) );
-   return returnBuffer;
+   return returnBufferV;
 }
 ConsoleSetType( TypeF32 )
 {
    if(argc == 1)
-      *((F32 *) dptr) = dAtof(argv[0]);
+      *((F32 *) dptr) = vmPtr->valueAsFloat(argv[0]);
    else
       Con::printf("(TypeF32) Cannot set multiple args to a single F32.");
 }
 
+#if TOFIX
 //////////////////////////////////////////////////////////////////////////
 // TypeF32Vector
 //////////////////////////////////////////////////////////////////////////
@@ -322,6 +334,8 @@ ConsoleSetType( TypeF32Vector )
       Con::printf("Vector<F32> must be set as { a, b, c, ... } or \"a b c ...\"");
 }
 
+#endif
+
 //////////////////////////////////////////////////////////////////////////
 // TypeBool
 //////////////////////////////////////////////////////////////////////////
@@ -329,17 +343,18 @@ ConsoleType( bool, TypeBool, sizeof(bool), "" )
 
 ConsoleGetType( TypeBool )
 {
-   return *((bool *) dptr) ? "1" : "0";
+   return KorkApi::ConsoleValue::makeInt(*((bool *) dptr) ? 1 : 0);
 }
 
 ConsoleSetType( TypeBool )
 {
    if(argc == 1)
-      *((bool *) dptr) = dAtob(argv[0]);
+      *((bool *) dptr) = vmPtr->valueAsBool(argv[0]);
    else
       Con::printf("(TypeBool) Cannot set multiple args to a single bool.");
 }
 
+#if TOFIX
 
 //////////////////////////////////////////////////////////////////////////
 // TypeBoolVector
@@ -394,6 +409,7 @@ ConsoleSetType( TypeBoolVector )
    else
       Con::printf("Vector<bool> must be set as { a, b, c, ... } or \"a b c ...\"");
 }
+#endif
 
 //////////////////////////////////////////////////////////////////////////
 // TypeEnum
@@ -408,12 +424,12 @@ ConsoleGetType( TypeEnum )
    {
       if (dptrVal == tbl->table[i].index)
       {
-         return tbl->table[i].label;
+         return KorkApi::ConsoleValue::makeString(tbl->table[i].label);
       }
    }
 
    //not found
-   return "";
+   return KorkApi::ConsoleValue::makeString("");
 }
 
 ConsoleSetType( TypeEnum )
@@ -422,9 +438,10 @@ ConsoleSetType( TypeEnum )
    if (argc != 1) return;
 
    S32 val = 0;
+   const char* sval = (const char*)argv[0].evaluatePtr(vmPtr->getAllocBase());
    for (S32 i = 0; i < tbl->size; i++)
    {
-      if (! dStricmp(argv[0], tbl->table[i].label))
+      if (! dStricmp(sval, tbl->table[i].label))
       {
          val = tbl->table[i].index;
          break;
@@ -432,7 +449,6 @@ ConsoleSetType( TypeEnum )
    }
    *((S32 *) dptr) = val;
 }
-
 
 //////////////////////////////////////////////////////////////////////////
 // TypeSimObjectPtr
@@ -444,7 +460,7 @@ ConsoleSetType( TypeSimObjectPtr )
    if(argc == 1)
    {
       SimObject **obj = (SimObject **)dptr;
-      *obj = Sim::findObject(argv[0]);
+      *obj = Sim::findObject((const char*)argv[0].evaluatePtr(vmPtr->getAllocBase()));
    }
    else
       Con::printf("(TypeSimObjectPtr) Cannot set multiple args to a single S32.");
@@ -453,10 +469,11 @@ ConsoleSetType( TypeSimObjectPtr )
 ConsoleGetType( TypeSimObjectPtr )
 {
    SimObject **obj = (SimObject**)dptr;
-   char* returnBuffer = Con::getReturnBuffer(256);
+   KorkApi::ConsoleValue returnBufferV = Con::getReturnBuffer(256);
+   char* returnBuffer = (char*)returnBufferV.evaluatePtr(vmPtr->getAllocBase());
    const char* Id =  *obj ? (*obj)->getName() ? (*obj)->getName() : (*obj)->getIdString() : StringTable->EmptyString;
    dSprintf(returnBuffer, 256, "%s", Id);
-   return returnBuffer;
+   return returnBufferV;
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -469,7 +486,7 @@ ConsoleSetType( TypeSimObjectName )
    if(argc == 1)
    {
       SimObject **obj = (SimObject **)dptr;
-      *obj = Sim::findObject(argv[0]);
+      *obj = Sim::findObject((const char*)argv[0].evaluatePtr(vmPtr->getAllocBase()));
    }
    else
       Con::printf("(TypeSimObjectName) Cannot set multiple args to a single S32.");
@@ -478,9 +495,10 @@ ConsoleSetType( TypeSimObjectName )
 ConsoleGetType( TypeSimObjectName )
 {
    SimObject **obj = (SimObject**)dptr;
-   char* returnBuffer = Con::getReturnBuffer(128);
+   KorkApi::ConsoleValue returnBufferV = Con::getReturnBuffer(256);
+   char* returnBuffer = (char*)returnBufferV.evaluatePtr(vmPtr->getAllocBase());
    dSprintf(returnBuffer, 128, "%s", *obj && (*obj)->getName() ? (*obj)->getName() : "");
-   return returnBuffer;
+   return returnBufferV;
 }
 
 
@@ -494,7 +512,7 @@ ConsoleSetType( TypeSimObjectId )
    if(argc == 1)
    {
       SimObject **obj = (SimObject **)dptr;
-      *obj = Sim::findObject(argv[0]);
+      *obj = Sim::findObject((const char*)argv[0].evaluatePtr(vmPtr->getAllocBase()));
    }
    else
       Con::printf("(TypeSimObjectId) Cannot set multiple args to a single S32.");
@@ -503,8 +521,9 @@ ConsoleSetType( TypeSimObjectId )
 ConsoleGetType( TypeSimObjectId )
 {
    SimObject **obj = (SimObject**)dptr;
-   char* returnBuffer = Con::getReturnBuffer(128);
+   KorkApi::ConsoleValue returnBufferV = Con::getReturnBuffer(256);
+   char* returnBuffer = (char*)returnBufferV.evaluatePtr(vmPtr->getAllocBase());
    dSprintf(returnBuffer, 128, "%s", *obj ? (*obj)->getIdString() : StringTable->EmptyString );
-   return returnBuffer;
+   return returnBufferV;
 }
 

@@ -187,9 +187,9 @@ class AbstractClassRep
    friend class ConsoleObject;
 
 public:
-   using SetDataNotify = KorkApi::SetDataNotify;
-   using GetDataNotify = KorkApi::GetDataNotify;
-   using WriteDataNotify = KorkApi::WriteDataNotify;
+   using SetValue = KorkApi::SetValueFn;
+   using CopyValue = KorkApi::CopyValueFn;
+   using WriteDataNotify = KorkApi::WriteDataNotifyFn;
    
    static void registerWithVM(KorkApi::Vm* vm);
 
@@ -396,7 +396,6 @@ public:
 //-----------------------------------------------------------------------------
 
 // Forward declarations so they can be used in the class
-const char *defaultProtectedGetFn( void *obj, const char *data );
 bool defaultProtectedWriteFn( void* obj, StringTableEntry pFieldName );
 
 //-----------------------------------------------------------------------------
@@ -583,8 +582,8 @@ protected:
    static void addProtectedField(const char*   in_pFieldname,
       const U32     in_fieldType,
       const dsize_t in_fieldOffset,
-      AbstractClassRep::SetDataNotify in_setDataFn,
-      AbstractClassRep::GetDataNotify in_getDataFn = &defaultProtectedGetFn,
+      AbstractClassRep::SetValue in_setDataFn,
+      AbstractClassRep::CopyValue in_getDataFn = NULL,
       const U32     in_elementCount = 1,
       EnumTable *   in_table        = NULL,
       const char*   in_pFieldDocs   = NULL);
@@ -603,8 +602,8 @@ protected:
    static void addProtectedField(const char*   in_pFieldname,
       const U32     in_fieldType,
       const dsize_t in_fieldOffset,
-      AbstractClassRep::SetDataNotify in_setDataFn,
-      AbstractClassRep::GetDataNotify in_getDataFn = &defaultProtectedGetFn,
+      AbstractClassRep::SetValue in_setDataFn,
+      AbstractClassRep::CopyValue in_getDataFn = NULL,
       AbstractClassRep::WriteDataNotify in_writeDataFn = &defaultProtectedWriteFn,
       const U32     in_elementCount = 1,
       EnumTable *   in_table        = NULL,
@@ -621,8 +620,8 @@ protected:
    static void addProtectedField(const char*   in_pFieldname,
       const U32     in_fieldType,
       const dsize_t in_fieldOffset,
-      AbstractClassRep::SetDataNotify in_setDataFn,
-      AbstractClassRep::GetDataNotify in_getDataFn = &defaultProtectedGetFn,
+      AbstractClassRep::SetValue in_setDataFn,
+      AbstractClassRep::CopyValue in_getDataFn = NULL,
       const char*   in_pFieldDocs = NULL);
 
    /// Register a simple protected field.
@@ -637,8 +636,8 @@ protected:
    static void addProtectedField(const char*   in_pFieldname,
       const U32     in_fieldType,
       const dsize_t in_fieldOffset,
-      AbstractClassRep::SetDataNotify in_setDataFn,
-      AbstractClassRep::GetDataNotify in_getDataFn = &defaultProtectedGetFn,
+      AbstractClassRep::SetValue in_setDataFn,
+      AbstractClassRep::CopyValue in_getDataFn = NULL,
       AbstractClassRep::WriteDataNotify in_writeDataFn = &defaultProtectedWriteFn,
       const char*   in_pFieldDocs = NULL);
 
@@ -860,20 +859,6 @@ inline bool& ConsoleObject::getDynamicGroupExpand()
 
 //-----------------------------------------------------------------------------
 
-inline bool defaultProtectedSetFn( void *obj, const char *data )
-{
-   return true;
-}
-
-//-----------------------------------------------------------------------------
-
-inline const char *defaultProtectedGetFn( void *obj, const char *data )
-{
-   return data;
-}
-
-//-----------------------------------------------------------------------------
-
 inline bool defaultProtectedWriteFn( void* obj, StringTableEntry pFieldName )
 {
    return true;
@@ -881,7 +866,14 @@ inline bool defaultProtectedWriteFn( void* obj, StringTableEntry pFieldName )
 
 //-----------------------------------------------------------------------------
 
-inline bool defaultProtectedNotSetFn(void* obj, const char* data)
+inline bool defaultProtectedNotSetFn(void* userPtr,
+                                     KorkApi::Vm* vm,
+                                     void* dptr,
+                                     S32 argc,
+                                     KorkApi::ConsoleValue* argv,
+                                     const EnumTable* tbl,
+                                     BitSet32 flag,
+                                     U32 typeId)
 {
    return false;
 }

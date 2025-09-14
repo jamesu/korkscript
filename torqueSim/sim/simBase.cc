@@ -21,15 +21,13 @@
 //-----------------------------------------------------------------------------
 
 #include "platform/platform.h"
-#include "console/simBase.h"
+#include "sim/simBase.h"
 #include "core/stringTable.h"
 #include "console/console.h"
 #include "core/fileStream.h"
 #include "core/tempAlloc.h"
 #include "core/memStream.h"
 
-#include "console/consoleInternal.h"
-#include "console/consoleNamespace.h"
 #include "console/typeValidators.h"
 #include "console/codeBlock.h"
 
@@ -420,6 +418,7 @@ void SimObject::assignDynamicFieldsFrom(SimObject* parent)
 
 void SimObject::assignFieldsFrom(SimObject *parent)
 {
+#if TOFIX
    // only allow field assigns from objects of the same class:
    if(getClassRep() == parent->getClassRep())
    {
@@ -454,6 +453,7 @@ void SimObject::assignFieldsFrom(SimObject *parent)
    }
 
    assignDynamicFieldsFrom(parent);
+#endif
 }
 
 bool SimObject::writeField(StringTableEntry fieldname, const char* value)
@@ -472,6 +472,7 @@ bool SimObject::writeField(StringTableEntry fieldname, const char* value)
 
 void SimObject::writeFields(Stream &stream, U32 tabStop)
 {
+#if TOFIX
    const AbstractClassRep::FieldList &list = getFieldList();
 
    for(U32 i = 0; i < (U32)list.size(); i++)
@@ -538,6 +539,7 @@ void SimObject::writeFields(Stream &stream, U32 tabStop)
    }    
    if(mFieldDictionary && mCanSaveFieldDictionary)
       mFieldDictionary->writeFields(this, stream, tabStop);
+#endif
 }
 
 void SimObject::write(Stream &stream, U32 tabStop, U32 flags)
@@ -1406,7 +1408,8 @@ ConsoleMethod(SimObject, getDynamicField, const char*, 3, 3, "index")
       ++itr;
    }
    
-   char* buffer = Con::getReturnBuffer(256);
+   KorkApi::ConsoleValue bufferV = Con::getReturnBuffer(256);
+   char* buffer = (char*)bufferV.evaluatePtr(vmPtr->getAllocBase());
    if (*itr)
    {
       SimFieldDictionary::Entry* entry = *itr;
@@ -1433,6 +1436,7 @@ ConsoleMethod(SimObject,dump, void, 2, 2, "")
 
 void SimObject::dump()
 {
+#if TOFIX
    const AbstractClassRep::FieldList &list = getFieldList();
    char expandedBuffer[4096];
 
@@ -1482,7 +1486,8 @@ void SimObject::dump()
 
    for(Vector<Namespace::Entry *>::iterator j = vec.begin(); j != vec.end(); j++)
       Con::printf("  %s() - %s", (*j)->mFunctionName, (*j)->mUsage ? (*j)->mUsage : "");
-
+   
+#endif
 }
 
 /*! Use the getType method to get the type for this object.
@@ -1511,9 +1516,11 @@ bool SimObject::isMethod( const char* methodName )
 
    StringTableEntry stname = StringTable->insert( methodName );
 
+#if TOFIX
    if( getNamespace() )
       return ( getNamespace()->lookup( stname ) != NULL );
-
+#endif
+   
    return false;
 }
 
@@ -1631,6 +1638,7 @@ const char *SimObject::tabComplete(const char *prevText, S32 baseLen, bool fForw
 
 void SimObject::setDataField(StringTableEntry slotName, const char *array, const char *value)
 {
+#if TOFIX
    // first search the static fields if enabled
    if(mFlags.test(ModStaticFields))
    {
@@ -1688,6 +1696,7 @@ void SimObject::setDataField(StringTableEntry slotName, const char *array, const
    {
       setDataFieldDynamic(slotName, array, value);
    }
+#endif
 }
 
 void SimObject::setDataFieldDynamic(StringTableEntry slotName, const char *array, const char *value)
@@ -1722,6 +1731,7 @@ void  SimObject::dumpClassHierarchy()
 
 const char *SimObject::getDataField(StringTableEntry slotName, const char *array)
 {
+#if TOFIX
    if(mFlags.test(ModStaticFields))
    {
       S32 array1 = array ? dAtoi(array) : -1;
@@ -1741,7 +1751,7 @@ const char *SimObject::getDataField(StringTableEntry slotName, const char *array
    {
       return getDataFieldDynamic(slotName, array);
    }
-
+#endif
    return "";
 }
 
@@ -1821,7 +1831,8 @@ const char *SimObject::getPrefixedDataField(StringTableEntry fieldName, const ch
     const U32 valueBufferSize = dStrlen(fieldPrefix) + dStrlen(pFieldValue) + 1;
 
     // Fetch a buffer.
-    char* pValueBuffer = Con::getReturnBuffer( valueBufferSize );
+    KorkApi::ConsoleValue pValueBufferV = Con::getReturnBuffer( valueBufferSize );
+    char* pValueBuffer = (char*)pValueBufferV.evaluatePtr(sVM->getAllocBase());
 
     // Format the value buffer.
     dSprintf( pValueBuffer, valueBufferSize, "%s%s", fieldPrefix, pFieldValue );
@@ -2000,6 +2011,7 @@ ConsoleMethod(SimObject, isChildOfGroup, bool, 3,3, "groupID")
 
 const char *SimObject::getPrefixedDynamicDataField(StringTableEntry fieldName, const char *array, const S32 fieldType )
 {
+#if TOFIX
     // Sanity!
     AssertFatal( fieldName != NULL, "Cannot get field value with NULL field name." );
 
@@ -2044,12 +2056,15 @@ const char *SimObject::getPrefixedDynamicDataField(StringTableEntry fieldName, c
     dSprintf( pValueBuffer, valueBufferSize, "%s%s", fieldPrefix, pFieldValue );
 
     return pValueBuffer;
+#endif
+   return "";
 }
 
 //-----------------------------------------------------------------------------
 
 void SimObject::setPrefixedDynamicDataField(StringTableEntry fieldName, const char *array, const char *value, const S32 fieldType )
 {
+#if TOFIX
     // Sanity!
     AssertFatal( fieldName != NULL, "Cannot set object field value with NULL field name." );
     AssertFatal( value != NULL, "Field value cannot be NULL." );
@@ -2106,12 +2121,14 @@ void SimObject::setPrefixedDynamicDataField(StringTableEntry fieldName, const ch
 
     // Yes, so set the data excluding the prefix.
     setDataField( fieldName, NULL, value + fieldPrefixLength );
+#endif
 }
 
 //-----------------------------------------------------------------------------
 
 StringTableEntry SimObject::getDataFieldPrefix( StringTableEntry fieldName )
 {
+#if TOFIX
     // Sanity!
     AssertFatal( fieldName != NULL, "Cannot get field prefix with NULL field name." );
 
@@ -2127,6 +2144,8 @@ StringTableEntry SimObject::getDataFieldPrefix( StringTableEntry fieldName )
 
     // Fetch the type prefix.
     return pConsoleBaseType->getTypePrefix();
+#endif
+   return StringTable->EmptyString;
 }
 
 //-----------------------------------------------------------------------------
@@ -2281,23 +2300,26 @@ bool gAllowClassName = false;
 void SimObject::initPersistFields()
 {
    Parent::initPersistFields();
+#if TOFIX
    addGroup("SimBase");
    addField("canSaveDynamicFields",    TypeBool,      Offset(mCanSaveFieldDictionary, SimObject), &writeCanSaveDynamicFields, "");
    addField("internalName",            TypeString,       Offset(mInternalName, SimObject), &writeInternalName, "");   
-   addProtectedField("parentGroup",        TypeSimObjectPtr, Offset(mGroup, SimObject), &setParentGroup, &defaultProtectedGetFn, &writeParentGroup, "Group hierarchy parent of the object." );
+   addProtectedField("parentGroup",        TypeSimObjectPtr, Offset(mGroup, SimObject), &setParentGroup, NULL, &writeParentGroup, "Group hierarchy parent of the object." );
    endGroup("SimBase");
 
    // Namespace Linking.
    //registerClassNameFields(); // TGE compat - this should only be allowed on GameBase or ScriptObject
+#endif
 }
 
 void SimObject::registerClassNameFields()
 {
+#if TOFIX
    addGroup("Namespace Linking");
-   addProtectedField("superclass", TypeString, Offset(mSuperClassName, SimObject), &setSuperClass, &defaultProtectedGetFn, &writeSuperclass, "Script Class of object.");
-   addProtectedField("className",      TypeString, Offset(mClassName,      SimObject), &setClass,      &defaultProtectedGetFn, &writeClass, "Script SuperClass of object.");
+   addProtectedField("superclass", TypeString, Offset(mSuperClassName, SimObject), &setSuperClass, NULL, &writeSuperclass, "Script Class of object.");
+   addProtectedField("className",      TypeString, Offset(mClassName,      SimObject), &setClass,      NULL, &writeClass, "Script SuperClass of object.");
    endGroup("Namespace Linking");
-   
+#endif
 }
 
 //-----------------------------------------------------------------------------
@@ -2436,6 +2458,7 @@ void SimObject::inspectPostApply()
 
 void SimObject::linkNamespaces()
 {
+#if TOFIX
    if( mNameSpace )
       unlinkNamespaces();
    
@@ -2473,10 +2496,12 @@ void SimObject::linkNamespaces()
 
    // Store our namespace.
    mNameSpace = Con::lookupNamespace( parent );
+#endif
 }
 
 void SimObject::unlinkNamespaces()
 {
+#if TOFIX
    if (!mNameSpace)
       return;
 
@@ -2519,6 +2544,7 @@ void SimObject::unlinkNamespaces()
    }
 
    mNameSpace = NULL;
+#endif
 }
 
 void SimObject::setClassNamespace( const char *classNamespace )
@@ -2655,13 +2681,14 @@ ConsoleMethod(SimObject, getProgenitorFile, const char*, 2, 2, "")
 */
 ConsoleMethod(SimObject, getFieldType, const char*, 3, 3, "fieldName")
 {
+#if TOFIX
    const char *fieldName = StringTable->insert( argv[2] );
    U32 typeID = object->getDataFieldType( fieldName, NULL );
    ConsoleBaseType* type = ConsoleBaseType::getType( typeID );
    
    if( type )
       return type->getTypeClassName();
-
+#endif
    return "";
 }
 

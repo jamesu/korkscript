@@ -24,7 +24,7 @@
 #define _DYNAMIC_CONSOLETYPES_H_
 
 #ifndef _SIMBASE_H_
-#include "console/simBase.h"
+#include "sim/simBase.h"
 #endif
 
 #include "embed/api.h"
@@ -87,11 +87,11 @@ public:
    void setInspectorFieldType(const char *type) { mInspectorFieldType = type; }
    const char *getInspectorFieldType() { return mInspectorFieldType; }
 
-   virtual void setData(void *dptr, S32 argc, const char **argv, const EnumTable *tbl, BitSet32 flag)=0;
-   virtual const char *getData(void *dptr, const EnumTable *tbl, BitSet32 flag )=0;
+   virtual void setData(KorkApi::Vm* vmPtr, void *dptr, S32 argc, KorkApi::ConsoleValue* argv, const EnumTable *tbl, BitSet32 flag, U32 typeId)=0;
+   virtual KorkApi::ConsoleValue getData(KorkApi::Vm* vmPtr, void *dptr, const EnumTable *tbl, BitSet32 flag, U32 requestedType, U32 requestedZone)=0;
    virtual const char *getTypeClassName()=0;
    virtual const bool isDatablock() { return false; };
-   virtual const char *prepData(const char *data, char *buffer, U32 bufferLen) { return data; };
+   virtual const char *prepData(KorkApi::Vm* vmPtr, const char *data, char *buffer, U32 bufferLen) { return data; };
    virtual StringTableEntry getTypePrefix( void ) const { return StringTable->EmptyString; }
 
    virtual void exportToVm(KorkApi::Vm* vm) = 0;
@@ -104,8 +104,8 @@ public:
    { \
    public: \
       ConsoleType##type (const S32 aSize, S32 *idPtr, const char *aTypeName) : ConsoleBaseType(aSize, idPtr, aTypeName) { } \
-      virtual void setData(void *dptr, S32 argc, const char **argv, const EnumTable *tbl, BitSet32 flag); \
-      virtual const char *getData(void *dptr, const EnumTable *tbl, BitSet32 flag ); \
+      virtual void setData(KorkApi::Vm* vmPtr, void *dptr, S32 argc, KorkApi::ConsoleValue* argv, const EnumTable *tbl, BitSet32 flag, U32 typeId); \
+      virtual KorkApi::ConsoleValue getData(KorkApi::Vm* vmPtr, void *dptr, const EnumTable *tbl, BitSet32 flag, U32 requestedType, U32 requestedZone); \
       virtual const char *getTypeClassName() { return #typeName ; } \
       virtual StringTableEntry getTypePrefix( void ) const { return StringTable->insert( typePrefix ); }\
       void exportToVm(KorkApi::Vm* vm) { exportTypeToVm(this, vm); } \
@@ -118,10 +118,10 @@ public:
    { \
    public: \
       ConsoleType##type (const S32 aSize, S32 *idPtr, const char *aTypeName) : ConsoleBaseType(aSize, idPtr, aTypeName) { } \
-      virtual void setData(void *dptr, S32 argc, const char **argv, const EnumTable *tbl, BitSet32 flag); \
-      virtual const char *getData(void *dptr, const EnumTable *tbl, BitSet32 flag ); \
+      virtual void setData(KorkApi::Vm* vmPtr, void *dptr, S32 argc, KorkApi::ConsoleValue* argv, const EnumTable *tbl, BitSet32 flag, U32 typeId); \
+      virtual KorkApi::ConsoleValue getData(KorkApi::Vm* vmPtr,void *dptr, const EnumTable *tbl, BitSet32 flag, U32 requestedType, U32 requestedZone); \
       virtual const char *getTypeClassName() { return #typeName; }; \
-      virtual const char *prepData(const char *data, char *buffer, U32 bufferLen); \
+      virtual const char *prepData(KorkApi::Vm* vmPtr, const char *data, char *buffer, U32 bufferLen); \
       virtual StringTableEntry getTypePrefix( void ) const { return StringTable->insert( typePrefix ); }\
       void exportToVm(KorkApi::Vm* vm) { exportTypeToVm(this, vm); } \
    }; \
@@ -129,13 +129,13 @@ public:
    ConsoleType##type gConsoleType##type##Instance(size,&type,#type); \
 
 #define ConsoleSetType( type ) \
-   void ConsoleType##type::setData(void *dptr, S32 argc, const char **argv, const EnumTable *tbl, BitSet32 flag)
+   void ConsoleType##type::setData(KorkApi::Vm* vmPtr, void *dptr, S32 argc, KorkApi::ConsoleValue* argv, const EnumTable *tbl, BitSet32 flag, U32 typeId)
 
 #define ConsoleGetType( type ) \
-   const char *ConsoleType##type::getData(void *dptr, const EnumTable *tbl, BitSet32 flag)
+   KorkApi::ConsoleValue ConsoleType##type::getData(KorkApi::Vm* vmPtr, void *dptr, const EnumTable *tbl, BitSet32 flag, U32 requestedType, U32 requestedZone)
 
 #define ConsolePrepData( type ) \
-   const char *ConsoleType##type::prepData(const char *data, char *buffer, U32 bufferSize)
+   const char *ConsoleType##type::prepData(KorkApi::Vm* vmPtr, const char *data, char *buffer, U32 bufferSize)
 
 #define ConsoleTypeFieldPrefix( type, typePrefix ) \
    StringTableEntry ConsoleType##type::getTypePrefix( void ) const { return StringTable->insert( typePrefix ); }
@@ -145,8 +145,8 @@ public:
    { \
    public: \
       ConsoleType##type (const S32 aSize, S32 *idPtr, const char *aTypeName) : ConsoleBaseType(aSize, idPtr, aTypeName) { } \
-      virtual void setData(void *dptr, S32 argc, const char **argv, const EnumTable *tbl, BitSet32 flag); \
-      virtual const char *getData(void *dptr, const EnumTable *tbl, BitSet32 flag ); \
+      virtual void setData(KorkApi::Vm* vmPtr, void *dptr, S32 argc, KorkApi::ConsoleValue* argv, const EnumTable *tbl, BitSet32 flag, U32 typeId); \
+      virtual KorkApi::ConsoleValue getData(KorkApi::Vm* vmPtr, void *dptr, const EnumTable *tbl, BitSet32 flag, U32 requestedType, U32 requestedZone); \
       virtual const char *getTypeClassName() { return #className; }; \
       virtual const bool isDatablock() { return true; }; \
    }; \
@@ -160,12 +160,12 @@ inline KorkApi::TypeInterface buildTypeInterface()
 {
    KorkApi::TypeInterface ti{};
 
-   ti.SetDataFn = &KorkApi::APIThunk<ConsoleBaseType,
-      static_cast<void(ConsoleBaseType::*)(void*, S32, const char**, const EnumTable*, BitSet32)>
+   ti.SetValue = &KorkApi::APIThunk<ConsoleBaseType,
+      static_cast<void(ConsoleBaseType::*)(KorkApi::Vm*,void*, S32, KorkApi::ConsoleValue*, const EnumTable*, BitSet32, U32)>
       (&ConsoleBaseType::setData)>::call;
 
-   ti.GetDataFn = &KorkApi::APIThunk<ConsoleBaseType,
-      static_cast<const char*(ConsoleBaseType::*)(void*, const EnumTable*, BitSet32)>
+   ti.CopyValue = &KorkApi::APIThunk<ConsoleBaseType,
+      static_cast<KorkApi::ConsoleValue(ConsoleBaseType::*)(KorkApi::Vm*, void*, const EnumTable*, BitSet32, U32, U32)>
       (&ConsoleBaseType::getData)>::call;
 
    ti.GetTypeClassNameFn = &KorkApi::APIThunk<ConsoleBaseType,
@@ -173,16 +173,8 @@ inline KorkApi::TypeInterface buildTypeInterface()
       (&ConsoleBaseType::getTypeClassName)>::call;
 
    ti.PrepDataFn = &KorkApi::APIThunk<ConsoleBaseType,
-      static_cast<const char*(ConsoleBaseType::*)(const char*, char*, U32)>
+      static_cast<const char*(ConsoleBaseType::*)(KorkApi::Vm*,const char*, char*, U32)>
       (&ConsoleBaseType::prepData)>::call;
-
-   ti.GetTypePrefixFn = &KorkApi::APIThunk<ConsoleBaseType,
-      static_cast<StringTableEntry(ConsoleBaseType::*)(void) const>
-      (&ConsoleBaseType::getTypePrefix)>::call;
-
-   // TODO
-   ti.SetValueFn = NULL;
-   ti.ExtractValueFn = NULL;
 
    return ti;
 }

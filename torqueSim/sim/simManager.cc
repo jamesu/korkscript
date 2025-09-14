@@ -22,12 +22,11 @@
 
 #include "platform/platform.h"
 #include "platform/threads/mutex.h"
-#include "console/simBase.h"
+#include "sim/simBase.h"
 #include "core/stringTable.h"
 #include "console/console.h"
 #include "core/fileStream.h"
 
-#include "console/consoleInternal.h"
 #include "core/idGenerator.h"
 #include "core/safeDelete.h"
 

@@ -24,7 +24,7 @@
 #define _CONSOLETYPES_H_
 
 #ifndef _DYNAMIC_CONSOLETYPES_H_
-#include "console/dynamicTypes.h"
+#include "sim/dynamicTypes.h"
 #endif
 
 #ifndef Offset

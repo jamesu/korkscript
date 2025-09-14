@@ -20,7 +20,7 @@
 // IN THE SOFTWARE.
 //-----------------------------------------------------------------------------
 
-#include "console/dynamicTypes.h"
+#include "sim/dynamicTypes.h"
 
 // Init the globals.
 ConsoleBaseType *ConsoleBaseType::smListHead = NULL;

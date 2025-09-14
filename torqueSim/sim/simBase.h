@@ -34,7 +34,7 @@
 #include "console/consoleObject.h"
 #endif
 #ifndef _SIMDICTIONARY_H_
-#include "console/simDictionary.h"
+#include "sim/simDictionary.h"
 #endif
 
 #ifndef _PLATFORMMUTEX_H_

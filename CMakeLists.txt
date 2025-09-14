@@ -133,4 +133,6 @@ add_executable(cstest ${KS_TEST_SRCS})
 add_executable(csprintast ${KS_AST_PRINT_SRCS})
 add_executable(csapitest ${KS_API_TEST_SRCS})
 add_executable(torquetest ${KS_TORQUE_TEST_SRCS})
+
+target_include_directories(torquetest PRIVATE ./torqueSim)
 endif()

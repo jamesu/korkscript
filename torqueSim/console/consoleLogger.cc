@@ -184,7 +184,7 @@ bool ConsoleLogger::detach()
 
 //-----------------------------------------------------------------------------
 
-void ConsoleLogger::logCallback( ConsoleLogEntry::Level level, const char *consoleLine, void* userPtr )
+void ConsoleLogger::logCallback( U32 level, const char *consoleLine, void* userPtr )
 {
 
    ConsoleLogger *curr;

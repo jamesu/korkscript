@@ -1,8 +1,5 @@
 #include "platform/platform.h"
 #include "console/console.h"
-#include "console/consoleInternal.h"
-#include "console/simpleLexer.h"
-#include "console/ast.h"
 
 #include "core/fileStream.h"
 #include "console/compiler.h"

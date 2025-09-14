@@ -985,6 +985,11 @@ S64 Vm::valueAsInt(ConsoleValue v)
    return mInternal->valueAsInt(v);
 }
 
+bool Vm::valueAsBool(ConsoleValue v)
+{
+   return mInternal->valueAsBool(v);
+}
+
 const char* Vm::valueAsString(ConsoleValue v)
 {
    return mInternal->valueAsString(v);
@@ -1025,6 +1030,38 @@ F64 VmInternal::valueAsFloat(ConsoleValue v)
    }
    return 0.0f;
 }
+
+S64 VmInternal::valueAsBool(ConsoleValue v)
+{
+   switch (v.typeId)
+   {
+      case KorkApi::ConsoleValue::TypeInternalInt:
+      return v.getInt();
+      break;
+      case KorkApi::ConsoleValue::TypeInternalFloat:
+      return v.getFloat();
+      break;
+      case KorkApi::ConsoleValue::TypeInternalString:
+      return dAtob((const char*)v.evaluatePtr(mAllocBase));
+      break;
+      default:
+         {
+            KorkApi::TypeInfo& info = mTypes[v.typeId];
+            void* typePtr = v.evaluatePtr(mAllocBase);
+
+            return info.iFuncs.CopyValue(info.userPtr,
+                                               mVM,
+                         typePtr,
+                         NULL,
+                         0,
+                                               KorkApi::ConsoleValue::TypeInternalInt,
+                                               KorkApi::ConsoleValue::ZoneArg).getInt();
+         }
+         break;
+   }
+   return 0;
+}
+
 
 S64 VmInternal::valueAsInt(ConsoleValue v)
 {

@@ -79,6 +79,7 @@ struct VmInternal
    // Conversion helpers
    F64 valueAsFloat(ConsoleValue v);
    S64 valueAsInt(ConsoleValue v);
+   S64 valueAsBool(ConsoleValue v);
    const char* valueAsString(ConsoleValue v);
 
 };

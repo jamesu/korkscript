@@ -21,13 +21,15 @@
 //-----------------------------------------------------------------------------
 
 #include "platform/platform.h"
+
+#include "console/console.h"
 #include "console/consoleObject.h"
+#include "console/consoleTypes.h"
+
 #include "core/stringTable.h"
 #include "console/console.h"
-#include "console/consoleInternal.h"
-#include "console/consoleNamespace.h"
 #include "console/typeValidators.h"
-#include "console/simBase.h"
+#include "sim/simBase.h"
 
 // TOFIX: add back in if networking needed
 #define INITIAL_CRC_VALUE 0
@@ -374,7 +376,7 @@ void AbstractClassRep::initialize()
    for (walk = classLinkList; walk; walk = walk->nextClass)
    {
       walk->mNamespace = Con::lookupNamespace(StringTable->insert(walk->getClassName()));
-      walk->mNamespace->mClassRep = walk;
+      //walk->mNamespace->mClassRep = walk;
    }
 
    // Initialize field lists... (and perform other console registration).
@@ -497,8 +499,8 @@ void ConsoleObject::addGroup(const char* in_pGroupname, const char* in_pGroupDoc
    f.elementCount = 0;
    f.groupExpand  = false;
    f.validator    = NULL;
-   f.setDataFn    = &defaultProtectedSetFn;
-   f.getDataFn    = &defaultProtectedGetFn;
+   f.ovrSetValue  = NULL;
+   f.ovrCopyValue = NULL;
    f.writeDataFn  = &defaultProtectedWriteFn;
 
    // Add to field list.
@@ -521,8 +523,8 @@ void ConsoleObject::endGroup(const char*  in_pGroupname)
    f.type         = AbstractClassRep::EndGroupFieldType;
    f.groupExpand  = false;
    f.validator    = NULL;
-   f.setDataFn    = &defaultProtectedSetFn;
-   f.getDataFn    = &defaultProtectedGetFn;
+   f.ovrSetValue  = NULL;
+   f.ovrCopyValue = NULL;
    f.writeDataFn  = &defaultProtectedWriteFn;
    f.elementCount = 0;
 
@@ -601,9 +603,9 @@ void ConsoleObject::addField(const char*  in_pFieldname,
    f.elementCount = in_elementCount;
    f.table        = in_table;
    f.validator    = NULL;
-
-   f.setDataFn    = &defaultProtectedSetFn;
-   f.getDataFn    = &defaultProtectedGetFn;
+   
+   f.ovrSetValue  = NULL;
+   f.ovrCopyValue = NULL;
    f.writeDataFn  = in_writeDataFn;
 
    sg_tempFieldList.push_back(f);
@@ -612,8 +614,8 @@ void ConsoleObject::addField(const char*  in_pFieldname,
 void ConsoleObject::addProtectedField(const char*  in_pFieldname,
                        const U32 in_fieldType,
                        const dsize_t in_fieldOffset,
-                       AbstractClassRep::SetDataNotify in_setDataFn,
-                       AbstractClassRep::GetDataNotify in_getDataFn,
+                       AbstractClassRep::SetValue in_setDataFn,
+                       AbstractClassRep::CopyValue in_getDataFn,
                        const char* in_pFieldDocs)
 {
    addProtectedField(
@@ -631,8 +633,8 @@ void ConsoleObject::addProtectedField(const char*  in_pFieldname,
 void ConsoleObject::addProtectedField(const char*  in_pFieldname,
                        const U32 in_fieldType,
                        const dsize_t in_fieldOffset,
-                       AbstractClassRep::SetDataNotify in_setDataFn,
-                       AbstractClassRep::GetDataNotify in_getDataFn,
+                                      AbstractClassRep::SetValue in_setDataFn,
+                                      AbstractClassRep::CopyValue in_getDataFn,
                        AbstractClassRep::WriteDataNotify in_writeDataFn,
                        const char* in_pFieldDocs)
 {
@@ -651,8 +653,8 @@ void ConsoleObject::addProtectedField(const char*  in_pFieldname,
 void ConsoleObject::addProtectedField(const char*  in_pFieldname,
                        const U32 in_fieldType,
                        const dsize_t in_fieldOffset,
-                       AbstractClassRep::SetDataNotify in_setDataFn,
-                       AbstractClassRep::GetDataNotify in_getDataFn,
+                                      AbstractClassRep::SetValue in_setDataFn,
+                                      AbstractClassRep::CopyValue in_getDataFn,
                        const U32 in_elementCount,
                        EnumTable *in_table,
                        const char* in_pFieldDocs)
@@ -672,8 +674,8 @@ void ConsoleObject::addProtectedField(const char*  in_pFieldname,
 void ConsoleObject::addProtectedField(const char*  in_pFieldname,
                        const U32 in_fieldType,
                        const dsize_t in_fieldOffset,
-                       AbstractClassRep::SetDataNotify in_setDataFn,
-                       AbstractClassRep::GetDataNotify in_getDataFn,
+                                      AbstractClassRep::SetValue in_setDataFn,
+                                      AbstractClassRep::CopyValue in_getDataFn,
                        AbstractClassRep::WriteDataNotify in_writeDataFn,
                        const U32 in_elementCount,
                        EnumTable *in_table,
@@ -694,8 +696,8 @@ void ConsoleObject::addProtectedField(const char*  in_pFieldname,
    f.table        = in_table;
    f.validator    = NULL;
 
-   f.setDataFn    = in_setDataFn;
-   f.getDataFn    = in_getDataFn;
+   f.ovrSetValue    = in_setDataFn;
+   f.ovrCopyValue    = in_getDataFn;
    f.writeDataFn  = in_writeDataFn;
 
    sg_tempFieldList.push_back(f);
@@ -718,8 +720,8 @@ void ConsoleObject::addFieldV(const char*  in_pFieldname,
    f.offset       = in_fieldOffset;
    f.elementCount = 1;
    f.table        = NULL;
-   f.setDataFn    = &defaultProtectedSetFn;
-   f.getDataFn    = &defaultProtectedGetFn;
+   f.ovrSetValue  = NULL;
+   f.ovrCopyValue = NULL;
    f.writeDataFn  = &defaultProtectedWriteFn;
    f.validator    = v;
    v->fieldIndex  = sg_tempFieldList.size();
@@ -738,8 +740,8 @@ void ConsoleObject::addDepricatedField(const char *fieldName)
    f.elementCount = 0;
    f.table        = NULL;
    f.validator    = NULL;
-   f.setDataFn    = &defaultProtectedSetFn;
-   f.getDataFn    = &defaultProtectedGetFn;
+   f.ovrSetValue  = NULL;
+   f.ovrCopyValue = NULL;
    f.writeDataFn  = &defaultProtectedWriteFn;
 
    sg_tempFieldList.push_back(f);

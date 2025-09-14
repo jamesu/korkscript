@@ -369,6 +369,7 @@ public:
    F64 valueAsFloat(ConsoleValue v);
    S64 valueAsInt(ConsoleValue v);
    const char* valueAsString(ConsoleValue v);
+   bool valueAsBool(ConsoleValue v);
 
    void* getUserPtr() const;
 };
