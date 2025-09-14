@@ -227,7 +227,7 @@ SimObject::SimObject( const U8 namespaceLinkMask ) : mNSLinkMask( namespaceLinkM
    mId                      = 0;
    mIdString                = StringTable->EmptyString;
    mGroup                   = 0;
-   mNameSpace               = NULL;
+   mVMNameSpace             = NULL;
    mNotifyList              = NULL;
    mTypeMask                = 0;
    mScriptCallbackGuard     = 0;
@@ -2359,7 +2359,7 @@ void SimObject::copyTo(SimObject* object)
 {
    object->mClassName = mClassName;
    object->mSuperClassName = mSuperClassName;
-   object->mNameSpace = NULL;
+   object->mVMNameSpace = NULL;
    object->linkNamespaces();
 }
 
@@ -2458,8 +2458,7 @@ void SimObject::inspectPostApply()
 
 void SimObject::linkNamespaces()
 {
-#if TOFIX
-   if( mNameSpace )
+   if( mVMNameSpace )
       unlinkNamespaces();
    
    StringTableEntry parent = StringTable->insert( getClassName() );
@@ -2488,21 +2487,20 @@ void SimObject::linkNamespaces()
 
    // ObjectName -> ClassName
    StringTableEntry objectName = getName();
-   if( objectName && objectName[0] && objectName != getClassRep()->getNameSpace()->mName )
+   /* TOFIX if( objectName && objectName[0] && objectName != getClassRep()->getNameSpace()->mName )
    {
       if( Con::linkNamespaces( parent, objectName ) )
          parent = objectName;
-   }
+   }*/
 
    // Store our namespace.
-   mNameSpace = Con::lookupNamespace( parent );
-#endif
+   mVMNameSpace = Con::lookupNamespace( parent );
+   getVM()->setObjectNamespace(getVMObject(), mVMNameSpace);
 }
 
 void SimObject::unlinkNamespaces()
 {
-#if TOFIX
-   if (!mNameSpace)
+   if (!mVMNameSpace)
       return;
 
    // Restore NameSpace's
@@ -2543,8 +2541,8 @@ void SimObject::unlinkNamespaces()
       }
    }
 
-   mNameSpace = NULL;
-#endif
+   mVMNameSpace = NULL;
+   getVM()->setObjectNamespace(getVMObject(), NULL);
 }
 
 void SimObject::setClassNamespace( const char *classNamespace )

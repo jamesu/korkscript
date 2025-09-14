@@ -285,6 +285,8 @@ class SimFieldDictionaryIterator
    SimFieldDictionary::Entry* operator++();
    SimFieldDictionary::Entry* operator*();
    void toVMItr(KorkApi::VMIterator& itr);
+   inline SimFieldDictionary::Entry* getEntry() const { return mEntry; }
+   inline bool isValid() const { return mEntry != NULL; }
 };
 
 // END T2D BLOCK
@@ -562,7 +564,7 @@ private:
 protected:
     SimObjectId mId;         ///< Id number for this object.
     StringTableEntry mIdString;
-    Namespace*  mNameSpace;
+    KorkApi::NamespaceId  mVMNameSpace;
     U32         mTypeMask;
 
     S32 mScriptCallbackGuard; ///< Whether the object is executing a script callback.

@@ -949,6 +949,8 @@ ConsoleFunction(eval, const char *, 2, 2, "eval(consoleString)")
    return Con::evaluate(argv[1], false, NULL);
 }
 
+#endif
+
 ConsoleFunction(getVariable, const char *, 2, 2, "(string varName)")
 {
    return Con::getVariable(argv[1]);
@@ -967,16 +969,20 @@ ConsoleFunction(export, void, 2, 4, "export(searchString [, fileName [,append]])
    bool append = (argc == 4) ? dAtob(argv[3]) : false;
 
    if (argc >= 3)
-      if (Con::expandScriptFilename(scriptFilenameBuffer, sizeof(scriptFilenameBuffer), argv[2]))
+   {
+      if (Con::expandScriptFilename(scriptFilenameBuffer, sizeof(scriptFilenameBuffer), (const char*)argv[2]) )
+      {
          filename = scriptFilenameBuffer;
-
-   gEvalState.globalVars.exportVariables(argv[1], filename, append);
+      }
+   }
+   
+   // TOFIX gEvalState.globalVars.exportVariables(argv[1]), filename, append);
 }
 
 ConsoleFunction(deleteVariables, void, 2, 2, "deleteVariables(wildCard)")
 {
    argc;
-   gEvalState.globalVars.deleteVariables(argv[1]);
+   vmPtr->removeGlobalVariable(StringTable->insert((const char*)argv[1]));
 }
 
 //----------------------------------------------------------------
@@ -984,8 +990,8 @@ ConsoleFunction(deleteVariables, void, 2, 2, "deleteVariables(wildCard)")
 ConsoleFunction(trace, void, 2, 2, "trace(bool)")
 {
    argc;
-   gEvalState.traceOn = dAtob(argv[1]);
-   Con::printf("Console trace is %s", gEvalState.traceOn ? "on." : "off.");
+   vmPtr->setTracing(dAtob(argv[1]));
+   Con::printf("Console trace is %s", vmPtr->isTracing() ? "on." : "off.");
 }
 
 //----------------------------------------------------------------
@@ -1019,7 +1025,8 @@ ConsoleFunction(fileBase, const char *, 2, 2, "fileBase(fileName)")
       path = argv[1];
    else
       path++;
-   char *ret = Con::getReturnBuffer(dStrlen(path) + 1);
+   KorkApi::ConsoleValue retV = Con::getReturnBuffer(dStrlen(path) + 1);
+   char *ret = (char*)retV.evaluatePtr(vmPtr->getAllocBase());
    dStrcpy(ret, path);
    char *ext = dStrrchr(ret, '.');
    if(ext)
@@ -1035,7 +1042,8 @@ ConsoleFunction(fileName, const char *, 2, 2, "fileName(filePathName)")
       name = argv[1];
    else
       name++;
-   char *ret = Con::getReturnBuffer(dStrlen(name));
+   KorkApi::ConsoleValue retV = Con::getReturnBuffer(dStrlen(name) + 1);
+   char *ret = (char*)retV.evaluatePtr(vmPtr->getAllocBase());
    dStrcpy(ret, name);
    return ret;
 }
@@ -1047,7 +1055,8 @@ ConsoleFunction(filePath, const char *, 2, 2, "filePath(fileName)")
    if(!path)
       return "";
    U32 len = path - argv[1];
-   char *ret = Con::getReturnBuffer(len + 1);
+   KorkApi::ConsoleValue retV = Con::getReturnBuffer(len + 1);
+   char *ret = (char*)retV.evaluatePtr(vmPtr->getAllocBase());
    dStrncpy(ret, argv[1], len);
    ret[len] = 0;
    return ret;
@@ -1105,7 +1114,8 @@ ConsoleFunction(getDirectoryList, const char*, 2, 3, "getDirectoryList(%path, %d
       length += dStrlen(directories[i]) + 1;
 
    // Get a return buffer.
-   char* buffer = Con::getReturnBuffer(length);
+   KorkApi::ConsoleValue bufferV = Con::getReturnBuffer(length);
+   char *buffer = (char*)bufferV.evaluatePtr(vmPtr->getAllocBase());
    char* p = buffer;
 
    // Copy the directory names to the buffer.
@@ -1163,5 +1173,3 @@ ConsoleFunction(fileDelete, bool, 2,2, "fileDelete('path')")
 }
 
 ConsoleFunctionGroupEnd( FileSystem );
-
-#endif

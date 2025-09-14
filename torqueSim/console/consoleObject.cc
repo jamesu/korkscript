@@ -223,9 +223,15 @@ void AbstractClassRep::registerClassWithVm(KorkApi::Vm* vm)
 
          if (!currentNewObject->isProperlyAdded())
          {
-            return currentNewObject->registerObject();
+            if (!currentNewObject->registerObject())
+            {
+               return false;
+            }
          }
-
+         
+         // Sync flags
+         vmObject->flags = currentNewObject->getInternalFlags();
+         
          // Are we dealing with a datablock?
          SimDataBlock *dataBlock = dynamic_cast<SimDataBlock *>(currentNewObject);
          static char errorBuffer[256];
@@ -283,7 +289,7 @@ void AbstractClassRep::registerClassWithVm(KorkApi::Vm* vm)
          return (KorkApi::SimObjectId)object->getId();
       };
       // Custom fields
-      mClassInfo.iCustomFields = {}; // TODO
+      mClassInfo.iCustomFields = {};
       mClassInfo.iCustomFields.IterateFields = [](KorkApi::Vm* vm, KorkApi::VMObject* vmObject, KorkApi::VMIterator& state, StringTableEntry* name){
          SimObject* object = NULL;
          
@@ -322,19 +328,25 @@ void AbstractClassRep::registerClassWithVm(KorkApi::Vm* vm)
          {
             // Advance iterator
             SimFieldDictionaryIterator itr(state);
-            // TODO: convert entry
+            if (itr.isValid())
+            {
+               return KorkApi::ConsoleValue::makeString(itr.getEntry()->value);
+            }
          }
 
          return cv;
       };
-      mClassInfo.iCustomFields.GetFieldByName = [](KorkApi::Vm* vm, KorkApi::VMObject* object, const char* name){
-         KorkApi::ConsoleValue cv = KorkApi::ConsoleValue(); // TOFIX
-         return cv;
+      mClassInfo.iCustomFields.GetFieldByName = [](KorkApi::Vm* vm, KorkApi::VMObject* vmObject, const char* name){
+         KorkApi::ConsoleValue cv = KorkApi::ConsoleValue();
+         ConsoleObject* consoleObject = static_cast<ConsoleObject*>(vmObject->userPtr);
+         SimObject* object = dynamic_cast<SimObject*>(consoleObject);
+         const char* val = object->getDataFieldDynamic(StringTable->insert(name), NULL);
+         return KorkApi::ConsoleValue::makeString(val);
       };
       mClassInfo.iCustomFields.SetFieldByName = [](KorkApi::Vm* vm, KorkApi::VMObject* vmObject, const char* name, KorkApi::ConsoleValue value){
          ConsoleObject* consoleObject = static_cast<ConsoleObject*>(vmObject->userPtr);
          SimObject* object = dynamic_cast<SimObject*>(consoleObject);
-         object->setDataFieldDynamic(StringTable->insert(name), "", ""); // TODO
+         object->setDataFieldDynamic(StringTable->insert(name), vm->valueAsString(value), NULL); // TODO
       };
       // Enumeration
       mClassInfo.iEnum = {};

@@ -233,6 +233,35 @@ void init()
    config.logFn = [](U32 level, const char *consoleLine, void* userPtr){
       Con::printf("%s", consoleLine);
    };
+   
+   config.iFind.FindObjectByIdFn = [](void* userPtr, SimObjectId ident){
+      SimObject* obj = Sim::findObject(ident);
+      return obj ? obj->getVMObject() : (KorkApi::VMObject*)NULL;
+   };
+   config.iFind.FindObjectByInternalNameFn = [](void* userPtr, StringTableEntry name, bool recursive, KorkApi::VMObject* parent){
+      SimObject* obj = static_cast<SimObject*>(parent->userPtr);
+      SimSet* set = dynamic_cast<SimSet*>(obj);
+      obj = set->findObjectByInternalName(name, recursive);
+      return obj ? obj->getVMObject() : (KorkApi::VMObject*)NULL;
+   };
+   config.iFind.FindObjectByNameFn = [](void* userPtr, StringTableEntry name, KorkApi::VMObject* parent){
+      SimObject* obj = NULL;
+      if (parent)
+      {
+         obj = static_cast<SimObject*>(parent->userPtr);
+         obj = obj->findObject(name);
+      }
+      else
+      {
+         obj = Sim::findObject(name);
+      }
+      return obj ? obj->getVMObject() : (KorkApi::VMObject*)NULL;
+   };
+   config.iFind.FindObjectByPathFn = [](void* userPtr, StringTableEntry name){
+      SimObject* obj = Sim::findObject(name);
+      return obj ? obj->getVMObject() : (KorkApi::VMObject*)NULL;
+   };
+   
    sVM = KorkApi::createVM(&config);
 
    AssertFatal(active == false, "Con::init should only be called once.");
