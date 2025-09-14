@@ -270,7 +270,7 @@ static U32 castValueToU32(KorkApi::ConsoleValue retValue, KorkApi::ConsoleValue:
       case KorkApi::ConsoleValue::TypeInternalString:
          return (U32)atoll((const char*)retValue.evaluatePtr(allocBase));
       default:
-         return 0; // TOFIX
+         return 0; // TOFIX: use type api
    }
 }
 
@@ -285,7 +285,7 @@ static F32 castValueToF32(KorkApi::ConsoleValue retValue, KorkApi::ConsoleValue:
       case KorkApi::ConsoleValue::TypeInternalString:
          return atoll((const char*)retValue.evaluatePtr(allocBase));
       default:
-         return 0.0f; // TOFIX
+         return 0.0f; // TOFIX: use type api
    }
 }
 
@@ -515,16 +515,15 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
             // an old one.
             if(isDataBlock)
             {
-               #if TOFIX
                // Con::printf("  - is a datablock");
                
                // Find the old one if any.
-               KorkApi::VMObject *db = Sim::getDataBlockGroup()->findObject(callArgv[2]);
+               KorkApi::VMObject *db = mVM->mConfig.iFind.FindDatablockGroup(mVM->mConfig.findUser);
                
                // Make sure we're not changing types on ourselves...
-               if(db && dStricmp(db->getClassName(), callArgv[1]))
+               if(db && dStricmp(db->klass->name, callArgv[1]))
                {
-                  Con::errorf(ConsoleLogEntry::General, "Cannot re-declare data block %s with a different class.", callArgv[2]);
+                  mVM->printf(0, "Cannot re-declare data block %s with a different class.", callArgv[2]);
                   ip = failJump;
                   break;
                }
@@ -532,7 +531,6 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
                // If there was one, set the currentNewObject and move on.
                if(db)
                   currentNewObject = db;
-               #endif
             }
 
             // For singletons, delete the old object if it exists
@@ -597,25 +595,21 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
                   break;
                }
 
-               #if TOFIX
                if(*objParent)
                {
                   // Find it!
-                  KorkApi::VMObject *parent;
-                  if(Sim::findObject(objParent, parent))
+                  KorkApi::VMObject *parent = mVM->mConfig.iFind.FindObjectByNameFn(mVM->mConfig.findUser, objParent, NULL);
+                  if (parent)
                   {
                      // Con::printf(" - Parent object found: %s", parent->getClassName());
                      
-                     // and suck the juices from it!
-                     klassInfo->iCreate
-                     currentNewObject->assignFieldsFrom(parent);
+                     // TOFIX currentNewObject->assignFieldsFrom(parent);
                   }
                   else
-                     Con::errorf(ConsoleLogEntry::General, "%s: Unable to find parent object %s for %s.", getFileLine(ip-1), objParent, callArgv[1]);
-                  
-                  // Mm! Juices!
+                  {
+                     mVM->printf(0, "%s: Unable to find parent object %s for %s.", getFileLine(ip-1), objParent, callArgv[1]);
+                  }
                }
-               #endif
 
                if (!klassInfo->iCreate.ProcessArgs(mVMPublic, currentNewObject, objectName, isDataBlock, isInternal, callArgc-3, callArgv+3))
                {
@@ -1043,22 +1037,10 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
             ++ip; // To skip the recurse flag if the object wasnt found
             if(curObject)
             {
-#if TOFIX
-               SimGroup *group = dynamic_cast<SimGroup *>(curObject);
-               if(group)
-               {
-                  StringTableEntry intName = StringTable->insert(mVM->mSTR.getStringValue());
-                  bool recurse = code[ip-1];
-                  KorkApi::VMObject *obj = group->findObjectByInternalName(intName, recurse);
-                  intStack[_UINT+1] = obj ? obj->getId() : 0;
-                  _UINT++;
-               }
-               else
-               {
-                  Con::errorf(ConsoleLogEntry::Script, "%s: Attempt to use -> on non-group %s of class %s.", getFileLine(ip-2), curObject->getName(), curObject->getClassName());
-                  intStack[_UINT] = 0;
-               }
-#endif
+               StringTableEntry intName = StringTable->insert(mVM->mSTR.getStringValue());
+               bool recurse = code[ip-1];
+               KorkApi::VMObject* obj = mVM->mConfig.iFind.FindObjectByInternalNameFn(mVM->mConfig.findUser, intName, recurse, curObject);
+               intStack[_UINT+1] = obj ? obj->klass->iCreate.GetId(obj) : 0;
             }
             break;
             
@@ -1637,20 +1619,19 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
             else
             {
                // Look up the object.
-               #if TOFIX
-               SimSet* set;
-               if( !Sim::findObject( mVM->mSTR.getStringValue(), set ) )
+               KorkApi::VMObject* set = mVM->mConfig.iFind.FindObjectByPathFn(mVM->mConfig.findUser, mVM->mSTR.getStringValue());
+               
+               if( !set )
                {
-                  Con::errorf( ConsoleLogEntry::General, "No SimSet object '%s'", mVM->mSTR.getStringValue() );
-                  Con::errorf( ConsoleLogEntry::General, "Did you mean to use 'foreach$' instead of 'foreach'?" );
+                  mVM->printf(0, "No SimSet object '%s'", mVM->mSTR.getStringValue());
+                  mVM->printf(0, "Did you mean to use 'foreach$' instead of 'foreach'?");
                   ip = failIp;
                   continue;
                }
-               #endif
                
                // Set up.
                
-               iter.mData.mObj.mSet = NULL; // TOFIX set;
+               iter.mData.mObj.mSet = set;
                iter.mData.mObj.mIndex = 0;
             }
             
@@ -1710,18 +1691,17 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
             else
             {
                U32 index = iter.mData.mObj.mIndex;
-               #if TOFIX
-               SimSet* set = iter.mData.mObj.mSet;
+               KorkApi::VMObject* set = iter.mData.mObj.mSet;
                
-               if( index >= set->size() )
+               if( index >= set->klass->iEnum.GetSize(set) )
                {
                   ip = breakIp;
                   continue;
                }
                
-               iter.mDictionary->setEntryIntValue(iter.mVariable, set->at( index )->getId() );
+               KorkApi::VMObject* atObject = set->klass->iEnum.GetObjectAtIndex(set, index);
+               iter.mDictionary->setEntryIntValue(iter.mVariable, atObject ? atObject->klass->iCreate.GetId(atObject) : 0);
                iter.mData.mObj.mIndex = index + 1;
-               #endif
             }
             
             ++ ip;

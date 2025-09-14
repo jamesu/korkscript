@@ -215,9 +215,10 @@ struct ClassInfo {
 struct FindObjectsInterface
 {
 	VMObject* (*FindObjectByNameFn)(void* userPtr, StringTableEntry name, VMObject* parent);
-    VMObject* (*FindObjectByPathFn)(void* userPtr, const char* path);
+   VMObject* (*FindObjectByPathFn)(void* userPtr, const char* path);
 	VMObject* (*FindObjectByInternalNameFn)(void* userPtr, StringTableEntry internalName, bool recursive, VMObject* parent);
 	VMObject* (*FindObjectByIdFn)(void* userPtr, SimObjectId objectId);
+   VMObject* (*FindDatablockGroup)(void* userPtr);
 };
 
 

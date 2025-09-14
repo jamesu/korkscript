@@ -30,6 +30,8 @@
 
 #include "console/typeValidators.h"
 #include "console/codeBlock.h"
+#include "console/consoleTypes.h"
+#include "sim/dynamicTypes.h"
 
 extern KorkApi::Vm* sVM;
 
@@ -2300,26 +2302,23 @@ bool gAllowClassName = false;
 void SimObject::initPersistFields()
 {
    Parent::initPersistFields();
-#if TOFIX
+   
    addGroup("SimBase");
    addField("canSaveDynamicFields",    TypeBool,      Offset(mCanSaveFieldDictionary, SimObject), &writeCanSaveDynamicFields, "");
    addField("internalName",            TypeString,       Offset(mInternalName, SimObject), &writeInternalName, "");   
-   addProtectedField("parentGroup",        TypeSimObjectPtr, Offset(mGroup, SimObject), &setParentGroup, NULL, &writeParentGroup, "Group hierarchy parent of the object." );
+   // TOFIX addProtectedField("parentGroup",        TypeSimObjectPtr, Offset(mGroup, SimObject), &setParentGroup, NULL, &writeParentGroup, "Group hierarchy parent of the object." );
    endGroup("SimBase");
 
    // Namespace Linking.
-   //registerClassNameFields(); // TGE compat - this should only be allowed on GameBase or ScriptObject
-#endif
+   //registerClassNameFields(); // TGE compat - this should only be allowed on GameBase or ScriptObjectxw
 }
 
 void SimObject::registerClassNameFields()
 {
-#if TOFIX
    addGroup("Namespace Linking");
-   addProtectedField("superclass", TypeString, Offset(mSuperClassName, SimObject), &setSuperClass, NULL, &writeSuperclass, "Script Class of object.");
-   addProtectedField("className",      TypeString, Offset(mClassName,      SimObject), &setClass,      NULL, &writeClass, "Script SuperClass of object.");
+   //addProtectedField("superclass", TypeString, Offset(mSuperClassName, SimObject), &setSuperClass, NULL, &writeSuperclass, "Script Class of object.");
+   //addProtectedField("className",      TypeString, Offset(mClassName,      SimObject), &setClass,      NULL, &writeClass, "Script SuperClass of object.");
    endGroup("Namespace Linking");
-#endif
 }
 
 //-----------------------------------------------------------------------------

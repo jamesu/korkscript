@@ -238,6 +238,10 @@ void init()
       SimObject* obj = Sim::findObject(ident);
       return obj ? obj->getVMObject() : (KorkApi::VMObject*)NULL;
    };
+   config.iFind.FindDatablockGroup = [](void* userPtr){
+      SimObject* obj = Sim::getDataBlockGroup();
+      return obj ? obj->getVMObject() : (KorkApi::VMObject*)NULL;
+   };
    config.iFind.FindObjectByInternalNameFn = [](void* userPtr, StringTableEntry name, bool recursive, KorkApi::VMObject* parent){
       SimObject* obj = static_cast<SimObject*>(parent->userPtr);
       SimSet* set = dynamic_cast<SimSet*>(obj);

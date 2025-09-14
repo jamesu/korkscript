@@ -524,7 +524,7 @@ bool Vm::callObjectFunction(VMObject* self, StringTableEntry funcName, int argc,
    else if (!self->ns)
    {
       // no ns
-      // TOFIX mInternal->printf(0, " Vm::callObjectFunction - %d has no namespace: %s", object->getId(), argv[0]);
+      mInternal->printf(0, " Vm::callObjectFunction - %d has no namespace: %s", self->klass->iCreate.GetId(self), argv[0]);
       return false;
    }
 
@@ -532,7 +532,7 @@ bool Vm::callObjectFunction(VMObject* self, StringTableEntry funcName, int argc,
 
    if(ent == NULL)
    {
-      // TOFIX mInternal->printf(0, "%s: undefined for object '%s' - id %d", funcName, object->getName(), object->getId());
+      mInternal->printf(0, "%s: undefined for object id %d", funcName, self->klass->iCreate.GetId(self));
 
       // Clean up arg buffers, if any.
       mInternal->mSTR.clearFunctionOffset();
@@ -790,6 +790,12 @@ VmInternal::VmInternal(Vm* vm, Config* cfg) : mSTR(&mAllocBase), mEvalState(this
       mConfig.iFind.FindObjectByIdFn = [](void* userPtr, SimObjectId ident) {
          return (VMObject*)NULL;
        };
+   }
+   
+   if (mConfig.iFind.FindDatablockGroup == NULL) {
+      mConfig.iFind.FindDatablockGroup = [](void* userPtr){
+         return (VMObject*)NULL;
+      };
    }
 }
 
