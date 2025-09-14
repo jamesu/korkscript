@@ -69,7 +69,46 @@ void ConsoleBaseType::registerWithVM(KorkApi::Vm* vm)
 
 void ConsoleBaseType::registerTypeWithVm(KorkApi::Vm* vm)
 {
-   // TODO
+   KorkApi::TypeInfo info;
+   info.size = mTypeSize;
+   info.name = StringTable->insert(mTypeName);
+   info.inspectorFieldType = StringTable->insert(mInspectorFieldType);
+   info.userPtr = this;
+   info.iFuncs.SetValue = [](void* userPtr,
+                             KorkApi::Vm* vm,
+                                     void* dptr,
+                                     S32 argc,
+                             KorkApi::ConsoleValue* argv,
+                                     const EnumTable* tbl,
+                                     BitSet32 flag,
+                             U32 typeId){
+      ConsoleBaseType* typeInfo = (ConsoleBaseType*)userPtr;
+      return typeInfo->setData(vm, dptr, argc, argv, tbl, flag, typeId);
+   };
+   info.iFuncs.CopyValue = [](void* userPtr,
+                              KorkApi::Vm* vm,
+                                     void* sptr,
+                                     const EnumTable* tbl,
+                                     BitSet32 flag,
+                                     U32 requestedType,
+                              U32 requestedZone){
+      ConsoleBaseType* typeInfo = (ConsoleBaseType*)userPtr;
+      return typeInfo->getData(vm, sptr, tbl, flag, requestedType, requestedZone);
+   };
+   info.iFuncs.PrepDataFn = [](void* userPtr, KorkApi::Vm* vm,
+                               const char* data,
+                               char* buffer,
+                               U32 bufferLen){
+      ConsoleBaseType* typeInfo = (ConsoleBaseType*)userPtr;
+      return typeInfo->prepData(vm, data, buffer, bufferLen);
+   };
+   info.iFuncs.GetTypeClassNameFn = [](void* userPtr){
+      ConsoleBaseType* typeInfo = (ConsoleBaseType*)userPtr;
+      return typeInfo->mTypeName;
+   };
+   
+   S32 vmTypeId = vm->registerType(info);
+   AssertFatal(mTypeId != vmTypeId, "Type Id Mismatch");
 }
 
 ConsoleBaseType  *ConsoleBaseType::getType(const S32 typeID)
