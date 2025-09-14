@@ -119,7 +119,6 @@ ConsoleGetType( TypeCaseString )
    return KorkApi::ConsoleValue::makeString(*((const char **)(dptr)));
 }
 
-#if TOFIX
 //////////////////////////////////////////////////////////////////////////
 // TypeFileName
 //////////////////////////////////////////////////////////////////////////
@@ -130,7 +129,8 @@ ConsoleSetType( TypeFilename )
    if(argc == 1)
    {
       char buffer[1024];
-      if (Con::expandScriptFilename(buffer, 1024, argv[0]))//(Con::expandPath(buffer, 1024, argv[0]))
+      const char* strArg = vmPtr->valueAsString(argv[0]);
+      if (Con::expandScriptFilename(buffer, 1024, strArg))
          *((const char **) dptr) = StringTable->insert(buffer);
       else
          Con::warnf("(TypeFilename) illegal filename detected: %s", argv[0]);
@@ -141,7 +141,7 @@ ConsoleSetType( TypeFilename )
 
 ConsoleGetType( TypeFilename )
 {
-   return *((const char **)(dptr));
+   return KorkApi::ConsoleValue::makeString(*((const char **)(dptr)));
 }
 
 ConsolePrepData( TypeFilename )
@@ -154,7 +154,6 @@ ConsolePrepData( TypeFilename )
       return data;
    }
 }
-#endif
 
 //////////////////////////////////////////////////////////////////////////
 // TypeS8
@@ -198,7 +197,6 @@ ConsoleSetType( TypeS32 )
       Con::printf("(TypeS32) Cannot set multiple args to a single S32.");
 }
 
-#if TOFIX
 //////////////////////////////////////////////////////////////////////////
 // TypeS32Vector
 //////////////////////////////////////////////////////////////////////////
@@ -208,7 +206,8 @@ ConsoleGetType( TypeS32Vector )
 {
    Vector<S32> *vec = (Vector<S32> *)dptr;
    S32 buffSize = ( vec->size() * 15 ) + 16 ;
-   char* returnBuffer = Con::getReturnBuffer( buffSize );
+   KorkApi::ConsoleValue returnValue = Con::getReturnBuffer(buffSize);
+   char* returnBuffer = (char*)returnValue.evaluatePtr(vmPtr->getAllocBase());
    S32 maxReturn = buffSize;
    returnBuffer[0] = '\0';
    S32 returnLeng = 0;
@@ -222,7 +221,7 @@ ConsoleGetType( TypeS32Vector )
    // trim off that last extra space
    if (returnLeng > 0 && returnBuffer[returnLeng - 1] == ' ')
       returnBuffer[returnLeng - 1] = '\0';
-   return returnBuffer;
+   return returnValue;
 }
 
 ConsoleSetType( TypeS32Vector )
@@ -232,7 +231,7 @@ ConsoleSetType( TypeS32Vector )
    vec->clear();
    if(argc == 1)
    {
-      const char *values = argv[0];
+      const char *values = vmPtr->valueAsString(argv[0]);
       const char *endValues = values + dStrlen(values);
       S32 value;
       // advance through the string, pulling off S32's and advancing the pointer
@@ -249,13 +248,11 @@ ConsoleSetType( TypeS32Vector )
    else if (argc > 1)
    {
       for (S32 i = 0; i < argc; i++)
-         vec->push_back(dAtoi(argv[i]));
+         vec->push_back(vmPtr->valueAsInt(argv[i]));
    }
    else
       Con::printf("Vector<S32> must be set as { a, b, c, ... } or \"a b c ...\"");
 }
-
-#endif
 
 //////////////////////////////////////////////////////////////////////////
 // TypeF32
@@ -277,7 +274,6 @@ ConsoleSetType( TypeF32 )
       Con::printf("(TypeF32) Cannot set multiple args to a single F32.");
 }
 
-#if TOFIX
 //////////////////////////////////////////////////////////////////////////
 // TypeF32Vector
 //////////////////////////////////////////////////////////////////////////
@@ -287,7 +283,8 @@ ConsoleGetType( TypeF32Vector )
 {
    Vector<F32> *vec = (Vector<F32> *)dptr;
    S32 buffSize = ( vec->size() * 15 ) + 16 ;
-   char* returnBuffer = Con::getReturnBuffer( buffSize );
+   KorkApi::ConsoleValue returnValue = Con::getReturnBuffer(buffSize);
+   char* returnBuffer = (char*)returnValue.evaluatePtr(vmPtr->getAllocBase());
    S32 maxReturn = buffSize;
    returnBuffer[0] = '\0';
    S32 returnLeng = 0;
@@ -301,7 +298,7 @@ ConsoleGetType( TypeF32Vector )
    // trim off that last extra space
    if (returnLeng > 0 && returnBuffer[returnLeng - 1] == ' ')
       returnBuffer[returnLeng - 1] = '\0';
-   return returnBuffer;
+   return returnValue;
 }
 
 ConsoleSetType( TypeF32Vector )
@@ -311,7 +308,7 @@ ConsoleSetType( TypeF32Vector )
    vec->clear();
    if(argc == 1)
    {
-      const char *values = argv[0];
+      const char *values = vmPtr->valueAsString(argv[0]);
       const char *endValues = values + dStrlen(values);
       F32 value;
       // advance through the string, pulling off F32's and advancing the pointer
@@ -328,13 +325,11 @@ ConsoleSetType( TypeF32Vector )
    else if (argc > 1)
    {
       for (S32 i = 0; i < argc; i++)
-         vec->push_back(dAtof(argv[i]));
+         vec->push_back(vmPtr->valueAsFloat(argv[i]));
    }
    else
       Con::printf("Vector<F32> must be set as { a, b, c, ... } or \"a b c ...\"");
 }
-
-#endif
 
 //////////////////////////////////////////////////////////////////////////
 // TypeBool
@@ -354,8 +349,6 @@ ConsoleSetType( TypeBool )
       Con::printf("(TypeBool) Cannot set multiple args to a single bool.");
 }
 
-#if TOFIX
-
 //////////////////////////////////////////////////////////////////////////
 // TypeBoolVector
 //////////////////////////////////////////////////////////////////////////
@@ -364,7 +357,8 @@ ConsoleType( boolList, TypeBoolVector, sizeof(Vector<bool>), "" )
 ConsoleGetType( TypeBoolVector )
 {
    Vector<bool> *vec = (Vector<bool>*)dptr;
-   char* returnBuffer = Con::getReturnBuffer(1024);
+   KorkApi::ConsoleValue returnValue = Con::getReturnBuffer(1024);
+   char* returnBuffer = (char*)returnValue.evaluatePtr(vmPtr->getAllocBase());
    S32 maxReturn = 1024;
    returnBuffer[0] = '\0';
    S32 returnLeng = 0;
@@ -377,7 +371,7 @@ ConsoleGetType( TypeBoolVector )
    // trim off that last extra space
    if (returnLeng > 0 && returnBuffer[returnLeng - 1] == ' ')
       returnBuffer[returnLeng - 1] = '\0';
-   return(returnBuffer);
+   return returnValue;
 }
 
 ConsoleSetType( TypeBoolVector )
@@ -387,7 +381,7 @@ ConsoleSetType( TypeBoolVector )
    vec->clear();
    if (argc == 1)
    {
-      const char *values = argv[0];
+      const char *values = vmPtr->valueAsString(argv[0]);
       const char *endValues = values + dStrlen(values);
       S32 value;
       // advance through the string, pulling off bool's and advancing the pointer
@@ -404,12 +398,11 @@ ConsoleSetType( TypeBoolVector )
    else if (argc > 1)
    {
       for (S32 i = 0; i < argc; i++)
-         vec->push_back(dAtob(argv[i]));
+         vec->push_back(vmPtr->valueAsBool(argv[i]));
    }
    else
       Con::printf("Vector<bool> must be set as { a, b, c, ... } or \"a b c ...\"");
 }
-#endif
 
 //////////////////////////////////////////////////////////////////////////
 // TypeEnum
