@@ -70,6 +70,8 @@ public:
    static void initialize();
    
    static void registerWithVM(KorkApi::Vm* vm);
+   
+   void registerTypeWithVm(KorkApi::Vm* vm);
 
    /// Call me to get a pointer to a type's info.
    static ConsoleBaseType *getType(const S32 typeID);

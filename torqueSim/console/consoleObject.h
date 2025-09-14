@@ -275,7 +275,7 @@ public:
    AbstractClassRep* findFieldRoot( StringTableEntry fieldName );
    AbstractClassRep* findContainerChildRoot( AbstractClassRep* pChild );
    
-   void registerWithVm(KorkApi::Vm* vm);
+   void registerClassWithVm(KorkApi::Vm* vm);
 
 protected:
    virtual void init() const = 0;

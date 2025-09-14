@@ -662,6 +662,7 @@ ConsoleFunctionGroupEnd( TaggedStrings );
 
 //----------------------------------------------------------------
 
+#endif
 ConsoleFunctionGroupBegin( Output, "Functions to output to the console." );
 
 ConsoleFunction(echo, void, 2, 0, "echo(text [, ... ])")
@@ -671,7 +672,8 @@ ConsoleFunction(echo, void, 2, 0, "echo(text [, ... ])")
    for(i = 1; i < argc; i++)
       len += dStrlen(argv[i]);
 
-   char *ret = Con::getReturnBuffer(len + 1);
+   KorkApi::ConsoleValue retV = Con::getReturnBuffer(len + 1);
+   char *ret = (char*)retV.evaluatePtr(vmPtr->getAllocBase());
    ret[0] = 0;
    for(i = 1; i < argc; i++)
       dStrcat(ret, argv[i]);
@@ -687,7 +689,8 @@ ConsoleFunction(warn, void, 2, 0, "warn(text [, ... ])")
    for(i = 1; i < argc; i++)
       len += dStrlen(argv[i]);
 
-   char *ret = Con::getReturnBuffer(len + 1);
+   KorkApi::ConsoleValue retV = Con::getReturnBuffer(len + 1);
+   char *ret = (char*)retV.evaluatePtr(vmPtr->getAllocBase());
    ret[0] = 0;
    for(i = 1; i < argc; i++)
       dStrcat(ret, argv[i]);
@@ -703,7 +706,8 @@ ConsoleFunction(error, void, 2, 0, "error(text [, ... ])")
    for(i = 1; i < argc; i++)
       len += dStrlen(argv[i]);
 
-   char *ret = Con::getReturnBuffer(len + 1);
+   KorkApi::ConsoleValue retV = Con::getReturnBuffer(len + 1);
+   char *ret = (char*)retV.evaluatePtr(vmPtr->getAllocBase());
    ret[0] = 0;
    for(i = 1; i < argc; i++)
       dStrcat(ret, argv[i]);
@@ -715,7 +719,8 @@ ConsoleFunction(error, void, 2, 0, "error(text [, ... ])")
 ConsoleFunction(expandEscape, const char *, 2, 2, "expandEscape(text)")
 {
    argc;
-   char *ret = Con::getReturnBuffer(dStrlen(argv[1])*2 + 1);  // worst case situation
+   KorkApi::ConsoleValue retV = Con::getReturnBuffer(dStrlen(argv[1])*2 + 1); // worst case situation
+   char *ret = (char*)retV.evaluatePtr(vmPtr->getAllocBase());
    expandEscape(ret, argv[1]);
    return ret;
 }
@@ -723,7 +728,8 @@ ConsoleFunction(expandEscape, const char *, 2, 2, "expandEscape(text)")
 ConsoleFunction(collapseEscape, const char *, 2, 2, "collapseEscape(text)")
 {
    argc;
-   char *ret = Con::getReturnBuffer(dStrlen(argv[1]) + 1);  // worst case situation
+   KorkApi::ConsoleValue retV = Con::getReturnBuffer(dStrlen(argv[1]) + 1); // worst case situation
+   char *ret = (char*)retV.evaluatePtr(vmPtr->getAllocBase());
    dStrcpy( ret, argv[1] );
    collapseEscape( ret );
    return ret;
@@ -752,6 +758,7 @@ ConsoleFunction(quitWithErrorMessage, void, 2, 2, "quitWithErrorMessage(msg)"
    AssertISV(false, argv[1]);
 }
 
+#if TOFIX
 //----------------------------------------------------------------
 
 ConsoleFunctionGroupBegin(MetaScripting, "Functions that let you manipulate the scripting engine programmatically.");

@@ -164,7 +164,7 @@ ConsoleObject* AbstractClassRep::create(const U32 groupId, const U32 typeId, con
 
 //--------------------------------------
 
-void AbstractClassRep::registerWithVm(KorkApi::Vm* vm)
+void AbstractClassRep::registerClassWithVm(KorkApi::Vm* vm)
 {
    if (mClassInfo.name == NULL)
    {
@@ -785,7 +785,7 @@ void AbstractClassRep::registerWithVM(KorkApi::Vm* vm)
 {
    for (AbstractClassRep* walk = classLinkList; walk; walk = walk->nextClass)
    {
-      walk->registerWithVM(vm);
+      walk->registerClassWithVm(vm);
    }
 }
 

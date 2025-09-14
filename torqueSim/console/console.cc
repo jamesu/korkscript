@@ -224,6 +224,15 @@ void init()
 {
    // Setup VM
    KorkApi::Config config = {};
+   config.mallocFn = [](size_t size, void*){
+      return dMalloc(size);
+   };
+   config.freeFn = [](void* addr, void*){
+      dFree(addr);
+   };
+   config.logFn = [](U32 level, const char *consoleLine, void* userPtr){
+      Con::printf("%s", consoleLine);
+   };
    sVM = KorkApi::createVM(&config);
 
    AssertFatal(active == false, "Con::init should only be called once.");
@@ -1183,7 +1192,7 @@ void setLogMode(S32 newMode)
 
 KorkApi::NamespaceId lookupNamespace(const char *ns)
 {
-   if(!ns)
+   if(!ns || ns[0] == '\0')
       return sVM->getGlobalNamespace();
    return sVM->findNamespace(StringTable->insert(ns));
 }

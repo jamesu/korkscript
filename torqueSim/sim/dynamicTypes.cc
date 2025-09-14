@@ -62,9 +62,14 @@ void ConsoleBaseType::registerWithVM(KorkApi::Vm* vm)
    {
       if (gConsoleTypeTable[i])
       {
-         gConsoleTypeTable[i]->registerWithVM(vm);
+         gConsoleTypeTable[i]->registerTypeWithVm(vm);
       }
    }
+}
+
+void ConsoleBaseType::registerTypeWithVm(KorkApi::Vm* vm)
+{
+   // TODO
 }
 
 ConsoleBaseType  *ConsoleBaseType::getType(const S32 typeID)
