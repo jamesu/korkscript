@@ -238,22 +238,16 @@ void Vm::releaseHeapRef(ConsoleHeapAllocRef value)
 
 ConsoleHeapAllocRef VmInternal::createHeapRef(U32 size)
 {
-   ConsoleHeapAlloc* ref = (ConsoleHeapAlloc*)mConfig.mallocFn(sizeof(ConsoleHeapAllocRef) + size, mConfig.allocUser);
+   ConsoleHeapAlloc* ref = (ConsoleHeapAlloc*)mConfig.mallocFn(sizeof(ConsoleHeapAlloc) + size, mConfig.allocUser);
    ref->size = size;
-
+   
+   ref->prev = nullptr;
+   ref->next = mHeapAllocs;
    if (mHeapAllocs)
    {
-      ref->prev = NULL;
-      ref->next = mHeapAllocs;
       mHeapAllocs->prev = ref;
-      mHeapAllocs = ref;
    }
-   else
-   {
-      ref->prev = NULL;
-      ref->next = NULL;
-      mHeapAllocs = ref;
-   }
+   mHeapAllocs = ref;
 
    return (ConsoleHeapAllocRef)ref;
 }

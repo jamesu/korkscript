@@ -39,8 +39,6 @@
 
 #define ST_INIT_SIZE 15
 
-static char scratchBuffer[1024];
-
 //---------------------------------------------------------------
 //
 // Dictionary functions
@@ -486,7 +484,7 @@ void Dictionary::setEntryStringValue(Dictionary::Entry* e, const char * value)
 
    U32 expectedSize = dStrlen(value)+1;
    
-   if (e->mHeapAlloc && e->mHeapAlloc->size < expectedSize)
+   if (e->mHeapAlloc && expectedSize > e->mHeapAlloc->size)
    {
       vm->releaseHeapRef(e->mHeapAlloc);
       e->mHeapAlloc = NULL;
@@ -572,6 +570,8 @@ Dictionary::Entry* Dictionary::addVariable(  const char *name,
                                            const char* usage )
 {
    AssertFatal( type >= 0, "Dictionary::addVariable - Got bad type!" );
+   
+   char scratchBuffer[1024];
    
    if(name[0] != '$')
    {

@@ -239,6 +239,8 @@ SimObject::SimObject( const U8 namespaceLinkMask ) : mNSLinkMask( namespaceLinkM
    mSuperClassName          = NULL;
    mProgenitorFile          = ""; // TOFIX CodeBlock::getCurrentCodeBlockFullPath();
    mPeriodicTimerID         = 0;
+   vmObject = NULL;
+   vm = NULL;
 }
 
 
