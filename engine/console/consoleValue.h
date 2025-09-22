@@ -9,8 +9,8 @@ struct ConsoleValue
 {
    struct AllocBase
    {
+      void* func;
       void* arg;
-      void* ret;
    };
    
    enum TypeEnum : U16
@@ -26,8 +26,8 @@ struct ConsoleValue
       ZoneExternal = 0, // externally managed pointer
       ZonePacked   = 1, // packed into CV
       ZoneVmHeap   = 2, // pointer managed by a ConsoleHeapAlloc
-      ZoneArg      = 3, // allocated inside VM arg buffer
-      ZoneReturn   = 4  // allocated inside VM return buffer
+      ZoneReturn   = 3, // allocated inside return overflow buffer
+      ZoneFunc     = 4  // allocated inside main function buffer
    };
    
    // flags
@@ -73,7 +73,7 @@ struct ConsoleValue
    }
    static ConsoleValue makeTyped(void* p, U16 typeId, Zone zone=ZoneExternal)
    {
-      ConsoleValue v; v.setTyped(p, typeId, zone); return v;
+      ConsoleValue v; v.setTyped((U64)p, typeId, zone); return v;
    }
    
    inline void setInt(U64 i)
@@ -104,11 +104,11 @@ struct ConsoleValue
       *((char**)&cvalue) = p;
    }
    
-   inline void setTyped(void* p, U16 customTypeId, Zone zone=ZoneExternal)
+   inline void setTyped(U64 p, U16 customTypeId, Zone zone=ZoneExternal)
    {
       typeId = customTypeId;
       setZone(zone);
-      *((U64*)&cvalue) = *((U64*)p);
+      cvalue = (U64)p;
    }
    
    inline U64 getInt(U64 def = 0) const
@@ -148,10 +148,10 @@ struct ConsoleValue
             return (void*)(cvalue);
          case ZonePacked:
             return (void*)&cvalue;
-         case ZoneArg:
-            return addOffset(base.arg, cvalue);
          case ZoneReturn:
-            return addOffset(base.ret, cvalue);
+            return addOffset(base.arg, cvalue);
+         case ZoneFunc:
+            return addOffset(base.func, cvalue);
          default:
             return NULL;
       }

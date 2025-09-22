@@ -426,7 +426,7 @@ const char *Dictionary::getEntryStringValue(Entry* e)
                       NULL,
                       0,
                                             KorkApi::ConsoleValue::TypeInternalString,
-                                            KorkApi::ConsoleValue::ZoneArg).evaluatePtr(vm->mAllocBase);
+                                            KorkApi::ConsoleValue::ZoneReturn).evaluatePtr(vm->mAllocBase);
       }
       break;
    }

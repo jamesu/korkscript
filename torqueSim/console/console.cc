@@ -926,7 +926,7 @@ KorkApi::ConsoleValue getReturnBuffer( const char *stringToCopy )
 
 KorkApi::ConsoleValue getArgBuffer(U32 bufferSize)
 {
-   return sVM->getStringArgBuffer(bufferSize);
+   return sVM->getStringFuncBuffer(bufferSize);
 }
 
 KorkApi::ConsoleValue getFloatArg(F64 arg)
@@ -947,7 +947,7 @@ KorkApi::ConsoleValue getBoolArg(bool arg)
 KorkApi::ConsoleValue getStringArg( const char *arg )
 {
    U32 len = dStrlen( arg ) + 1;
-   KorkApi::ConsoleValue retV = sVM->getStringArgBuffer( len );
+   KorkApi::ConsoleValue retV = sVM->getStringFuncBuffer( len );
    char *ret = (char*)retV.evaluatePtr(sVM->getAllocBase());
    dMemcpy( ret, arg, len );
    return retV;

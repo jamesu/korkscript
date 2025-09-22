@@ -278,14 +278,14 @@ void VmInternal::releaseHeapRef(ConsoleHeapAllocRef value)
    mConfig.freeFn(ref, mConfig.allocUser);
 }
 
+ConsoleValue Vm::getStringFuncBuffer(U32 size)
+{
+    return mInternal->getStringFuncBuffer(size);
+}
+
 ConsoleValue Vm::getStringReturnBuffer(U32 size)
 {
     return mInternal->getStringReturnBuffer(size);
-}
-
-ConsoleValue Vm::getStringArgBuffer(U32 size)
-{
-    return mInternal->getStringArgBuffer(size);
 }
 
 ConsoleValue Vm::getTypeReturn(TypeId typeId)
@@ -293,9 +293,9 @@ ConsoleValue Vm::getTypeReturn(TypeId typeId)
     return mInternal->getTypeReturn(typeId);
 }
 
-ConsoleValue Vm::getTypeArg(TypeId typeId)
+ConsoleValue Vm::getTypeFunc(TypeId typeId)
 {
-    return mInternal->getTypeArg(typeId);
+    return mInternal->getTypeFunc(typeId);
 }
 
 ConsoleValue Vm::getStringInZone(U16 zone, U32 size)
@@ -310,48 +310,44 @@ ConsoleValue Vm::getTypeInZone(U16 zone, TypeId typeId)
 
 ConsoleValue VmInternal::getStringInZone(U16 zone, U32 size)
 {
-   if (zone == ConsoleValue::ZoneArg)
-      return getStringArgBuffer(size);
-   else if (zone == ConsoleValue::ZoneReturn)
+   if (zone == ConsoleValue::ZoneReturn)
       return getStringReturnBuffer(size);
+   else if (zone == ConsoleValue::ZoneFunc)
+      return getStringFuncBuffer(size);
    else
       return ConsoleValue();
 }
 
 ConsoleValue VmInternal::getTypeInZone(U16 zone, TypeId typeId)
 {
-   if (zone == ConsoleValue::ZoneArg)
-      return getTypeArg(typeId);
-   else if (zone == ConsoleValue::ZoneReturn)
+   if (zone == ConsoleValue::ZoneReturn)
       return getTypeReturn(typeId);
+   else if (zone == ConsoleValue::ZoneFunc)
+      return getTypeFunc(typeId);
    else
       return ConsoleValue();
 }
 
-ConsoleValue VmInternal::getStringReturnBuffer(U32 size)
+ConsoleValue VmInternal::getStringFuncBuffer(U32 size)
 {
-   char* data = mSTR.getReturnBuffer(size);
-   return ConsoleValue::makeString((char*)(data - mSTR.mBuffer), ConsoleValue::ZoneReturn);
+   return mSTR.getFuncBuffer(KorkApi::ConsoleValue::TypeInternalString, size);
 }
 
-ConsoleValue VmInternal::getStringArgBuffer(U32 size)
+ConsoleValue VmInternal::getStringReturnBuffer(U32 size)
 {
-   char* data = mSTR.getArgBuffer(size);
-   return ConsoleValue::makeString((char*)(data - mSTR.mArgBuffer), ConsoleValue::ZoneArg);
+   return mSTR.getReturnBuffer(KorkApi::ConsoleValue::TypeInternalString, size);
+}
+
+ConsoleValue VmInternal::getTypeFunc(TypeId typeId)
+{
+   U32 size = mTypes[typeId].size;
+   return mSTR.getFuncBuffer(typeId, size);
 }
 
 ConsoleValue VmInternal::getTypeReturn(TypeId typeId)
 {
    U32 size = mTypes[typeId].size;
-   char* data = mSTR.getReturnBuffer(size);
-   return ConsoleValue::makeTyped((char*)(data - mSTR.mArgBuffer), typeId, ConsoleValue::ZoneReturn);
-}
-
-ConsoleValue VmInternal::getTypeArg(TypeId typeId)
-{
-   U32 size = mTypes[typeId].size;
-   char* data = mSTR.getArgBuffer(size);
-   return ConsoleValue::makeTyped((char*)(data - mSTR.mArgBuffer), typeId, ConsoleValue::ZoneArg);
+   return mSTR.getReturnBuffer(typeId, size);
 }
 
 
@@ -632,7 +628,7 @@ ConsoleValue Vm::getObjectField(VMObject* object, StringTableEntry fieldName, Co
 
 const char* Vm::getObjectFieldString(VMObject* object, StringTableEntry fieldName, const char** stringValue, const char* arrayIndex)
 {
-   ConsoleValue foundValue = mInternal->getObjectField(object, fieldName, arrayIndex, KorkApi::TypeDirectCopy, KorkApi::ConsoleValue::ZoneReturn);
+   ConsoleValue foundValue = mInternal->getObjectField(object, fieldName, arrayIndex, KorkApi::TypeDirectCopy, KorkApi::ConsoleValue::ZoneFunc);
    
    return (const char*)foundValue.evaluatePtr(mInternal->mAllocBase);
 }
@@ -1030,7 +1026,7 @@ F64 VmInternal::valueAsFloat(ConsoleValue v)
                          NULL,
                          0,
                                                KorkApi::ConsoleValue::TypeInternalFloat,
-                                               KorkApi::ConsoleValue::ZoneArg).getFloat();
+                                               KorkApi::ConsoleValue::ZoneReturn).getFloat();
          }
          break;
    }
@@ -1061,7 +1057,7 @@ S64 VmInternal::valueAsBool(ConsoleValue v)
                          NULL,
                          0,
                                                KorkApi::ConsoleValue::TypeInternalInt,
-                                               KorkApi::ConsoleValue::ZoneArg).getInt();
+                                               KorkApi::ConsoleValue::ZoneReturn).getInt();
          }
          break;
    }
@@ -1093,7 +1089,7 @@ S64 VmInternal::valueAsInt(ConsoleValue v)
                          NULL,
                          0,
                                                KorkApi::ConsoleValue::TypeInternalInt,
-                                               KorkApi::ConsoleValue::ZoneArg).getInt();
+                                               KorkApi::ConsoleValue::ZoneReturn).getInt();
          }
          break;
    }
@@ -1124,7 +1120,7 @@ const char* VmInternal::valueAsString(ConsoleValue v)
                       NULL,
                       0,
                                             KorkApi::ConsoleValue::TypeInternalString,
-                                            KorkApi::ConsoleValue::ZoneArg).evaluatePtr(mAllocBase);
+                                            KorkApi::ConsoleValue::ZoneReturn).evaluatePtr(mAllocBase);
       }
       break;
    }

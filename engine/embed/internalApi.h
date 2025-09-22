@@ -52,9 +52,9 @@ struct VmInternal
    void releaseHeapRef(ConsoleHeapAllocRef value);
 
    // Heap values (like strings)
+   ConsoleValue getStringFuncBuffer(U32 size);
    ConsoleValue getStringReturnBuffer(U32 size);
-   ConsoleValue getStringArgBuffer(U32 size);
-   ConsoleValue getTypeArg(TypeId typeId);
+   ConsoleValue getTypeFunc(TypeId typeId);
    ConsoleValue getTypeReturn(TypeId typeId);
 
    ConsoleValue getStringInZone(U16 zone, U32 size);

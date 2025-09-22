@@ -102,7 +102,7 @@ const char *ExprEvalState::getNamespaceList(Namespace *ns)
    Namespace * walk;
    for(walk = ns; walk; walk = walk->mParent)
       size += dStrlen(walk->mName) + 4;
-   char *ret = (char*)vmInternal->getStringReturnBuffer(size).ptr();
+   char *ret = (char*)vmInternal->getStringFuncBuffer(size).ptr();
    ret[0] = 0;
    for(walk = ns; walk; walk = walk->mParent)
    {

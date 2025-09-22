@@ -54,8 +54,8 @@ struct StringStack
    U32 mStartStackSize;
    U32 mFunctionOffset;
 
-   U32 mArgBufferSize;
-   char *mArgBuffer;
+   U32 mReturnBufferSize;
+   char *mReturnBuffer;
 
    void validateBufferSize(U32 size)
    {
@@ -63,15 +63,15 @@ struct StringStack
       {
          mBufferSize = size + 2048;
          mBuffer = (char *) dRealloc(mBuffer, mBufferSize);
-         if (mAllocBase) mAllocBase->ret = mBuffer;
+         if (mAllocBase) mAllocBase->func = mBuffer;
       }
    }
-   void validateArgBufferSize(U32 size)
+   void validateReturnBufferSize(U32 size)
    {
-      if(size > mArgBufferSize)
+      if(size > mReturnBufferSize)
       {
-         mArgBufferSize = size + 2048;
-         mArgBuffer = (char *) dRealloc(mArgBuffer, mArgBufferSize);
+         mReturnBufferSize = size + 2048;
+         mReturnBuffer = (char *) dRealloc(mReturnBuffer, mReturnBufferSize);
          if (mAllocBase) mAllocBase->arg = mBuffer;
       }
    }
@@ -87,7 +87,7 @@ struct StringStack
       mFunctionOffset = 0;
       mAllocBase = allocBase;
       validateBufferSize(8192);
-      validateArgBufferSize(2048);
+      validateReturnBufferSize(2048);
    }
 
    /// Set the top of the stack to be an integer value.
@@ -109,27 +109,31 @@ struct StringStack
    /// Return a temporary buffer we can use to return data.
    ///
    /// @note This clobbers anything in our buffers!
-   char *getReturnBuffer(U32 size)
+   KorkApi::ConsoleValue getReturnBuffer(U16 valueType, U32 size)
    {
+      KorkApi::ConsoleValue ret;
       if(size > ReturnBufferSpace)
       {
-         validateArgBufferSize(size);
-         return mArgBuffer;
+         validateReturnBufferSize(size);
+         ret.setTyped((U64)0, valueType, KorkApi::ConsoleValue::ZoneReturn);
+         return ret;
       }
       else
       {
          validateBufferSize(mStart + size);
-         return mBuffer + mStart;
+         ret.setTyped((U64)(mStart), valueType, KorkApi::ConsoleValue::ZoneFunc);
+         return ret;
       }
    }
 
    /// Return a buffer we can use for arguments.
    ///
    /// This updates the function offset.
-   char *getArgBuffer(U32 size)
+   KorkApi::ConsoleValue getFuncBuffer(U16 valueType, U32 size)
    {
+      KorkApi::ConsoleValue ret;
       validateBufferSize(mStart + mFunctionOffset + size);
-      char *ret = mBuffer + mStart + mFunctionOffset;
+      ret.setTyped((U64)(mStart + mFunctionOffset), valueType, KorkApi::ConsoleValue::ZoneFunc);
       mFunctionOffset += size;
       return ret;
    }
