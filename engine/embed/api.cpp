@@ -228,7 +228,7 @@ ClassId Vm::getClassId(const char* name)
 
 ConsoleHeapAllocRef Vm::createHeapRef(U32 size)
 {
-   mInternal->createHeapRef(size);
+   return mInternal->createHeapRef(size);
 }
 
 void Vm::releaseHeapRef(ConsoleHeapAllocRef value)
@@ -394,7 +394,7 @@ VMObject* Vm::constructObject(ClassId klassId, const char* name, int argc, const
    return NULL;
 }
 
-VMObject* Vm::setObjectNamespace(VMObject* object, NamespaceId nsId)
+void Vm::setObjectNamespace(VMObject* object, NamespaceId nsId)
 {
    object->ns = (Namespace*)nsId;
 }

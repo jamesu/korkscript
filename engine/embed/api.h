@@ -319,7 +319,7 @@ public:
 
 	// Public
 	VMObject* constructObject(ClassId klassId, const char* name, int argc, const char** argv);
-   VMObject* setObjectNamespace(VMObject* object, NamespaceId nsId);
+    void setObjectNamespace(VMObject* object, NamespaceId nsId);
    NamespaceId getObjectNamespace(VMObject* object);
 	// Internal
 	VMObject* createVMObject(ClassId klassId, void* klassPtr);

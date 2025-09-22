@@ -30,7 +30,7 @@ ConsoleGetType( TypeMyPoint3F )
          cv = vmPtr->getStringInZone(requestedZone, 256);
          if (cv.isNull())
          {
-            return;
+            return cv;
          }
       }
       else

@@ -127,6 +127,12 @@ struct ConsoleValue
    {
       return (void*)cvalue;
    }
+
+   void* advancePtr(size_t bytes)
+   {
+      *((char**)&cvalue) += bytes;
+      return *((char**)&cvalue);
+   }
    
    void* evaluatePtr(AllocBase base = {}) const
    {
