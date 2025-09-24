@@ -320,7 +320,7 @@ void shutdown()
 
    consoleLogFile.close();
 
-   KorkApi::destroyVm(sVM);
+   KorkApi::destroyVM(sVM);
    sVM = NULL;
 
    SAFE_DELETE( sLogMutex );

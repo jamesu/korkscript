@@ -135,6 +135,6 @@ int main(int argc, char **argv)
    
    Con::evaluate(data);
 
-	return 1;
+	return 0;
 }
 

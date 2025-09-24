@@ -388,7 +388,7 @@ public:
    {
       if (mVm)
       {
-         destroyVm(mVm);
+         destroyVM(mVm);
       }
    }
    

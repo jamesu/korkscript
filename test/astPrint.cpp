@@ -1,11 +1,12 @@
 #include "platform/platform.h"
-#include "console/console.h"
 #include "console/simpleLexer.h"
 #include "console/ast.h"
 #include "console/compiler.h"
 #include "console/simpleParser.h"
 #include "core/fileStream.h"
 #include <stdio.h>
+#include "embed/api.h"
+#include "embed/internalApi.h"
 
 /*
  
@@ -15,7 +16,7 @@
 
 bool gPrintBytecode = false;
 
-void MyLogger(ConsoleLogEntry::Level level, const char *consoleLine)
+void MyLogger(U32 level, const char *consoleLine, void* userPtr)
 {
    printf("%s\n", consoleLine);
 }
@@ -355,7 +356,19 @@ void dumpToInstructionsPrint(StmtNode* rootNode)
    // Convert AST to bytecode
    CodeStream codeStream;
    codeStream.setFilename("input");
-   CodeBlock* cb = new CodeBlock();
+
+   KorkApi::Config cfg{};
+   cfg.mallocFn = [](size_t sz, void* user) {
+      return (void*)malloc(sz);
+   };
+   cfg.freeFn = [](void* ptr, void* user){
+      free(ptr);
+   };
+   cfg.logFn = MyLogger;
+
+   KorkApi::Vm* vm = KorkApi::createVM(&cfg);
+
+   CodeBlock* cb = new CodeBlock(vm->mInternal);
    Compiler::STEtoCode = &Compiler::evalSTEtoCode;
    Compiler::resetTables();
    
@@ -377,6 +390,8 @@ void dumpToInstructionsPrint(StmtNode* rootNode)
    cb->functionFloats  = Compiler::getFunctionFloatTable().build();
    
    cb->dumpInstructions();
+
+   KorkApi::destroyVM(vm);
 }
 
 bool printAST(const char* buf, const char* filename)

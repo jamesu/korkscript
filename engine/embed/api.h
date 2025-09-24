@@ -384,6 +384,6 @@ public:
 };
 
 Vm* createVM(Config* cfg);
-void destroyVm(Vm* vm);
+void destroyVM(Vm* vm);
 
 }

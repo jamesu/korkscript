@@ -5,6 +5,7 @@
 #include "console/simpleParser.h"
 #include "core/fileStream.h"
 #include <stdio.h>
+#include <unordered_map>
 #include "embed/api.h"
 
 /*
@@ -119,7 +120,7 @@ static ConsoleValue MyPoint3F_CopyData(void* userPtr,
          cv = vm->getStringInZone(requestedZone, 256);
          if (cv.isNull())
          {
-            return;
+            return cv;
          }
       }
       else
@@ -128,14 +129,14 @@ static ConsoleValue MyPoint3F_CopyData(void* userPtr,
       }
       
       dSprintf(destPtr, 256, "%g %g %g", pt->x, pt->y, pt->z);
-      return cv;
    }
    else if ((requestedType & KorkApi::TypeDirectCopy) != 0) // i.e. same type
    {
       cv = vm->getTypeInZone(requestedZone, realRequestedType);
       *((MyPoint3F*)cv.ptr()) = *pt;
-      return cv;
    }
+
+   return cv;
 }
 
 static const char* MyPoint3F_GetTypeClassName(void*) { return "MyPoint3F"; }
@@ -248,7 +249,7 @@ static bool Player_AddObject(Vm* vm, VMObject* object, bool placeAtRoot, U32 gro
 
 static void Player_RemoveObject(void* user, Vm* vm, VMObject* object)
 {
-   auto* p = reinterpret_cast<Player*>(instanceUser);
+   auto* p = reinterpret_cast<Player*>(user);
    if (p && p->mVMInstance)
    {
       gByName.erase(p->mName);
@@ -349,7 +350,7 @@ int testScript(char* script, const char* filename)
    VMObject* found = cfg.iFind.FindObjectByNameFn(cfg.findUser, "player1", NULL);
    AssertFatal(found, "player1 should be registered in iFind");
    
-   destroyVm(vm);
+   destroyVM(vm);
    return 0;
 }
 

@@ -720,7 +720,7 @@ Vm* createVM(Config* cfg)
    return vm;
 }
 
-void destroyVm(Vm* vm)
+void destroyVM(Vm* vm)
 {
    delete vm->mInternal;
    delete vm;
