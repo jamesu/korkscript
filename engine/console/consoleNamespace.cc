@@ -3,7 +3,6 @@
 #include "console/consoleNamespace.h"
 #include "console/consoleInternal.h"
 
-extern KorkApi::Vm* sVM;
 extern U32 HashPointer(StringTableEntry ptr);
 
 NamespaceState::NamespaceState()
