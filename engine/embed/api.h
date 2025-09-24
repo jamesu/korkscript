@@ -247,6 +247,8 @@ struct Config {
    void* findUser;
 
    void* vmUser;
+
+   bool warnUndefinedScriptVariables;
 };
 
 struct ConsoleHeapAlloc

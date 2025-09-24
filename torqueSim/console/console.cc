@@ -43,7 +43,6 @@ static Mutex* sLogMutex;
 KorkApi::Vm* sVM;
 
 ConsoleConstructor *ConsoleConstructor::first = NULL;
-extern bool gWarnUndefinedScriptVariables;
 
 static char scratchBuffer[4096];
 
@@ -274,7 +273,6 @@ void init()
    active                        = true;
    logFileName                   = NULL;
    newLogFile                    = true;
-   gWarnUndefinedScriptVariables = false;
    sLogMutex                     = new Mutex;
 
 #ifdef TORQUE_MULTITHREAD
@@ -292,7 +290,7 @@ void init()
    setVariable("Con::prompt", "% ");
    addVariable("Con::logBufferEnabled", TypeBool, &logBufferEnabled);
    addVariable("Con::printLevel", TypeS32, &printLevel);
-   addVariable("Con::warnUndefinedVariables", TypeBool, &gWarnUndefinedScriptVariables);
+   // TOFIX addVariable("Con::warnUndefinedVariables", TypeBool, &config.gWarnUndefinedScriptVariables);
 
    // Current script file name and root
 #if TOFIX

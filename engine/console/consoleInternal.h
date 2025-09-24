@@ -54,6 +54,11 @@ class EnumTable;
 extern char *typeValueEmpty;
 class ExprEvalState;
 
+enum EvalConstants {
+   MaxStackSize = 1024,
+   MethodOnComponent = -2
+};
+
 class Dictionary
 {
 public:
@@ -163,6 +168,44 @@ public:
    void validate();
 };
 
+
+/// Frame data for a foreach/foreach$ loop.
+struct IterStackRecord
+{
+   /// If true, this is a foreach$ loop; if not, it's a foreach loop.
+   bool mIsStringIter;
+   
+   Dictionary* mDictionary;
+   
+   /// The iterator variable.
+   Dictionary::Entry* mVariable;
+   
+   /// Information for an object iterator loop.
+   struct ObjectPos
+   {
+      /// The set being iterated over.
+      KorkApi::VMObject* mSet;
+
+      /// Current index in the set.
+      U32 mIndex;
+   };
+   
+   /// Information for a string iterator loop.
+   struct StringPos
+   {
+      /// The raw string data on the string stack.
+      const char* mString;
+      
+      /// Current parsing position.
+      U32 mIndex;
+   };
+   union
+   {
+      ObjectPos mObj;
+      StringPos mStr;
+   } mData;
+};
+
 class ExprEvalState
 {
 public:
@@ -177,6 +220,15 @@ public:
    Dictionary* copyDictionary;
    Dictionary::Entry *copyVariable;
    bool traceOn;
+
+   IterStackRecord iterStack[ MaxStackSize ];
+
+   F64 floatStack[MaxStackSize];
+   S64 intStack[MaxStackSize];
+
+   U32 _FLT = 0;
+   U32 _UINT = 0;
+   U32 _ITER = 0;    ///< Stack pointer for iterStack.
    
    U32 mStackDepth;
    

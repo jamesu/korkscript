@@ -43,11 +43,6 @@ namespace KorkApi
    typedef Namespace* NamespaceId;
 }
 
-/// Indicates that warnings about undefined script variables should be displayed.
-///
-/// @note This is set and controlled by script.
-extern bool gWarnUndefinedScriptVariables;
-
 /// Represents an entry in the log.
 struct ConsoleLogEntry
 {

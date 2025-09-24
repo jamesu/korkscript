@@ -334,9 +334,10 @@ Dictionary::Entry* Dictionary::getVariable(StringTableEntry name)
    }
    
    // Warn users when they access a variable that isn't defined.
-   /* TOFIX if(gWarnUndefinedScriptVariables)
-      Con::warnf(" *** Accessed undefined variable '%s'", name);
-   */
+   if(vm->mConfig.warnUndefinedScriptVariables)
+   {
+      vm->printf(0, " *** Accessed undefined variable '%s'", name);
+   }
    return NULL;
 }
 
@@ -645,6 +646,14 @@ ExprEvalState::ExprEvalState(KorkApi::VmInternal* vm)
    copyVariable = NULL;
    currentDictionary = NULL;
    copyDictionary = NULL;
+
+   memset(iterStack, 0, sizeof(iterStack));
+   memset(floatStack, 0, sizeof(floatStack));
+   memset(intStack, 0, sizeof(intStack));
+   
+   _FLT = 0;
+   _UINT = 0;
+   _ITER = 0;
 }
 
 ExprEvalState::~ExprEvalState()

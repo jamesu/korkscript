@@ -42,11 +42,6 @@
 
 using namespace Compiler;
 
-enum EvalConstants {
-   MaxStackSize = 1024,
-   MethodOnComponent = -2
-};
-
 struct LocalRefTrack
 {
    KorkApi::VmInternal* vm;
@@ -97,55 +92,6 @@ struct LocalRefTrack
       return obj;
    }
 };
-
-
-/// Frame data for a foreach/foreach$ loop.
-struct IterStackRecord
-{
-   /// If true, this is a foreach$ loop; if not, it's a foreach loop.
-   bool mIsStringIter;
-   
-   Dictionary* mDictionary;
-   
-   /// The iterator variable.
-   Dictionary::Entry* mVariable;
-   
-   /// Information for an object iterator loop.
-   struct ObjectPos
-   {
-      /// The set being iterated over.
-      KorkApi::VMObject* mSet;
-
-      /// Current index in the set.
-      U32 mIndex;
-   };
-   
-   /// Information for a string iterator loop.
-   struct StringPos
-   {
-      /// The raw string data on the string stack.
-      const char* mString;
-      
-      /// Current parsing position.
-      U32 mIndex;
-   };
-   union
-   {
-      ObjectPos mObj;
-      StringPos mStr;
-   } mData;
-};
-
-bool gWarnUndefinedScriptVariables;
-
-IterStackRecord iterStack[ MaxStackSize ];
-
-F64 floatStack[MaxStackSize];
-S64 intStack[MaxStackSize];
-
-U32 _FLT = 0;
-U32 _UINT = 0;
-U32 _ITER = 0;    ///< Stack pointer for iterStack.
 
 
 const char *ExprEvalState::getNamespaceList(Namespace *ns)
@@ -199,7 +145,7 @@ inline void ExprEvalState::setCurVarName(StringTableEntry name)
       currentVariable = stack.last()->lookup(name);
       currentDictionary = stack.last();
    }
-   if(!currentVariable && gWarnUndefinedScriptVariables)
+   if(!currentVariable && vmInternal->mConfig.warnUndefinedScriptVariables)
    {
       vmInternal->printf(1, "Variable referenced before assignment: %s", name);
    }
@@ -747,7 +693,7 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
                break;
             }
             
-            U32 groupAddId = (U32)intStack[_UINT];
+            U32 groupAddId = (U32)mVM->mEvalState.intStack[mVM->mEvalState._UINT];
             if(!currentNewObject->klass->iCreate.AddObjectFn(mVMPublic, currentNewObject, placeAtRoot, groupAddId))
             {
                // This error is usually caused by failing to call Parent::initPersistFields in the class' initPersistFields().
@@ -763,9 +709,9 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
             // store the new object's ID on the stack (overwriting the group/set
             // id, if one was given, otherwise getting pushed)
             if(placeAtRoot)
-               intStack[_UINT] = currentNewObject->klass->iCreate.GetIdFn(currentNewObject);
+               mVM->mEvalState.intStack[mVM->mEvalState._UINT] = currentNewObject->klass->iCreate.GetIdFn(currentNewObject);
             else
-               intStack[++_UINT] = currentNewObject->klass->iCreate.GetIdFn(currentNewObject);
+               mVM->mEvalState.intStack[++mVM->mEvalState._UINT] = currentNewObject->klass->iCreate.GetIdFn(currentNewObject);
             
             break;
          }
@@ -776,7 +722,7 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
             // our group reference.
             bool placeAtRoot = code[ip++];
             if(!placeAtRoot)
-               _UINT--;
+               mVM->mEvalState._UINT--;
             break;
          }
             
@@ -787,7 +733,7 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
          }
             
          case OP_JMPIFFNOT:
-            if(floatStack[_FLT--])
+            if(mVM->mEvalState.floatStack[mVM->mEvalState._FLT--])
             {
                ip++;
                break;
@@ -795,7 +741,7 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
             ip = code[ip];
             break;
          case OP_JMPIFNOT:
-            if(intStack[_UINT--])
+            if(mVM->mEvalState.intStack[mVM->mEvalState._UINT--])
             {
                ip++;
                break;
@@ -803,7 +749,7 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
             ip = code[ip];
             break;
          case OP_JMPIFF:
-            if(!floatStack[_FLT--])
+            if(!mVM->mEvalState.floatStack[mVM->mEvalState._FLT--])
             {
                ip++;
                break;
@@ -811,7 +757,7 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
             ip = code[ip];
             break;
          case OP_JMPIF:
-            if(!intStack[_UINT--])
+            if(!mVM->mEvalState.intStack[mVM->mEvalState._UINT--])
             {
                ip ++;
                break;
@@ -819,18 +765,18 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
             ip = code[ip];
             break;
          case OP_JMPIFNOT_NP:
-            if(intStack[_UINT])
+            if(mVM->mEvalState.intStack[mVM->mEvalState._UINT])
             {
-               _UINT--;
+               mVM->mEvalState._UINT--;
                ip++;
                break;
             }
             ip = code[ip];
             break;
          case OP_JMPIF_NP:
-            if(!intStack[_UINT])
+            if(!mVM->mEvalState.intStack[mVM->mEvalState._UINT])
             {
-               _UINT--;
+               mVM->mEvalState._UINT--;
                ip++;
                break;
             }
@@ -854,7 +800,7 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
                // Clear iterator state.
                while( iterDepth > 0 )
                {
-                  IterStackRecord& iter = iterStack[ -- _ITER ];
+                  IterStackRecord& iter = mVM->mEvalState.iterStack[ -- mVM->mEvalState._ITER ];
                   if (iter.mData.mObj.mSet)
                   {
                      mVM->decVMRef(iter.mData.mObj.mSet);
@@ -880,7 +826,7 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
                // Clear iterator state.
                while( iterDepth > 0 )
                {
-                  IterStackRecord& iter = iterStack[ -- _ITER ];
+                  IterStackRecord& iter = mVM->mEvalState.iterStack[ -- mVM->mEvalState._ITER ];
                   if (iter.mData.mObj.mSet)
                   {
                      mVM->decVMRef(iter.mData.mObj.mSet);
@@ -892,8 +838,8 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
                
             }
 
-            mVM->mSTR.setFloatValue( floatStack[_FLT] );
-            _FLT--;
+            mVM->mSTR.setFloatValue( mVM->mEvalState.floatStack[mVM->mEvalState._FLT] );
+            mVM->mEvalState._FLT--;
                
             goto execFinished;
 
@@ -906,7 +852,7 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
                // Clear iterator state.
                while( iterDepth > 0 )
                {
-                  IterStackRecord& iter = iterStack[ -- _ITER ];
+                  IterStackRecord& iter = mVM->mEvalState.iterStack[ -- mVM->mEvalState._ITER ];
                   if (iter.mData.mObj.mSet)
                   {
                      mVM->decVMRef(iter.mData.mObj.mSet);
@@ -917,124 +863,124 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
                }
             }
 
-            mVM->mSTR.setIntValue( intStack[_UINT] );
-            _UINT--;
+            mVM->mSTR.setIntValue( mVM->mEvalState.intStack[mVM->mEvalState._UINT] );
+            mVM->mEvalState._UINT--;
                
             goto execFinished;
 
          case OP_CMPEQ:
-            intStack[_UINT+1] = bool(floatStack[_FLT] == floatStack[_FLT-1]);
-            _UINT++;
-            _FLT -= 2;
+            mVM->mEvalState.intStack[mVM->mEvalState._UINT+1] = bool(mVM->mEvalState.floatStack[mVM->mEvalState._FLT] == mVM->mEvalState.floatStack[mVM->mEvalState._FLT-1]);
+            mVM->mEvalState._UINT++;
+            mVM->mEvalState._FLT -= 2;
             break;
             
          case OP_CMPGR:
-            intStack[_UINT+1] = bool(floatStack[_FLT] > floatStack[_FLT-1]);
-            _UINT++;
-            _FLT -= 2;
+            mVM->mEvalState.intStack[mVM->mEvalState._UINT+1] = bool(mVM->mEvalState.floatStack[mVM->mEvalState._FLT] > mVM->mEvalState.floatStack[mVM->mEvalState._FLT-1]);
+            mVM->mEvalState._UINT++;
+            mVM->mEvalState._FLT -= 2;
             break;
             
          case OP_CMPGE:
-            intStack[_UINT+1] = bool(floatStack[_FLT] >= floatStack[_FLT-1]);
-            _UINT++;
-            _FLT -= 2;
+            mVM->mEvalState.intStack[mVM->mEvalState._UINT+1] = bool(mVM->mEvalState.floatStack[mVM->mEvalState._FLT] >= mVM->mEvalState.floatStack[mVM->mEvalState._FLT-1]);
+            mVM->mEvalState._UINT++;
+            mVM->mEvalState._FLT -= 2;
             break;
             
          case OP_CMPLT:
-            intStack[_UINT+1] = bool(floatStack[_FLT] < floatStack[_FLT-1]);
-            _UINT++;
-            _FLT -= 2;
+            mVM->mEvalState.intStack[mVM->mEvalState._UINT+1] = bool(mVM->mEvalState.floatStack[mVM->mEvalState._FLT] < mVM->mEvalState.floatStack[mVM->mEvalState._FLT-1]);
+            mVM->mEvalState._UINT++;
+            mVM->mEvalState._FLT -= 2;
             break;
             
          case OP_CMPLE:
-            intStack[_UINT+1] = bool(floatStack[_FLT] <= floatStack[_FLT-1]);
-            _UINT++;
-            _FLT -= 2;
+            mVM->mEvalState.intStack[mVM->mEvalState._UINT+1] = bool(mVM->mEvalState.floatStack[mVM->mEvalState._FLT] <= mVM->mEvalState.floatStack[mVM->mEvalState._FLT-1]);
+            mVM->mEvalState._UINT++;
+            mVM->mEvalState._FLT -= 2;
             break;
             
          case OP_CMPNE:
-            intStack[_UINT+1] = bool(floatStack[_FLT] != floatStack[_FLT-1]);
-            _UINT++;
-            _FLT -= 2;
+            mVM->mEvalState.intStack[mVM->mEvalState._UINT+1] = bool(mVM->mEvalState.floatStack[mVM->mEvalState._FLT] != mVM->mEvalState.floatStack[mVM->mEvalState._FLT-1]);
+            mVM->mEvalState._UINT++;
+            mVM->mEvalState._FLT -= 2;
             break;
             
          case OP_XOR:
-            intStack[_UINT-1] = intStack[_UINT] ^ intStack[_UINT-1];
-            _UINT--;
+            mVM->mEvalState.intStack[mVM->mEvalState._UINT-1] = mVM->mEvalState.intStack[mVM->mEvalState._UINT] ^ mVM->mEvalState.intStack[mVM->mEvalState._UINT-1];
+            mVM->mEvalState._UINT--;
             break;
             
          case OP_MOD:
-            if(  intStack[_UINT-1] != 0 )
-               intStack[_UINT-1] = intStack[_UINT] % intStack[_UINT-1];
+            if(  mVM->mEvalState.intStack[mVM->mEvalState._UINT-1] != 0 )
+               mVM->mEvalState.intStack[mVM->mEvalState._UINT-1] = mVM->mEvalState.intStack[mVM->mEvalState._UINT] % mVM->mEvalState.intStack[mVM->mEvalState._UINT-1];
             else
-               intStack[_UINT-1] = 0;
-            _UINT--;
+               mVM->mEvalState.intStack[mVM->mEvalState._UINT-1] = 0;
+            mVM->mEvalState._UINT--;
             break;
             
          case OP_BITAND:
-            intStack[_UINT-1] = intStack[_UINT] & intStack[_UINT-1];
-            _UINT--;
+            mVM->mEvalState.intStack[mVM->mEvalState._UINT-1] = mVM->mEvalState.intStack[mVM->mEvalState._UINT] & mVM->mEvalState.intStack[mVM->mEvalState._UINT-1];
+            mVM->mEvalState._UINT--;
             break;
             
          case OP_BITOR:
-            intStack[_UINT-1] = intStack[_UINT] | intStack[_UINT-1];
-            _UINT--;
+            mVM->mEvalState.intStack[mVM->mEvalState._UINT-1] = mVM->mEvalState.intStack[mVM->mEvalState._UINT] | mVM->mEvalState.intStack[mVM->mEvalState._UINT-1];
+            mVM->mEvalState._UINT--;
             break;
             
          case OP_NOT:
-            intStack[_UINT] = !intStack[_UINT];
+            mVM->mEvalState.intStack[mVM->mEvalState._UINT] = !mVM->mEvalState.intStack[mVM->mEvalState._UINT];
             break;
             
          case OP_NOTF:
-            intStack[_UINT+1] = !floatStack[_FLT];
-            _FLT--;
-            _UINT++;
+            mVM->mEvalState.intStack[mVM->mEvalState._UINT+1] = !mVM->mEvalState.floatStack[mVM->mEvalState._FLT];
+            mVM->mEvalState._FLT--;
+            mVM->mEvalState._UINT++;
             break;
             
          case OP_ONESCOMPLEMENT:
-            intStack[_UINT] = ~intStack[_UINT];
+            mVM->mEvalState.intStack[mVM->mEvalState._UINT] = ~mVM->mEvalState.intStack[mVM->mEvalState._UINT];
             break;
             
          case OP_SHR:
-            intStack[_UINT-1] = intStack[_UINT] >> intStack[_UINT-1];
-            _UINT--;
+            mVM->mEvalState.intStack[mVM->mEvalState._UINT-1] = mVM->mEvalState.intStack[mVM->mEvalState._UINT] >> mVM->mEvalState.intStack[mVM->mEvalState._UINT-1];
+            mVM->mEvalState._UINT--;
             break;
             
          case OP_SHL:
-            intStack[_UINT-1] = intStack[_UINT] << intStack[_UINT-1];
-            _UINT--;
+            mVM->mEvalState.intStack[mVM->mEvalState._UINT-1] = mVM->mEvalState.intStack[mVM->mEvalState._UINT] << mVM->mEvalState.intStack[mVM->mEvalState._UINT-1];
+            mVM->mEvalState._UINT--;
             break;
             
          case OP_AND:
-            intStack[_UINT-1] = intStack[_UINT] && intStack[_UINT-1];
-            _UINT--;
+            mVM->mEvalState.intStack[mVM->mEvalState._UINT-1] = mVM->mEvalState.intStack[mVM->mEvalState._UINT] && mVM->mEvalState.intStack[mVM->mEvalState._UINT-1];
+            mVM->mEvalState._UINT--;
             break;
             
          case OP_OR:
-            intStack[_UINT-1] = intStack[_UINT] || intStack[_UINT-1];
-            _UINT--;
+            mVM->mEvalState.intStack[mVM->mEvalState._UINT-1] = mVM->mEvalState.intStack[mVM->mEvalState._UINT] || mVM->mEvalState.intStack[mVM->mEvalState._UINT-1];
+            mVM->mEvalState._UINT--;
             break;
             
          case OP_ADD:
-            floatStack[_FLT-1] = floatStack[_FLT] + floatStack[_FLT-1];
-            _FLT--;
+            mVM->mEvalState.floatStack[mVM->mEvalState._FLT-1] = mVM->mEvalState.floatStack[mVM->mEvalState._FLT] + mVM->mEvalState.floatStack[mVM->mEvalState._FLT-1];
+            mVM->mEvalState._FLT--;
             break;
             
          case OP_SUB:
-            floatStack[_FLT-1] = floatStack[_FLT] - floatStack[_FLT-1];
-            _FLT--;
+            mVM->mEvalState.floatStack[mVM->mEvalState._FLT-1] = mVM->mEvalState.floatStack[mVM->mEvalState._FLT] - mVM->mEvalState.floatStack[mVM->mEvalState._FLT-1];
+            mVM->mEvalState._FLT--;
             break;
             
          case OP_MUL:
-            floatStack[_FLT-1] = floatStack[_FLT] * floatStack[_FLT-1];
-            _FLT--;
+            mVM->mEvalState.floatStack[mVM->mEvalState._FLT-1] = mVM->mEvalState.floatStack[mVM->mEvalState._FLT] * mVM->mEvalState.floatStack[mVM->mEvalState._FLT-1];
+            mVM->mEvalState._FLT--;
             break;
          case OP_DIV:
-            floatStack[_FLT-1] = floatStack[_FLT] / floatStack[_FLT-1];
-            _FLT--;
+            mVM->mEvalState.floatStack[mVM->mEvalState._FLT-1] = mVM->mEvalState.floatStack[mVM->mEvalState._FLT] / mVM->mEvalState.floatStack[mVM->mEvalState._FLT-1];
+            mVM->mEvalState._FLT--;
             break;
          case OP_NEG:
-            floatStack[_FLT] = -floatStack[_FLT];
+            mVM->mEvalState.floatStack[mVM->mEvalState._FLT] = -mVM->mEvalState.floatStack[mVM->mEvalState._FLT];
             break;
             
          case OP_SETCURVAR:
@@ -1104,13 +1050,13 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
             break;
             
          case OP_LOADVAR_UINT:
-            intStack[_UINT+1] = mVM->mEvalState.getIntVariable();
-            _UINT++;
+            mVM->mEvalState.intStack[mVM->mEvalState._UINT+1] = mVM->mEvalState.getIntVariable();
+            mVM->mEvalState._UINT++;
             break;
             
          case OP_LOADVAR_FLT:
-            floatStack[_FLT+1] = mVM->mEvalState.getFloatVariable();
-            _FLT++;
+            mVM->mEvalState.floatStack[mVM->mEvalState._FLT+1] = mVM->mEvalState.getFloatVariable();
+            mVM->mEvalState._FLT++;
             break;
             
          case OP_LOADVAR_STR:
@@ -1124,11 +1070,11 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
             break;
             
          case OP_SAVEVAR_UINT:
-            mVM->mEvalState.setIntVariable((S32)intStack[_UINT]);
+            mVM->mEvalState.setIntVariable((S32)mVM->mEvalState.intStack[mVM->mEvalState._UINT]);
             break;
             
          case OP_SAVEVAR_FLT:
-            mVM->mEvalState.setFloatVariable(floatStack[_FLT]);
+            mVM->mEvalState.setFloatVariable(mVM->mEvalState.floatStack[mVM->mEvalState._FLT]);
             break;
             
          case OP_SAVEVAR_STR:
@@ -1166,7 +1112,7 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
                StringTableEntry intName = StringTable->insert(mVM->mSTR.getStringValue());
                bool recurse = code[ip-1];
                KorkApi::VMObject* obj = mVM->mConfig.iFind.FindObjectByInternalNameFn(mVM->mConfig.findUser, intName, recurse, curObject);
-               intStack[_UINT+1] = obj ? obj->klass->iCreate.GetIdFn(obj) : 0;
+               mVM->mEvalState.intStack[mVM->mEvalState._UINT+1] = obj ? obj->klass->iCreate.GetIdFn(obj) : 0;
             }
             break;
             
@@ -1197,7 +1143,7 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
             if(curObject)
             {
                KorkApi::ConsoleValue retValue = mVM->getObjectField(curObject, curField, curFieldArray, KorkApi::ConsoleValue::TypeInternalInt, KorkApi::ConsoleValue::ZoneExternal);
-               intStack[_UINT+1] = castValueToU32(retValue, mVM->mAllocBase);
+               mVM->mEvalState.intStack[mVM->mEvalState._UINT+1] = castValueToU32(retValue, mVM->mAllocBase);
             }
             else
             {
@@ -1205,25 +1151,25 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
                // a special accessor?
                
                //getFieldComponent( prevObject, prevField, prevFieldArray, curField, valBuffer, VAL_BUFFER_SIZE );
-               intStack[_UINT+1] = 0;//dAtoi( valBuffer );
+               mVM->mEvalState.intStack[mVM->mEvalState._UINT+1] = 0;//dAtoi( valBuffer );
             }
-            _UINT++;
+            mVM->mEvalState._UINT++;
             break;
             
          case OP_LOADFIELD_FLT:
             if(curObject)
             {
                KorkApi::ConsoleValue retValue =  mVM->getObjectField(curObject, curField, curFieldArray, KorkApi::ConsoleValue::TypeInternalFloat, KorkApi::ConsoleValue::ZoneExternal);
-               floatStack[_FLT+1] = castValueToF32(retValue, mVM->mAllocBase);
+               mVM->mEvalState.floatStack[mVM->mEvalState._FLT+1] = castValueToF32(retValue, mVM->mAllocBase);
             }
             else
             {
                // The field is not being retrieved from an object. Maybe it's
                // a special accessor?
                //getFieldComponent( prevObject, prevField, prevFieldArray, curField, valBuffer, VAL_BUFFER_SIZE );
-               floatStack[_FLT+1] = 0.0f;//dAtof( valBuffer );
+               mVM->mEvalState.floatStack[mVM->mEvalState._FLT+1] = 0.0f;//dAtof( valBuffer );
             }
-            _FLT++;
+            mVM->mEvalState._FLT++;
             break;
             
          case OP_LOADFIELD_STR:
@@ -1242,7 +1188,7 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
             break;
             
          case OP_SAVEFIELD_UINT:
-            mVM->mSTR.setIntValue((U32)intStack[_UINT]);
+            mVM->mSTR.setIntValue((U32)mVM->mEvalState.intStack[mVM->mEvalState._UINT]);
             if(curObject)
             {
                KorkApi::ConsoleValue cv = KorkApi::ConsoleValue::makeString(mVM->mSTR.getStringValue());
@@ -1258,7 +1204,7 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
             break;
             
          case OP_SAVEFIELD_FLT:
-            mVM->mSTR.setFloatValue(floatStack[_FLT]);
+            mVM->mSTR.setFloatValue(mVM->mEvalState.floatStack[mVM->mEvalState._FLT]);
             if(curObject)
             {
                KorkApi::ConsoleValue cv = KorkApi::ConsoleValue::makeString(mVM->mSTR.getStringValue());
@@ -1289,13 +1235,13 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
             break;
             
          case OP_STR_TO_UINT:
-            intStack[_UINT+1] = mVM->mSTR.getIntValue();
-            _UINT++;
+            mVM->mEvalState.intStack[mVM->mEvalState._UINT+1] = mVM->mSTR.getIntValue();
+            mVM->mEvalState._UINT++;
             break;
             
          case OP_STR_TO_FLT:
-            floatStack[_FLT+1] = mVM->mSTR.getFloatValue();
-            _FLT++;
+            mVM->mEvalState.floatStack[mVM->mEvalState._FLT+1] = mVM->mSTR.getFloatValue();
+            mVM->mEvalState._FLT++;
             break;
             
          case OP_STR_TO_NONE:
@@ -1303,33 +1249,33 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
             break;
             
          case OP_FLT_TO_UINT:
-            intStack[_UINT+1] = (S64)floatStack[_FLT];
-            _FLT--;
-            _UINT++;
+            mVM->mEvalState.intStack[mVM->mEvalState._UINT+1] = (S64)mVM->mEvalState.floatStack[mVM->mEvalState._FLT];
+            mVM->mEvalState._FLT--;
+            mVM->mEvalState._UINT++;
             break;
             
          case OP_FLT_TO_STR:
-            mVM->mSTR.setFloatValue(floatStack[_FLT]);
-            _FLT--;
+            mVM->mSTR.setFloatValue(mVM->mEvalState.floatStack[mVM->mEvalState._FLT]);
+            mVM->mEvalState._FLT--;
             break;
             
          case OP_FLT_TO_NONE:
-            _FLT--;
+            mVM->mEvalState._FLT--;
             break;
             
          case OP_UINT_TO_FLT:
-            floatStack[_FLT+1] = (F64)intStack[_UINT];
-            _UINT--;
-            _FLT++;
+            mVM->mEvalState.floatStack[mVM->mEvalState._FLT+1] = (F64)mVM->mEvalState.intStack[mVM->mEvalState._UINT];
+            mVM->mEvalState._UINT--;
+            mVM->mEvalState._FLT++;
             break;
             
          case OP_UINT_TO_STR:
-            mVM->mSTR.setIntValue((U32)intStack[_UINT]);
-            _UINT--;
+            mVM->mSTR.setIntValue((U32)mVM->mEvalState.intStack[mVM->mEvalState._UINT]);
+            mVM->mEvalState._UINT--;
             break;
             
          case OP_UINT_TO_NONE:
-            _UINT--;
+            mVM->mEvalState._UINT--;
             break;
          
          case OP_COPYVAR_TO_NONE:
@@ -1337,14 +1283,14 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
             break;
             
          case OP_LOADIMMED_UINT:
-            intStack[_UINT+1] = code[ip++];
-            _UINT++;
+            mVM->mEvalState.intStack[mVM->mEvalState._UINT+1] = code[ip++];
+            mVM->mEvalState._UINT++;
             break;
             
          case OP_LOADIMMED_FLT:
-            floatStack[_FLT+1] = curFloatTable[code[ip]];
+            mVM->mEvalState.floatStack[mVM->mEvalState._FLT+1] = curFloatTable[code[ip]];
             ip++;
-            _FLT++;
+            mVM->mEvalState._FLT++;
             break;
          case OP_TAG_TO_STR:
             code[ip-1] = OP_LOADIMMED_STR;
@@ -1549,13 +1495,13 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
                         if(code[ip] == OP_STR_TO_UINT)
                         {
                            ip++;
-                           intStack[++_UINT] = result;
+                           mVM->mEvalState.intStack[++mVM->mEvalState._UINT] = result;
                            break;
                         }
                         else if(code[ip] == OP_STR_TO_FLT)
                         {
                            ip++;
-                           floatStack[++_FLT] = result;
+                           mVM->mEvalState.floatStack[++mVM->mEvalState._FLT] = result;
                            break;
                         }
                         else if(code[ip] == OP_STR_TO_NONE)
@@ -1571,13 +1517,13 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
                         if(code[ip] == OP_STR_TO_UINT)
                         {
                            ip++;
-                           intStack[++_UINT] = (S64)result;
+                           mVM->mEvalState.intStack[++mVM->mEvalState._UINT] = (S64)result;
                            break;
                         }
                         else if(code[ip] == OP_STR_TO_FLT)
                         {
                            ip++;
-                           floatStack[++_FLT] = result;
+                           mVM->mEvalState.floatStack[++mVM->mEvalState._FLT] = result;
                            break;
                         }
                         else if(code[ip] == OP_STR_TO_NONE)
@@ -1602,13 +1548,13 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
                         if(code[ip] == OP_STR_TO_UINT)
                         {
                            ip++;
-                           intStack[++_UINT] = result;
+                           mVM->mEvalState.intStack[++mVM->mEvalState._UINT] = result;
                            break;
                         }
                         else if(code[ip] == OP_STR_TO_FLT)
                         {
                            ip++;
-                           floatStack[++_FLT] = result;
+                           mVM->mEvalState.floatStack[++mVM->mEvalState._FLT] = result;
                            break;
                         }
                         else if(code[ip] == OP_STR_TO_NONE)
@@ -1649,22 +1595,22 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
             break;
             
          case OP_COMPARE_STR:
-            intStack[++_UINT] = mVM->mSTR.compare();
+            mVM->mEvalState.intStack[++mVM->mEvalState._UINT] = mVM->mSTR.compare();
             break;
          case OP_PUSH:
             mVM->mSTR.push();
             break;
             
          case OP_PUSH_UINT:
-            // OP_UINT_TO_STR, OP_PUSH
-            mVM->mSTR.setIntValue((U32)intStack[_UINT]);
-            _UINT--;
+            // OPmVM->mEvalState._UINT_TO_STR, OP_PUSH
+            mVM->mSTR.setIntValue((U32)mVM->mEvalState.intStack[mVM->mEvalState._UINT]);
+            mVM->mEvalState._UINT--;
             mVM->mSTR.push();
             break;
          case OP_PUSH_FLT:
-            // OP_FLT_TO_STR, OP_PUSH
-            mVM->mSTR.setFloatValue(floatStack[_FLT]);
-            _FLT--;
+            // OPmVM->mEvalState._FLT_TO_STR, OP_PUSH
+            mVM->mSTR.setFloatValue(mVM->mEvalState.floatStack[mVM->mEvalState._FLT]);
+            mVM->mEvalState._FLT--;
             mVM->mSTR.push();
             break;
          case OP_PUSH_VAR:
@@ -1680,7 +1626,7 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
 
          case OP_ASSERT:
          {
-            if( !intStack[_UINT--] )
+            if( !mVM->mEvalState.intStack[mVM->mEvalState._UINT--] )
             {
                const char *message = curStringTable + code[ip];
 
@@ -1723,7 +1669,7 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
          
          case OP_ITER_BEGIN_STR:
          {
-            iterStack[ _ITER ].mIsStringIter = true;
+            mVM->mEvalState.iterStack[ mVM->mEvalState._ITER ].mIsStringIter = true;
             /* fallthrough */
          }
          
@@ -1732,7 +1678,7 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
             StringTableEntry varName = CodeToSTE(code, ip);
             U32 failIp = code[ ip + 2 ];
             
-            IterStackRecord& iter = iterStack[ _ITER ];
+            IterStackRecord& iter = mVM->mEvalState.iterStack[ mVM->mEvalState._ITER ];
             
             iter.mVariable = mVM->mEvalState.getCurrentFrame().add( varName );
             iter.mDictionary = &mVM->mEvalState.getCurrentFrame();
@@ -1764,7 +1710,7 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
                iter.mData.mObj.mIndex = 0;
             }
             
-            _ITER ++;
+            mVM->mEvalState._ITER ++;
             iterDepth ++;
             
             mVM->mSTR.push();
@@ -1776,7 +1722,7 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
          case OP_ITER:
          {
             U32 breakIp = code[ ip ];
-            IterStackRecord& iter = iterStack[ _ITER - 1 ];
+            IterStackRecord& iter = mVM->mEvalState.iterStack[ mVM->mEvalState._ITER - 1 ];
             
             if( iter.mIsStringIter )
             {
@@ -1844,9 +1790,9 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
          
          case OP_ITER_END:
          {
-            -- _ITER;
+            -- mVM->mEvalState._ITER;
             -- iterDepth;
-            IterStackRecord& iter = iterStack[_ITER];
+            IterStackRecord& iter = mVM->mEvalState.iterStack[mVM->mEvalState._ITER];
 
             if (iter.mData.mObj.mSet)
             {
@@ -1857,7 +1803,7 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
 
             mVM->mSTR.rewind();
             
-            iterStack[ _ITER ].mIsStringIter = false;
+            mVM->mEvalState.iterStack[ mVM->mEvalState._ITER ].mIsStringIter = false;
             break;
          }
 
