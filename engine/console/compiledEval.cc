@@ -47,6 +47,58 @@ enum EvalConstants {
    MethodOnComponent = -2
 };
 
+struct LocalRefTrack
+{
+   KorkApi::VmInternal* vm;
+   KorkApi::VMObject* obj;
+
+   LocalRefTrack(KorkApi::VmInternal* _vm) : vm(_vm), obj(NULL) {;}
+   ~LocalRefTrack()
+   {
+      if (obj)
+         vm->decVMRef(obj);
+   }
+   
+   LocalRefTrack& operator=(const LocalRefTrack& other)
+   {
+      if (obj && obj != other.obj)
+      {
+         vm->decVMRef(obj);
+      }
+      obj = other.obj;
+      if (obj)
+      {
+         vm->incVMRef(obj);
+      }
+      return *this;
+   }
+
+   LocalRefTrack& operator=(KorkApi::VMObject* object)
+   {
+      if (obj && obj != object)
+      {
+         vm->decVMRef(obj);
+      }
+      obj = object;
+      if (obj)
+      {
+         vm->incVMRef(obj);
+      }
+      return *this;
+   }
+
+   KorkApi::VMObject& operator*() const { return *obj; }
+   KorkApi::VMObject* operator->() const { return obj; }
+   operator KorkApi::VMObject*() const { return obj; }
+   explicit operator bool() const { return obj != nullptr; }
+   
+   bool isValid()
+   {
+      return obj;
+   }
+};
+
+
 /// Frame data for a foreach/foreach$ loop.
 struct IterStackRecord
 {
@@ -294,6 +346,63 @@ inline void* safeObjectUserPtr(KorkApi::VMObject* obj)
    return obj ? obj->userPtr : NULL;
 }
 
+struct ObjectCreationStack
+{
+   struct Item
+   {
+      KorkApi::VMObject* newObject;
+      U32 failJump;
+   };
+
+   static const U32 objectCreationStackSize = 32;
+   U32 index;
+   Item stack[objectCreationStackSize];
+
+   ObjectCreationStack() : index(0) {;}
+
+   void push(KorkApi::VmInternal* vm, KorkApi::VMObject* object, U32 failJump)
+   {
+      stack[index].newObject = object;
+      stack[index++].failJump = failJump;
+      if (object)
+      {
+         vm->incVMRef(object);
+      }
+   }
+
+   void pop(KorkApi::VmInternal* vm, LocalRefTrack& outTrack, U32* outJump)
+   {
+      if (index == 0)
+      {
+         return;
+      }
+
+      U32 realIndex = index-1;
+      *outJump = stack[realIndex].failJump;
+      KorkApi::VMObject* newObject = stack[realIndex].newObject;
+      outTrack = newObject;
+      
+      if (newObject)
+      {
+         stack[realIndex].newObject = NULL;
+         vm->decVMRef(newObject);
+      }
+   }
+
+   void clear(KorkApi::VmInternal* vm)
+   {
+      for (U32 i=0; i<index; i++)
+      {
+         if (stack[i].newObject)
+         {
+            vm->decVMRef(stack[i].newObject);
+            stack[i].newObject = NULL;
+         }
+      }
+   }
+};
+
+
 U32 gExecCount = 0;
 const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNamespace, U32 argc, const char **argv, bool noCalls, StringTableEntry packageName, S32 setFrame)
 {
@@ -398,19 +507,14 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
    StringTableEntry fnName;
    StringTableEntry fnNamespace, fnPackage;
    
-   static const U32 objectCreationStackSize = 32;
-   U32 objectCreationStackIndex = 0;
-   struct {
-      KorkApi::VMObject *newObject;
-      U32 failJump;
-   } objectCreationStack[ objectCreationStackSize ];
+   ObjectCreationStack creationStack;
    
-   KorkApi::VMObject *currentNewObject = 0;
+   LocalRefTrack currentNewObject(mVM);
    StringTableEntry prevField = NULL;
    StringTableEntry curField = NULL;
-   KorkApi::VMObject *prevObject = NULL;
-   KorkApi::VMObject *curObject = NULL;
-   KorkApi::VMObject *saveObject=NULL;
+   LocalRefTrack prevObject(mVM);
+   LocalRefTrack curObject(mVM);
+   LocalRefTrack saveObject(mVM);
    Namespace::Entry *nsEntry;
    Namespace *ns;
    const char* curFNDocBlock = NULL;
@@ -499,8 +603,8 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
             
             // Push the old info to the stack
             //Assert( objectCreationStackIndex < objectCreationStackSize );
-            objectCreationStack[ objectCreationStackIndex ].newObject = currentNewObject;
-            objectCreationStack[ objectCreationStackIndex++ ].failJump = failJump;
+
+            creationStack.push(mVM, currentNewObject, failJump);
             
             // Get the constructor information off the stack.
             mVM->mSTR.getArgcArgv(NULL, &callArgc, &callArgv);
@@ -530,7 +634,9 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
                
                // If there was one, set the currentNewObject and move on.
                if(db)
+               {
                   currentNewObject = db;
+               }
             }
 
             // For singletons, delete the old object if it exists
@@ -543,9 +649,9 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
                   mVM->mSTR.pushFrame();
                   // --
                   
+                  oldObject->klass->iCreate.RemoveObjectFn(oldObject->klass->userPtr, mVMPublic, oldObject);
                   oldObject->klass->iCreate.DestroyClassFn(oldObject->klass->userPtr, mVMPublic, oldObject->userPtr);
                   
-                  delete oldObject;
                   oldObject = NULL;
 
                   // Prevent stack value corruption
@@ -555,7 +661,7 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
             
             mVM->mSTR.popFrame();
             
-            if(!currentNewObject)
+            if(!currentNewObject.isValid())
             {
                // Well, looks like we have to create a new object.
                KorkApi::ClassInfo* klassInfo = mVM->getClassInfoByName(StringTable->insert(callArgv[1]));
@@ -584,10 +690,10 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
                }
                
                // Finally, set currentNewObject to point to the new one.
-               currentNewObject = object;//dynamic_cast<SimObject *>(object);
+               currentNewObject = object;
                
                // Deal with the case of a non-SimObject.
-               if(!currentNewObject)
+               if(!currentNewObject.isValid())
                {
                   mVM->printf(0, "%s: Unable to instantiate non-SimObject class %s.", getFileLine(ip-1), callArgv[1]);
                   delete object;
@@ -611,9 +717,8 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
                   }
                }
 
-               if (!klassInfo->iCreate.ProcessArgs(mVMPublic, currentNewObject, objectName, isDataBlock, isInternal, callArgc-3, callArgv+3))
+               if (!klassInfo->iCreate.ProcessArgsFn(mVMPublic, currentNewObject, objectName, isDataBlock, isInternal, callArgc-3, callArgv+3))
                {
-                  delete currentNewObject;
                   currentNewObject = NULL;
                   ip = failJump;
                   break;
@@ -637,19 +742,19 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
             // Con::printf("Adding object %s", currentNewObject->getName());
             
             // Make sure it wasn't already added, then add it.
-            if (currentNewObject == NULL)
+            if (!currentNewObject.isValid())
             {
                break;
             }
             
             U32 groupAddId = (U32)intStack[_UINT];
-            if(!currentNewObject->klass->iCreate.AddObject(mVMPublic, currentNewObject, placeAtRoot, groupAddId))
+            if(!currentNewObject->klass->iCreate.AddObjectFn(mVMPublic, currentNewObject, placeAtRoot, groupAddId))
             {
                // This error is usually caused by failing to call Parent::initPersistFields in the class' initPersistFields().
                /* TOFIX mVM->printf(0, "%s: Register object failed for object %s of class %s.", getFileLine(ip-2), currentNewObject->getName(), currentNewObject->getClassName());*/
 
+               // NOTE: AddObject may have "unregistered" the object, but since we refcount our objects this is still safe.
                currentNewObject->klass->iCreate.DestroyClassFn(currentNewObject->klass->userPtr, mVMPublic, currentNewObject->userPtr);
-               delete currentNewObject;
                currentNewObject = NULL;
                ip = failJump;
                break;
@@ -658,9 +763,9 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
             // store the new object's ID on the stack (overwriting the group/set
             // id, if one was given, otherwise getting pushed)
             if(placeAtRoot)
-               intStack[_UINT] = currentNewObject->klass->iCreate.GetId(currentNewObject);
+               intStack[_UINT] = currentNewObject->klass->iCreate.GetIdFn(currentNewObject);
             else
-               intStack[++_UINT] = currentNewObject->klass->iCreate.GetId(currentNewObject);
+               intStack[++_UINT] = currentNewObject->klass->iCreate.GetIdFn(currentNewObject);
             
             break;
          }
@@ -677,10 +782,7 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
             
          case OP_FINISH_OBJECT:
          {
-            //Assert( objectCreationStackIndex >= 0 );
-            // Restore the object info from the stack [7/9/2007 Black]
-            currentNewObject = objectCreationStack[ --objectCreationStackIndex ].newObject;
-            failJump = objectCreationStack[ objectCreationStackIndex ].failJump;
+            creationStack.pop(mVM, currentNewObject, &failJump);
             break;
          }
             
@@ -745,12 +847,20 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
             
          case OP_RETURN:
 
+            creationStack.clear(mVM);
+
             if( iterDepth > 0 )
             {
                // Clear iterator state.
                while( iterDepth > 0 )
                {
-                  iterStack[ -- _ITER ].mIsStringIter = false;
+                  IterStackRecord& iter = iterStack[ -- _ITER ];
+                  if (iter.mData.mObj.mSet)
+                  {
+                     mVM->decVMRef(iter.mData.mObj.mSet);
+                     iter.mData.mObj.mSet = NULL;
+                  }
+                  iter.mIsStringIter = false;
                   -- iterDepth;
                }
                
@@ -762,13 +872,21 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
             goto execFinished;
 
          case OP_RETURN_FLT:
+
+            creationStack.clear(mVM);
          
             if( iterDepth > 0 )
             {
                // Clear iterator state.
                while( iterDepth > 0 )
                {
-                  iterStack[ -- _ITER ].mIsStringIter = false;
+                  IterStackRecord& iter = iterStack[ -- _ITER ];
+                  if (iter.mData.mObj.mSet)
+                  {
+                     mVM->decVMRef(iter.mData.mObj.mSet);
+                     iter.mData.mObj.mSet = NULL;
+                  }
+                  iter.mIsStringIter = false;
                   -- iterDepth;
                }
                
@@ -780,13 +898,21 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
             goto execFinished;
 
          case OP_RETURN_UINT:
+
+            creationStack.clear(mVM);
          
             if( iterDepth > 0 )
             {
                // Clear iterator state.
                while( iterDepth > 0 )
                {
-                  iterStack[ -- _ITER ].mIsStringIter = false;
+                  IterStackRecord& iter = iterStack[ -- _ITER ];
+                  if (iter.mData.mObj.mSet)
+                  {
+                     mVM->decVMRef(iter.mData.mObj.mSet);
+                     iter.mData.mObj.mSet = NULL;
+                  }
+                  iter.mIsStringIter = false;
                   -- iterDepth;
                }
             }
@@ -1040,7 +1166,7 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
                StringTableEntry intName = StringTable->insert(mVM->mSTR.getStringValue());
                bool recurse = code[ip-1];
                KorkApi::VMObject* obj = mVM->mConfig.iFind.FindObjectByInternalNameFn(mVM->mConfig.findUser, intName, recurse, curObject);
-               intStack[_UINT+1] = obj ? obj->klass->iCreate.GetId(obj) : 0;
+               intStack[_UINT+1] = obj ? obj->klass->iCreate.GetIdFn(obj) : 0;
             }
             break;
             
@@ -1630,7 +1756,10 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
                }
                
                // Set up.
-               
+
+               AssertFatal(iter.mData.mObj.mSet == NULL, "Should be NULL");
+
+               mVM->incVMRef(set);
                iter.mData.mObj.mSet = set;
                iter.mData.mObj.mIndex = 0;
             }
@@ -1695,12 +1824,17 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
                
                if( index >= set->klass->iEnum.GetSize(set) )
                {
+                  if (set)
+                  {
+                     mVM->decVMRef(set);
+                     iter.mData.mObj.mSet = NULL;
+                  }
                   ip = breakIp;
                   continue;
                }
                
                KorkApi::VMObject* atObject = set->klass->iEnum.GetObjectAtIndex(set, index);
-               iter.mDictionary->setEntryIntValue(iter.mVariable, atObject ? atObject->klass->iCreate.GetId(atObject) : 0);
+               iter.mDictionary->setEntryIntValue(iter.mVariable, atObject ? atObject->klass->iCreate.GetIdFn(atObject) : 0);
                iter.mData.mObj.mIndex = index + 1;
             }
             
@@ -1712,7 +1846,15 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
          {
             -- _ITER;
             -- iterDepth;
+            IterStackRecord& iter = iterStack[_ITER];
+
+            if (iter.mData.mObj.mSet)
+            {
+               mVM->decVMRef(iter.mData.mObj.mSet);
+               iter.mData.mObj.mSet = NULL;
+            }
             
+
             mVM->mSTR.rewind();
             
             iterStack[ _ITER ].mIsStringIter = false;
@@ -1727,6 +1869,8 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
       }
    }
 execFinished:
+
+   creationStack.clear(mVM);
    
    if ( telDebuggerOn && setFrame < 0 )
       mVM->mTelDebugger->popStackFrame();

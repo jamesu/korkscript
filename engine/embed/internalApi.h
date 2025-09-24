@@ -48,6 +48,23 @@ struct VmInternal
    VmInternal(KorkApi::Vm* vm, Config* cfg);
    ~VmInternal();
 
+   inline void incVMRef(VMObject* object)
+   {
+      object->refCount++;
+   }
+   
+   inline void decVMRef(VMObject* object)
+   {
+      object->refCount--;
+      if (object->refCount == 0)
+      {
+         AssertFatal(object->userPtr, "Userptr still present with no refs, check refs!");
+         delete object;
+      }
+   }
+
+
+
    ConsoleHeapAllocRef createHeapRef(U32 size);
    void releaseHeapRef(ConsoleHeapAllocRef value);
 

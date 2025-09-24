@@ -154,21 +154,26 @@ ClassId Vm::registerClass(ClassInfo& info)
       chkFunc.iCreate.DestroyClassFn = [](void* user, Vm* vm, void* createdPtr) {
       };
    }
-   if (chkFunc.iCreate.ProcessArgs == NULL)
+   if (chkFunc.iCreate.ProcessArgsFn == NULL)
    {
-      chkFunc.iCreate.ProcessArgs = [](Vm* vm, VMObject* object, const char* name, bool isDatablock, bool internalName, int argc, const char** argv) {
+      chkFunc.iCreate.ProcessArgsFn = [](Vm* vm, VMObject* object, const char* name, bool isDatablock, bool internalName, int argc, const char** argv) {
          return false;
       };
    }
-   if (chkFunc.iCreate.AddObject == NULL)
+   if (chkFunc.iCreate.AddObjectFn == NULL)
    {
-      chkFunc.iCreate.AddObject = [](Vm* vm, VMObject* object, bool placeAtRoot, U32 groupAddId) {
+      chkFunc.iCreate.AddObjectFn = [](Vm* vm, VMObject* object, bool placeAtRoot, U32 groupAddId) {
          return false;
       };
    }
-   if (chkFunc.iCreate.GetId == NULL)
+   if (chkFunc.iCreate.RemoveObjectFn == NULL)
    {
-      chkFunc.iCreate.GetId = [](VMObject* object) {
+      chkFunc.iCreate.RemoveObjectFn = [](void* user, Vm* vm, VMObject* object) {
+      };
+   }
+   if (chkFunc.iCreate.GetIdFn == NULL)
+   {
+      chkFunc.iCreate.GetIdFn = [](VMObject* object) {
          return (SimObjectId)0;
       };
    }
@@ -361,6 +366,7 @@ VMObject* Vm::constructObject(ClassId klassId, const char* name, int argc, const
 {
    ClassInfo* ci = &mInternal->mClassList[klassId];
    VMObject* object = new VMObject();
+   mInternal->incVMRef(object);
    
    if (ci->iCreate.CreateClassFn)
    {
@@ -369,9 +375,10 @@ VMObject* Vm::constructObject(ClassId klassId, const char* name, int argc, const
       object->userPtr = ci->iCreate.CreateClassFn(ci->userPtr, this, object);
       if (object->userPtr)
       {
-         if (!ci->iCreate.ProcessArgs(this, object, name, false, false, argc, argv))
+         if (!ci->iCreate.ProcessArgsFn(this, object, name, false, false, argc, argv))
          {
-            ci->iCreate.DestroyClassFn(ci->userPtr, this, object);
+            ci->iCreate.DestroyClassFn(ci->userPtr, this, object->userPtr);
+            return NULL;
          }
          else
          {
@@ -380,7 +387,7 @@ VMObject* Vm::constructObject(ClassId klassId, const char* name, int argc, const
       }
    }
    
-   delete object;
+   mInternal->decVMRef(object);
    return NULL;
 }
 
@@ -393,15 +400,21 @@ void Vm::setObjectNamespace(VMObject* object, NamespaceId nsId)
 VMObject* Vm::createVMObject(ClassId klassId, void* klassPtr)
 {
    VMObject* object = new VMObject();
+   mInternal->incVMRef(object);
    object->klass = &mInternal->mClassList[klassId];
    object->ns = NULL;
    object->userPtr = klassPtr;
     return object;
 }
 
-void Vm::destroyVMObject(VMObject* object)
+void Vm::incVMRef(VMObject* object)
 {
-   delete object;
+   mInternal->incVMRef(object);
+}
+
+void Vm::decVMRef(VMObject* object)
+{
+   mInternal->decVMRef(object);
 }
 
 void Vm::addNamespaceFunction(NamespaceId nsId, StringTableEntry name, StringFuncCallback cb, void* userPtr, const char* usage, S32 minArgs, S32 maxArgs)
@@ -514,7 +527,7 @@ bool Vm::callObjectFunction(VMObject* self, StringTableEntry funcName, int argc,
    else if (!self->ns)
    {
       // no ns
-      mInternal->printf(0, " Vm::callObjectFunction - %d has no namespace: %s", self->klass->iCreate.GetId(self), argv[0]);
+      mInternal->printf(0, " Vm::callObjectFunction - %d has no namespace: %s", self->klass->iCreate.GetIdFn(self), argv[0]);
       return false;
    }
 
@@ -522,7 +535,7 @@ bool Vm::callObjectFunction(VMObject* self, StringTableEntry funcName, int argc,
 
    if(ent == NULL)
    {
-      mInternal->printf(0, "%s: undefined for object id %d", funcName, self->klass->iCreate.GetId(self));
+      mInternal->printf(0, "%s: undefined for object id %d", funcName, self->klass->iCreate.GetIdFn(self));
 
       // Clean up arg buffers, if any.
       mInternal->mSTR.clearFunctionOffset();
@@ -531,7 +544,7 @@ bool Vm::callObjectFunction(VMObject* self, StringTableEntry funcName, int argc,
 
    // Twiddle %this argument
    const char *oldArg1 = argv[1];
-   SimObjectId cv = self->klass->iCreate.GetId(self);
+   SimObjectId cv = self->klass->iCreate.GetIdFn(self);
    dSprintf(idBuf, sizeof(idBuf), "%u", cv);
    argv[1] = idBuf;
 

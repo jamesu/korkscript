@@ -472,15 +472,17 @@ bool SimObject::registerObject()
    if (vm == NULL || vmObject == NULL)
    {
       vm = Con::getVM();
-      vmObject = vm->createVMObject(getClassRep()->getRegisteredId(), this);
+      vmObject = vm->createVMObject(getClassRep()->getRegisteredId(), this); // NOTE: rc=1
    }
    
    // Notify object
    bool ret = onAdd();
    
    if(!ret)
+   {
       unregisterObject();
-   
+      return false;
+   }
    AssertFatal(!ret || isProperlyAdded(), "Object did not call SimObject::onAdd()");
    
    if ( isMethod( "onAdd" ) )
@@ -523,7 +525,7 @@ void SimObject::unregisterObject()
 
    if (vm && vmObject)
    {
-      vm->destroyVMObject(vmObject);
+      vm->decVMRef(vmObject);
       vm = NULL;
       vmObject = NULL;
    }

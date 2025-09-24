@@ -148,7 +148,10 @@ struct VMObject {
    ClassInfo* klass;
    VMNamespace* ns;
    void* userPtr;
-   U32 flags;
+   U16 flags;
+   U16 refCount; // basic ref count (for interpreter loop)
+
+   VMObject() : klass(NULL), ns(NULL), userPtr(NULL), flags(0), refCount(0) {;}
 };
 
 struct VMIterator {
@@ -173,14 +176,17 @@ struct CreateObjectInterface
 {
     // Create object
 	void* (*CreateClassFn)(void* user, Vm* vm, VMObject* object);
-    // Destroy
+    // Destroys createdPtr
     void (*DestroyClassFn)(void* user, Vm* vm, void* createdPtr);
     // Process args (happens next; usually: name set, then args processed)
-    bool (*ProcessArgs)(Vm* vm, VMObject* object, const char* name, bool isDatablock, bool internalName, int argc, const char** argv);
+    bool (*ProcessArgsFn)(Vm* vm, VMObject* object, const char* name, bool isDatablock, bool internalName, int argc, const char** argv);
     // i.e. OP_ADD_OBJECT
-    bool (*AddObject)(Vm* vm, VMObject* object, bool placeAtRoot, U32 groupAddId);
+    // Should perform any registration of the object (unless it has already been performed)
+    bool (*AddObjectFn)(Vm* vm, VMObject* object, bool placeAtRoot, U32 groupAddId);
+    // Should perform any removal of the object, including any extra vmobject deregistrations
+    void (*RemoveObjectFn)(void* user, Vm* vm, VMObject* object);
     // Get identifier (used for return value)
-    SimObjectId (*GetId)(VMObject* object);
+    SimObjectId (*GetIdFn)(VMObject* object);
 };
 
 // handles sub object enum
@@ -323,7 +329,9 @@ public:
    NamespaceId getObjectNamespace(VMObject* object);
 	// Internal
 	VMObject* createVMObject(ClassId klassId, void* klassPtr);
-    void destroyVMObject(VMObject* object);
+   
+   void incVMRef(VMObject* object);
+   void decVMRef(VMObject* object);
 
    void addNamespaceFunction(NamespaceId nsId, StringTableEntry name,  StringFuncCallback, void* userPtr, const char *usage, S32 minArgs, S32 maxArgs);
    void addNamespaceFunction(NamespaceId nsId, StringTableEntry name,  IntFuncCallback, void* userPtr, const char *usage, S32 minArgs, S32 maxArgs);

@@ -183,7 +183,14 @@ void AbstractClassRep::registerClassWithVm(KorkApi::Vm* vm)
          ConsoleObject* obj = static_cast<ConsoleObject*>(createdPtr);
          delete obj;
       };
-      mClassInfo.iCreate.ProcessArgs = [](KorkApi::Vm* vm, KorkApi::VMObject* vmObject, const char* name, bool isDatablock, bool internalName, int argc, const char** argv){
+      mClassInfo.iCreate.RemoveObjectFn = [](void* user, KorkApi::Vm* vm, KorkApi::VMObject* object){
+         AbstractClassRep* rep = static_cast<AbstractClassRep*>(user);
+         ConsoleObject* consoleObject = rep->create();
+         SimObject* simObject = dynamic_cast<SimObject*>(consoleObject);
+         simObject->unregisterObject();
+      };
+      mClassInfo.iCreate.ProcessArgsFn = [](KorkApi::Vm* vm, KorkApi::VMObject* vmObject, const char* name, bool isDatablock, bool internalName, int argc, const char** argv){
+         AssertFatal(vmObject->userPtr, "no userPtr?!");
          ConsoleObject* consoleObject = static_cast<ConsoleObject*>(vmObject->userPtr);
          SimObject* object = dynamic_cast<SimObject*>(consoleObject);
          object->setupVM(vm, vmObject);
@@ -217,7 +224,7 @@ void AbstractClassRep::registerClassWithVm(KorkApi::Vm* vm)
          
          return false;
       };
-      mClassInfo.iCreate.AddObject = [](KorkApi::Vm* vm, KorkApi::VMObject* vmObject, bool placeAtRoot, U32 groupAddId) {
+      mClassInfo.iCreate.AddObjectFn = [](KorkApi::Vm* vm, KorkApi::VMObject* vmObject, bool placeAtRoot, U32 groupAddId) {
          ConsoleObject* consoleObject = static_cast<ConsoleObject*>(vmObject->userPtr);
          SimObject* currentNewObject = dynamic_cast<SimObject*>(consoleObject);
 
@@ -225,6 +232,7 @@ void AbstractClassRep::registerClassWithVm(KorkApi::Vm* vm)
          {
             if (!currentNewObject->registerObject())
             {
+               // NOTE: class destruction will happen AFTER
                return false;
             }
          }
@@ -282,7 +290,7 @@ void AbstractClassRep::registerClassWithVm(KorkApi::Vm* vm)
 
          return true;
       };
-      mClassInfo.iCreate.GetId = [](KorkApi::VMObject* vmObject){
+      mClassInfo.iCreate.GetIdFn = [](KorkApi::VMObject* vmObject){
          ConsoleObject* consoleObject = static_cast<ConsoleObject*>(vmObject->userPtr);
          SimObject* object = dynamic_cast<SimObject*>(consoleObject);
          

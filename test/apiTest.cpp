@@ -155,13 +155,32 @@ static void* MyBase_Create(void* classUser, Vm* vm, VMObject* object)
 {
    MyBase* b = new MyBase();
    b->mVMInstance = object;
+   vm->incVMRef(object);
    object->flags |= KorkApi::ObjectFlags::ModStaticFields;
    return b;
+}
+
+static void MyBase_RemoveObject(void* user, Vm* vm, VMObject* object)
+{
+   MyBase* b = (MyBase*)object->userPtr;
+   if (b->mVMInstance)
+   {
+      vm->decVMRef(b->mVMInstance);
+      b->mVMInstance = NULL;
+   }
 }
 
 static bool MyBase_AddObject(Vm* vm, VMObject* object, bool placeAtRoot, U32 groupAddId)
 {
    MyBase* b = (MyBase*)object->userPtr;
+   
+   if (b->mVMInstance != NULL && b->mVMInstance != object)
+   {
+      vm->decVMRef(b->mVMInstance);
+   }
+   
+   b->mVMInstance = object;
+   vm->incVMRef(object);
    
    b->mId = gCurrentId++;
    gByName[b->mName] = object;
@@ -211,6 +230,7 @@ static void* Player_Create(void* classUser, Vm* vm, VMObject* object)
    Player* b = new Player();
    b->mPosition = {};
    b->mVMInstance = object;
+   vm->incVMRef(object);
    object->flags |= KorkApi::ModStaticFields;
    return b;
 }
@@ -222,16 +242,23 @@ static bool Player_AddObject(Vm* vm, VMObject* object, bool placeAtRoot, U32 gro
       vm->setObjectNamespace(object, vm->findNamespace(StringTable->insert("Player")));
       return true;
    }
+   
    return false;
+}
+
+static void Player_RemoveObject(void* user, Vm* vm, VMObject* object)
+{
+   auto* p = reinterpret_cast<Player*>(instanceUser);
+   if (p && p->mVMInstance)
+   {
+      gByName.erase(p->mName);
+   }
+   MyBase_RemoveObject(user, vm, object);
 }
 
 static void  Player_Destroy(void* classUser, Vm* vm, void* instanceUser)
 {
    auto* p = reinterpret_cast<Player*>(instanceUser);
-   if (p && p->mVMInstance) 
-   {
-      gByName.erase(p->mName);
-   }
    delete p;
 }
 
@@ -284,7 +311,7 @@ int testScript(char* script, const char* filename)
    myBase.userPtr = NULL;
    myBase.numFields = 0;
    myBase.fields = NULL;
-   myBase.iCreate = { &MyBase_Create, &MyBase_Destroy, &MyBase_ProcessArgs, &MyBase_AddObject, &MyBase_GetID };
+   myBase.iCreate = { &MyBase_Create, &MyBase_Destroy, &MyBase_ProcessArgs, &MyBase_AddObject, &MyBase_RemoveObject, &MyBase_GetID };
    
    myBase.iCustomFields   = {};
    
@@ -306,7 +333,7 @@ int testScript(char* script, const char* filename)
    player.userPtr     = NULL;
    player.numFields   = 1;
    player.fields      = playerFields;
-   player.iCreate     = { &Player_Create, &Player_Destroy, &MyBase_ProcessArgs, &Player_AddObject, &MyBase_GetID };
+   player.iCreate     = { &Player_Create, &Player_Destroy, &MyBase_ProcessArgs, &Player_AddObject, &Player_RemoveObject, &MyBase_GetID };
    player.iCustomFields = {};
    
    ClassId playerId = vm->registerClass(player);
