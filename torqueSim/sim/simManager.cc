@@ -448,10 +448,9 @@ void SimDataBlockGroup::sort()
 
 // BEGIN T2D BLOCK (moved back to here)
 
-bool SimObject::registerObject()
+bool SimObject::registerObject(KorkApi::Vm* vm, KorkApi::VMObject* evalObject)
 {
-   AssertFatal( !mFlags.test( Added ), "reigsterObject - Object already registered!");
-   mFlags.clear(Deleted | Removed);
+   AssertFatal( !isProperlyAdded(), "reigsterObject - Object already registered!");
    
    if( mId == 0 )
    {
@@ -469,11 +468,17 @@ bool SimObject::registerObject()
    Sim::gNameDictionary->insert(this);
    
    // Register this with the VM if not already registered
-   if (vm == NULL || vmObject == NULL)
+   if (evalObject != NULL)
+   {
+      setupVM(vm, evalObject);
+   }
+   else if (vm == NULL || vmObject == NULL)
    {
       vm = Con::getVM();
       vmObject = vm->createVMObject(getClassRep()->getRegisteredId(), this); // NOTE: rc=1
    }
+
+   mSimFlags |= ~(Deleted | Removed);
    
    // Notify object
    bool ret = onAdd();
@@ -501,7 +506,7 @@ void SimObject::unregisterObject()
    if ( isMethod( "onRemove" ) )
       Con::executef( this, 1, "onRemove" );
    
-   mFlags.set(Removed);
+   mSimFlags |= Removed;
    
    // Notify object first
    onRemove();
@@ -538,13 +543,14 @@ void SimObject::deleteObject()
    // Sanity!
    AssertISV( getScriptCallbackGuard() == 0, "SimObject::deleteObject: Object is being deleted whilst performing a script callback!" );
    
-   AssertFatal(mFlags.test(Added),
+   AssertFatal(isProperlyAdded(),
                "SimObject::deleteObject: Object not registered.");
    AssertFatal(!isDeleted(),"SimManager::deleteObject: "
                "Object has already been deleted");
    AssertFatal(!isRemoved(),"SimManager::deleteObject: "
                "Object in the process of being removed");
-   mFlags.set(Deleted);
+   
+   mSimFlags |= Deleted;
    
    unregisterObject();
    delete this;
@@ -555,7 +561,7 @@ void SimObject::deleteObject()
 
 void SimObject::setId(SimObjectId newId)
 {
-   if(!mFlags.test(Added))
+   if(!isProperlyAdded())
    {
       mId = newId;
    }
@@ -606,7 +612,7 @@ void SimObject::assignName(const char *name)
    
    if(mGroup)
       mGroup->nameDictionary.remove(this);
-   if(mFlags.test(Added))
+   if(isProperlyAdded())
    {
       unlinkNamespaces(); // from T3D
       Sim::gNameDictionary->remove(this);
@@ -616,7 +622,7 @@ void SimObject::assignName(const char *name)
    
    if(mGroup)
       mGroup->nameDictionary.insert(this);
-   if(mFlags.test(Added))
+   if(isProperlyAdded())
    {
       Sim::gNameDictionary->insert(this);
       linkNamespaces(); // from T3D

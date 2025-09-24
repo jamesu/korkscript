@@ -173,10 +173,14 @@ void AbstractClassRep::registerClassWithVm(KorkApi::Vm* vm)
       mClassInfo.numFields = mFieldList.size();
       mClassInfo.fields = &mFieldList[0];
       // Create & Destroy
-      mClassInfo.iCreate.CreateClassFn = [](void* user, KorkApi::Vm* vm, KorkApi::VMObject* object){
+      mClassInfo.iCreate.CreateClassFn = [](void* user, KorkApi::Vm* vm, KorkApi::CreateClassReturn* outP){
          AbstractClassRep* rep = static_cast<AbstractClassRep*>(user);
-         ConsoleObject* obj = rep->create();
-         return (void*)obj;
+         outP->userPtr = rep->create();
+         if (outP->userPtr)
+         {
+            SimObject* obj = dynamic_cast<SimObject*>((ConsoleObject*)outP->userPtr);
+            outP->initialFlags = KorkApi::ModStaticFields | KorkApi::ModDynamicFields;
+         }
       };
       mClassInfo.iCreate.DestroyClassFn = [](void* user, KorkApi::Vm* vm, void* createdPtr){
          AbstractClassRep* rep = static_cast<AbstractClassRep*>(user);
@@ -189,11 +193,10 @@ void AbstractClassRep::registerClassWithVm(KorkApi::Vm* vm)
          SimObject* simObject = dynamic_cast<SimObject*>(consoleObject);
          simObject->unregisterObject();
       };
-      mClassInfo.iCreate.ProcessArgsFn = [](KorkApi::Vm* vm, KorkApi::VMObject* vmObject, const char* name, bool isDatablock, bool internalName, int argc, const char** argv){
+      mClassInfo.iCreate.ProcessArgsFn = [](KorkApi::Vm* vm, void* createdPtr, const char* name, bool isDatablock, bool internalName, int argc, const char** argv){
          AssertFatal(vmObject->userPtr, "no userPtr?!");
-         ConsoleObject* consoleObject = static_cast<ConsoleObject*>(vmObject->userPtr);
+         ConsoleObject* consoleObject = static_cast<ConsoleObject*>(createdPtr);
          SimObject* object = dynamic_cast<SimObject*>(consoleObject);
-         object->setupVM(vm, vmObject);
 
          if (object->processArguments(argc, argv))
          {
@@ -208,13 +211,12 @@ void AbstractClassRep::registerClassWithVm(KorkApi::Vm* vm)
                //currentNewObject->setOriginalName( objectName );
             }
             
+            /* TOFIX: TGE seems to set these flags in Datablock regardless!
             if (!isDatablock)
             {
-               object->setModStaticFields(true);
-               object->setModDynamicFields(true);
-            }
+               vmObject->flags |= KorkApi::ModStaticFields | KorkApi::ModDynamicFields;
+            }*/
             
-            vmObject->flags = object->getInternalFlags();
             return true;
          }
          else
@@ -228,17 +230,15 @@ void AbstractClassRep::registerClassWithVm(KorkApi::Vm* vm)
          ConsoleObject* consoleObject = static_cast<ConsoleObject*>(vmObject->userPtr);
          SimObject* currentNewObject = dynamic_cast<SimObject*>(consoleObject);
 
+         // NOTE: this should apply to ANY script constructed object
          if (!currentNewObject->isProperlyAdded())
          {
-            if (!currentNewObject->registerObject())
+            if (!currentNewObject->registerObject(vm, vmObject))
             {
                // NOTE: class destruction will happen AFTER
                return false;
             }
          }
-         
-         // Sync flags
-         vmObject->flags = currentNewObject->getInternalFlags();
          
          // Are we dealing with a datablock?
          SimDataBlock *dataBlock = dynamic_cast<SimDataBlock *>(currentNewObject);

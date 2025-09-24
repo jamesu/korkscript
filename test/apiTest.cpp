@@ -152,13 +152,12 @@ struct MyBase
    U32 mId;
 };
 
-static void* MyBase_Create(void* classUser, Vm* vm, VMObject* object)
+static void MyBase_Create(void* classUser, Vm* vm, CreateClassReturn* outP)
 {
    MyBase* b = new MyBase();
-   b->mVMInstance = object;
-   vm->incVMRef(object);
-   object->flags |= KorkApi::ObjectFlags::ModStaticFields;
-   return b;
+   b->mVMInstance = NULL;
+   outP->userPtr = b;
+   outP->initialFlags |= KorkApi::ObjectFlags::ModStaticFields;
 }
 
 static void MyBase_RemoveObject(void* user, Vm* vm, VMObject* object)
@@ -190,9 +189,9 @@ static bool MyBase_AddObject(Vm* vm, VMObject* object, bool placeAtRoot, U32 gro
    return true;
 }
 
-static bool MyBase_ProcessArgs(Vm* vm, VMObject* object, const char* name, bool isDatablock, bool internalName, int argc, const char** argv)
+static bool MyBase_ProcessArgs(Vm* vm, void* createdPtr, const char* name, bool isDatablock, bool internalName, int argc, const char** argv)
 {
-    MyBase* b = (MyBase*)object->userPtr;
+    MyBase* b = (MyBase*)createdPtr;
     b->mName = StringTable->insert(name);
     return true;
 }
@@ -226,14 +225,13 @@ struct Player : public MyBase
    MyPoint3F mPosition;
 };
 
-static void* Player_Create(void* classUser, Vm* vm, VMObject* object)
+static void Player_Create(void* classUser, Vm* vm, CreateClassReturn* outP)
 {
    Player* b = new Player();
    b->mPosition = {};
-   b->mVMInstance = object;
-   vm->incVMRef(object);
-   object->flags |= KorkApi::ModStaticFields;
-   return b;
+   b->mVMInstance = NULL;
+   outP->userPtr = b;
+   outP->initialFlags = KorkApi::ModStaticFields;
 }
 
 static bool Player_AddObject(Vm* vm, VMObject* object, bool placeAtRoot, U32 groupAddId)

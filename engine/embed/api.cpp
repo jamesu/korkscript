@@ -145,8 +145,7 @@ ClassId Vm::registerClass(ClassInfo& info)
    
    if (chkFunc.iCreate.CreateClassFn == NULL)
    {
-      chkFunc.iCreate.CreateClassFn = [](void* user, Vm* vm, VMObject* object) {
-         return (void*)NULL;
+      chkFunc.iCreate.CreateClassFn = [](void* user, Vm* vm, CreateClassReturn* outP) {
       };
    }
    if (chkFunc.iCreate.DestroyClassFn == NULL)
@@ -156,7 +155,7 @@ ClassId Vm::registerClass(ClassInfo& info)
    }
    if (chkFunc.iCreate.ProcessArgsFn == NULL)
    {
-      chkFunc.iCreate.ProcessArgsFn = [](Vm* vm, VMObject* object, const char* name, bool isDatablock, bool internalName, int argc, const char** argv) {
+      chkFunc.iCreate.ProcessArgsFn = [](Vm* vm, void* createdPtr, const char* name, bool isDatablock, bool internalName, int argc, const char** argv) {
          return false;
       };
    }
@@ -367,15 +366,20 @@ VMObject* Vm::constructObject(ClassId klassId, const char* name, int argc, const
    ClassInfo* ci = &mInternal->mClassList[klassId];
    VMObject* object = new VMObject();
    mInternal->incVMRef(object);
+
+   CreateClassReturn ret = {};
    
    if (ci->iCreate.CreateClassFn)
    {
       object->klass = ci;
       object->ns = NULL;
-      object->userPtr = ci->iCreate.CreateClassFn(ci->userPtr, this, object);
+      ci->iCreate.CreateClassFn(ci->userPtr, this, &ret);
+      object->userPtr = ret.userPtr;
+      object->flags = ret.initialFlags;
+
       if (object->userPtr)
       {
-         if (!ci->iCreate.ProcessArgsFn(this, object, name, false, false, argc, argv))
+         if (!ci->iCreate.ProcessArgsFn(this, object->userPtr, name, false, false, argc, argv))
          {
             ci->iCreate.DestroyClassFn(ci->userPtr, this, object->userPtr);
             return NULL;
@@ -1023,6 +1027,12 @@ const char* Vm::valueAsString(ConsoleValue v)
 void* Vm::getUserPtr() const
 {
    return mInternal->mConfig.vmUser;
+}
+
+
+void VmInternal::assignFieldsFromTo(VMObject* from, VMObject* to)
+{
+   // TODO
 }
 
 F64 VmInternal::valueAsFloat(ConsoleValue v)

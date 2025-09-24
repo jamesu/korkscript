@@ -132,15 +132,10 @@ struct FieldInfo {
 
 struct ClassInfo;
 
-enum ObjectFlags : U32
+enum ObjectFlags : U16
 {
-    Deleted   = BIT(0),
-    Removed   = BIT(1),
-    Added     = BIT(3),
-    Selected  = BIT(4),
-    Expanded  = BIT(5),
-    ModStaticFields  = BIT(6),
-    ModDynamicFields = BIT(7)
+    ModStaticFields  = BIT(0),
+    ModDynamicFields = BIT(1)
 };
 
 enum TypeFlags : U32
@@ -176,15 +171,21 @@ typedef void (*ConsumerCallback)(U32 level, const char *consoleLine, void* userP
 
 struct Vm;
 
+struct CreateClassReturn
+{
+    void* userPtr;
+    U32 initialFlags;
+};
+
 // handles create & destroy
 struct CreateObjectInterface
 {
     // Create object
-	void* (*CreateClassFn)(void* user, Vm* vm, VMObject* object);
+	void (*CreateClassFn)(void* user, Vm* vm, CreateClassReturn* ret);
     // Destroys createdPtr
     void (*DestroyClassFn)(void* user, Vm* vm, void* createdPtr);
     // Process args (happens next; usually: name set, then args processed)
-    bool (*ProcessArgsFn)(Vm* vm, VMObject* object, const char* name, bool isDatablock, bool internalName, int argc, const char** argv);
+    bool (*ProcessArgsFn)(Vm* vm, void* createdPtr, const char* name, bool isDatablock, bool internalName, int argc, const char** argv);
     // i.e. OP_ADD_OBJECT
     // Should perform any registration of the object (unless it has already been performed)
     bool (*AddObjectFn)(Vm* vm, VMObject* object, bool placeAtRoot, U32 groupAddId);

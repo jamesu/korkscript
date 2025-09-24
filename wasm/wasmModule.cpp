@@ -107,6 +107,7 @@ struct TypeBinding
 struct ClassBinding 
 {
    Vm* vm;
+   VMObject* vmObject;
    
    // stable storage for C-string fields
    std::string nameBuf;
@@ -116,6 +117,7 @@ struct ClassBinding
    JsVal cb_destroy;
    JsVal cb_processArgs;
    JsVal cb_addObject;
+   JsVal cb_removeObject;
    JsVal cb_getId;
    
    // enumeration
@@ -128,10 +130,12 @@ struct ClassBinding
    
    ClassBinding() : 
    vm(NULL),
+   vmObject(NULL),
    cb_create(JsVal::undefined()),
    cb_destroy(JsVal::undefined()),
    cb_processArgs(JsVal::undefined()),
    cb_addObject(JsVal::undefined()),
+   cb_removeObject(JsVal::undefined()),
    cb_getId(JsVal::undefined()),
    cb_enum_getSize(JsVal::undefined()),
    cb_enum_getAtIndex(JsVal::undefined()),
@@ -256,9 +260,9 @@ static VMObject* FindByIdThunk(void* user, SimObjectId objectId);
 // iCreate
 //
 
-static void* Class_CreateThunk(void* user, Vm* vm, VMObject* object);
+static void Class_CreateThunk(void* user, Vm* vm, CreateClassReturn* outP);
 static void Class_DestroyThunk(void* user, Vm* vm, void* createdPtr);
-static bool Class_ProcessArgsThunk(Vm* vm, VMObject* object, const char* name, bool isDatablock, bool internalName, int argc, const char** argv);
+static bool Class_ProcessArgsThunk(Vm* vm, void* createdPtr, const char* name, bool isDatablock, bool internalName, int argc, const char** argv);
 static bool Class_AddObjectThunk(Vm* vm, VMObject* object, bool placeAtRoot, U32 groupAddId);
 static SimObjectId Class_GetIdThunk(VMObject* object);
 
@@ -482,6 +486,7 @@ public:
          if (js_is_function(c["destroy"]))       kb->cb_destroy      = c["destroy"];
          if (js_is_function(c["processArgs"]))   kb->cb_processArgs  = c["processArgs"];
          if (js_is_function(c["addObject"]))     kb->cb_addObject    = c["addObject"];
+         if (js_is_function(c["removeObject"]))  kb->cb_removeObject    = c["removeObject"];
          if (js_is_function(c["getId"]))         kb->cb_getId        = c["getId"];
       }
       
@@ -511,9 +516,9 @@ public:
       // iCreate (always populate; JS handlers may be undefined)
       info.iCreate.CreateClassFn = &Class_CreateThunk;
       info.iCreate.DestroyClassFn = &Class_DestroyThunk;
-      info.iCreate.ProcessArgs = &Class_ProcessArgsThunk;
-      info.iCreate.AddObject   = &Class_AddObjectThunk;
-      info.iCreate.GetId       = &Class_GetIdThunk;
+      info.iCreate.ProcessArgsFn = &Class_ProcessArgsThunk;
+      info.iCreate.AddObjectFn   = &Class_AddObjectThunk;
+      info.iCreate.GetIdFn       = &Class_GetIdThunk;
       
       // iEnum
       info.iEnum.GetSize          = &Enum_GetSizeThunk;
@@ -969,16 +974,24 @@ static VMObject* FindByIdThunk(void* user, SimObjectId objectId)
 // iCreate
 //
 
-static void* Class_CreateThunk(void* user, Vm* vm, VMObject* object)
+static void Class_CreateThunk(void* user, Vm* vm, CreateClassReturn* outP)
 {
    auto* kb = static_cast<ClassBinding*>(user);
    auto* ob = new ObjBinding();
    ob->klass = kb;
+
    if (!js_is_nullish(kb->cb_create))
    {
-      ob->peer = kb->cb_create(JsVal((uintptr_t)object));
+      ob->peer = kb->cb_create();
    }
-   return ob;
+   else
+   {
+      delete ob;
+      ob = NULL;
+   }
+
+   outP->userPtr = ob;
+   outP->initialFlags = 0;
 }
 
 static void Class_DestroyThunk(void* user, Vm* vm, void* createdPtr)
@@ -992,9 +1005,9 @@ static void Class_DestroyThunk(void* user, Vm* vm, void* createdPtr)
    delete ob;
 }
 
-static bool Class_ProcessArgsThunk(Vm* vm, VMObject* object, const char* name, bool isDatablock, bool internalName, int argc, const char** argv)
+static bool Class_ProcessArgsThunk(Vm* vm, void* createdPtr, const char* name, bool isDatablock, bool internalName, int argc, const char** argv)
 {
-   auto* ob = static_cast<ObjBinding*>(object ? object->userPtr : nullptr);
+   auto* ob = static_cast<ObjBinding*>(createdPtr);
    auto* kb = ob ? ob->klass : nullptr;
    if (!kb || js_is_nullish(kb->cb_processArgs)) 
    {
@@ -1003,7 +1016,7 @@ static bool Class_ProcessArgsThunk(Vm* vm, VMObject* object, const char* name, b
    std::vector<JsVal> jsArgv; jsArgv.reserve(argc);
    for (int i=0;i<argc;++i) jsArgv.emplace_back(JsVal(argv[i] ? std::string(argv[i]) : std::string()));
    JsVal jsArray = JsVal::array(jsArgv);
-   return kb->cb_processArgs(JsVal((uintptr_t)vm), JsVal((uintptr_t)object),
+   return kb->cb_processArgs(JsVal((uintptr_t)vm), JsVal((uintptr_t)0),
                              JsVal(name ? name : ""), JsVal(isDatablock), JsVal(internalName), jsArray).as<bool>();
 }
 
@@ -1011,13 +1024,39 @@ static bool Class_AddObjectThunk(Vm* vm, VMObject* object, bool placeAtRoot, U32
 {
    auto* ob = static_cast<ObjBinding*>(object ? object->userPtr : nullptr);
    auto* kb = ob ? ob->klass : nullptr;
+
    if (!kb || js_is_nullish(kb->cb_addObject)) 
    {
-      return true;
+      return false;
    }
    
-   return kb->cb_addObject(JsVal((uintptr_t)vm), JsVal((uintptr_t)object),
+   bool ret = kb->cb_addObject(JsVal((uintptr_t)vm), JsVal((uintptr_t)object),
                            JsVal(placeAtRoot), JsVal(groupAddId)).as<bool>();
+
+   if (ret)
+   {
+      kb->vmObject = object;
+      vm->incVMRef(object);
+   }
+
+   return ret;
+}
+
+
+static void Class_RemoveObjectThunk(void* user, Vm* vm, VMObject* object)
+{
+   auto* ob = static_cast<ObjBinding*>(object ? object->userPtr : nullptr);
+   auto* kb = ob ? ob->klass : nullptr;
+
+   bool ret;
+
+   if (kb && !js_is_nullish(kb->cb_removeObject)) 
+   {
+      kb->cb_removeObject(JsVal((uintptr_t)object)).as<bool>();
+   }
+
+   kb->vmObject = NULL;
+   vm->decVMRef(object);
 }
 
 static SimObjectId Class_GetIdThunk(VMObject* object)

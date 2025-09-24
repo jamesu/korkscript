@@ -113,6 +113,7 @@ struct VmInternal
    S64 valueAsBool(ConsoleValue v);
    const char* valueAsString(ConsoleValue v);
 
+   void assignFieldsFromTo(VMObject* from, VMObject* to);
 };
 
 }

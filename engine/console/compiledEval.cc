@@ -617,7 +617,11 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
                   object = new KorkApi::VMObject();
                   object->klass = klassInfo;
                   object->ns = NULL;
-                  object->userPtr = klassInfo->iCreate.CreateClassFn(klassInfo->userPtr, mVMPublic, object);  
+
+                  KorkApi::CreateClassReturn ret = {};
+                  klassInfo->iCreate.CreateClassFn(klassInfo->userPtr, mVMPublic, &ret);  
+                  object->userPtr = ret.userPtr;
+                  object->flags = ret.initialFlags;
 
                   if (object->userPtr == NULL)
                   {
@@ -654,7 +658,7 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
                   {
                      // Con::printf(" - Parent object found: %s", parent->getClassName());
                      
-                     // TOFIX currentNewObject->assignFieldsFrom(parent);
+                     mVM->assignFieldsFromTo(parent, currentNewObject);
                   }
                   else
                   {
@@ -662,7 +666,7 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
                   }
                }
 
-               if (!klassInfo->iCreate.ProcessArgsFn(mVMPublic, currentNewObject, objectName, isDataBlock, isInternal, callArgc-3, callArgv+3))
+               if (!klassInfo->iCreate.ProcessArgsFn(mVMPublic, currentNewObject->userPtr, objectName, isDataBlock, isInternal, callArgc-3, callArgv+3))
                {
                   currentNewObject = NULL;
                   ip = failJump;

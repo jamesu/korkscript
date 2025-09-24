@@ -494,14 +494,12 @@ class SimObject: public ConsoleObject
 private:
 
     /// Flags for use in mFlags
-    enum {
+    enum : U8 {
         Deleted   = BIT(0),   ///< This object is marked for deletion.
         Removed   = BIT(1),   ///< This object has been unregistered from the object system.
         Added     = BIT(3),   ///< This object has been registered with the object system.
         Selected  = BIT(4),   ///< This object has been marked as selected. (in editor)
         Expanded  = BIT(5),   ///< This object has been marked as expanded. (in editor)
-        ModStaticFields  = BIT(6),    ///< The object allows you to read/modify static fields
-        ModDynamicFields = BIT(7)     ///< The object allows you to read/modify dynamic fields
     };
 
 public:
@@ -524,14 +522,19 @@ public:
         SelectedOnly = BIT(0) ///< Passed to SimObject::write to indicate that only objects
                             ///  marked as selected should be outputted. Used in SimSet.
     };
-   
-    U32 getInternalFlags() { return mFlags; }
-
 
     void setupVM(KorkApi::Vm* _vm, KorkApi::VMObject* _vmObject)
     {
+      if (vmObject && vmObject != _vmObject)
+      {
+         _vm->decVMRef(vmObject);
+      }
       vm = _vm;
       vmObject = _vmObject;
+      if (_vmObject)
+      {
+         _vm->incVMRef(vmObject);
+      }
     }
     KorkApi::Vm* getVM() { return vm; }
     KorkApi::VMObject* getVMObject() { return vmObject; }
@@ -547,11 +550,12 @@ private:
     KorkApi::VMObject* vmObject;
 
     SimGroup*   mGroup;  ///< SimGroup we're contained in, if any.
-    BitSet32    mFlags;
 
     StringTableEntry    mProgenitorFile;
 
     S32 mPeriodicTimerID;
+
+    U8 mSimFlags;
 
 
     /// @name Notification
@@ -817,7 +821,7 @@ public:
     ///
     /// If a subclass's onAdd doesn't eventually call SimObject::onAdd(), it will
     /// cause an assertion.
-    bool registerObject();
+    bool registerObject(KorkApi::Vm* vm = NULL, KorkApi::VMObject* evalObject=NULL);
 
     /// Register the object, forcing the id.
     ///
@@ -869,9 +873,9 @@ public:
     void assignName(const char* name);
     SimGroup* getGroup() const { return mGroup; }
     bool isChildOfGroup(SimGroup* pGroup);
-    bool isProperlyAdded() const { return mFlags.test(Added); }
-    bool isDeleted() const { return mFlags.test(Deleted); }
-    bool isRemoved() const { return mFlags.test(Deleted | Removed); }
+    bool isProperlyAdded() const { return (mSimFlags & Added) != 0; }
+    bool isDeleted() const { return (mSimFlags & Deleted) != 0; }
+    bool isRemoved() const { return (mSimFlags & (Deleted | Removed)) != 0; }
     bool isLocked();
     void setLocked( bool b );
     bool isHidden();
@@ -972,12 +976,15 @@ public:
 
     /// @name Accessors
     /// @{
-    bool isSelected() const { return mFlags.test(Selected); }
-    bool isExpanded() const { return mFlags.test(Expanded); }
-    void setSelected(bool sel) { if(sel) mFlags.set(Selected); else mFlags.clear(Selected); }
-    void setExpanded(bool exp) { if(exp) mFlags.set(Expanded); else mFlags.clear(Expanded); }
-    void setModDynamicFields(bool dyn) { if(dyn) mFlags.set(ModDynamicFields); else mFlags.clear(ModDynamicFields); }
-    void setModStaticFields(bool sta) { if(sta) mFlags.set(ModStaticFields); else mFlags.clear(ModStaticFields); }
+    bool isSelected() const { return vmObject && (vmObject->flags & Selected) != 0; }
+    bool isExpanded() const { return vmObject && (vmObject->flags & Expanded) != 0; }
+    void setSelected(bool sel) { if(sel) mSimFlags |= Selected; else mSimFlags |= ~Selected; }
+    void setExpanded(bool exp) { if(exp) mSimFlags |= Expanded; else mSimFlags |= ~Expanded; }
+    void setModDynamicFields(bool dyn) { if (!vmObject) return; if(dyn) vmObject->flags |= KorkApi::ModDynamicFields; else vmObject->flags |= ~KorkApi::ModDynamicFields; }
+    void setModStaticFields(bool sta) { if (!vmObject) return; if(sta) vmObject->flags |= KorkApi::ModStaticFields; else vmObject->flags |= ~KorkApi::ModStaticFields; }
+
+    inline bool canModDynamicFields() { return false; }
+    inline bool canModStaticFields() { return false; }
 
     /// @}
    

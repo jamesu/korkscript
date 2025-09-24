@@ -220,7 +220,6 @@ const char *SimFieldDictionary::getFieldValue(StringTableEntry slotName)
 
 SimObject::SimObject( const U8 namespaceLinkMask ) : mNSLinkMask( namespaceLinkMask )
 {
-   mFlags.set( ModStaticFields | ModDynamicFields );
    objectName               = NULL;
    mInternalName            = NULL;
    nextNameObject           = (SimObject*)-1;
@@ -1644,7 +1643,7 @@ void SimObject::setDataField(StringTableEntry slotName, const char *array, const
 {
 #if TOFIX
    // first search the static fields if enabled
-   if(mFlags.test(ModStaticFields))
+   if (canModStaticFields())
    {
       const AbstractClassRep::Field *fld = findField(slotName);
       if(fld)
@@ -1696,7 +1695,7 @@ void SimObject::setDataField(StringTableEntry slotName, const char *array, const
          return;
       }
    }
-   if(mFlags.test(ModDynamicFields))
+   if (canModDynamicFields())
    {
       setDataFieldDynamic(slotName, array, value);
    }
@@ -1736,7 +1735,7 @@ void  SimObject::dumpClassHierarchy()
 const char *SimObject::getDataField(StringTableEntry slotName, const char *array)
 {
 #if TOFIX
-   if(mFlags.test(ModStaticFields))
+   if (canModStaticFields())
    {
       S32 array1 = array ? dAtoi(array) : -1;
       const AbstractClassRep::Field *fld = findField(slotName);
@@ -1751,7 +1750,7 @@ const char *SimObject::getDataField(StringTableEntry slotName, const char *array
       }
    }
 
-   if(mFlags.test(ModDynamicFields))
+   if (canModDynamicFields())
    {
       return getDataFieldDynamic(slotName, array);
    }
@@ -1792,7 +1791,7 @@ SimObject::~SimObject()
    AssertFatal(nextManagerNameObject == (SimObject*)-1,avar(
                   "SimObject::~SimObject:  Not removed from manager dictionary: name %s, id %i",
                   objectName,mId));
-   AssertFatal(mFlags.test(Added) == 0, "SimObject::object "
+   AssertFatal(!isProperlyAdded(), "SimObject::object "
                "missing call to SimObject::onRemove");
 }
 
@@ -1917,7 +1916,7 @@ void SimObject::setHidden(bool b = true)
 
 bool SimObject::onAdd()
 {
-   mFlags.set(Added);
+   mSimFlags |= Added;
 
    linkNamespaces();
 
@@ -1929,7 +1928,7 @@ bool SimObject::onAdd()
 
 void SimObject::onRemove()
 {
-   mFlags.clear(Added);
+   mSimFlags |= ~Added;
 
    unlinkNamespaces();
 }
@@ -2381,7 +2380,7 @@ bool SimObject::setParentGroup(void* obj, const char* data)
 
 bool SimObject::addToSet(SimObjectId spid)
 {
-   if (mFlags.test(Added) == false)
+   if (!isProperlyAdded())
       return false;
 
    SimObject* ptr = Sim::findObject(spid);
@@ -2402,7 +2401,7 @@ bool SimObject::addToSet(SimObjectId spid)
 
 bool SimObject::addToSet(const char *ObjectName)
 {
-   if (mFlags.test(Added) == false)
+   if (!isProperlyAdded())
       return false;
 
    SimObject* ptr = Sim::findObject(ObjectName);
@@ -2423,7 +2422,7 @@ bool SimObject::addToSet(const char *ObjectName)
 
 bool SimObject::removeFromSet(SimObjectId sid)
 {
-   if (mFlags.test(Added) == false)
+   if (!isProperlyAdded())
       return false;
 
    SimSet *set;
@@ -2437,7 +2436,7 @@ bool SimObject::removeFromSet(SimObjectId sid)
 
 bool SimObject::removeFromSet(const char *objectName)
 {
-   if (mFlags.test(Added) == false)
+   if (!isProperlyAdded())
       return false;
 
    SimSet *set;
@@ -2549,14 +2548,14 @@ void SimObject::unlinkNamespaces()
 void SimObject::setClassNamespace( const char *classNamespace )
 {
     mClassName = StringTable->insert( classNamespace );
-    if (mFlags.test(Added))
+    if (isProperlyAdded())
         linkNamespaces();
 }
 
 void SimObject::setSuperClassNamespace( const char *superClassNamespace )
 {
     mSuperClassName = StringTable->insert( superClassNamespace );
-    if (mFlags.test(Added))
+    if (isProperlyAdded())
         linkNamespaces();
 }
 
