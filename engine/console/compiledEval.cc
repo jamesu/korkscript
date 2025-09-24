@@ -238,7 +238,7 @@ void CodeBlock::getFunctionArgs(char buffer[1024], U32 ip)
    buffer[0] = 0;
    for(U32 i = 0; i < fnArgc; i++)
    {
-      StringTableEntry var = CodeToSTE(code, ip + (i*2) + 6);
+      StringTableEntry var = Compiler::CodeToSTE(NULL, code, ip + (i*2) + 6);
       
       // Add a comma so it looks nice!
       if(i != 0)
@@ -374,7 +374,7 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
    {
       // assume this points into a function decl:
       U32 fnArgc = code[ip + 2 + 6];
-      thisFunctionName = CodeToSTE(code, ip);
+      thisFunctionName = Compiler::CodeToSTE(NULL, code, ip);
       S32 wantedArgc = getMin(argc-1, fnArgc); // argv[0] is func name
       if(mVM->mEvalState.traceOn)
       {
@@ -409,7 +409,7 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
       popFrame = true;
       for(i = 0; i < wantedArgc; i++)
       {
-         StringTableEntry var = CodeToSTE(code, ip + (2 + 6 + 1) + (i * 2));
+         StringTableEntry var = Compiler::CodeToSTE(NULL, code, ip + (2 + 6 + 1) + (i * 2));
          mVM->mEvalState.setCurVarNameCreate(var);
          mVM->mEvalState.setStringVariable(argv[i+1]);
       }
@@ -497,9 +497,9 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
          case OP_FUNC_DECL:
             if(!noCalls)
             {
-               fnName       = CodeToSTE(code, ip);
-               fnNamespace  = CodeToSTE(code, ip+2);
-               fnPackage    = CodeToSTE(code, ip+4);
+               fnName       = Compiler::CodeToSTE(NULL, code, ip);
+               fnNamespace  = Compiler::CodeToSTE(NULL, code, ip+2);
+               fnPackage    = Compiler::CodeToSTE(NULL, code, ip+4);
                bool hasBody = ( code[ ip + 6 ] & 0x01 ) != 0;
                U32 lineNumber = code[ ip + 6 ] >> 1;
                
@@ -530,7 +530,7 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
          case OP_CREATE_OBJECT:
          {
             // Read some useful info.
-            objParent        = CodeToSTE(code, ip);
+            objParent        = Compiler::CodeToSTE(NULL, code, ip);
             bool isDataBlock =          code[ip + 2];
             bool isInternal  =          code[ip + 3];
             bool isSingleton =          code[ip + 4];
@@ -984,7 +984,7 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
             break;
             
          case OP_SETCURVAR:
-            var = CodeToSTE(code, ip);
+            var = Compiler::CodeToSTE(NULL, code, ip);
             ip += 2;
             
             // If a variable is set, then these must be NULL. It is necessary
@@ -1004,7 +1004,7 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
             break;
             
          case OP_SETCURVAR_CREATE:
-            var = CodeToSTE(code, ip);
+            var = Compiler::CodeToSTE(NULL, code, ip);
             ip += 2;
             
             // See OP_SETCURVAR
@@ -1124,7 +1124,7 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
             // Save the previous field for parsing vector fields.
             prevField = curField;
             dStrcpy( prevFieldArray, curFieldArray );
-            curField = CodeToSTE(code, ip);
+            curField = Compiler::CodeToSTE(NULL, code, ip);
             curFieldArray[0] = 0;
             ip += 2;
             break;
@@ -1337,14 +1337,14 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
             break;
             
          case OP_LOADIMMED_IDENT:
-            mVM->mSTR.setStringValue(CodeToSTE(code, ip));
+            mVM->mSTR.setStringValue(Compiler::CodeToSTE(NULL, code, ip));
             ip += 2;
             break;
             
          case OP_CALLFUNC_RESOLVE:
             // This deals with a function that is potentially living in a namespace.
-            fnNamespace = CodeToSTE(code, ip+2);
-            fnName      = CodeToSTE(code, ip);
+            fnNamespace = Compiler::CodeToSTE(NULL, code, ip+2);
+            fnName      = Compiler::CodeToSTE(NULL, code, ip);
             
             // Try to look it up.
             ns = mVM->mNSState.find(fnNamespace);
@@ -1376,7 +1376,7 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
             // or just on the object.
             S32 routingId = 0;
             
-            fnName = CodeToSTE(code, ip);
+            fnName = Compiler::CodeToSTE(NULL, code, ip);
             
             //if this is called from inside a function, append the ip and codeptr
             if (!mVM->mEvalState.stack.empty())
@@ -1675,7 +1675,7 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
          
          case OP_ITER_BEGIN:
          {
-            StringTableEntry varName = CodeToSTE(code, ip);
+            StringTableEntry varName = Compiler::CodeToSTE(NULL, code, ip);
             U32 failIp = code[ ip + 2 ];
             
             IterStackRecord& iter = mVM->mEvalState.iterStack[ mVM->mEvalState._ITER ];

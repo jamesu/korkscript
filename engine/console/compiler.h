@@ -169,6 +169,8 @@ namespace Compiler
       OP_INVALID   // 90
    };
 
+   struct Resources;
+
    //------------------------------------------------------------
 
    F64 consoleStringToNumber(const char *str, StringTableEntry file = 0, U32 line = 0);
@@ -186,17 +188,22 @@ namespace Compiler
          Entry *next;
          Entry *nextIdent;
       };
+      Resources* res;
       Entry *list;
       void add(StringTableEntry ste, U32 ip);
       void reset();
       void write(Stream &st);
+
+      CompilerIdentTable(Resources* _res) : res(_res)
+      {
+         list = NULL;
+      }
    };
 
    //------------------------------------------------------------
 
    struct CompilerStringTable
    {
-      U32 totalLen;
       struct Entry
       {
          char *string;
@@ -205,7 +212,16 @@ namespace Compiler
          bool tag;
          Entry *next;
       };
+      U32 totalLen;
+      Resources* res;
       Entry *list;
+
+      CompilerStringTable(Resources* _res) : res(_res)
+      {
+         totalLen = 0;
+         list = NULL;
+         memset(buf, 0, sizeof(buf));
+      }
 
       char buf[256];
 
@@ -227,7 +243,14 @@ namespace Compiler
          Entry *next;
       };
       U32 count;
+      Resources* res;
       Entry *list;
+
+      CompilerFloatTable(Resources* _res) : res(_res)
+      {
+         count = 0;
+         list = NULL;
+      }
 
       U32 add(F64 value);
       void reset();
@@ -237,7 +260,12 @@ namespace Compiler
 
    //------------------------------------------------------------
 
-   inline StringTableEntry CodeToSTE(U32 *code, U32 ip)
+   struct Resources;
+
+   void evalSTEtoCode(Resources* res, StringTableEntry ste, U32 ip, U32 *ptr);
+   void compileSTEtoCode(Resources* res, StringTableEntry ste, U32 ip, U32 *ptr);
+
+   static inline StringTableEntry CodeToSTE(Resources* res, U32 *code, U32 ip)
    {
 #ifdef TORQUE_64
       return (StringTableEntry)(*((U64*)(code+ip)));
@@ -246,35 +274,46 @@ namespace Compiler
 #endif
    }
 
-   extern void (*STEtoCode)(StringTableEntry ste, U32 ip, U32 *ptr);
-   
-   void evalSTEtoCode(StringTableEntry ste, U32 ip, U32 *ptr);
-   void compileSTEtoCode(StringTableEntry ste, U32 ip, U32 *ptr);
+   struct Resources
+   {
+      CompilerStringTable *currentStringTable, globalStringTable, functionStringTable;
+      CompilerFloatTable  *currentFloatTable,  globalFloatTable,  functionFloatTable;
+      DataChunker          consoleAllocator;
+      CompilerIdentTable   identTable;
 
-   CompilerStringTable *getCurrentStringTable();
-   CompilerStringTable &getGlobalStringTable();
-   CompilerStringTable &getFunctionStringTable();
+      bool syntaxError;
 
-   void setCurrentStringTable (CompilerStringTable* cst);
+      void (*STEtoCode)(Resources* res, StringTableEntry ste, U32 ip, U32 *ptr);
 
-   CompilerFloatTable *getCurrentFloatTable();
-   CompilerFloatTable &getGlobalFloatTable();
-   CompilerFloatTable &getFunctionFloatTable();
 
-   void setCurrentFloatTable (CompilerFloatTable* cst);
+      //------------------------------------------------------------
 
-   CompilerIdentTable &getIdentTable();
+      CompilerStringTable *getCurrentStringTable()  { return currentStringTable;  }
+      CompilerStringTable &getGlobalStringTable()   { return globalStringTable;   }
+      CompilerStringTable &getFunctionStringTable() { return functionStringTable; }
 
-   void precompileIdent(StringTableEntry ident);
+      void setCurrentStringTable (CompilerStringTable* cst) { currentStringTable  = cst; }
 
-   /// Helper function to reset the float, string, and ident tables to a base
-   /// starting state.
-   void resetTables();
+      CompilerFloatTable *getCurrentFloatTable()    { return currentFloatTable;   }
+      CompilerFloatTable &getGlobalFloatTable()     { return globalFloatTable;    }
+      CompilerFloatTable &getFunctionFloatTable()   { return functionFloatTable; }
 
-   void *consoleAlloc(U32 size);
-   void consoleAllocReset();
+      void setCurrentFloatTable (CompilerFloatTable* cst) { currentFloatTable  = cst; }
 
-   extern bool gSyntaxError;
+      CompilerIdentTable &getIdentTable() { return identTable; }
+
+      void precompileIdent(StringTableEntry ident);
+      void resetTables();
+
+      void *consoleAlloc(U32 size) { return consoleAllocator.alloc(size);  }
+      void consoleAllocReset()     { consoleAllocator.freeBlocks(); }
+
+      Resources() : globalStringTable(this), functionStringTable(this), globalFloatTable(this), functionFloatTable(this), identTable(this)
+      {
+         STEtoCode = evalSTEtoCode;
+         syntaxError = false;
+      }
+   };
 };
 
 /// Utility class to emit and patch bytecode
@@ -333,8 +372,11 @@ protected:
    const char* mFilename;
    
 public:
+   Compiler::Resources* mResources;
+   
+public:
 
-   CodeStream() : mCode(0), mCodeHead(NULL), mCodePos(0), mFilename(NULL)
+   CodeStream(Compiler::Resources* res) : mCode(0), mCodeHead(NULL), mCodePos(0), mFilename(NULL), mResources(res)
    {
    }
    
@@ -376,7 +418,7 @@ public:
    {
       U64 *ptr = (U64*)allocCode(8);
       *ptr = 0;
-      Compiler::STEtoCode(code, mCodePos, (U32*)ptr);
+      mResources->STEtoCode(mResources, code, mCodePos, (U32*)ptr);
 #ifdef DEBUG_CODESTREAM
       printf("code[%u] = %s\n", mCodePos, code);
 #endif

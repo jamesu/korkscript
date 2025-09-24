@@ -351,10 +351,10 @@ static inline void printTree(const StmtNode* root) {
 
 }
 
-void dumpToInstructionsPrint(StmtNode* rootNode)
+void dumpToInstructionsPrint(Compiler::Resources& res, StmtNode* rootNode)
 {
    // Convert AST to bytecode
-   CodeStream codeStream;
+   CodeStream codeStream(&res);
    codeStream.setFilename("input");
 
    KorkApi::Config cfg{};
@@ -365,12 +365,13 @@ void dumpToInstructionsPrint(StmtNode* rootNode)
       free(ptr);
    };
    cfg.logFn = MyLogger;
+   cfg.userResources = &res;
 
    KorkApi::Vm* vm = KorkApi::createVM(&cfg);
 
    CodeBlock* cb = new CodeBlock(vm->mInternal);
-   Compiler::STEtoCode = &Compiler::evalSTEtoCode;
-   Compiler::resetTables();
+   res.STEtoCode = &Compiler::evalSTEtoCode;
+   res.resetTables();
    
    U32 lastIP = Compiler::compileBlock(rootNode, codeStream, 0) + 1;
    
@@ -380,14 +381,14 @@ void dumpToInstructionsPrint(StmtNode* rootNode)
    
    cb->lineBreakPairCount = codeStream.getNumLineBreaks();
    
-   cb->globalStrings   = Compiler::getGlobalStringTable().build();
-   cb->globalStringsMaxLen =Compiler::getGlobalStringTable().totalLen;
+   cb->globalStrings   = res.getGlobalStringTable().build();
+   cb->globalStringsMaxLen = res.getGlobalStringTable().totalLen;
    
-   cb->functionStrings = Compiler::getFunctionStringTable().build();
-   cb->functionStringsMaxLen = Compiler::getFunctionStringTable().totalLen;
+   cb->functionStrings = res.getFunctionStringTable().build();
+   cb->functionStringsMaxLen = res.getFunctionStringTable().totalLen;
    
-   cb->globalFloats    = Compiler::getGlobalFloatTable().build();
-   cb->functionFloats  = Compiler::getFunctionFloatTable().build();
+   cb->globalFloats    = res.getGlobalFloatTable().build();
+   cb->functionFloats  = res.getFunctionFloatTable().build();
    
    cb->dumpInstructions();
 
@@ -397,8 +398,9 @@ void dumpToInstructionsPrint(StmtNode* rootNode)
 bool printAST(const char* buf, const char* filename)
 {
    std::string theBuf(buf);
+   Compiler::Resources res;
    SimpleLexer::Tokenizer lex(StringTable, theBuf, filename);
-   SimpleParser::ASTGen astGen(&lex);
+   SimpleParser::ASTGen astGen(&lex, &res);
    
    StmtNode* rootNode = NULL;
    
@@ -411,7 +413,7 @@ bool printAST(const char* buf, const char* filename)
       {
          // Convert AST to bytecode
          printf("== Parser Bytecode ==\n");
-         dumpToInstructionsPrint(rootNode);
+         dumpToInstructionsPrint(res, rootNode);
       }
       else
       {

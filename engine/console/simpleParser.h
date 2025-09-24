@@ -4,6 +4,11 @@
 #include <string>
 #include "core/stringTable.h"
 
+namespace Compiler
+{
+struct Resources;
+}
+
 namespace SimpleParser
 {
 using TT = SimpleLexer::TokenType;
@@ -32,8 +37,8 @@ class ASTGen
 {
 public:
    
-   ASTGen(SimpleLexer::Tokenizer* tok)
-   : mTokenizer(tok), mTokenPos(0)
+   ASTGen(SimpleLexer::Tokenizer* tok, Compiler::Resources* res)
+   : mTokenizer(tok), mTokenPos(0), mResources(res)
    {
    }
    
@@ -78,6 +83,7 @@ private:
    SimpleLexer::Tokenizer* mTokenizer;
    std::vector<TOK> mTokens;
    U64 mTokenPos;
+   Compiler::Resources* mResources;
    
    // Token helpers
    
@@ -223,14 +229,14 @@ private:
       
       // First var
       TOK v = expect(TT::VAR, "parameter name expected");
-      VarNode* head = VarNode::alloc(v.pos.line, v.stString, NULL);
+      VarNode* head = VarNode::alloc(mResources, v.pos.line, v.stString, NULL);
       VarNode* tail = head;
       
       // Subsequent vars
       while (matchChar(','))
       {
          TOK t = expect(TT::VAR, "parameter name expected");
-         VarNode* nxt = VarNode::alloc(t.pos.line, t.stString, NULL);
+         VarNode* nxt = VarNode::alloc(mResources, t.pos.line, t.stString, NULL);
          tail->append(nxt);
          tail = nxt;
       }
@@ -277,7 +283,7 @@ private:
       {
          elseS = parseStmtOrBlock();
       }
-      return IfStmtNode::alloc(ifTok.pos.line, cond, thenS, elseS, false); // propagate=false
+      return IfStmtNode::alloc(mResources, ifTok.pos.line, cond, thenS, elseS, false); // propagate=false
    }
    
    // Handles do / while conditionals
@@ -292,7 +298,7 @@ private:
          ExprNode* test = parseExprNode();
          expectChar(')', "')' expected");
          StmtNode* body = parseStmtOrBlock();
-         return LoopStmtNode::alloc(wTok.pos.line, NULL, test, NULL, body, false);
+         return LoopStmtNode::alloc(mResources, wTok.pos.line, NULL, test, NULL, body, false);
       }
       else
       {
@@ -303,7 +309,7 @@ private:
          ExprNode* test = parseExprNode();
          expectChar(')', "')' expected");
          expectChar(';', "';' expected");
-         return LoopStmtNode::alloc(dTok.pos.line, NULL, test, NULL, body, true);
+         return LoopStmtNode::alloc(mResources, dTok.pos.line, NULL, test, NULL, body, true);
       }
    }
    
@@ -337,8 +343,8 @@ private:
       StmtNode* body = parseStmtOrBlock();
       
       // If test omitted, treat as true (1).
-      if (!test) test = IntNode::alloc(fTok.pos.line, 1);
-      return LoopStmtNode::alloc(fTok.pos.line, init, test, end, body, false);
+      if (!test) test = IntNode::alloc(mResources, fTok.pos.line, 1);
+      return LoopStmtNode::alloc(mResources, fTok.pos.line, init, test, end, body, false);
    }
    
    // Handles foreach & foreach$ iterators
@@ -358,7 +364,7 @@ private:
       expectChar(')', "')' expected");
       
       StmtNode* body = parseStmtOrBlock();
-      return IterStmtNode::alloc(t.pos.line, v.stString, cont, body, isStr);
+      return IterStmtNode::alloc(mResources, t.pos.line, v.stString, cont, body, isStr);
    }
    
    // Emits either a string or int equality node
@@ -367,11 +373,11 @@ private:
    {
       if (string)
       {
-         return StreqExprNode::alloc(line, left, right, true);
+         return StreqExprNode::alloc(mResources, line, left, right, true);
       }
       else
       {
-         return IntBinaryExprNode::alloc(line, processCharOp(TT::opEQ), left, right);
+         return IntBinaryExprNode::alloc(mResources, line, processCharOp(TT::opEQ), left, right);
       }
    }
    
@@ -432,18 +438,18 @@ private:
          expectChar(':', "':' expected after default");
          StmtNode* defBody = parseCaseBody();
          // CASE ... ':' stmts DEFAULT ':' stmts
-         return IfStmtNode::alloc(caseTok.pos.line, list, body, defBody, false);
+         return IfStmtNode::alloc(mResources, caseTok.pos.line, list, body, defBody, false);
       }
       
       if (LA().kind == TT::rwCASE)
       {
          // CASE ... ':' stmts case_block
          IfStmtNode* rest = parseCaseBlock();
-         return IfStmtNode::alloc(caseTok.pos.line, list, body, rest, true);
+         return IfStmtNode::alloc(mResources, caseTok.pos.line, list, body, rest, true);
       }
       
       // CASE ... ':' stmts
-      return IfStmtNode::alloc(caseTok.pos.line, list, body, NULL, false);
+      return IfStmtNode::alloc(mResources, caseTok.pos.line, list, body, NULL, false);
    }
    
    // Handles switch statement
@@ -479,7 +485,7 @@ private:
       expectChar('}', "'}' expected");
       
       // Now attach selector to each case by expanding the stored lists into ORs of (selector == expr)
-      root->propagateSwitchExpr(selector, isString);
+      root->propagateSwitchExpr(mResources, selector, isString);
       return root;
    }
    
@@ -531,7 +537,7 @@ private:
          expectChar(';', "; expected");
          
          slotName = mTokenizer->mStringTable->insert("datablock");
-         return SlotAssignNode::alloc(line, object, aidx, slotName, rhs, typeID);
+         return SlotAssignNode::alloc(mResources, line, object, aidx, slotName, rhs, typeID);
       }
       
       // IDENT ... (maybe typed)
@@ -553,7 +559,7 @@ private:
       ExprNode* rhs = parseExprNode();
       expectChar(';', "; expected");
       
-      return SlotAssignNode::alloc(line, object, aidx, slotName, rhs, typeID);
+      return SlotAssignNode::alloc(mResources, line, object, aidx, slotName, rhs, typeID);
    }
    
    // Handles list of slot_asign ending with '}'
@@ -663,7 +669,7 @@ private:
       {
          char empty[1];
          empty[0] = '\0';
-         objectNameExpr = StrConstNode::alloc(line, empty, false);
+         objectNameExpr = StrConstNode::alloc(mResources, line, empty, false);
       }
       
       // Optional { slots }
@@ -697,7 +703,7 @@ private:
          expectChar(';', "';' expected");
       }
       
-      return ObjectDeclNode::alloc(line, klassName, objectNameExpr, argList,
+      return ObjectDeclNode::alloc(mResources, line, klassName, objectNameExpr, argList,
                                    parentObject, slots, subs,
                                    /*isDatablock*/false, isInternal,
                                    startToken.kind == K::rwDECLARESINGLETON);
@@ -717,7 +723,7 @@ private:
       {
          TOK identName = LA();
          expect(TT::IDENT, "expected ident");
-         return ConstantNode::alloc(identName.pos.line, identName.stString);
+         return ConstantNode::alloc(mResources, identName.pos.line, identName.stString);
       }
    }
    
@@ -755,7 +761,7 @@ private:
       expectChar('}', "} expected");
       expectChar(';', "; expected");
       
-      return ObjectDeclNode::alloc(line, klassNameNode, nameExpr, NULL, parentObject, slotAssignNode, NULL, /*isDatablock*/true, /*isSingleton*/false, /*isNewExpr*/false);
+      return ObjectDeclNode::alloc(mResources, line, klassNameNode, nameExpr, NULL, parentObject, slotAssignNode, NULL, /*isDatablock*/true, /*isSingleton*/false, /*isNewExpr*/false);
    }
    
    // Handles function definitions such as function foo(...) { ... }
@@ -785,7 +791,7 @@ private:
       // { ... }
       StmtNode* body = parseBlockStmt();
       
-      return FunctionDeclStmtNode::alloc(line ? line : a.pos.line, fn, ns, args, body);
+      return FunctionDeclStmtNode::alloc(mResources, line ? line : a.pos.line, fn, ns, args, body);
    }
    
    // Handles a list of function definitions
@@ -873,11 +879,11 @@ private:
             
          case TT::rwBREAK: {
             TOK tok = mTokens[mTokenPos++]; expectChar(';', "; expected");
-            return BreakStmtNode::alloc((S32)tok.pos.line);
+            return BreakStmtNode::alloc(mResources, (S32)tok.pos.line);
          }
          case TT::rwCONTINUE: {
             TOK tok = mTokens[mTokenPos++]; expectChar(';', "; expected");
-            return ContinueStmtNode::alloc((S32)tok.pos.line);
+            return ContinueStmtNode::alloc(mResources, (S32)tok.pos.line);
          }
          case TT::rwRETURN: {
             TOK tok = mTokens[mTokenPos++];
@@ -885,16 +891,16 @@ private:
             {
                ExprNode*  e = parseExprNode();
                expectChar(';', "; expected");
-               return ReturnStmtNode::alloc((S32)tok.pos.line, e);
+               return ReturnStmtNode::alloc(mResources, (S32)tok.pos.line, e);
             }
-            return ReturnStmtNode::alloc((S32)tok.pos.line, NULL);
+            return ReturnStmtNode::alloc(mResources, (S32)tok.pos.line, NULL);
          }
          case TT::rwASSERT:
             return parseAssertStmt();
             
          case TT::DOCBLOCK: { // also valid inside blocks
             TOK tok = mTokens[mTokenPos++];
-            return StrConstNode::alloc(tok.pos.line, mTokenizer->bufferAtOffset(tok.stringValue.offset), false, true, tok.stringValue.len);
+            return StrConstNode::alloc(mResources, tok.pos.line, mTokenizer->bufferAtOffset(tok.stringValue.offset), false, true, tok.stringValue.len);
          }
          default: {
             // expression_stmt ';'
@@ -925,7 +931,7 @@ private:
       expectChar(')', "')' expected after assert(...)");
       expectChar(';', "';' expected after assert(...)");
       
-      return AssertCallExprNode::alloc(kw.pos.line, cond, msg);
+      return AssertCallExprNode::alloc(mResources, kw.pos.line, cond, msg);
    }
    
    // Handles array expression a,b,c ...
@@ -940,7 +946,7 @@ private:
       while (matchChar(',', &lineNo))
       {
          ExprNode* next = parseExprNode();
-         ExprNode* catOp = CommaCatExprNode::alloc(lineNo, head, next);
+         ExprNode* catOp = CommaCatExprNode::alloc(mResources, lineNo, head, next);
          head = catOp;
       }
       
@@ -1057,18 +1063,18 @@ private:
       {
          if (tok.kind == TT::opCHAR && tok.asChar() == '=')
          {
-            return AssignExprNode::alloc(tok.pos.line, v->varName, v->arrayIndex, r);            // =
+            return AssignExprNode::alloc(mResources, tok.pos.line, v->varName, v->arrayIndex, r);            // =
          }
          // all op*ASN kinds go through AssignOpExprNode with tok.kind payload
-         return AssignOpExprNode::alloc(tok.pos.line, v->varName, v->arrayIndex, r, processCharOp(TOK(tok)));
+         return AssignOpExprNode::alloc(mResources, tok.pos.line, v->varName, v->arrayIndex, r, processCharOp(TOK(tok)));
       }
       if (SlotAccessNode* s = dynamic_cast<SlotAccessNode*>(l))
       {
          if (tok.kind == TT::opCHAR && tok.asChar() == '=')
          {
-            return SlotAssignNode::alloc(tok.pos.line, s->objectExpr, s->arrayExpr, s->slotName, r);
+            return SlotAssignNode::alloc(mResources, tok.pos.line, s->objectExpr, s->arrayExpr, s->slotName, r);
          }
-         return SlotAssignOpNode::alloc(tok.pos.line, s->objectExpr, s->slotName, s->arrayExpr, processCharOp(TOK(tok)), r);
+         return SlotAssignOpNode::alloc(mResources, tok.pos.line, s->objectExpr, s->slotName, s->arrayExpr, processCharOp(TOK(tok)), r);
       }
       errorHere(tok, "left-hand side of assignment must be a variable");
       return NULL;
@@ -1090,7 +1096,7 @@ private:
                
                if (VarNode* v = dynamic_cast<VarNode*>(left)) {
                   if (v->arrayIndex)
-                     v->arrayIndex = CommaCatExprNode::alloc(op.pos.line, v->arrayIndex, idx);
+                     v->arrayIndex = CommaCatExprNode::alloc(mResources, op.pos.line, v->arrayIndex, idx);
                   else
                      v->arrayIndex = idx;
                   return v;
@@ -1106,7 +1112,7 @@ private:
                ExprNode* mid = parseExpression(0);
                expectChar(':', ": expected");
                ExprNode* rhs = parseExpression(opBP - 1);
-               return ConditionalExprNode::alloc(op.pos.line, left, mid, rhs);
+               return ConditionalExprNode::alloc(mResources, op.pos.line, left, mid, rhs);
             }
             
             if (op.asChar() == '=') // '='
@@ -1120,12 +1126,12 @@ private:
                      mTokenPos++; // consume '{'
                      ExprNode* list = parseExprListOptUntil('}');
                      expectChar('}', "'}' expected");
-                     return SlotAssignNode::alloc(op.pos.line, s->objectExpr, s->arrayExpr, s->slotName, list);
+                     return SlotAssignNode::alloc(mResources, op.pos.line, s->objectExpr, s->arrayExpr, s->slotName, list);
                   }
                   
                   // Normal RHS
                   ExprNode* rhs = parseAssignRHS(opBP);
-                  return SlotAssignNode::alloc(op.pos.line, s->objectExpr, s->arrayExpr, s->slotName, rhs);
+                  return SlotAssignNode::alloc(mResources, op.pos.line, s->objectExpr, s->arrayExpr, s->slotName, rhs);
                }
                
                return makeAssign(op, left, parseAssignRHS(opBP));
@@ -1148,7 +1154,7 @@ private:
                   
                   // Use the object's dbg line if available, else token line
                   S32 ln = left && left->dbgLineNumber ? left->dbgLineNumber : (S32)id.pos.line;
-                  return FuncCallExprNode::alloc(ln, id.stString, /*nameSpace*/0, argHead, /*dot*/true);
+                  return FuncCallExprNode::alloc(mResources, ln, id.stString, /*nameSpace*/0, argHead, /*dot*/true);
                }
                
                // Slot access: .IDENT [ '[' aidx ']' ]   -> SlotAccessNode
@@ -1157,7 +1163,7 @@ private:
                   arr = parseAidxExprNode();
                   expectChar(']', "] expected");
                }
-               return SlotAccessNode::alloc(op.pos.line, left, arr, id.stString);
+               return SlotAccessNode::alloc(mResources, op.pos.line, left, arr, id.stString);
             }
             
             // Ordinary binary ops
@@ -1167,9 +1173,9 @@ private:
                {
                      // Single-char arithmetic etc.
                   case '+': case '-': case '*': case '/':
-                     return FloatBinaryExprNode::alloc(op.pos.line, processCharOp(op), left, right);
+                     return FloatBinaryExprNode::alloc(mResources, op.pos.line, processCharOp(op), left, right);
                   case '%': case '^': case '&': case '|': case '<': case '>':
-                     return IntBinaryExprNode::alloc(op.pos.line, processCharOp(op), left, right);
+                     return IntBinaryExprNode::alloc(mResources, op.pos.line, processCharOp(op), left, right);
                   default:
                      errorHere(op, "unsupported operator in expression");
                      break;
@@ -1190,15 +1196,15 @@ private:
          {
             if (VarNode* v = dynamic_cast<VarNode*>(left))
             {
-               ExprNode* one = FloatNode::alloc(op.pos.line, 1);
+               ExprNode* one = FloatNode::alloc(mResources, op.pos.line, 1);
                TT asn = (op.kind == TT::opPLUSPLUS) ? TT::opPCHAR_PLUS : TT::opPCHAR_MINUS;
-               return AssignOpExprNode::alloc(op.pos.line, v->varName, v->arrayIndex, one, asn);
+               return AssignOpExprNode::alloc(mResources, op.pos.line, v->varName, v->arrayIndex, one, asn);
             }
             else if (SlotAccessNode* s = dynamic_cast<SlotAccessNode*>(left))
             {
-               ExprNode* one = FloatNode::alloc(op.pos.line, 1);
+               ExprNode* one = FloatNode::alloc(mResources, op.pos.line, 1);
                TT asn = (op.kind == TT::opPLUSPLUS) ? TT::opPCHAR_PLUS : TT::opPCHAR_MINUS;
-               return SlotAssignOpNode::alloc(op.pos.line, s->objectExpr, s->slotName, s->arrayExpr, asn, one);
+               return SlotAssignOpNode::alloc(mResources, op.pos.line, s->objectExpr, s->slotName, s->arrayExpr, asn, one);
             }
             errorHere(op, "postfix ++/-- requires a variable");
             return NULL;
@@ -1210,21 +1216,21 @@ private:
          case TT::opSHL: case TT::opSHR:
          {
             ExprNode* right = parseExpression(associativity(op)==LEFT ? opBP : (opBP-1));
-            return IntBinaryExprNode::alloc(op.pos.line, processCharOp(op.kind), left, right);
+            return IntBinaryExprNode::alloc(mResources, op.pos.line, processCharOp(op.kind), left, right);
          }
             
          case TT::opSTREQ:
          case TT::opSTRNE:
          {
             ExprNode* right = parseExpression(associativity(op)==LEFT ? opBP : (opBP-1));
-            return StreqExprNode::alloc(op.pos.line, left, right, op.kind==TT::opSTREQ);
+            return StreqExprNode::alloc(mResources, op.pos.line, left, right, op.kind==TT::opSTREQ);
          }
             
          case TT::opCONCAT:
          {
             ExprNode* right = parseExpression(associativity(op)==LEFT ? opBP : (opBP-1));
             char glue = (char)op.ivalue;
-            return StrcatExprNode::alloc(op.pos.line, left, right, glue);
+            return StrcatExprNode::alloc(mResources, op.pos.line, left, right, glue);
          }
             
             // Internal slot access: -> (opINTNAME) and --> (opINTNAMER)
@@ -1234,7 +1240,7 @@ private:
             bool recurse = (op.kind == TT::opINTNAMER);
             // tight parse for the "slot expression" on the right
             ExprNode* slotExpr = parseExpression( (int)130 ); // bind tighter than '.'
-            return InternalSlotAccessNode::alloc(op.pos.line, left, slotExpr, recurse);
+            return InternalSlotAccessNode::alloc(mResources, op.pos.line, left, slotExpr, recurse);
          }
             
          default:
@@ -1252,11 +1258,11 @@ private:
       switch (t.kind)
       {
             // Literals
-         case TT::INTCONST:   return IntNode::alloc(t.pos.line, (S32)t.ivalue);
-         case TT::FLTCONST:   return FloatNode::alloc(t.pos.line, t.value);
-         case TT::STRATOM:    return StrConstNode::alloc(t.pos.line, mTokenizer->bufferAtOffset(t.stringValue.offset), false);
-         case TT::TAGATOM:    return StrConstNode::alloc(t.pos.line, mTokenizer->bufferAtOffset(t.stringValue.offset), true);
-         case TT::DOCBLOCK:   return StrConstNode::alloc(t.pos.line, mTokenizer->bufferAtOffset(t.stringValue.offset), false, true, t.stringValue.len);
+         case TT::INTCONST:   return IntNode::alloc(mResources, t.pos.line, (S32)t.ivalue);
+         case TT::FLTCONST:   return FloatNode::alloc(mResources, t.pos.line, t.value);
+         case TT::STRATOM:    return StrConstNode::alloc(mResources, t.pos.line, mTokenizer->bufferAtOffset(t.stringValue.offset), false);
+         case TT::TAGATOM:    return StrConstNode::alloc(mResources, t.pos.line, mTokenizer->bufferAtOffset(t.stringValue.offset), true);
+         case TT::DOCBLOCK:   return StrConstNode::alloc(mResources, t.pos.line, mTokenizer->bufferAtOffset(t.stringValue.offset), false, true, t.stringValue.len);
             
          case TT::opPLUSPLUS:
          case TT::opMINUSMINUS:
@@ -1278,7 +1284,7 @@ private:
                expectChar('(', "'(' expected");
                ExprNode* args = parseExprListOptUntil(')');
                expectChar(')', "')' expected");
-               return FuncCallExprNode::alloc(nsTok.pos.line, fnTok.stString, nsTok.stString, args, /*dot*/false);
+               return FuncCallExprNode::alloc(mResources, nsTok.pos.line, fnTok.stString, nsTok.stString, args, /*dot*/false);
             }
             
             // func( ... )
@@ -1287,13 +1293,13 @@ private:
                expectChar('(', "'(' expected");
                ExprNode* args = parseExprListOptUntil(')');
                expectChar(')', "')' expected");
-               return FuncCallExprNode::alloc(t.pos.line, t.stString, /*nameSpace*/0, args, /*dot*/false);
+               return FuncCallExprNode::alloc(mResources, t.pos.line, t.stString, /*nameSpace*/0, args, /*dot*/false);
             }
             
             // bare name
-            return ConstantNode::alloc(t.pos.line, t.stString);
+            return ConstantNode::alloc(mResources, t.pos.line, t.stString);
          }
-         case TT::VAR:        return VarNode::alloc(t.pos.line, t.stString, NULL);
+         case TT::VAR:        return VarNode::alloc(mResources, t.pos.line, t.stString, NULL);
             
          case TT::rwDECLARE:           // 'new'
          case TT::rwDECLARESINGLETON:  // 'singleton'
@@ -1311,10 +1317,10 @@ private:
                   expectChar(')', ") expected");
                   return e;
                }
-               case '-':  return FloatUnaryExprNode::alloc(t.pos.line, TT::opPCHAR_MINUS, parseExpression(110)); // bind tighter than *,/,%  (any high > 100)
-               case '!':  return IntUnaryExprNode::alloc(t.pos.line,   TT::opPCHAR_EXCL, parseExpression(110));
-               case '~':  return IntUnaryExprNode::alloc(t.pos.line,   TT::opPCHAR_TILDE, parseExpression(110));
-               case '*':  return TTagDerefNode::alloc(t.pos.line,          parseExpression(110));
+               case '-':  return FloatUnaryExprNode::alloc(mResources, t.pos.line, TT::opPCHAR_MINUS, parseExpression(110)); // bind tighter than *,/,%  (any high > 100)
+               case '!':  return IntUnaryExprNode::alloc(mResources, t.pos.line,   TT::opPCHAR_EXCL, parseExpression(110));
+               case '~':  return IntUnaryExprNode::alloc(mResources, t.pos.line,   TT::opPCHAR_TILDE, parseExpression(110));
+               case '*':  return TTagDerefNode::alloc(mResources, t.pos.line,          parseExpression(110));
             }
             break;
          }

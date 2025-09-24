@@ -236,24 +236,24 @@ U32 ReturnStmtNode::compileStmt(CodeStream &codeStream, U32 ip)
 
 //------------------------------------------------------------
 
-ExprNode *IfStmtNode::getSwitchOR(ExprNode *left, ExprNode *list, bool string)
+ExprNode *IfStmtNode::getSwitchOR(Compiler::Resources* res, ExprNode *left, ExprNode *list, bool string)
 {
    ExprNode *nextExpr = (ExprNode *) list->getNext();
    ExprNode *test;
    if(string)
-      test = StreqExprNode::alloc( left->dbgLineNumber, left, list, true );
+      test = StreqExprNode::alloc( res, left->dbgLineNumber, left, list, true );
    else
-      test = IntBinaryExprNode::alloc( left->dbgLineNumber, SimpleLexer::TokenType::opEQ, left, list );
+      test = IntBinaryExprNode::alloc( res, left->dbgLineNumber, SimpleLexer::TokenType::opEQ, left, list );
    if(!nextExpr)
       return test;
-   return IntBinaryExprNode::alloc( test->dbgLineNumber, SimpleLexer::TokenType::opOR, test, getSwitchOR( left, nextExpr, string ) );
+   return IntBinaryExprNode::alloc( res, test->dbgLineNumber, SimpleLexer::TokenType::opOR, test, getSwitchOR( res, left, nextExpr, string ) );
 }
 
-void IfStmtNode::propagateSwitchExpr(ExprNode *left, bool string)
+void IfStmtNode::propagateSwitchExpr(Compiler::Resources* res, ExprNode *left, bool string)
 {
-   testExpr = getSwitchOR(left, testExpr, string);
+   testExpr = getSwitchOR(res, left, testExpr, string);
    if(propagate && elseBlock)
-      ((IfStmtNode *) elseBlock)->propagateSwitchExpr(left, string);
+      ((IfStmtNode *) elseBlock)->propagateSwitchExpr(res, left, string);
 }
 
 U32 IfStmtNode::compileStmt(CodeStream &codeStream, U32 ip)
@@ -712,7 +712,7 @@ U32 VarNode::compile(CodeStream &codeStream, U32 ip, TypeReq type)
    if(type == TypeReqNone)
       return codeStream.tell();
    
-   precompileIdent(varName);
+   codeStream.mResources->precompileIdent(varName);
 
    codeStream.emit(arrayIndex ? OP_LOADIMMED_IDENT : OP_SETCURVAR);
    codeStream.emitSTE(varName);
@@ -756,9 +756,9 @@ TypeReq VarNode::getPreferredType()
 U32 IntNode::compile(CodeStream &codeStream, U32 ip, TypeReq type)
 {
    if(type == TypeReqString)
-      index = getCurrentStringTable()->addIntString(value);
+      index = codeStream.mResources->getCurrentStringTable()->addIntString(value);
    else if(type == TypeReqFloat)
-      index = getCurrentFloatTable()->add(value);
+      index = codeStream.mResources->getCurrentFloatTable()->add(value);
    
    switch(type)
    {
@@ -790,9 +790,9 @@ TypeReq IntNode::getPreferredType()
 U32 FloatNode::compile(CodeStream &codeStream, U32 ip, TypeReq type)
 {
    if(type == TypeReqString)
-      index = getCurrentStringTable()->addFloatString(value);
+      index = codeStream.mResources->getCurrentStringTable()->addFloatString(value);
    else if(type == TypeReqFloat)
-      index = getCurrentFloatTable()->add(value);
+      index = codeStream.mResources->getCurrentFloatTable()->add(value);
    
    switch(type)
    {
@@ -826,18 +826,18 @@ U32 StrConstNode::compile(CodeStream &codeStream, U32 ip, TypeReq type)
    // Early out for documentation block.
    if( doc )
    {
-      index = getCurrentStringTable()->add(str, true, tag);
+      index = codeStream.mResources->getCurrentStringTable()->add(str, true, tag);
    }
    else if(type == TypeReqString)
    {
-      index = getCurrentStringTable()->add(str, true, tag);
+      index = codeStream.mResources->getCurrentStringTable()->add(str, true, tag);
    }
    else if (type != TypeReqNone)
    {
       fVal = consoleStringToNumber(str, codeStream.getFilename(), dbgLineNumber);
       if(type == TypeReqFloat)
       {
-         index = getCurrentFloatTable()->add(fVal);
+         index = codeStream.mResources->getCurrentFloatTable()->add(fVal);
       }
    }
    
@@ -881,13 +881,13 @@ U32 ConstantNode::compile(CodeStream &codeStream, U32 ip, TypeReq type)
 {
    if(type == TypeReqString)
    {
-      precompileIdent(value);
+      codeStream.mResources->precompileIdent(value);
    }
    else if (type != TypeReqNone)
    {
       fVal = consoleStringToNumber(value, codeStream.getFilename(), dbgLineNumber);
       if(type == TypeReqFloat)
-         index = getCurrentFloatTable()->add(fVal);
+         index = codeStream.mResources->getCurrentFloatTable()->add(fVal);
    }
    
    switch(type)
@@ -955,7 +955,7 @@ U32 AssignExprNode::compile(CodeStream &codeStream, U32 ip, TypeReq type)
    // varname
    // OP_SAVEVAR
    
-   precompileIdent(varName);
+   codeStream.mResources->precompileIdent(varName);
    
    ip = expr->compile(codeStream, ip, subType);
 
@@ -1079,7 +1079,7 @@ U32 AssignOpExprNode::compile(CodeStream &codeStream, U32 ip, TypeReq type)
    
    // conversion OP if necessary.
    getAssignOpTypeOp(op, subType, operand);
-   precompileIdent(varName);
+   codeStream.mResources->precompileIdent(varName);
    
    ip = expr->compile(codeStream, ip, subType);
    if(!arrayIndex)
@@ -1155,8 +1155,8 @@ U32 FuncCallExprNode::compile(CodeStream &codeStream, U32 ip, TypeReq type)
    // namespace
    // isDot
    
-   precompileIdent(funcName);
-   precompileIdent(nameSpace);
+   codeStream.mResources->precompileIdent(funcName);
+   codeStream.mResources->precompileIdent(nameSpace);
    
    codeStream.emit(OP_PUSH_FRAME);
    for(ExprNode *walk = args; walk; walk = (ExprNode *) walk->getNext())
@@ -1203,7 +1203,7 @@ U32 AssertCallExprNode::compile( CodeStream &codeStream, U32 ip, TypeReq type )
 {
    #ifdef TORQUE_ENABLE_SCRIPTASSERTS
    
-      messageIndex = getCurrentStringTable()->add( message, true, false );
+      messageIndex = codeStream.mResources->getCurrentStringTable()->add( message, true, false );
    
       ip = testExpr->compile( codeStream, ip, TypeReqUInt );
       codeStream.emit(OP_ASSERT);
@@ -1226,7 +1226,7 @@ U32 SlotAccessNode::compile(CodeStream &codeStream, U32 ip, TypeReq type)
    if(type == TypeReqNone)
       return ip;
    
-   precompileIdent(slotName);
+   codeStream.mResources->precompileIdent(slotName);
 
    if(arrayExpr)
    {
@@ -1331,7 +1331,7 @@ U32 SlotAssignNode::compile(CodeStream &codeStream, U32 ip, TypeReq type)
    // OP_SAVEFIELD
    // convert to return type if necessary.
    
-   precompileIdent(slotName);
+   codeStream.mResources->precompileIdent(slotName);
    
    ip = valueExpr->compile(codeStream, ip, TypeReqString);
    codeStream.emit(OP_ADVANCE_STR);
@@ -1403,7 +1403,7 @@ U32 SlotAssignOpNode::compile(CodeStream &codeStream, U32 ip, TypeReq type)
    // convert to return type if necessary.
    
    getAssignOpTypeOp(op, subType, operand);
-   precompileIdent(slotName);
+   codeStream.mResources->precompileIdent(slotName);
    
    ip = valueExpr->compile(codeStream, ip, subType);
    if(arrayExpr)
@@ -1548,19 +1548,19 @@ U32 FunctionDeclStmtNode::compileStmt(CodeStream &codeStream, U32 ip)
    // ident array[argc]
    // code
    // OP_RETURN_VOID
-   setCurrentStringTable(&getFunctionStringTable());
-   setCurrentFloatTable(&getFunctionFloatTable());
+   codeStream.mResources->setCurrentStringTable(&codeStream.mResources->getFunctionStringTable());
+   codeStream.mResources->setCurrentFloatTable(&codeStream.mResources->getFunctionFloatTable());
    
    argc = 0;
    for(VarNode *walk = args; walk; walk = (VarNode *)((StmtNode*)walk)->getNext())
    {
-      precompileIdent(walk->varName);
+      codeStream.mResources->precompileIdent(walk->varName);
       argc++;
    }
    
-   precompileIdent(fnName);
-   precompileIdent(nameSpace);
-   precompileIdent(package);
+   codeStream.mResources->precompileIdent(fnName);
+   codeStream.mResources->precompileIdent(nameSpace);
+   codeStream.mResources->precompileIdent(package);
    
    codeStream.emit(OP_FUNC_DECL);
    codeStream.emitSTE(fnName);
@@ -1585,8 +1585,8 @@ U32 FunctionDeclStmtNode::compileStmt(CodeStream &codeStream, U32 ip)
    
    codeStream.patch(endIp, codeStream.tell());
    
-   setCurrentStringTable(&getGlobalStringTable());
-   setCurrentFloatTable(&getGlobalFloatTable());
+   codeStream.mResources->setCurrentStringTable(&codeStream.mResources->getGlobalStringTable());
+   codeStream.mResources->setCurrentFloatTable(&codeStream.mResources->getGlobalFloatTable());
    
    return ip;
 }

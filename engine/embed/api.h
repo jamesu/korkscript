@@ -9,6 +9,11 @@ class TypeValidator; // TODO: change to interface
 class Namespace;
 struct EnumTable;
 
+namespace Compiler
+{
+    struct Resources;
+}
+
 namespace KorkApi
 {
 
@@ -247,6 +252,8 @@ struct Config {
    void* findUser;
 
    void* vmUser;
+
+   Compiler::Resources* userResources;
 
    bool warnUndefinedScriptVariables;
 };

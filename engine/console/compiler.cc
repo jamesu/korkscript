@@ -37,6 +37,23 @@
 namespace Compiler
 {
 
+   void evalSTEtoCode(Resources* res, StringTableEntry ste, U32 ip, U32 *ptr)
+   {
+   #ifdef TORQUE_64
+      *(U64*)(ptr) = (U64)ste;
+   #else
+      *ptr = (U32)ste;
+   #endif
+   }
+
+   void compileSTEtoCode(Resources* res, StringTableEntry ste, U32 ip, U32 *ptr)
+   {
+      if(ste)
+         res->getIdentTable().add(ste, ip);
+      *ptr = 0;
+      *(ptr+1) = 0;
+   }
+
    F64 consoleStringToNumber(const char *str, StringTableEntry file, U32 line)
    {
       F64 val = dAtof(str);
@@ -56,71 +73,22 @@ namespace Compiler
 
    //------------------------------------------------------------
 
-   CompilerStringTable *gCurrentStringTable, gGlobalStringTable, gFunctionStringTable;
-   CompilerFloatTable  *gCurrentFloatTable,  gGlobalFloatTable,  gFunctionFloatTable;
-   DataChunker          gConsoleAllocator;
-   CompilerIdentTable   gIdentTable;
-
-   //------------------------------------------------------------
-
-   void evalSTEtoCode(StringTableEntry ste, U32 ip, U32 *ptr)
-   {
-#ifdef TORQUE_64
-      *(U64*)(ptr) = (U64)ste;
-#else
-      *ptr = (U32)ste;
-#endif
-   }
-   
-   void compileSTEtoCode(StringTableEntry ste, U32 ip, U32 *ptr)
-   {
-      if(ste)
-         getIdentTable().add(ste, ip);
-      *ptr = 0;
-      *(ptr+1) = 0;
-   }
-   
-   void (*STEtoCode)(StringTableEntry ste, U32 ip, U32 *ptr) = evalSTEtoCode;
-
-   //------------------------------------------------------------
-
-   bool gSyntaxError = false;
-
-   //------------------------------------------------------------
-
-   CompilerStringTable *getCurrentStringTable()  { return gCurrentStringTable;  }
-   CompilerStringTable &getGlobalStringTable()   { return gGlobalStringTable;   }
-   CompilerStringTable &getFunctionStringTable() { return gFunctionStringTable; }
-
-   void setCurrentStringTable (CompilerStringTable* cst) { gCurrentStringTable  = cst; }
-
-   CompilerFloatTable *getCurrentFloatTable()    { return gCurrentFloatTable;   }
-   CompilerFloatTable &getGlobalFloatTable()     { return gGlobalFloatTable;    }
-   CompilerFloatTable &getFunctionFloatTable()   { return gFunctionFloatTable; }
-
-   void setCurrentFloatTable (CompilerFloatTable* cst) { gCurrentFloatTable  = cst; }
-
-   CompilerIdentTable &getIdentTable() { return gIdentTable; }
-
-   void precompileIdent(StringTableEntry ident)
+   void Resources::precompileIdent(StringTableEntry ident)
    {
       if(ident)
-         gGlobalStringTable.add(ident);
+         globalStringTable.add(ident);
    }
 
-   void resetTables()
+   void Resources::resetTables()
    {
-      setCurrentStringTable(&gGlobalStringTable);
-      setCurrentFloatTable(&gGlobalFloatTable);
+      setCurrentStringTable(&globalStringTable);
+      setCurrentFloatTable(&globalFloatTable);
       getGlobalFloatTable().reset();
       getGlobalStringTable().reset();
       getFunctionFloatTable().reset();
       getFunctionStringTable().reset();
       getIdentTable().reset();
    }
-
-   void *consoleAlloc(U32 size) { return gConsoleAllocator.alloc(size);  }
-   void consoleAllocReset()     { gConsoleAllocator.freeBlocks(); }
 
 }
 
@@ -153,7 +121,7 @@ U32 CompilerStringTable::add(const char *str, bool caseSens, bool tag)
    }
 
    // Write it out.
-   Entry *newStr = (Entry *) consoleAlloc(sizeof(Entry));
+   Entry *newStr = (Entry *) res->consoleAlloc(sizeof(Entry));
    *walk = newStr;
    newStr->next = NULL;
    newStr->start = totalLen;
@@ -161,7 +129,7 @@ U32 CompilerStringTable::add(const char *str, bool caseSens, bool tag)
    if(tag && len < 7) // alloc space for the numeric tag 1 for tag, 5 for # and 1 for nul
       len = 7;
    totalLen += len;
-   newStr->string = (char *) consoleAlloc(len);
+   newStr->string = (char *) res->consoleAlloc(len);
    newStr->len = len;
    newStr->tag = tag;
    dStrcpy(newStr->string, str);
@@ -210,7 +178,7 @@ U32 CompilerFloatTable::add(F64 value)
    for(walk = &list; *walk; walk = &((*walk)->next), i++)
       if(value == (*walk)->val)
          return i;
-   Entry *newFloat = (Entry *) consoleAlloc(sizeof(Entry));
+   Entry *newFloat = (Entry *) res->consoleAlloc(sizeof(Entry));
    newFloat->val = value;
    newFloat->next = NULL;
    count++;
@@ -247,8 +215,8 @@ void CompilerIdentTable::reset()
 
 void CompilerIdentTable::add(StringTableEntry ste, U32 ip)
 {
-   U32 index = gGlobalStringTable.add(ste, false);
-   Entry *newEntry = (Entry *) consoleAlloc(sizeof(Entry));
+   U32 index = res->globalStringTable.add(ste, false);
+   Entry *newEntry = (Entry *) res->consoleAlloc(sizeof(Entry));
    newEntry->offset = index;
    newEntry->ip = ip;
    for(Entry *walk = list; walk; walk = walk->next)

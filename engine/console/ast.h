@@ -29,6 +29,11 @@ class SimObject;
 class SimGroup;
 class CodeStream;
 
+namespace Compiler
+{
+struct Resources;
+}
+
 /// Enable this #define if you are seeing the message "precompile size mismatch" in the console.
 /// This will help track down which node type is causing the error. It could be
 /// due to incorrect compiler optimization.
@@ -99,7 +104,7 @@ struct StmtNode
 
 struct BreakStmtNode : StmtNode
 {
-   static BreakStmtNode *alloc( S32 lineNumber );
+   static BreakStmtNode *alloc( Compiler::Resources* res, S32 lineNumber );
 
    
    U32 compileStmt(CodeStream &codeStream, U32 ip);
@@ -108,7 +113,7 @@ struct BreakStmtNode : StmtNode
 
 struct ContinueStmtNode : StmtNode
 {
-   static ContinueStmtNode *alloc( S32 lineNumber );
+   static ContinueStmtNode *alloc( Compiler::Resources* res, S32 lineNumber );
    
    U32 compileStmt(CodeStream &codeStream, U32 ip);
    DBG_STMT_TYPE(ContinueStmtNode);
@@ -128,7 +133,7 @@ struct ReturnStmtNode : StmtNode
 {
    ExprNode *expr;
 
-   static ReturnStmtNode *alloc( S32 lineNumber, ExprNode *expr );
+   static ReturnStmtNode *alloc( Compiler::Resources* res, S32 lineNumber, ExprNode *expr );
    
    U32 compileStmt(CodeStream &codeStream, U32 ip);
    DBG_STMT_TYPE(ReturnStmtNode);
@@ -143,9 +148,9 @@ struct IfStmtNode : StmtNode
    bool integer;
    bool propagate;
 
-   static IfStmtNode *alloc( S32 lineNumber, ExprNode *testExpr, StmtNode *ifBlock, StmtNode *elseBlock, bool propagateThrough );
-   void propagateSwitchExpr(ExprNode *left, bool string);
-   ExprNode *getSwitchOR(ExprNode *left, ExprNode *list, bool string);
+   static IfStmtNode *alloc( Compiler::Resources* res, S32 lineNumber, ExprNode *testExpr, StmtNode *ifBlock, StmtNode *elseBlock, bool propagateThrough );
+   void propagateSwitchExpr(Compiler::Resources* res, ExprNode *left, bool string);
+   ExprNode *getSwitchOR(Compiler::Resources* res, ExprNode *left, ExprNode *list, bool string);
    
    U32 compileStmt(CodeStream &codeStream, U32 ip);
    DBG_STMT_TYPE(IfStmtNode);
@@ -163,7 +168,7 @@ struct LoopStmtNode : StmtNode
    U32 loopBlockStartOffset;
    bool integer;
 
-   static LoopStmtNode *alloc( S32 lineNumber, ExprNode *testExpr, ExprNode *initExpr, ExprNode *endLoopExpr, StmtNode *loopBlock, bool isDoLoop );
+   static LoopStmtNode *alloc( Compiler::Resources* res, S32 lineNumber, ExprNode *testExpr, ExprNode *initExpr, ExprNode *endLoopExpr, StmtNode *loopBlock, bool isDoLoop );
    
    U32 compileStmt(CodeStream &codeStream, U32 ip);
    DBG_STMT_TYPE(LoopStmtNode);
@@ -187,7 +192,7 @@ struct IterStmtNode : StmtNode
    /// Bytecode size of body statement.  Set by precompileStmt.
    U32 bodySize;
    
-   static IterStmtNode* alloc( S32 lineNumber, StringTableEntry varName, ExprNode* containerExpr, StmtNode* body, bool isStringIter );
+   static IterStmtNode* alloc( Compiler::Resources* res, S32 lineNumber, StringTableEntry varName, ExprNode* containerExpr, StmtNode* body, bool isStringIter );
    
    U32 compileStmt( CodeStream &codeStream, U32 ip );
 };
@@ -202,7 +207,7 @@ struct BinaryExprNode : ExprNode
 
 struct FloatBinaryExprNode : BinaryExprNode
 {
-   static FloatBinaryExprNode *alloc( S32 lineNumber, const SimpleLexer::TokenType op, ExprNode *left, ExprNode *right );
+   static FloatBinaryExprNode *alloc( Compiler::Resources* res, S32 lineNumber, const SimpleLexer::TokenType op, ExprNode *left, ExprNode *right );
   
    U32 compile(CodeStream &codeStream, U32 ip, TypeReq type);
    TypeReq getPreferredType();
@@ -215,7 +220,7 @@ struct ConditionalExprNode : ExprNode
    ExprNode *trueExpr;
    ExprNode *falseExpr;
    bool integer;
-   static ConditionalExprNode *alloc( S32 lineNumber, ExprNode *testExpr, ExprNode *trueExpr, ExprNode *falseExpr );
+   static ConditionalExprNode *alloc( Compiler::Resources* res, S32 lineNumber, ExprNode *testExpr, ExprNode *trueExpr, ExprNode *falseExpr );
    
    virtual U32 compile(CodeStream &codeStream, U32 ip, TypeReq type);
    virtual TypeReq getPreferredType();
@@ -227,7 +232,7 @@ struct IntBinaryExprNode : BinaryExprNode
    TypeReq subType;
    U32 operand;
 
-   static IntBinaryExprNode *alloc( S32 lineNumber, const SimpleLexer::TokenType op, ExprNode *left, ExprNode *right );
+   static IntBinaryExprNode *alloc( Compiler::Resources* res, S32 lineNumber, const SimpleLexer::TokenType op, ExprNode *left, ExprNode *right );
 
    void getSubTypeOperand();
    
@@ -239,7 +244,7 @@ struct IntBinaryExprNode : BinaryExprNode
 struct StreqExprNode : BinaryExprNode
 {
    bool eq;
-   static StreqExprNode *alloc( S32 lineNumber, ExprNode *left, ExprNode *right, bool eq );
+   static StreqExprNode *alloc( Compiler::Resources* res, S32 lineNumber, ExprNode *left, ExprNode *right, bool eq );
    
    U32 compile(CodeStream &codeStream, U32 ip, TypeReq type);
    TypeReq getPreferredType();
@@ -249,7 +254,7 @@ struct StreqExprNode : BinaryExprNode
 struct StrcatExprNode : BinaryExprNode
 {
    S32 appendChar;
-   static StrcatExprNode *alloc( S32 lineNumber, ExprNode *left, ExprNode *right, S32 appendChar );
+   static StrcatExprNode *alloc( Compiler::Resources* res, S32 lineNumber, ExprNode *left, ExprNode *right, S32 appendChar );
   
    U32 compile(CodeStream &codeStream, U32 ip, TypeReq type);
    TypeReq getPreferredType();
@@ -258,7 +263,7 @@ struct StrcatExprNode : BinaryExprNode
 
 struct CommaCatExprNode : BinaryExprNode
 {
-   static CommaCatExprNode *alloc( S32 lineNumber, ExprNode *left, ExprNode *right );
+   static CommaCatExprNode *alloc( Compiler::Resources* res, S32 lineNumber, ExprNode *left, ExprNode *right );
 
   
    U32 compile(CodeStream &codeStream, U32 ip, TypeReq type);
@@ -272,7 +277,7 @@ struct IntUnaryExprNode : ExprNode
    ExprNode *expr;
    bool integer;
 
-   static IntUnaryExprNode *alloc( S32 lineNumber, const SimpleLexer::TokenType op, ExprNode *expr );
+   static IntUnaryExprNode *alloc( Compiler::Resources* res, S32 lineNumber, const SimpleLexer::TokenType op, ExprNode *expr );
   
    U32 compile(CodeStream &codeStream, U32 ip, TypeReq type);
    TypeReq getPreferredType();
@@ -284,7 +289,7 @@ struct FloatUnaryExprNode : ExprNode
    SimpleLexer::TokenType op;
    ExprNode *expr;
 
-   static FloatUnaryExprNode *alloc( S32 lineNumber, const SimpleLexer::TokenType op, ExprNode *expr );
+   static FloatUnaryExprNode *alloc( Compiler::Resources* res, S32 lineNumber, const SimpleLexer::TokenType op, ExprNode *expr );
   
    U32 compile(CodeStream &codeStream, U32 ip, TypeReq type);
    TypeReq getPreferredType();
@@ -296,7 +301,7 @@ struct VarNode : ExprNode
    StringTableEntry varName;
    ExprNode *arrayIndex;
 
-   static VarNode *alloc( S32 lineNumber, StringTableEntry varName, ExprNode *arrayIndex );
+   static VarNode *alloc( Compiler::Resources* res, S32 lineNumber, StringTableEntry varName, ExprNode *arrayIndex );
   
    U32 compile(CodeStream &codeStream, U32 ip, TypeReq type);
    TypeReq getPreferredType();
@@ -308,7 +313,7 @@ struct IntNode : ExprNode
    S32 value;
    U32 index; // if it's converted to float/string
 
-   static IntNode *alloc( S32 lineNumber, S32 value );
+   static IntNode *alloc( Compiler::Resources* res, S32 lineNumber, S32 value );
   
    U32 compile(CodeStream &codeStream, U32 ip, TypeReq type);
    TypeReq getPreferredType();
@@ -320,7 +325,7 @@ struct FloatNode : ExprNode
    F64 value;
    U32 index;
 
-   static FloatNode *alloc( S32 lineNumber, F64 value );
+   static FloatNode *alloc( Compiler::Resources* res, S32 lineNumber, F64 value );
   
    U32 compile(CodeStream &codeStream, U32 ip, TypeReq type);
    TypeReq getPreferredType();
@@ -335,7 +340,7 @@ struct StrConstNode : ExprNode
    bool tag;
    bool doc; // Specifies that this string is a documentation block.
 
-   static StrConstNode *alloc( S32 lineNumber, char *str, bool tag, bool doc = false, S32 forceLen = -1);
+   static StrConstNode *alloc( Compiler::Resources* res, S32 lineNumber, char *str, bool tag, bool doc = false, S32 forceLen = -1);
   
    U32 compile(CodeStream &codeStream, U32 ip, TypeReq type);
    TypeReq getPreferredType();
@@ -348,7 +353,7 @@ struct ConstantNode : ExprNode
    F64 fVal;
    U32 index;
 
-   static ConstantNode *alloc( S32 lineNumber, StringTableEntry value );
+   static ConstantNode *alloc( Compiler::Resources* res, S32 lineNumber, StringTableEntry value );
   
    U32 compile(CodeStream &codeStream, U32 ip, TypeReq type);
    TypeReq getPreferredType();
@@ -362,7 +367,7 @@ struct AssignExprNode : ExprNode
    ExprNode *arrayIndex;
    TypeReq subType;
 
-   static AssignExprNode *alloc( S32 lineNumber, StringTableEntry varName, ExprNode *arrayIndex, ExprNode *expr );
+   static AssignExprNode *alloc( Compiler::Resources* res, S32 lineNumber, StringTableEntry varName, ExprNode *arrayIndex, ExprNode *expr );
   
    U32 compile(CodeStream &codeStream, U32 ip, TypeReq type);
    TypeReq getPreferredType();
@@ -386,7 +391,7 @@ struct AssignOpExprNode : ExprNode
    U32 operand;
    TypeReq subType;
 
-   static AssignOpExprNode *alloc( S32 lineNumber, StringTableEntry varName, ExprNode *arrayIndex, ExprNode *expr, const SimpleLexer::TokenType op );
+   static AssignOpExprNode *alloc( Compiler::Resources* res, S32 lineNumber, StringTableEntry varName, ExprNode *arrayIndex, ExprNode *expr, const SimpleLexer::TokenType op );
   
    U32 compile(CodeStream &codeStream, U32 ip, TypeReq type);
    TypeReq getPreferredType();
@@ -399,7 +404,7 @@ struct TTagSetStmtNode : StmtNode
    ExprNode *valueExpr;
    ExprNode *stringExpr;
 
-   static TTagSetStmtNode *alloc( S32 lineNumber, StringTableEntry tag, ExprNode *valueExpr, ExprNode *stringExpr );
+   static TTagSetStmtNode *alloc( Compiler::Resources* res, S32 lineNumber, StringTableEntry tag, ExprNode *valueExpr, ExprNode *stringExpr );
    
    U32 compileStmt(CodeStream &codeStream, U32 ip);
    DBG_STMT_TYPE(TTagSetStmtNode);
@@ -409,7 +414,7 @@ struct TTagDerefNode : ExprNode
 {
    ExprNode *expr;
 
-   static TTagDerefNode *alloc( S32 lineNumber, ExprNode *expr );
+   static TTagDerefNode *alloc( Compiler::Resources* res, S32 lineNumber, ExprNode *expr );
   
    U32 compile(CodeStream &codeStream, U32 ip, TypeReq type);
    TypeReq getPreferredType();
@@ -420,7 +425,7 @@ struct TTagExprNode : ExprNode
 {
    StringTableEntry tag;
 
-   static TTagExprNode *alloc( S32 lineNumber, StringTableEntry tag );
+   static TTagExprNode *alloc( Compiler::Resources* res, S32 lineNumber, StringTableEntry tag );
   
    U32 compile(CodeStream &codeStream, U32 ip, TypeReq type);
    TypeReq getPreferredType();
@@ -439,7 +444,7 @@ struct FuncCallExprNode : ExprNode
       ParentCall
    };
 
-   static FuncCallExprNode *alloc( S32 lineNumber, StringTableEntry funcName, StringTableEntry nameSpace, ExprNode *args, bool dot );
+   static FuncCallExprNode *alloc( Compiler::Resources* res, S32 lineNumber, StringTableEntry funcName, StringTableEntry nameSpace, ExprNode *args, bool dot );
   
    U32 compile(CodeStream &codeStream, U32 ip, TypeReq type);
    TypeReq getPreferredType();
@@ -452,7 +457,7 @@ struct AssertCallExprNode : ExprNode
    const char *message;
    U32 messageIndex;
 
-   static AssertCallExprNode *alloc( S32 lineNumber, ExprNode *testExpr, const char *message );
+   static AssertCallExprNode *alloc( Compiler::Resources* res, S32 lineNumber, ExprNode *testExpr, const char *message );
   
    U32 compile(CodeStream &codeStream, U32 ip, TypeReq type);
    TypeReq getPreferredType();
@@ -472,7 +477,7 @@ struct SlotAccessNode : ExprNode
    ExprNode *objectExpr, *arrayExpr;
    StringTableEntry slotName;
 
-   static SlotAccessNode *alloc( S32 lineNumber, ExprNode *objectExpr, ExprNode *arrayExpr, StringTableEntry slotName );
+   static SlotAccessNode *alloc( Compiler::Resources* res, S32 lineNumber, ExprNode *objectExpr, ExprNode *arrayExpr, StringTableEntry slotName );
   
    U32 compile(CodeStream &codeStream, U32 ip, TypeReq type);
    TypeReq getPreferredType();
@@ -492,7 +497,7 @@ struct InternalSlotAccessNode : ExprNode
    ExprNode *objectExpr, *slotExpr;
    bool recurse;
 
-   static InternalSlotAccessNode *alloc( S32 lineNumber, ExprNode *objectExpr, ExprNode *slotExpr, bool recurse );
+   static InternalSlotAccessNode *alloc( Compiler::Resources* res, S32 lineNumber, ExprNode *objectExpr, ExprNode *slotExpr, bool recurse );
   
    U32 compile(CodeStream &codeStream, U32 ip, TypeReq type);
    TypeReq getPreferredType();
@@ -506,7 +511,7 @@ struct SlotAssignNode : ExprNode
    ExprNode *valueExpr;
    U32 typeID;
 
-   static SlotAssignNode *alloc( S32 lineNumber, ExprNode *objectExpr, ExprNode *arrayExpr, StringTableEntry slotName, ExprNode *valueExpr, U32 typeID = -1 );
+   static SlotAssignNode *alloc( Compiler::Resources* res, S32 lineNumber, ExprNode *objectExpr, ExprNode *arrayExpr, StringTableEntry slotName, ExprNode *valueExpr, U32 typeID = -1 );
   
    U32 compile(CodeStream &codeStream, U32 ip, TypeReq type);
    TypeReq getPreferredType();
@@ -522,7 +527,7 @@ struct SlotAssignOpNode : ExprNode
    U32 operand;
    TypeReq subType;
 
-   static SlotAssignOpNode *alloc( S32 lineNumber, ExprNode *objectExpr, StringTableEntry slotName, ExprNode *arrayExpr, const SimpleLexer::TokenType op, ExprNode *valueExpr );
+   static SlotAssignOpNode *alloc( Compiler::Resources* res, S32 lineNumber, ExprNode *objectExpr, StringTableEntry slotName, ExprNode *arrayExpr, const SimpleLexer::TokenType op, ExprNode *valueExpr );
   
    U32 compile(CodeStream &codeStream, U32 ip, TypeReq type);
    TypeReq getPreferredType();
@@ -542,7 +547,7 @@ struct ObjectDeclNode : ExprNode
    bool isClassNameInternal;
    bool isSingleton;
 
-   static ObjectDeclNode *alloc( S32 lineNumber, ExprNode *classNameExpr, ExprNode *objectNameExpr, ExprNode *argList, StringTableEntry parentObject, SlotAssignNode *slotDecls, ObjectDeclNode *subObjects, bool isDatablock, bool classNameInternal, bool isSingleton );
+   static ObjectDeclNode *alloc( Compiler::Resources* res, S32 lineNumber, ExprNode *classNameExpr, ExprNode *objectNameExpr, ExprNode *argList, StringTableEntry parentObject, SlotAssignNode *slotDecls, ObjectDeclNode *subObjects, bool isDatablock, bool classNameInternal, bool isSingleton );
   
    U32 precompileSubObject(bool);
    U32 compile(CodeStream &codeStream, U32 ip, TypeReq type);
@@ -567,7 +572,7 @@ struct FunctionDeclStmtNode : StmtNode
    U32 endOffset;
    U32 argc;
 
-   static FunctionDeclStmtNode *alloc( S32 lineNumber, StringTableEntry fnName, StringTableEntry nameSpace, VarNode *args, StmtNode *stmts );
+   static FunctionDeclStmtNode *alloc( Compiler::Resources* res, S32 lineNumber, StringTableEntry fnName, StringTableEntry nameSpace, VarNode *args, StmtNode *stmts );
    
    U32 compileStmt(CodeStream &codeStream, U32 ip);
    void setPackage(StringTableEntry packageName);

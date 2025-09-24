@@ -33,31 +33,31 @@ using namespace Compiler;
 /// TorqueScript AST node allocators.
 ///
 /// These static methods exist to allocate new AST node for the compiler. They
-/// all allocate memory from the consoleAllocator for efficiency, and often take
+/// all allocate memory from the res->consoleAllocator for efficiency, and often take
 /// arguments relating to the state of the nodes. They are called from gram.y
 /// (really gram.c) as the lexer analyzes the script code.
 
 //------------------------------------------------------------
 
-BreakStmtNode *BreakStmtNode::alloc( S32 lineNumber )
+BreakStmtNode *BreakStmtNode::alloc( Compiler::Resources* res, S32 lineNumber )
 {
-   BreakStmtNode *ret = (BreakStmtNode *) consoleAlloc(sizeof(BreakStmtNode));
+   BreakStmtNode *ret = (BreakStmtNode *) res->consoleAlloc(sizeof(BreakStmtNode));
    constructInPlace(ret);
    ret->dbgLineNumber = lineNumber;
    return ret;
 }
 
-ContinueStmtNode *ContinueStmtNode::alloc( S32 lineNumber )
+ContinueStmtNode *ContinueStmtNode::alloc( Compiler::Resources* res, S32 lineNumber )
 {
-   ContinueStmtNode *ret = (ContinueStmtNode *) consoleAlloc(sizeof(ContinueStmtNode));
+   ContinueStmtNode *ret = (ContinueStmtNode *) res->consoleAlloc(sizeof(ContinueStmtNode));
    constructInPlace(ret);
    ret->dbgLineNumber = lineNumber;
    return ret;
 }
 
-ReturnStmtNode *ReturnStmtNode::alloc( S32 lineNumber, ExprNode *expr)
+ReturnStmtNode *ReturnStmtNode::alloc( Compiler::Resources* res, S32 lineNumber, ExprNode *expr)
 {
-   ReturnStmtNode *ret = (ReturnStmtNode *) consoleAlloc(sizeof(ReturnStmtNode));
+   ReturnStmtNode *ret = (ReturnStmtNode *) res->consoleAlloc(sizeof(ReturnStmtNode));
    constructInPlace(ret);
    ret->expr = expr;
    ret->dbgLineNumber = lineNumber;
@@ -65,9 +65,9 @@ ReturnStmtNode *ReturnStmtNode::alloc( S32 lineNumber, ExprNode *expr)
    return ret;
 }
 
-IfStmtNode *IfStmtNode::alloc( S32 lineNumber, ExprNode *testExpr, StmtNode *ifBlock, StmtNode *elseBlock, bool propagate )
+IfStmtNode *IfStmtNode::alloc( Compiler::Resources* res, S32 lineNumber, ExprNode *testExpr, StmtNode *ifBlock, StmtNode *elseBlock, bool propagate )
 {
-   IfStmtNode *ret = (IfStmtNode *) consoleAlloc(sizeof(IfStmtNode));
+   IfStmtNode *ret = (IfStmtNode *) res->consoleAlloc(sizeof(IfStmtNode));
    constructInPlace(ret);
    ret->dbgLineNumber = lineNumber;
    
@@ -80,9 +80,9 @@ IfStmtNode *IfStmtNode::alloc( S32 lineNumber, ExprNode *testExpr, StmtNode *ifB
    return ret;
 }
 
-LoopStmtNode *LoopStmtNode::alloc( S32 lineNumber, ExprNode *initExpr, ExprNode *testExpr, ExprNode *endLoopExpr, StmtNode *loopBlock, bool isDoLoop )
+LoopStmtNode *LoopStmtNode::alloc( Compiler::Resources* res, S32 lineNumber, ExprNode *initExpr, ExprNode *testExpr, ExprNode *endLoopExpr, StmtNode *loopBlock, bool isDoLoop )
 {
-   LoopStmtNode *ret = (LoopStmtNode *) consoleAlloc(sizeof(LoopStmtNode));
+   LoopStmtNode *ret = (LoopStmtNode *) res->consoleAlloc(sizeof(LoopStmtNode));
    constructInPlace(ret);
    ret->dbgLineNumber = lineNumber;
    ret->testExpr = testExpr;
@@ -95,14 +95,14 @@ LoopStmtNode *LoopStmtNode::alloc( S32 lineNumber, ExprNode *initExpr, ExprNode 
    // Deal with setting some dummy constant nodes if we weren't provided with
    // info... This allows us to play nice with missing parts of for(;;) for
    // instance.
-   if(!ret->testExpr) ret->testExpr = IntNode::alloc( lineNumber, 1 );
+   if(!ret->testExpr) ret->testExpr = IntNode::alloc( res, lineNumber, 1 );
    
    return ret;
 }
 
-IterStmtNode* IterStmtNode::alloc( S32 lineNumber, StringTableEntry varName, ExprNode* containerExpr, StmtNode* body, bool isStringIter )
+IterStmtNode* IterStmtNode::alloc( Compiler::Resources* res, S32 lineNumber, StringTableEntry varName, ExprNode* containerExpr, StmtNode* body, bool isStringIter )
 {
-   IterStmtNode* ret = ( IterStmtNode* ) consoleAlloc( sizeof( IterStmtNode ) );
+   IterStmtNode* ret = ( IterStmtNode* ) res->consoleAlloc( sizeof( IterStmtNode ) );
    constructInPlace( ret );
    
    ret->dbgLineNumber = lineNumber;
@@ -114,9 +114,9 @@ IterStmtNode* IterStmtNode::alloc( S32 lineNumber, StringTableEntry varName, Exp
    return ret;
 }
 
-FloatBinaryExprNode *FloatBinaryExprNode::alloc( S32 lineNumber, const SimpleLexer::TokenType op, ExprNode *left, ExprNode *right )
+FloatBinaryExprNode *FloatBinaryExprNode::alloc( Compiler::Resources* res, S32 lineNumber, const SimpleLexer::TokenType op, ExprNode *left, ExprNode *right )
 {
-   FloatBinaryExprNode *ret = (FloatBinaryExprNode *) consoleAlloc(sizeof(FloatBinaryExprNode));
+   FloatBinaryExprNode *ret = (FloatBinaryExprNode *) res->consoleAlloc(sizeof(FloatBinaryExprNode));
    constructInPlace(ret);
    ret->dbgLineNumber = lineNumber;
    
@@ -127,9 +127,9 @@ FloatBinaryExprNode *FloatBinaryExprNode::alloc( S32 lineNumber, const SimpleLex
    return ret;
 }
 
-IntBinaryExprNode *IntBinaryExprNode::alloc( S32 lineNumber, const SimpleLexer::TokenType op, ExprNode *left, ExprNode *right )
+IntBinaryExprNode *IntBinaryExprNode::alloc( Compiler::Resources* res, S32 lineNumber, const SimpleLexer::TokenType op, ExprNode *left, ExprNode *right )
 {
-   IntBinaryExprNode *ret = (IntBinaryExprNode *) consoleAlloc(sizeof(IntBinaryExprNode));
+   IntBinaryExprNode *ret = (IntBinaryExprNode *) res->consoleAlloc(sizeof(IntBinaryExprNode));
    constructInPlace(ret);
    ret->dbgLineNumber = lineNumber;
    
@@ -142,9 +142,9 @@ IntBinaryExprNode *IntBinaryExprNode::alloc( S32 lineNumber, const SimpleLexer::
    return ret;
 }
 
-StreqExprNode *StreqExprNode::alloc( S32 lineNumber, ExprNode *left, ExprNode *right, bool eq )
+StreqExprNode *StreqExprNode::alloc( Compiler::Resources* res, S32 lineNumber, ExprNode *left, ExprNode *right, bool eq )
 {
-   StreqExprNode *ret = (StreqExprNode *) consoleAlloc(sizeof(StreqExprNode));
+   StreqExprNode *ret = (StreqExprNode *) res->consoleAlloc(sizeof(StreqExprNode));
    constructInPlace(ret);
    ret->dbgLineNumber = lineNumber;
    ret->left = left;
@@ -154,9 +154,9 @@ StreqExprNode *StreqExprNode::alloc( S32 lineNumber, ExprNode *left, ExprNode *r
    return ret;
 }
 
-StrcatExprNode *StrcatExprNode::alloc( S32 lineNumber, ExprNode *left, ExprNode *right, int appendChar )
+StrcatExprNode *StrcatExprNode::alloc( Compiler::Resources* res, S32 lineNumber, ExprNode *left, ExprNode *right, int appendChar )
 {
-   StrcatExprNode *ret = (StrcatExprNode *) consoleAlloc(sizeof(StrcatExprNode));
+   StrcatExprNode *ret = (StrcatExprNode *) res->consoleAlloc(sizeof(StrcatExprNode));
    constructInPlace(ret);
    ret->dbgLineNumber = lineNumber;
    ret->left = left;
@@ -166,9 +166,9 @@ StrcatExprNode *StrcatExprNode::alloc( S32 lineNumber, ExprNode *left, ExprNode 
    return ret;
 }
 
-CommaCatExprNode *CommaCatExprNode::alloc( S32 lineNumber, ExprNode *left, ExprNode *right )
+CommaCatExprNode *CommaCatExprNode::alloc( Compiler::Resources* res, S32 lineNumber, ExprNode *left, ExprNode *right )
 {
-   CommaCatExprNode *ret = (CommaCatExprNode *) consoleAlloc(sizeof(CommaCatExprNode));
+   CommaCatExprNode *ret = (CommaCatExprNode *) res->consoleAlloc(sizeof(CommaCatExprNode));
    constructInPlace(ret);
    ret->dbgLineNumber = lineNumber;
    ret->left = left;
@@ -177,9 +177,9 @@ CommaCatExprNode *CommaCatExprNode::alloc( S32 lineNumber, ExprNode *left, ExprN
    return ret;
 }
 
-IntUnaryExprNode *IntUnaryExprNode::alloc( S32 lineNumber, const SimpleLexer::TokenType op, ExprNode *expr )
+IntUnaryExprNode *IntUnaryExprNode::alloc( Compiler::Resources* res, S32 lineNumber, const SimpleLexer::TokenType op, ExprNode *expr )
 {
-   IntUnaryExprNode *ret = (IntUnaryExprNode *) consoleAlloc(sizeof(IntUnaryExprNode));
+   IntUnaryExprNode *ret = (IntUnaryExprNode *) res->consoleAlloc(sizeof(IntUnaryExprNode));
    constructInPlace(ret);
    ret->dbgLineNumber = lineNumber;
    ret->op = op;
@@ -188,9 +188,9 @@ IntUnaryExprNode *IntUnaryExprNode::alloc( S32 lineNumber, const SimpleLexer::To
    return ret;
 }
 
-FloatUnaryExprNode *FloatUnaryExprNode::alloc( S32 lineNumber, const SimpleLexer::TokenType op, ExprNode *expr )
+FloatUnaryExprNode *FloatUnaryExprNode::alloc( Compiler::Resources* res, S32 lineNumber, const SimpleLexer::TokenType op, ExprNode *expr )
 {
-   FloatUnaryExprNode *ret = (FloatUnaryExprNode *) consoleAlloc(sizeof(FloatUnaryExprNode));
+   FloatUnaryExprNode *ret = (FloatUnaryExprNode *) res->consoleAlloc(sizeof(FloatUnaryExprNode));
    constructInPlace(ret);
    ret->dbgLineNumber = lineNumber;
    ret->op = op;
@@ -198,9 +198,9 @@ FloatUnaryExprNode *FloatUnaryExprNode::alloc( S32 lineNumber, const SimpleLexer
    return ret;
 }
 
-VarNode *VarNode::alloc( S32 lineNumber, StringTableEntry varName, ExprNode *arrayIndex )
+VarNode *VarNode::alloc( Compiler::Resources* res, S32 lineNumber, StringTableEntry varName, ExprNode *arrayIndex )
 {
-   VarNode *ret = (VarNode *) consoleAlloc(sizeof(VarNode));
+   VarNode *ret = (VarNode *) res->consoleAlloc(sizeof(VarNode));
    constructInPlace(ret);
    ret->dbgLineNumber = lineNumber;
    ret->varName = varName;
@@ -208,18 +208,18 @@ VarNode *VarNode::alloc( S32 lineNumber, StringTableEntry varName, ExprNode *arr
    return ret;
 }
 
-IntNode *IntNode::alloc( S32 lineNumber, S32 value )
+IntNode *IntNode::alloc( Compiler::Resources* res, S32 lineNumber, S32 value )
 {
-   IntNode *ret = (IntNode *) consoleAlloc(sizeof(IntNode));
+   IntNode *ret = (IntNode *) res->consoleAlloc(sizeof(IntNode));
    constructInPlace(ret);
    ret->dbgLineNumber = lineNumber;
    ret->value = value;
    return ret;
 }
 
-ConditionalExprNode *ConditionalExprNode::alloc( S32 lineNumber, ExprNode *testExpr, ExprNode *trueExpr, ExprNode *falseExpr )
+ConditionalExprNode *ConditionalExprNode::alloc( Compiler::Resources* res, S32 lineNumber, ExprNode *testExpr, ExprNode *trueExpr, ExprNode *falseExpr )
 {
-   ConditionalExprNode *ret = (ConditionalExprNode *) consoleAlloc(sizeof(ConditionalExprNode));
+   ConditionalExprNode *ret = (ConditionalExprNode *) res->consoleAlloc(sizeof(ConditionalExprNode));
    constructInPlace(ret);
    ret->dbgLineNumber = lineNumber;
    ret->testExpr = testExpr;
@@ -229,9 +229,9 @@ ConditionalExprNode *ConditionalExprNode::alloc( S32 lineNumber, ExprNode *testE
    return ret;
 }
 
-FloatNode *FloatNode::alloc( S32 lineNumber, F64 value )
+FloatNode *FloatNode::alloc( Compiler::Resources* res, S32 lineNumber, F64 value )
 {
-   FloatNode *ret = (FloatNode *) consoleAlloc(sizeof(FloatNode));
+   FloatNode *ret = (FloatNode *) res->consoleAlloc(sizeof(FloatNode));
    constructInPlace(ret);
    
    ret->dbgLineNumber = lineNumber;
@@ -239,12 +239,12 @@ FloatNode *FloatNode::alloc( S32 lineNumber, F64 value )
    return ret;
 }
 
-StrConstNode *StrConstNode::alloc( S32 lineNumber, char *str, bool tag, bool doc, S32 forceLen)
+StrConstNode *StrConstNode::alloc( Compiler::Resources* res, S32 lineNumber, char *str, bool tag, bool doc, S32 forceLen)
 {
-   StrConstNode *ret = (StrConstNode *) consoleAlloc(sizeof(StrConstNode));
+   StrConstNode *ret = (StrConstNode *) res->consoleAlloc(sizeof(StrConstNode));
    constructInPlace(ret);
    ret->dbgLineNumber = lineNumber;
-   ret->str = (char *) consoleAlloc(forceLen >= 0 ? forceLen+1 : dStrlen(str) + 1);
+   ret->str = (char *) res->consoleAlloc(forceLen >= 0 ? forceLen+1 : dStrlen(str) + 1);
    ret->tag = tag;
    ret->doc = doc;
    
@@ -261,18 +261,18 @@ StrConstNode *StrConstNode::alloc( S32 lineNumber, char *str, bool tag, bool doc
    return ret;
 }
 
-ConstantNode *ConstantNode::alloc( S32 lineNumber, StringTableEntry value )
+ConstantNode *ConstantNode::alloc( Compiler::Resources* res, S32 lineNumber, StringTableEntry value )
 {
-   ConstantNode *ret = (ConstantNode *) consoleAlloc(sizeof(ConstantNode));
+   ConstantNode *ret = (ConstantNode *) res->consoleAlloc(sizeof(ConstantNode));
    constructInPlace(ret);
    ret->dbgLineNumber = lineNumber;
    ret->value = value;
    return ret;
 }
 
-AssignExprNode *AssignExprNode::alloc( S32 lineNumber, StringTableEntry varName, ExprNode *arrayIndex, ExprNode *expr )
+AssignExprNode *AssignExprNode::alloc( Compiler::Resources* res, S32 lineNumber, StringTableEntry varName, ExprNode *arrayIndex, ExprNode *expr )
 {
-   AssignExprNode *ret = (AssignExprNode *) consoleAlloc(sizeof(AssignExprNode));
+   AssignExprNode *ret = (AssignExprNode *) res->consoleAlloc(sizeof(AssignExprNode));
    constructInPlace(ret);
    ret->dbgLineNumber = lineNumber;
    ret->varName = varName;
@@ -283,9 +283,9 @@ AssignExprNode *AssignExprNode::alloc( S32 lineNumber, StringTableEntry varName,
    return ret;
 }
 
-AssignOpExprNode *AssignOpExprNode::alloc( S32 lineNumber, StringTableEntry varName, ExprNode *arrayIndex, ExprNode *expr, const SimpleLexer::TokenType op )
+AssignOpExprNode *AssignOpExprNode::alloc( Compiler::Resources* res, S32 lineNumber, StringTableEntry varName, ExprNode *arrayIndex, ExprNode *expr, const SimpleLexer::TokenType op )
 {
-   AssignOpExprNode *ret = (AssignOpExprNode *) consoleAlloc(sizeof(AssignOpExprNode));
+   AssignOpExprNode *ret = (AssignOpExprNode *) res->consoleAlloc(sizeof(AssignOpExprNode));
    constructInPlace(ret);
    ret->dbgLineNumber = lineNumber;
    ret->varName = varName;
@@ -297,9 +297,9 @@ AssignOpExprNode *AssignOpExprNode::alloc( S32 lineNumber, StringTableEntry varN
    return ret;
 }
 
-TTagSetStmtNode *TTagSetStmtNode::alloc( S32 lineNumber, StringTableEntry tag, ExprNode *valueExpr, ExprNode *stringExpr )
+TTagSetStmtNode *TTagSetStmtNode::alloc( Compiler::Resources* res, S32 lineNumber, StringTableEntry tag, ExprNode *valueExpr, ExprNode *stringExpr )
 {
-   TTagSetStmtNode *ret = (TTagSetStmtNode *) consoleAlloc(sizeof(TTagSetStmtNode));
+   TTagSetStmtNode *ret = (TTagSetStmtNode *) res->consoleAlloc(sizeof(TTagSetStmtNode));
    constructInPlace(ret);
    ret->dbgLineNumber = lineNumber;
    ret->tag = tag;
@@ -308,27 +308,27 @@ TTagSetStmtNode *TTagSetStmtNode::alloc( S32 lineNumber, StringTableEntry tag, E
    return ret;
 }
 
-TTagDerefNode *TTagDerefNode::alloc( S32 lineNumber, ExprNode *expr )
+TTagDerefNode *TTagDerefNode::alloc( Compiler::Resources* res, S32 lineNumber, ExprNode *expr )
 {
-   TTagDerefNode *ret = (TTagDerefNode *) consoleAlloc(sizeof(TTagDerefNode));
+   TTagDerefNode *ret = (TTagDerefNode *) res->consoleAlloc(sizeof(TTagDerefNode));
    constructInPlace(ret);
    ret->dbgLineNumber = lineNumber;
    ret->expr = expr;
    return ret;
 }
 
-TTagExprNode *TTagExprNode::alloc( S32 lineNumber, StringTableEntry tag )
+TTagExprNode *TTagExprNode::alloc( Compiler::Resources* res, S32 lineNumber, StringTableEntry tag )
 {
-   TTagExprNode *ret = (TTagExprNode *) consoleAlloc(sizeof(TTagExprNode));
+   TTagExprNode *ret = (TTagExprNode *) res->consoleAlloc(sizeof(TTagExprNode));
    constructInPlace(ret);
    ret->dbgLineNumber = lineNumber;
    ret->tag = tag;
    return ret;
 }
 
-FuncCallExprNode *FuncCallExprNode::alloc( S32 lineNumber, StringTableEntry funcName, StringTableEntry nameSpace, ExprNode *args, bool dot )
+FuncCallExprNode *FuncCallExprNode::alloc( Compiler::Resources* res, S32 lineNumber, StringTableEntry funcName, StringTableEntry nameSpace, ExprNode *args, bool dot )
 {
-   FuncCallExprNode *ret = (FuncCallExprNode *) consoleAlloc(sizeof(FuncCallExprNode));
+   FuncCallExprNode *ret = (FuncCallExprNode *) res->consoleAlloc(sizeof(FuncCallExprNode));
    constructInPlace(ret);
    ret->dbgLineNumber = lineNumber;
    ret->funcName = funcName;
@@ -346,11 +346,11 @@ FuncCallExprNode *FuncCallExprNode::alloc( S32 lineNumber, StringTableEntry func
    return ret;
 }
 
-AssertCallExprNode *AssertCallExprNode::alloc( S32 lineNumber,  ExprNode *testExpr, const char *message )
+AssertCallExprNode *AssertCallExprNode::alloc( Compiler::Resources* res, S32 lineNumber,  ExprNode *testExpr, const char *message )
 {
 #ifdef TORQUE_ENABLE_SCRIPTASSERTS
    
-   AssertCallExprNode *ret = (AssertCallExprNode *) consoleAlloc(sizeof(FuncCallExprNode));
+   AssertCallExprNode *ret = (AssertCallExprNode *) res->consoleAlloc(sizeof(FuncCallExprNode));
    constructInPlace(ret);
    ret->dbgLineNumber = lineNumber;
    ret->testExpr = testExpr;
@@ -364,9 +364,9 @@ AssertCallExprNode *AssertCallExprNode::alloc( S32 lineNumber,  ExprNode *testEx
 #endif
 }
 
-SlotAccessNode *SlotAccessNode::alloc( S32 lineNumber, ExprNode *objectExpr, ExprNode *arrayExpr, StringTableEntry slotName )
+SlotAccessNode *SlotAccessNode::alloc( Compiler::Resources* res, S32 lineNumber, ExprNode *objectExpr, ExprNode *arrayExpr, StringTableEntry slotName )
 {
-   SlotAccessNode *ret = (SlotAccessNode *) consoleAlloc(sizeof(SlotAccessNode));
+   SlotAccessNode *ret = (SlotAccessNode *) res->consoleAlloc(sizeof(SlotAccessNode));
    constructInPlace(ret);
    ret->dbgLineNumber = lineNumber;
    ret->objectExpr = objectExpr;
@@ -375,9 +375,9 @@ SlotAccessNode *SlotAccessNode::alloc( S32 lineNumber, ExprNode *objectExpr, Exp
    return ret;
 }
 
-InternalSlotAccessNode *InternalSlotAccessNode::alloc( S32 lineNumber, ExprNode *objectExpr, ExprNode *slotExpr, bool recurse )
+InternalSlotAccessNode *InternalSlotAccessNode::alloc( Compiler::Resources* res, S32 lineNumber, ExprNode *objectExpr, ExprNode *slotExpr, bool recurse )
 {
-   InternalSlotAccessNode *ret = (InternalSlotAccessNode *) consoleAlloc(sizeof(InternalSlotAccessNode));
+   InternalSlotAccessNode *ret = (InternalSlotAccessNode *) res->consoleAlloc(sizeof(InternalSlotAccessNode));
    constructInPlace(ret);
    ret->dbgLineNumber = lineNumber;
    ret->objectExpr = objectExpr;
@@ -386,9 +386,9 @@ InternalSlotAccessNode *InternalSlotAccessNode::alloc( S32 lineNumber, ExprNode 
    return ret;
 }
 
-SlotAssignNode *SlotAssignNode::alloc( S32 lineNumber, ExprNode *objectExpr, ExprNode *arrayExpr, StringTableEntry slotName, ExprNode *valueExpr, U32 typeID /* = -1 */ )
+SlotAssignNode *SlotAssignNode::alloc( Compiler::Resources* res, S32 lineNumber, ExprNode *objectExpr, ExprNode *arrayExpr, StringTableEntry slotName, ExprNode *valueExpr, U32 typeID /* = -1 */ )
 {
-   SlotAssignNode *ret = (SlotAssignNode *) consoleAlloc(sizeof(SlotAssignNode));
+   SlotAssignNode *ret = (SlotAssignNode *) res->consoleAlloc(sizeof(SlotAssignNode));
    constructInPlace(ret);
    ret->dbgLineNumber = lineNumber;
    ret->objectExpr = objectExpr;
@@ -399,9 +399,9 @@ SlotAssignNode *SlotAssignNode::alloc( S32 lineNumber, ExprNode *objectExpr, Exp
    return ret;
 }
 
-SlotAssignOpNode *SlotAssignOpNode::alloc( S32 lineNumber, ExprNode *objectExpr, StringTableEntry slotName, ExprNode *arrayExpr, const SimpleLexer::TokenType op, ExprNode *valueExpr )
+SlotAssignOpNode *SlotAssignOpNode::alloc( Compiler::Resources* res, S32 lineNumber, ExprNode *objectExpr, StringTableEntry slotName, ExprNode *arrayExpr, const SimpleLexer::TokenType op, ExprNode *valueExpr )
 {
-   SlotAssignOpNode *ret = (SlotAssignOpNode *) consoleAlloc(sizeof(SlotAssignOpNode));
+   SlotAssignOpNode *ret = (SlotAssignOpNode *) res->consoleAlloc(sizeof(SlotAssignOpNode));
    constructInPlace(ret);
    ret->dbgLineNumber = lineNumber;
    ret->objectExpr = objectExpr;
@@ -414,9 +414,9 @@ SlotAssignOpNode *SlotAssignOpNode::alloc( S32 lineNumber, ExprNode *objectExpr,
    return ret;
 }
 
-ObjectDeclNode *ObjectDeclNode::alloc( S32 lineNumber, ExprNode *classNameExpr, ExprNode *objectNameExpr, ExprNode *argList, StringTableEntry parentObject, SlotAssignNode *slotDecls, ObjectDeclNode *subObjects, bool isDatablock, bool classNameInternal, bool isSingleton )
+ObjectDeclNode *ObjectDeclNode::alloc( Compiler::Resources* res, S32 lineNumber, ExprNode *classNameExpr, ExprNode *objectNameExpr, ExprNode *argList, StringTableEntry parentObject, SlotAssignNode *slotDecls, ObjectDeclNode *subObjects, bool isDatablock, bool classNameInternal, bool isSingleton )
 {
-   ObjectDeclNode *ret = (ObjectDeclNode *) consoleAlloc(sizeof(ObjectDeclNode));
+   ObjectDeclNode *ret = (ObjectDeclNode *) res->consoleAlloc(sizeof(ObjectDeclNode));
    constructInPlace(ret);
    ret->dbgLineNumber = lineNumber;
    ret->classNameExpr = classNameExpr;
@@ -435,9 +435,9 @@ ObjectDeclNode *ObjectDeclNode::alloc( S32 lineNumber, ExprNode *classNameExpr, 
    return ret;
 }
 
-FunctionDeclStmtNode *FunctionDeclStmtNode::alloc( S32 lineNumber, StringTableEntry fnName, StringTableEntry nameSpace, VarNode *args, StmtNode *stmts )
+FunctionDeclStmtNode *FunctionDeclStmtNode::alloc( Compiler::Resources* res, S32 lineNumber, StringTableEntry fnName, StringTableEntry nameSpace, VarNode *args, StmtNode *stmts )
 {
-   FunctionDeclStmtNode *ret = (FunctionDeclStmtNode *) consoleAlloc(sizeof(FunctionDeclStmtNode));
+   FunctionDeclStmtNode *ret = (FunctionDeclStmtNode *) res->consoleAlloc(sizeof(FunctionDeclStmtNode));
    constructInPlace(ret);
    ret->dbgLineNumber = lineNumber;
    ret->fnName = fnName;

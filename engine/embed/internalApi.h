@@ -9,6 +9,11 @@ class TelnetConsole;
 #include "console/consoleNamespace.h"
 #include "console/consoleInternal.h"
 
+namespace Compiler
+{
+   struct Resources;
+}
+
 namespace KorkApi
 {
 
@@ -44,6 +49,9 @@ struct VmInternal
 
    U32 mConvIndex;
    char mTempStringConversions[MaxTempStringSize][MaxStringConvs];
+
+   Compiler::Resources* mCompilerResources;
+   bool mOwnsResources;
 
    VmInternal(KorkApi::Vm* vm, Config* cfg);
    ~VmInternal();

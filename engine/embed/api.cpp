@@ -737,6 +737,17 @@ VmInternal::VmInternal(Vm* vm, Config* cfg) : mSTR(&mAllocBase), mEvalState(this
    mTelConsole = new TelnetConsole(this);
    mHeapAllocs = NULL;
    mConvIndex = 0;
+
+   if (cfg->userResources)
+   {
+      mCompilerResources = cfg->userResources;
+      mOwnsResources = false;
+   }
+   else
+   {
+      mCompilerResources = new Compiler::Resources();
+      mOwnsResources = true;
+   }
    
    TypeInfo typeInfo = {};
    
@@ -806,6 +817,10 @@ VmInternal::~VmInternal()
 {
    delete mTelDebugger;
    delete mTelConsole;
+   if (mOwnsResources)
+   {
+      delete mCompilerResources;
+   }
    mNSState.shutdown();
 
    for (ConsoleHeapAlloc* alloc = mHeapAllocs; alloc; alloc = alloc->next)

@@ -454,16 +454,16 @@ bool CodeBlock::compileToStream(Stream &st, StringTableEntry fileName, const cha
    char *script;
    chompUTF8BOM( inScript, &script );
    
-   gSyntaxError = false;
+   mVM->mCompilerResources->syntaxError = false;
    
-   consoleAllocReset();
+   mVM->mCompilerResources->consoleAllocReset();
    
-   STEtoCode = &compileSTEtoCode;
+   mVM->mCompilerResources->STEtoCode = &Compiler::compileSTEtoCode;
    
    StmtNode* rootNode = NULL;
    
    SimpleLexer::Tokenizer lex(StringTable, inScript, fileName);
-   SimpleParser::ASTGen astGen(&lex);
+   SimpleParser::ASTGen astGen(&lex, mVM->mCompilerResources);
    
    try
    {
@@ -483,14 +483,14 @@ bool CodeBlock::compileToStream(Stream &st, StringTableEntry fileName, const cha
    
    if(!rootNode)
    {
-      consoleAllocReset();
+      mVM->mCompilerResources->consoleAllocReset();
       return false;
    }
    
    // Reset all our value tables...
-   resetTables();
+   mVM->mCompilerResources->resetTables();
    
-   CodeStream codeStream;
+   CodeStream codeStream(mVM->mCompilerResources);
    codeStream.setFilename(fileName);
    U32 lastIp;
    if(rootNode)
@@ -511,12 +511,12 @@ bool CodeBlock::compileToStream(Stream &st, StringTableEntry fileName, const cha
    st.write(U32(KorkApi::DSOVersion));
    
    // Write string table data...
-   getGlobalStringTable().write(st);
-   getFunctionStringTable().write(st);
+   mVM->mCompilerResources->getGlobalStringTable().write(st);
+   mVM->mCompilerResources->getFunctionStringTable().write(st);
    
    // Write float table data...
-   getGlobalFloatTable().write(st);
-   getFunctionFloatTable().write(st);
+   mVM->mCompilerResources->getGlobalFloatTable().write(st);
+   mVM->mCompilerResources->getFunctionFloatTable().write(st);
    
    if(lastIp != codeSize)
    {
@@ -544,9 +544,9 @@ bool CodeBlock::compileToStream(Stream &st, StringTableEntry fileName, const cha
    for(i = codeSize; i < totSize; i++)
       st.write(code[i]);
    
-   getIdentTable().write(st);
+   mVM->mCompilerResources->getIdentTable().write(st);
    
-   consoleAllocReset();
+   mVM->mCompilerResources->consoleAllocReset();
    
    return true;
 }
@@ -557,8 +557,8 @@ const char *CodeBlock::compileExec(StringTableEntry fileName, const char *inStri
    char *string;
    chompUTF8BOM( inString, &string );
 
-   STEtoCode = &evalSTEtoCode;
-   consoleAllocReset();
+   mVM->mCompilerResources->STEtoCode = &Compiler::evalSTEtoCode;
+   mVM->mCompilerResources->consoleAllocReset();
    
    name = fileName;
    
@@ -592,7 +592,7 @@ const char *CodeBlock::compileExec(StringTableEntry fileName, const char *inStri
    StmtNode* rootNode = NULL;
    
    SimpleLexer::Tokenizer lex(StringTable, inString, fileName ? fileName : "");
-   SimpleParser::ASTGen astGen(&lex);
+   SimpleParser::ASTGen astGen(&lex, mVM->mCompilerResources);
    
    try
    {
@@ -610,27 +610,27 @@ const char *CodeBlock::compileExec(StringTableEntry fileName, const char *inStri
       return "";
    }
    
-   resetTables();
+   mVM->mCompilerResources->resetTables();
    
-   CodeStream codeStream;
+   CodeStream codeStream(mVM->mCompilerResources);
    codeStream.setFilename(fileName);
    U32 lastIp = compileBlock(rootNode, codeStream, 0);
    
    lineBreakPairCount = codeStream.getNumLineBreaks();
    
-   globalStrings   = getGlobalStringTable().build();
-   globalStringsMaxLen = getGlobalStringTable().totalLen;
+   globalStrings   = mVM->mCompilerResources->getGlobalStringTable().build();
+   globalStringsMaxLen = mVM->mCompilerResources->getGlobalStringTable().totalLen;
    
-   functionStrings = getFunctionStringTable().build();
-   functionStringsMaxLen = getFunctionStringTable().totalLen;
+   functionStrings = mVM->mCompilerResources->getFunctionStringTable().build();
+   functionStringsMaxLen = mVM->mCompilerResources->getFunctionStringTable().totalLen;
    
-   globalFloats    = getGlobalFloatTable().build();
-   functionFloats  = getFunctionFloatTable().build();
+   globalFloats    = mVM->mCompilerResources->getGlobalFloatTable().build();
+   functionFloats  = mVM->mCompilerResources->getFunctionFloatTable().build();
    
    codeStream.emit(OP_RETURN);
    codeStream.emitCodeStream(&codeSize, &code, &lineBreakPairs);
    
-   consoleAllocReset();
+   mVM->mCompilerResources->consoleAllocReset();
    
    if(lineBreakPairCount && fileName)
       calcBreakList();
@@ -677,9 +677,9 @@ void CodeBlock::dumpInstructions( U32 startIp, bool upToReturn )
             
          case OP_FUNC_DECL:
          {
-            StringTableEntry fnName       = CodeToSTE(code, ip);
-            StringTableEntry fnNamespace  = CodeToSTE(code, ip+2);
-            StringTableEntry fnPackage    = CodeToSTE(code, ip+4);
+            StringTableEntry fnName       = CodeToSTE(NULL, code, ip);
+            StringTableEntry fnNamespace  = CodeToSTE(NULL, code, ip+2);
+            StringTableEntry fnPackage    = CodeToSTE(NULL, code, ip+4);
             bool hasBody = bool(code[ip+6]);
             U32 newIp = code[ ip + 7 ];
             U32 argc = code[ ip + 8 ];
@@ -697,7 +697,7 @@ void CodeBlock::dumpInstructions( U32 startIp, bool upToReturn )
             
          case OP_CREATE_OBJECT:
          {
-            StringTableEntry objParent = CodeToSTE(code, ip);
+            StringTableEntry objParent = CodeToSTE(NULL, code, ip);
             bool isDataBlock =          code[ip + 2];
             bool isInternal  =          code[ip + 3];
             bool isSingleton =          code[ip + 4];
@@ -954,7 +954,7 @@ void CodeBlock::dumpInstructions( U32 startIp, bool upToReturn )
 
          case OP_SETCURVAR:
          {
-            StringTableEntry var = CodeToSTE(code, ip);
+            StringTableEntry var = CodeToSTE(NULL, code, ip);
             
             printf( "%i: OP_SETCURVAR var=%s", ip - 1, var );
             ip += 2;
@@ -963,7 +963,7 @@ void CodeBlock::dumpInstructions( U32 startIp, bool upToReturn )
          
          case OP_SETCURVAR_CREATE:
          {
-            StringTableEntry var = CodeToSTE(code, ip);
+            StringTableEntry var = CodeToSTE(NULL, code, ip);
             
             printf( "%i: OP_SETCURVAR_CREATE var=%s", ip - 1, var );
             ip += 2;
@@ -1051,7 +1051,7 @@ void CodeBlock::dumpInstructions( U32 startIp, bool upToReturn )
          
          case OP_SETCURFIELD:
          {
-            StringTableEntry curField = CodeToSTE(code, ip);
+            StringTableEntry curField = CodeToSTE(NULL, code, ip);
             printf( "%i: OP_SETCURFIELD field=%s", ip - 1, curField );
             ip += 2;
             break;
@@ -1209,7 +1209,7 @@ void CodeBlock::dumpInstructions( U32 startIp, bool upToReturn )
          
          case OP_LOADIMMED_IDENT:
          {
-            StringTableEntry str = CodeToSTE(code, ip);
+            StringTableEntry str = CodeToSTE(NULL, code, ip);
             printf( "%i: OP_LOADIMMED_IDENT str=%s", ip - 1, str );
             ip += 2;
             break;
@@ -1217,8 +1217,8 @@ void CodeBlock::dumpInstructions( U32 startIp, bool upToReturn )
 
          case OP_CALLFUNC_RESOLVE:
          {
-            StringTableEntry fnNamespace = CodeToSTE(code, ip+2);
-            StringTableEntry fnName      = CodeToSTE(code, ip);
+            StringTableEntry fnNamespace = CodeToSTE(NULL, code, ip+2);
+            StringTableEntry fnName      = CodeToSTE(NULL, code, ip);
             U32 callType = code[ip+2];
 
             printf( "%i: OP_CALLFUNC_RESOLVE name=%s nspace=%s callType=%s", ip - 1, fnName, fnNamespace,
@@ -1231,8 +1231,8 @@ void CodeBlock::dumpInstructions( U32 startIp, bool upToReturn )
          
          case OP_CALLFUNC:
          {
-            StringTableEntry fnNamespace = CodeToSTE(code, ip+2);
-            StringTableEntry fnName      = CodeToSTE(code, ip);
+            StringTableEntry fnNamespace = CodeToSTE(NULL, code, ip+2);
+            StringTableEntry fnName      = CodeToSTE(NULL, code, ip);
             U32 callType = code[ip+4];
 
             printf( "%i: OP_CALLFUNC name=%s nspace=%s callType=%s", ip - 1, fnName, fnNamespace,
@@ -1333,7 +1333,7 @@ void CodeBlock::dumpInstructions( U32 startIp, bool upToReturn )
          
          case OP_ITER_BEGIN:
          {
-            StringTableEntry varName = CodeToSTE(code, ip);
+            StringTableEntry varName = CodeToSTE(NULL, code, ip);
             U32 failIp = code[ ip + 2 ];
             
             printf( "%i: OP_ITER_BEGIN varName=%s failIp=%i", ip - 1, varName, failIp );
@@ -1344,7 +1344,7 @@ void CodeBlock::dumpInstructions( U32 startIp, bool upToReturn )
 
          case OP_ITER_BEGIN_STR:
          {
-            StringTableEntry varName = CodeToSTE(code, ip);
+            StringTableEntry varName = CodeToSTE(NULL, code, ip);
             U32 failIp = code[ ip + 2 ];
             
             printf( "%i: OP_ITER_BEGIN varName=%s failIp=%i", ip - 1, varName, failIp );
