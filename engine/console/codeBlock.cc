@@ -216,11 +216,11 @@ void CodeBlock::findBreakLine(U32 ip, U32 &line, U32 &instruction)
 
 const char *CodeBlock::getFileLine(U32 ip)
 {
-   static char nameBuffer[256];
+   char* nameBuffer = mVM->mFileLineBuffer;
    U32 line, inst;
    findBreakLine(ip, line, inst);
    
-   dSprintf(nameBuffer, sizeof(nameBuffer), "%s (%d)", name ? name : "<input>", line);
+   dSprintf(nameBuffer, KorkApi::VmInternal::FileLineBufferSize, "%s (%d)", name ? name : "<input>", line);
    return nameBuffer;
 }
 

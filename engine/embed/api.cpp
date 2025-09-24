@@ -737,6 +737,7 @@ VmInternal::VmInternal(Vm* vm, Config* cfg) : mSTR(&mAllocBase), mEvalState(this
    mTelConsole = new TelnetConsole(this);
    mHeapAllocs = NULL;
    mConvIndex = 0;
+   mNSCounter = 0;
 
    if (cfg->userResources)
    {

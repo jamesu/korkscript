@@ -358,7 +358,6 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
    gExecCount++;
 #endif
    
-   static char traceBuffer[1024];
    U32 i;
    
    U32 iterDepth = 0;
@@ -378,32 +377,32 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
       S32 wantedArgc = getMin(argc-1, fnArgc); // argv[0] is func name
       if(mVM->mEvalState.traceOn)
       {
-         traceBuffer[0] = 0;
-         dStrcat(traceBuffer, "Entering ");
+         mVM->mEvalState.traceBuffer[0] = 0;
+         dStrcat(mVM->mEvalState.traceBuffer, "Entering ");
          if(packageName)
          {
-            dStrcat(traceBuffer, "[");
-            dStrcat(traceBuffer, packageName);
-            dStrcat(traceBuffer, "]");
+            dStrcat(mVM->mEvalState.traceBuffer, "[");
+            dStrcat(mVM->mEvalState.traceBuffer, packageName);
+            dStrcat(mVM->mEvalState.traceBuffer, "]");
          }
          if(thisNamespace && thisNamespace->mName)
          {
-            dSprintf(traceBuffer + dStrlen(traceBuffer), sizeof(traceBuffer) - dStrlen(traceBuffer),
+            dSprintf(mVM->mEvalState.traceBuffer + dStrlen(mVM->mEvalState.traceBuffer), ExprEvalState::TraceBufferSize - dStrlen(mVM->mEvalState.traceBuffer),
                      "%s::%s(", thisNamespace->mName, thisFunctionName);
          }
          else
          {
-            dSprintf(traceBuffer + dStrlen(traceBuffer), sizeof(traceBuffer) - dStrlen(traceBuffer),
+            dSprintf(mVM->mEvalState.traceBuffer + dStrlen(mVM->mEvalState.traceBuffer), ExprEvalState::TraceBufferSize - dStrlen(mVM->mEvalState.traceBuffer),
                      "%s(", thisFunctionName);
          }
          for(i = 0; i < wantedArgc; i++)
          {
-            dStrcat(traceBuffer, argv[i+1]);
+            dStrcat(mVM->mEvalState.traceBuffer, argv[i+1]);
             if(i != wantedArgc - 1)
-               dStrcat(traceBuffer, ", ");
+               dStrcat(mVM->mEvalState.traceBuffer, ", ");
          }
-         dStrcat(traceBuffer, ")");
-         mVM->printf(0, "%s", traceBuffer);
+         dStrcat(mVM->mEvalState.traceBuffer, ")");
+         mVM->printf(0, "%s", mVM->mEvalState.traceBuffer);
       }
       mVM->mEvalState.pushFrame(thisFunctionName, thisNamespace);
       popFrame = true;
@@ -471,8 +470,8 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
    U32 callArgc;
    const char **callArgv;
    
-   static char curFieldArray[256];
-   static char prevFieldArray[256];
+   char curFieldArray[256];
+   char prevFieldArray[256];
    
    CodeBlock *saveCodeBlock = mVM->mCurrentCodeBlock;
    mVM->mCurrentCodeBlock = this;
@@ -1828,26 +1827,26 @@ execFinished:
    {
       if(mVM->mEvalState.traceOn)
       {
-         traceBuffer[0] = 0;
-         dStrcat(traceBuffer, "Leaving ");
+         mVM->mEvalState.traceBuffer[0] = 0;
+         dStrcat(mVM->mEvalState.traceBuffer, "Leaving ");
          
          if(packageName)
          {
-            dStrcat(traceBuffer, "[");
-            dStrcat(traceBuffer, packageName);
-            dStrcat(traceBuffer, "]");
+            dStrcat(mVM->mEvalState.traceBuffer, "[");
+            dStrcat(mVM->mEvalState.traceBuffer, packageName);
+            dStrcat(mVM->mEvalState.traceBuffer, "]");
          }
          if(thisNamespace && thisNamespace->mName)
          {
-            dSprintf(traceBuffer + dStrlen(traceBuffer), sizeof(traceBuffer) - dStrlen(traceBuffer),
+            dSprintf(mVM->mEvalState.traceBuffer + dStrlen(mVM->mEvalState.traceBuffer), ExprEvalState::TraceBufferSize - dStrlen(mVM->mEvalState.traceBuffer),
                      "%s::%s() - return %s", thisNamespace->mName, thisFunctionName, mVM->mSTR.getStringValue());
          }
          else
          {
-            dSprintf(traceBuffer + dStrlen(traceBuffer), sizeof(traceBuffer) - dStrlen(traceBuffer),
+            dSprintf(mVM->mEvalState.traceBuffer + dStrlen(mVM->mEvalState.traceBuffer), ExprEvalState::TraceBufferSize - dStrlen(mVM->mEvalState.traceBuffer),
                      "%s() - return %s", thisFunctionName, mVM->mSTR.getStringValue());
          }
-         mVM->printf(0, "%s", traceBuffer);
+         mVM->printf(0, "%s", mVM->mEvalState.traceBuffer);
       }
    }
    else

@@ -209,6 +209,12 @@ struct IterStackRecord
 class ExprEvalState
 {
 public:
+
+   enum
+   {
+      TraceBufferSize = 1024
+   };
+   
    /// @name Expression Evaluation
    /// @{
    
@@ -220,6 +226,8 @@ public:
    Dictionary* copyDictionary;
    Dictionary::Entry *copyVariable;
    bool traceOn;
+
+   char traceBuffer[TraceBufferSize];
 
    IterStackRecord iterStack[ MaxStackSize ];
 

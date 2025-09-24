@@ -22,7 +22,9 @@ struct VmInternal
    enum
    {
       MaxTempStringSize = 16,
-      MaxStringConvs = 16
+      MaxStringConvs = 16,
+      ExecReturnBufferSize = 32,
+      FileLineBufferSize = 512
    };
 
    KorkApi::Vm* mVM;
@@ -52,6 +54,10 @@ struct VmInternal
 
    Compiler::Resources* mCompilerResources;
    bool mOwnsResources;
+
+   U32 mNSCounter;
+   char mExecReturnBuffer[ExecReturnBufferSize];
+   char mFileLineBuffer[FileLineBufferSize];
 
    VmInternal(KorkApi::Vm* vm, Config* cfg);
    ~VmInternal();

@@ -496,11 +496,10 @@ void Namespace::addCommand(StringTableEntry name, KorkApi::BoolFuncCallback cb, 
 
 void Namespace::addOverload(const char * name, const char *altUsage)
 {
-   static U32 uid=0;
    char buffer[1024];
    char lilBuffer[32];
    dStrcpy(buffer, name);
-   dSprintf(lilBuffer, 32, "_%d", uid++);
+   dSprintf(lilBuffer, 32, "_%d", mVmInternal->mNSCounter++);
    dStrcat(buffer, lilBuffer);
 
    Entry *ent = createLocalEntry(StringTable->insert( buffer ));
@@ -516,11 +515,10 @@ void Namespace::addOverload(const char * name, const char *altUsage)
 
 void Namespace::markGroup(const char* name, const char* usage)
 {
-   static U32 uid=0;
    char buffer[1024];
    char lilBuffer[32];
    dStrcpy(buffer, name);
-   dSprintf(lilBuffer, 32, "_%d", uid++);
+   dSprintf(lilBuffer, 32, "_%d", mVmInternal->mNSCounter++);
    dStrcat(buffer, lilBuffer);
 
    Entry *ent = createLocalEntry(StringTable->insert( buffer ));
@@ -557,25 +555,25 @@ const char *Namespace::Entry::execute(S32 argc, const char **argv, ExprEvalState
       return "";
    }
 
-   static char returnBuffer[32];
+   char* returnBuffer = state->vmInternal->mExecReturnBuffer;
    switch(mType)
    {
          // TOFIX
       case StringCallbackType:
          return cb.mStringCallbackFunc((SimObject*)state->thisObject->userPtr, mUserPtr, argc, argv);
       case IntCallbackType:
-         dSprintf(returnBuffer, sizeof(returnBuffer), "%d",
+         dSprintf(returnBuffer, KorkApi::VmInternal::ExecReturnBufferSize, "%d",
             cb.mIntCallbackFunc((SimObject*)state->thisObject->userPtr, mUserPtr, argc, argv));
          return returnBuffer;
       case FloatCallbackType:
-         dSprintf(returnBuffer, sizeof(returnBuffer), "%g",
+         dSprintf(returnBuffer, KorkApi::VmInternal::ExecReturnBufferSize, "%g",
             cb.mFloatCallbackFunc((SimObject*)state->thisObject->userPtr, mUserPtr, argc, argv));
          return returnBuffer;
       case VoidCallbackType:
          cb.mVoidCallbackFunc((SimObject*)state->thisObject->userPtr, mUserPtr, argc, argv);
          return "";
       case BoolCallbackType:
-         dSprintf(returnBuffer, sizeof(returnBuffer), "%d",
+         dSprintf(returnBuffer, KorkApi::VmInternal::ExecReturnBufferSize, "%d",
             (U32)cb.mBoolCallbackFunc((SimObject*)state->thisObject->userPtr, mUserPtr, argc, argv));
          return returnBuffer;
    }
