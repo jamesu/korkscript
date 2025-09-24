@@ -1172,4 +1172,16 @@ void VmInternal::print(int level, const char* buf)
 
 }
 
+
+
+void Vm::dumpNamespaceClasses(bool dumpScript, bool dumpEngine)
+{
+   mInternal->mNSState.dumpClasses(dumpScript, dumpEngine);
+}
+
+void Vm::dumpNamespaceFunctions(bool dumpScript, bool dumpEngine)
+{
+   mInternal->mNSState.dumpFunctions(dumpScript, dumpEngine);
+}
+
 } // namespace KorkApi

@@ -390,6 +390,10 @@ public:
    bool valueAsBool(ConsoleValue v);
 
    void* getUserPtr() const;
+
+   // These print to the logger
+   void dumpNamespaceClasses( bool dumpScript, bool dumpEngine );
+   void dumpNamespaceFunctions( bool dumpScript, bool dumpEngine );
 };
 
 Vm* createVM(Config* cfg);

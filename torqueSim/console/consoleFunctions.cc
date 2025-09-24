@@ -1173,3 +1173,53 @@ ConsoleFunction(fileDelete, bool, 2,2, "fileDelete('path')")
 }
 
 ConsoleFunctionGroupEnd( FileSystem );
+
+
+extern KorkApi::Vm* sVM;
+
+ConsoleFunctionGroupBegin(ConsoleDoc, "Console self-documentation functions. These output psuedo C++ suitable for feeeding through Doxygen or another auto documentation tool.");
+
+/*! @addtogroup ConsoleOutput Console Output
+   @ingroup TorqueScriptFunctions
+   @{
+*/
+
+/*! dumps all declared console classes to the console.
+    This will dump all classes and methods that were registered from within the engine, AND from the console via scripts.
+    @param dumpScript Specifies whether or not classes defined in script should be dumped.
+    @param dumpEngine Specifies whether or not classes defined in the engine should be dumped.
+*/
+ConsoleFunction(dumpConsoleClasses, void, 1, 3, "bool dumpScript = true, bool dumpEngine = true")
+{
+   bool dumpScript = true;
+   if( argc > 1 )
+      dumpScript = dAtob( argv[1] );
+   
+   bool dumpEngine = true;
+   if( argc > 2 )
+      dumpEngine = dAtob( argv[2] );
+
+   sVM->dumpNamespaceClasses( dumpScript, dumpEngine );
+}
+
+/*! Dumps all declared console functions to the console.
+    This will dump all funtions that were registered from within the engine, AND from the console via scripts.
+    @param dumpScript Specifies whether or not functions defined in script should be dumped.
+    @param dumpEngine Specifies whether or not functions defined in the engine should be dumped.
+    @sa dumpConsoleMethods
+*/
+ConsoleFunction(dumpConsoleFunctions, void, 1, 3, "bool dumpScript = true, bool dumpEngine = true")
+{
+   bool dumpScript = true;
+   if( argc > 1 )
+      dumpScript = dAtob( argv[1] );
+   
+   bool dumpEngine = true;
+   if( argc > 2 )
+      dumpEngine = dAtob( argv[2] );
+
+   sVM->dumpNamespaceFunctions( dumpScript, dumpEngine );
+}
+
+ConsoleFunctionGroupEnd(ConsoleDoc);
+
