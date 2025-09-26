@@ -146,16 +146,6 @@ class Stream {
    /// Writes a NULL terminated string buffer.
    bool writeStringBuffer(const char* buffer) { return write( dStrlen(buffer), buffer ); }
 
-   /// Write a network address to the stream.
-   bool write(const NetAddress &);
-   /// Read a network address from the stream.
-   bool read(NetAddress*);
-
-   /// Write a network socket to the stream.
-   bool write(const NetSocket &);
-   /// Read a network socket from the stream.
-   bool read(NetSocket*);
-
    // Overloaded write and read ops..
   public:
    bool read(const U32 in_numBytes,  void* out_pBuffer) {

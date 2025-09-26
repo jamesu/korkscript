@@ -25,7 +25,6 @@
 #include "embed/internalApi.h"
 #include "console/consoleNamespace.h"
 #include "console/telnetConsole.h"
-#include "platform/platformNetwork.h"
 
 #if TOFIX
 
@@ -127,7 +126,6 @@ void TelnetConsole::processConsoleLine(const char *consoleLine)
 
 void TelnetConsole::process()
 {
-   NetAddress address;
    KorkApi::Config& cfg = mVMInternal->mConfig;
    KorkApi::TelnetInterface& tel = cfg.iTelnet;
 

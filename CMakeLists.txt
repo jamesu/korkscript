@@ -13,10 +13,6 @@ include_directories(
 	./engine
 )
 
-set(KS_NETWORK_SRCS
-	./engine/platform/platformNetAsync.cc
-	./engine/platform/platformNetwork.cc
-)
 set(KS_SRCS
 	./engine/core/idGenerator.cc
 	./engine/core/tVector.cc
@@ -76,6 +72,8 @@ set(TORQUESIM_SRCS
 	./torqueSim/sim/simDictionary.cc
 	./torqueSim/sim/simDictionary.h
 	./torqueSim/sim/simManager.cc
+	./torqueSim/platform/platformNetAsync.cc
+	./torqueSim/platform/platformNetwork.cc
 )
 
 set(KS_WASM_SRCS
@@ -99,7 +97,6 @@ set(KS_AST_PRINT_SRCS
 
 set(KS_TORQUE_TEST_SRCS
 	${KS_SRCS}
-	${KS_NETWORK_SRCS}
 	${TORQUESIM_SRCS}
 	test/torqueTest.cpp
 )

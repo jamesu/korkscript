@@ -30,7 +30,6 @@
 #include "console/ast.h"
 #include "console/compiler.h"
 #include "core/tempAlloc.h"
-#include "platform/platformNetwork.h"
 #include "console/telnetDebugger.h"
 
 
@@ -246,7 +245,6 @@ void TelnetDebugger::processConsoleLine(const char *consoleLine)
 
 void TelnetDebugger::process()
 {
-   NetAddress address;
    KorkApi::Config& cfg = mVMInternal->mConfig;
    KorkApi::TelnetInterface& tel = cfg.iTelnet;
 

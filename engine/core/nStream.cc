@@ -23,7 +23,6 @@
 #include "platform/platform.h"
 #include "core/stream.h"
 #include "core/stringTable.h"
-#include "platform/platformNetwork.h"
 
 
 Stream::Stream()
@@ -161,35 +160,6 @@ void Stream::writeLine(U8 *buffer)
 {
    write(dStrlen((const char*)buffer), buffer);
    write(2, "\r\n");
-}
-
-bool Stream::write(const NetAddress &na)
-{
-   bool success = write(na.type);
-   success &= write(na.port);
-   success &= write(sizeof(na.address), &na.address);
-   return success;
-}
-
-bool Stream::read(NetAddress *na)
-{
-   bool success = read(&na->type);
-   success &= read(&na->port);
-   success &= read(sizeof(na->address), &na->address);
-   return success;
-}
-
-bool Stream::write(const NetSocket &so)
-{
-   return write(so.getHandle());
-}
-
-bool Stream::read(NetSocket* so)
-{
-   S32 handle = -1;
-   bool success = read(&handle);
-   *so = NetSocket::fromHandle(handle);
-   return success;
 }
 
 bool Stream::copyFrom(Stream *other)
