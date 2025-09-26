@@ -266,7 +266,11 @@ struct TelnetInterface
     void (*QueueEvaluateFn)(void* user, const char* evaluateStr); // callback to eval command next frame
 };
 
-
+struct LogConfig
+{
+  ConsumerCallback cbFunc;
+  void*            cbUser;
+};
 
 struct Config {
   MallocFn mallocFn;
@@ -276,8 +280,7 @@ struct Config {
   ConsumerCallback logFn;
   void*            logUser;
 
-  ConsumerCallback telnetLogFn;
-  void* telnetLogUser;
+  LogConfig extraConsumers[2]; // for telnet
   TelnetInterface iTelnet;
   void* telnetUser;
 

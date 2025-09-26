@@ -56,8 +56,8 @@ static void telnetCallback(U32 level, const char *consoleLine, void* userPtr)
 TelnetConsole::TelnetConsole(KorkApi::VmInternal* vm)
 {
    mVMInternal = vm;
-   mVMInternal->mConfig.telnetLogFn = telnetCallback;
-   mVMInternal->mConfig.telnetLogUser = this;
+   mVMInternal->mConfig.extraConsumers[0].cbFunc = telnetCallback;
+   mVMInternal->mConfig.extraConsumers[0].cbUser = this;
 
    mAcceptPort = -1;
    mClientList = NULL;
@@ -74,10 +74,10 @@ TelnetConsole::TelnetConsole(KorkApi::VmInternal* vm)
 
 TelnetConsole::~TelnetConsole()
 {
-   if (mVMInternal->mConfig.telnetLogUser == this)
+   if (mVMInternal->mConfig.extraConsumers[0].cbUser == this)
    {
-      mVMInternal->mConfig.telnetLogFn = NULL;
-      mVMInternal->mConfig.telnetLogUser = NULL;
+      mVMInternal->mConfig.extraConsumers[0].cbFunc = NULL;
+      mVMInternal->mConfig.extraConsumers[0].cbUser = NULL;
    }
 
    if (mValid)

@@ -1171,7 +1171,9 @@ const char* VmInternal::valueAsString(ConsoleValue v)
 
 void VmInternal::printf(int level, const char* fmt, ...)
 {
-   if (mConfig.logFn == NULL && mConfig.telnetLogFn == NULL)
+   if (mConfig.logFn == NULL && 
+       mConfig.extraConsumers[0].cbFunc == NULL &&
+       mConfig.extraConsumers[1].cbFunc == NULL)
       return;
 
    char buffer[4096];
@@ -1184,9 +1186,13 @@ void VmInternal::printf(int level, const char* fmt, ...)
    {
       mConfig.logFn(level, buffer, mConfig.logUser);
    }
-   if (mConfig.telnetLogFn)
+
+   for (U32 i=0; i<2; i++)
    {
-      mConfig.telnetLogFn(level, buffer, mConfig.telnetLogUser);
+      if (mConfig.extraConsumers[i].cbFunc)
+      {
+         mConfig.extraConsumers[i].cbFunc(level, buffer, mConfig.extraConsumers[i].cbUser);
+      }
    }
 }
 

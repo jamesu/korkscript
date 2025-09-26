@@ -131,7 +131,8 @@ static void debuggerConsumer(U32 level, const char *line, void* userPtr)
 
 TelnetDebugger::TelnetDebugger(KorkApi::VmInternal* vm)
 {
-   // TOFIX Con::addConsumer(debuggerConsumer);
+   mVMInternal->mConfig.extraConsumers[1].cbFunc = debuggerConsumer;
+   mVMInternal->mConfig.extraConsumers[1].cbUser = this;
    mVMInternal = vm;
    
    mAcceptPort = -1;
@@ -173,7 +174,11 @@ TelnetDebugger::Breakpoint **TelnetDebugger::findBreakpoint(StringTableEntry fil
 
 TelnetDebugger::~TelnetDebugger()
 {
-   // TOFIX Con::removeConsumer(debuggerConsumer);
+   if (mVMInternal->mConfig.extraConsumers[1].cbUser == this)
+   {
+      mVMInternal->mConfig.extraConsumers[1].cbFunc = NULL;
+      mVMInternal->mConfig.extraConsumers[1].cbUser = NULL;
+   }
 
    if (mValid)
    {
