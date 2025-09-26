@@ -737,8 +737,18 @@ VmInternal::VmInternal(Vm* vm, Config* cfg) : mSTR(&mAllocBase), mEvalState(this
    mCodeBlockList = NULL;
    mCurrentCodeBlock = NULL;
    mNSState.init(this);
-   mTelDebugger = new TelnetDebugger(this);
-   mTelConsole = new TelnetConsole(this);
+
+   if (cfg.initTelnet)
+   {
+      mTelDebugger = new TelnetDebugger(this);
+      mTelConsole = new TelnetConsole(this);
+   }
+   else
+   {
+      mTelDebugger = NULL;
+      mTelConsole = NULL;
+   }
+   
    mHeapAllocs = NULL;
    mConvIndex = 0;
    mNSCounter = 0;
@@ -1161,7 +1171,7 @@ const char* VmInternal::valueAsString(ConsoleValue v)
 
 void VmInternal::printf(int level, const char* fmt, ...)
 {
-   if (mConfig.logFn == NULL)
+   if (mConfig.logFn == NULL && mConfig.telnetLogFn == NULL)
       return;
 
    char buffer[4096];
@@ -1170,7 +1180,14 @@ void VmInternal::printf(int level, const char* fmt, ...)
    vsnprintf(buffer, sizeof(buffer), fmt, args);
    va_end(args);
    
-   mConfig.logFn(level, buffer, mConfig.logUser);
+   if (mConfig.logFn)
+   {
+      mConfig.logFn(level, buffer, mConfig.logUser);
+   }
+   if (mConfig.telnetLogFn)
+   {
+      mConfig.telnetLogFn(level, buffer, mConfig.telnetLogUser);
+   }
 }
 
 void VmInternal::print(int level, const char* buf)
@@ -1193,5 +1210,56 @@ void Vm::dumpNamespaceFunctions(bool dumpScript, bool dumpEngine)
 {
    mInternal->mNSState.dumpFunctions(dumpScript, dumpEngine);
 }
+
+void Vm::dbgSetParameters(int port, const char* password, bool waitForClient)
+{
+   if (mInternal->mTelDebugger)
+   {
+      mInternal->mTelDebugger->setDebugParameters(port, password, waitForClient);
+   }
+}
+
+bool Vm::dbgIsConnected()
+{
+   return mInternal->mTelDebugger && mInternal->mTelDebugger->isConnected();
+}
+
+void Vm::dbgDisconnect()
+{
+   if (mInternal->mTelDebugger)
+   {
+      mInternal->mTelDebugger->disconnect();
+   }
+}
+
+void Vm::telnetSetParameters(int port, const char* consolePass, const char* listenPass, bool remoteEcho)
+{
+   if (mInternal->mTelConsole)
+   {
+      mInternal->mTelConsole->setTelnetParameters(port, consolePass, listenPass, remoteEcho);
+   }
+}
+
+void Vm::telnetDisconnect()
+{
+   if (mInternal->mTelConsole)
+   {
+      mInternal->mTelConsole->disconnect();
+   }
+}
+
+void Vm::processTelnet()
+{
+   if (mInternal->mTelConsole)
+   {
+      mInternal->mTelConsole->process();
+   }
+   if (mInternal->mTelDebugger)
+   {
+      mInternal->mTelDebugger->process();
+   }
+}
+
+
 
 } // namespace KorkApi

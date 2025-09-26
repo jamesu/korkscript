@@ -104,6 +104,8 @@ public:
    void process();          ///< Called by the main loop to let the console process commands
                             ///  and connections.
 
+   void disconnect();
+
    /// Configure the parameter for the telnet console.
    ///
    /// @param    port           Port on which to listen for connections.

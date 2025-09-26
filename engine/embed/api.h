@@ -241,6 +241,27 @@ struct FindObjectsInterface
 typedef void* (*MallocFn)(size_t, void* user);
 typedef void  (*FreeFn)(void*, void* user);
 
+
+enum TelnetSocket
+{
+    SOCKET_DEBUGGER=1,
+    SOCKET_CONSOLE=2
+};
+
+struct TelnetInterface
+{
+    bool (*StartListenFn)(void* user, U32 socketNum, int port); // callback to start listening
+    bool (*StopListenFn)(void* user, U32 socketNum, int port); // callback to stop listening
+
+    bool (*CheckAcceptFn)(void* user, U32 socketNum); // callback for if a connection should be accepted
+    bool (*CheckListenFn)(void* user, U32 socketNum); // callback for if listener is still active
+
+    void (*SendDataFn)(void* user, U32 socketNum, U32 bytes, void* data); // callback for sending data
+    bool (*RecvDataFn)(void* user, U32 socketNum, U32* inBytes, void* data); // callback for receiving data
+};
+
+
+
 struct Config {
   MallocFn mallocFn;
   FreeFn   freeFn;
@@ -248,6 +269,11 @@ struct Config {
 
   ConsumerCallback logFn;
   void*            logUser;
+
+  ConsumerCallback telnetLogFn;
+  void* telnetLogUser;
+  TelnetInterface iTelnet;
+  void* telnetUser;
 
   FindObjectsInterface iFind;
    void* findUser;
@@ -257,6 +283,7 @@ struct Config {
    Compiler::Resources* userResources;
 
    bool warnUndefinedScriptVariables;
+   bool initTelnet;
 };
 
 struct ConsoleHeapAlloc
@@ -395,6 +422,15 @@ public:
    // These print to the logger
    void dumpNamespaceClasses( bool dumpScript, bool dumpEngine );
    void dumpNamespaceFunctions( bool dumpScript, bool dumpEngine );
+
+   void dbgSetParameters(int port, const char* password, bool waitForClient);
+   bool dbgIsConnected();
+   void dbgDisconnect();
+   void telnetSetParameters(int port, const char* consolePass, const char* listenPass, bool remoteEcho);
+   void telnetDisconnect();
+
+   void processTelnet();
+
 };
 
 Vm* createVM(Config* cfg);

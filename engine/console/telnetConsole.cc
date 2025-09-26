@@ -43,19 +43,21 @@ ConsoleFunction( telnetSetParameters, void, 4, 5, "(int port, string consolePass
 }
 #endif
 
-#if TOFIX
-static void telnetCallback(ConsoleLogEntry::Level level, const char *consoleLine, void* userPtr)
+static void telnetCallback(U32 level, const char *consoleLine, void* userPtr)
 {
+   TelnetConsole* con = (TelnetConsole*)userPtr;
    level;
-   if (TelConsole)
-	  TelConsole->processConsoleLine(consoleLine);
+   if (con)
+   {
+      con->processConsoleLine(consoleLine);
+   }
 }
-#endif
 
 TelnetConsole::TelnetConsole(KorkApi::VmInternal* vm)
 {
-   // TOFIX Con::addConsumer(telnetCallback);
    mVMInternal = vm;
+   mVMInternal->mConfig.telnetLogFn = telnetCallback;
+   mVMInternal->mConfig.telnetLogUser = this;
 
    mAcceptSocket = NetSocket::INVALID;
    mAcceptPort = -1;
@@ -65,6 +67,12 @@ TelnetConsole::TelnetConsole(KorkApi::VmInternal* vm)
 
 TelnetConsole::~TelnetConsole()
 {
+   if (mVMInternal->mConfig.telnetLogUser == this)
+   {
+      mVMInternal->mConfig.telnetLogFn = NULL;
+      mVMInternal->mConfig.telnetLogUser = NULL;
+   }
+
    // TOFIX Con::removeConsumer(telnetCallback);
    if(mAcceptSocket != NetSocket::INVALID)
       Net::closeSocket(mAcceptSocket);
@@ -313,5 +321,10 @@ void TelnetConsole::process()
       else
          walk = &cl->nextClient;
    }
+}
+
+void TelnetConsole::disconnect()
+{
+   // TODO
 }
 
