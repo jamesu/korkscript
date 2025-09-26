@@ -14,9 +14,6 @@ include_directories(
 )
 
 set(KS_NETWORK_SRCS
-	./engine/console/telnetConsole.cc
-	./engine/console/telnetDebugger.cc
-
 	./engine/platform/platformNetAsync.cc
 	./engine/platform/platformNetwork.cc
 )
@@ -52,6 +49,9 @@ set(KS_SRCS
 	./engine/console/astAlloc.cc
 	./engine/console/compiler.cc
 
+	./engine/console/telnetConsole.cc
+	./engine/console/telnetDebugger.cc
+
 	./engine/console/consoleValue.h
 	./engine/console/simpleLexer.h
 	./engine/console/simpleParser.h
@@ -80,24 +80,20 @@ set(TORQUESIM_SRCS
 
 set(KS_WASM_SRCS
 	${KS_SRCS}
-	${KS_NETWORK_SRCS}
 	wasm/wasmModule.cpp
 )
 
 set(KS_TEST_SRCS
 	${KS_SRCS}
-	${KS_NETWORK_SRCS}
 	test/main.cpp
 )
 
 set(KS_API_TEST_SRCS
 	${KS_SRCS}
-	${KS_NETWORK_SRCS}
 	test/apiTest.cpp
 )
 set(KS_AST_PRINT_SRCS
 	${KS_SRCS}
-	${KS_NETWORK_SRCS}
 	test/astPrint.cpp
 )
 
