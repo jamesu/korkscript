@@ -42,10 +42,6 @@ class CodeBlock;
 /// @see http://www.planettribes.com/tribes2/editing.shtml for more thorough discussion.
 class TelnetDebugger
 {
-   S32 mAcceptPort;
-   NetSocket mAcceptSocket;
-   NetSocket mDebugSocket;
-
    enum {
       
       // We should only change this is we truely 
@@ -65,8 +61,11 @@ class TelnetDebugger
       Connected
    };
    S32 mState;
+   S32 mAcceptPort;
    char mLineBuffer[MaxCommandSize];
    S32 mCurPos;
+   U32 mDebugSocket;
+   bool mValid;
    bool mWaitForClient;
 
    KorkApi::VmInternal* mVMInternal;

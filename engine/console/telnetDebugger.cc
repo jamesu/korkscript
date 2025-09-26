@@ -122,14 +122,12 @@ ConsoleFunction( dbgDisconnect, void, 1, 1, "()"
 }
 #endif
 
-#if TOFIX
-static void debuggerConsumer(ConsoleLogEntry::Level level, const char *line, void* userPtr)
+static void debuggerConsumer(U32 level, const char *line, void* userPtr)
 {
-   level;
-   if (TelDebugger)
-      TelDebugger->processConsoleLine(line);
+   TelnetDebugger* debugger = (TelnetDebugger*)userPtr;
+   if (debugger)
+      debugger->processConsoleLine(line);
 }
-#endif
 
 TelnetDebugger::TelnetDebugger(KorkApi::VmInternal* vm)
 {
@@ -137,8 +135,6 @@ TelnetDebugger::TelnetDebugger(KorkApi::VmInternal* vm)
    mVMInternal = vm;
    
    mAcceptPort = -1;
-   mAcceptSocket = NetSocket::INVALID;
-   mDebugSocket = NetSocket::INVALID;
    
    mState = NotConnected;
    mCurPos = 0;
@@ -148,11 +144,15 @@ TelnetDebugger::TelnetDebugger(KorkApi::VmInternal* vm)
    mStackPopBreakIndex = -1;
    mProgramPaused = false;
    mWaitForClient = false;
+
+   mValid = false;
    
    // Add the version number in a global so that
    // scripts can detect the presence of the
    // "enhanced" debugger features.
-   // TOFIX Con::evaluatef( "$dbgVersion = %d;", Version );
+   char buf[32];
+   snprintf(buf, 32, "$dbgVersion = %d;", Version );
+   mVMInternal->mVM->evalCode(buf, "");
 }
 
 TelnetDebugger::Breakpoint **TelnetDebugger::findBreakpoint(StringTableEntry fileName, S32 lineNumber)
@@ -174,24 +174,27 @@ TelnetDebugger::Breakpoint **TelnetDebugger::findBreakpoint(StringTableEntry fil
 TelnetDebugger::~TelnetDebugger()
 {
    // TOFIX Con::removeConsumer(debuggerConsumer);
-   
-   if(mAcceptSocket != NetSocket::INVALID)
-      Net::closeSocket(mAcceptSocket);
-   if(mDebugSocket != NetSocket::INVALID)
-      Net::closeSocket(mDebugSocket);
+
+   if (mValid)
+   {
+      mVMInternal->mConfig.iTelnet.StopListenFn(mVMInternal->mConfig.telnetUser, KorkApi::TELNET_DEBUGGER);
+   }
 }
 
 void TelnetDebugger::send(const char *str)
 {
-   Net::send(mDebugSocket, (const unsigned char*)str, dStrlen(str));
+   if (mDebugSocket != 0)
+   {
+      mVMInternal->mConfig.iTelnet.SendDataFn(mVMInternal->mConfig.telnetUser, mDebugSocket, dStrlen(str), (const unsigned char*)str);
+   }
 }
 
 void TelnetDebugger::disconnect()
 {
-   if ( mDebugSocket != NetSocket::INVALID )
+   if (mDebugSocket != 0)
    {
-      Net::closeSocket(mDebugSocket);
-      mDebugSocket = NetSocket::INVALID;
+      mVMInternal->mConfig.iTelnet.StopSocketFn(mVMInternal->mConfig.telnetUser, mDebugSocket);
+      mDebugSocket = 0;
    }
    
    removeAllBreakpoints();
@@ -202,29 +205,15 @@ void TelnetDebugger::disconnect()
 
 void TelnetDebugger::setDebugParameters(S32 port, const char *password, bool waitForClient)
 {
-   // Don't bail if same port... we might just be wanting to change
-   // the password.
-   //   if(port == mAcceptPort)
-   //      return;
-   
-   if(mAcceptSocket != NetSocket::INVALID)
+   if (mVMInternal->mConfig.iTelnet.StartListenFn(mVMInternal->mConfig.telnetUser, KorkApi::TELNET_DEBUGGER, port))
    {
-      Net::closeSocket(mAcceptSocket);
-      mAcceptSocket = NetSocket::INVALID;
+      mAcceptPort = port;
    }
-   mAcceptPort = port;
-   if(mAcceptPort != -1 && mAcceptPort != 0)
+   else
    {
-      NetAddress address;
-      Net::getIdealListenAddress(&address);
-      address.port = mAcceptPort;
-      
-      mAcceptSocket = Net::openSocket();
-      Net::bindAddress(address, mAcceptSocket);
-      Net::listen(mAcceptSocket, 4);
-      
-      Net::setBlocking(mAcceptSocket, false);
+      mAcceptPort = -1;
    }
+
    dStrncpy(mDebuggerPassword, password, PasswordMaxLength);
    
    mWaitForClient = waitForClient;
@@ -253,39 +242,48 @@ void TelnetDebugger::processConsoleLine(const char *consoleLine)
 void TelnetDebugger::process()
 {
    NetAddress address;
+   KorkApi::Config& cfg = mVMInternal->mConfig;
+   KorkApi::TelnetInterface& tel = cfg.iTelnet;
+
+   if (!mValid)
+   {
+      return;
+   }
    
-   if(mAcceptSocket != NetSocket::INVALID)
+   if (tel.CheckListenFn(cfg.telnetUser, KorkApi::TELNET_DEBUGGER))
    {
       // ok, see if we have any new connections:
-      NetSocket newConnection;
-      newConnection = Net::accept(mAcceptSocket, &address);
+      U32 newConnection = tel.CheckAcceptFn(cfg.telnetUser, KorkApi::TELNET_DEBUGGER);
       
-      if(newConnection != NetSocket::INVALID && mDebugSocket == NetSocket::INVALID)
+      if(newConnection != 0 && mDebugSocket == 0)
       {
          char buffer[256];
-         Net::addressToString(&address, buffer);
-         // TOFIX Con::printf("Debugger connection from %s", buffer);
+         tel.GetSocketAddressFn(cfg.telnetUser, newConnection, buffer);
+         mVMInternal->printf(0, "Debugger connection from %s", buffer);
          
          mState = PasswordTry;
          mDebugSocket = newConnection;
-         
-         Net::setBlocking(newConnection, false);
       }
-      else if(newConnection != NetSocket::INVALID)
-         Net::closeSocket(newConnection);
+      else if(newConnection != 0)
+      {
+         tel.StopSocketFn(cfg.telnetUser, newConnection);
+      }
    }
    // see if we have any input to process...
    
-   if(mDebugSocket == NetSocket::INVALID)
+   if (mDebugSocket == 0)
       return;
    
    checkDebugRecv();
-   if(mDebugSocket == NetSocket::INVALID)
+   if (mDebugSocket == 0)
       removeAllBreakpoints();
 }
 
 void TelnetDebugger::checkDebugRecv()
 {
+   KorkApi::Config& cfg = mVMInternal->mConfig;
+   KorkApi::TelnetInterface& tel = cfg.iTelnet;
+
    for (;;)
    {
       // Process all the complete commands in the buffer.
@@ -332,17 +330,14 @@ void TelnetDebugger::checkDebugRecv()
          disconnect();
          return;
       }
-      
-      S32 numBytes;
-      Net::Error err = Net::recv(mDebugSocket, (unsigned char*)(mLineBuffer + mCurPos), MaxCommandSize - mCurPos, &numBytes);
-      
-      if((err != Net::NoError && err != Net::WouldBlock) || numBytes == 0)
+
+      U32 numBytes = 0;
+
+      if (!tel.RecvDataFn(cfg.telnetUser, mDebugSocket, (unsigned char*)(mLineBuffer + mCurPos), MaxCommandSize - mCurPos, &numBytes))
       {
          disconnect();
          return;
       }
-      if(err == Net::WouldBlock)
-         return;
       
       mCurPos += numBytes;
    }
@@ -366,8 +361,14 @@ void TelnetDebugger::executionStopped(CodeBlock *code, U32 lineNumber)
    
    Breakpoint *brk = *bp;
    mProgramPaused = true;
-   // TOFIX Con::evaluatef("$Debug::result = %s;", brk->testExpression);
-   // TOFIX if(Con::getBoolVariable("$Debug::result"))
+
+   char buf[256];
+   snprintf(buf, 256, "$Debug::result = %s;", brk->testExpression);
+   mVMInternal->mVM->evalCode(buf, "");
+
+   KorkApi::ConsoleValue cv = mVMInternal->mVM->getGlobalVariable("$Debug::result");
+
+   if (mVMInternal->valueAsBool(cv))
    {
       brk->curCount++;
       if(brk->curCount >= brk->passCount)
@@ -402,15 +403,20 @@ void TelnetDebugger::popStackFrame()
 
 void TelnetDebugger::breakProcess()
 {
+   if (!mValid)
+   {
+      return;
+   }
+
    // Send out a break with the full stack.
    sendBreak();
    
    mProgramPaused = true;
-   while(mProgramPaused)
+   while (mProgramPaused)
    {
       Platform::sleep(10);
       checkDebugRecv();
-      if(mDebugSocket == NetSocket::INVALID)
+      if(mDebugSocket == 0)
       {
          mProgramPaused = false;
          removeAllBreakpoints();
@@ -468,6 +474,9 @@ void TelnetDebugger::sendBreak()
 
 void TelnetDebugger::processLineBuffer(S32 cmdLen)
 {
+   KorkApi::Config& cfg = mVMInternal->mConfig;
+   KorkApi::TelnetInterface& tel = cfg.iTelnet;
+
    if (mState == PasswordTry)
    {
       if(dStrncmp(mLineBuffer, mDebuggerPassword, cmdLen-1))
@@ -494,10 +503,10 @@ void TelnetDebugger::processLineBuffer(S32 cmdLen)
       
       if(dSscanf(mLineBuffer, "CEVAL %[^\n]", evalBuffer) == 1)
       {
-         /* TOFIX ConsoleEvent postEvent;
-         dStrcpy(postEvent.data, evalBuffer);
-         postEvent.size = ConsoleEventHeaderSize + dStrlen(evalBuffer) + 1;
-         Game->postEvent(postEvent);*/
+         if (cfg.iTelnet.QueueEvaluateFn)
+         {
+            tel.QueueEvaluateFn(cfg.telnetUser, evalBuffer);
+         }
       }
       else if(dSscanf(mLineBuffer, "BRKVARSET %s %d %[^\n]", varBuffer, &passCount, evalBuffer) == 3)
          addVariableBreakpoint(varBuffer, passCount, evalBuffer);
