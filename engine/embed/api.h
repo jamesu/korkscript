@@ -244,20 +244,26 @@ typedef void  (*FreeFn)(void*, void* user);
 
 enum TelnetSocket
 {
-    SOCKET_DEBUGGER=1,
-    SOCKET_CONSOLE=2
+    TELNET_DEBUGGER=1,
+    TELNET_CONSOLE=2
 };
 
 struct TelnetInterface
 {
-    bool (*StartListenFn)(void* user, U32 socketNum, int port); // callback to start listening
-    bool (*StopListenFn)(void* user, U32 socketNum, int port); // callback to stop listening
+    bool (*StartListenFn)(void* user, TelnetSocket kind, int port); // callback to start listening
+    bool (*StopListenFn)(void* user, TelnetSocket kind); // callback to stop listening
 
-    bool (*CheckAcceptFn)(void* user, U32 socketNum); // callback for if a connection should be accepted
-    bool (*CheckListenFn)(void* user, U32 socketNum); // callback for if listener is still active
+    bool (*CheckSocketActiveFn)(void* user, U32 socket); // callback to check if a socket is active
+    U32 (*CheckAcceptFn)(void* user, TelnetSocket kind); // callback for if a connection should be accepted
+    bool (*CheckListenFn)(void* user, TelnetSocket kind); // callback for if listener is still active
+    bool (*StopSocketFn)(void* user, U32 socket); // callback for if a socket needs disconnecting
 
-    void (*SendDataFn)(void* user, U32 socketNum, U32 bytes, void* data); // callback for sending data
-    bool (*RecvDataFn)(void* user, U32 socketNum, U32* inBytes, void* data); // callback for receiving data
+    void (*SendDataFn)(void* user, U32 socketNum, U32 bytes, const void* data); // callback for sending data
+    bool (*RecvDataFn)(void* user, U32 socketNum, void* data, U32 bufferBytes, U32* outBytes); // callback for receiving data
+
+    void (*GetSocketAddressFn)(void* user, U32 socket, char* buffer); // callback to get socket address; 256 byte buffer
+
+    void (*QueueEvaluateFn)(void* user, const char* evaluateStr); // callback to eval command next frame
 };
 
 

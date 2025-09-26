@@ -46,7 +46,7 @@ ConsoleFunction( telnetSetParameters, void, 4, 5, "(int port, string consolePass
 static void telnetCallback(U32 level, const char *consoleLine, void* userPtr)
 {
    TelnetConsole* con = (TelnetConsole*)userPtr;
-   level;
+   
    if (con)
    {
       con->processConsoleLine(consoleLine);
@@ -59,10 +59,17 @@ TelnetConsole::TelnetConsole(KorkApi::VmInternal* vm)
    mVMInternal->mConfig.telnetLogFn = telnetCallback;
    mVMInternal->mConfig.telnetLogUser = this;
 
-   mAcceptSocket = NetSocket::INVALID;
    mAcceptPort = -1;
    mClientList = NULL;
    mRemoteEchoEnabled = false;
+
+   mValid = mVMInternal->mConfig.iTelnet.StartListenFn != NULL &&
+   mVMInternal->mConfig.iTelnet.StopListenFn != NULL &&
+   mVMInternal->mConfig.iTelnet.CheckSocketActiveFn != NULL &&
+   mVMInternal->mConfig.iTelnet.CheckAcceptFn != NULL &&
+   mVMInternal->mConfig.iTelnet.CheckListenFn != NULL &&
+   mVMInternal->mConfig.iTelnet.SendDataFn != NULL &&
+   mVMInternal->mConfig.iTelnet.RecvDataFn != NULL;
 }
 
 TelnetConsole::~TelnetConsole()
@@ -73,63 +80,46 @@ TelnetConsole::~TelnetConsole()
       mVMInternal->mConfig.telnetLogUser = NULL;
    }
 
-   // TOFIX Con::removeConsumer(telnetCallback);
-   if(mAcceptSocket != NetSocket::INVALID)
-      Net::closeSocket(mAcceptSocket);
-   TelnetClient *walk = mClientList, *temp;
-   while(walk)
+   if (mValid)
    {
-      temp = walk->nextClient;
-      if(walk->socket != NetSocket::INVALID)
-         Net::closeSocket(walk->socket);
-      delete walk;
-      walk = temp;
+      mVMInternal->mConfig.iTelnet.StopListenFn(mVMInternal->mConfig.telnetUser, KorkApi::TELNET_CONSOLE);
    }
 }
 
 void TelnetConsole::setTelnetParameters(S32 port, const char *telnetPassword, const char *listenPassword, bool remoteEcho)
 {
-   if(port == mAcceptPort)
+   if (port == mAcceptPort || !mValid)
       return;
    
    mRemoteEchoEnabled = remoteEcho;
-   
-   if(mAcceptSocket != NetSocket::INVALID)
+
+   if (mVMInternal->mConfig.iTelnet.StartListenFn(mVMInternal->mConfig.telnetUser, KorkApi::TELNET_CONSOLE, port))
    {
-      Net::closeSocket(mAcceptSocket);
-      mAcceptSocket = NetSocket::INVALID;
+      mAcceptPort = port;
    }
-   mAcceptPort = port;
-   if(mAcceptPort != -1 && mAcceptPort != 0)
+   else
    {
-      NetAddress address;
-      Net::getIdealListenAddress(&address);
-      address.port = mAcceptPort;
-      
-      mAcceptSocket = Net::openSocket();
-      Net::bindAddress(address, mAcceptSocket);
-      Net::listen(mAcceptSocket, 4);
-      
-      Net::setBlocking(mAcceptSocket, false);
+      mAcceptPort = -1;
    }
+
    dStrncpy(mTelnetPassword, telnetPassword, PasswordMaxLength);
    dStrncpy(mListenPassword, listenPassword, PasswordMaxLength);
 }
 
 void TelnetConsole::processConsoleLine(const char *consoleLine)
 {
-   if (mClientList==NULL) return;  // just escape early.  don't even do another step...
+   if (mClientList==NULL || !mValid) return;  // just escape early.  don't even do another step...
 
    // ok, spew this line out to all our subscribers...
    S32 len = dStrlen(consoleLine)+1;
    for(TelnetClient *walk = mClientList; walk; walk = walk->nextClient)
    {
-      if(walk->state == FullAccessConnected || walk->state == ReadOnlyConnected)
+      if (walk->state == FullAccessConnected || walk->state == ReadOnlyConnected)
       {
-         if ( walk->socket != NetSocket::INVALID )
+         if (walk->socket != 0)
          {
-            Net::send(walk->socket, (const unsigned char*)consoleLine, len);
-            Net::send(walk->socket, (const unsigned char*)"\r\n", 2);
+            mVMInternal->mConfig.iTelnet.SendDataFn(mVMInternal->mConfig.telnetUser, walk->socket, len, (const unsigned char*)consoleLine);
+            mVMInternal->mConfig.iTelnet.SendDataFn(mVMInternal->mConfig.telnetUser, walk->socket, 2, (const unsigned char*)"\r\n");
          }
       }
    }
@@ -138,17 +128,24 @@ void TelnetConsole::processConsoleLine(const char *consoleLine)
 void TelnetConsole::process()
 {
    NetAddress address;
+   KorkApi::Config& cfg = mVMInternal->mConfig;
+   KorkApi::TelnetInterface& tel = cfg.iTelnet;
+
+   if (!mValid)
+   {
+      return;
+   }
    
-   if(mAcceptSocket != NetSocket::INVALID)
+   if(mAcceptPort != -1)
    {
       // ok, see if we have any new connections:
-      NetSocket newConnection;
-      newConnection = Net::accept(mAcceptSocket, &address);
+      U32 newConnection = tel.CheckAcceptFn(cfg.telnetUser, KorkApi::TELNET_CONSOLE);
       
-      if(newConnection != NetSocket::INVALID)
+      if(newConnection != 0)
       {
          char buffer[256];
-         Net::addressToString(&address, buffer);
+         tel.GetSocketAddressFn(cfg.telnetUser, newConnection, buffer);
+
          printf("Telnet connection from %s", buffer);
          
          TelnetClient *cl = new TelnetClient;
@@ -163,19 +160,24 @@ void TelnetConsole::process()
          cl->state = PasswordTryOne;
 #endif
          
-         Net::setBlocking(newConnection, false);
-         
          const char *prompt = "";// TOFIX Con::getVariable("Con::Prompt");
          char connectMessage[1024];
          dSprintf(connectMessage, sizeof(connectMessage),
                   "Torque Telnet Remote Console\r\n\r\n%s",
                   cl->state == FullAccessConnected ? prompt : "Enter Password:");
          
-         if ( cl->socket != NetSocket::INVALID )
-            Net::send(cl->socket, (const unsigned char*)connectMessage, dStrlen(connectMessage)+1);
+         if (cl->socket != 0)
+         {
+            tel.SendDataFn(cfg.telnetUser, cl->socket, dStrlen(connectMessage)+1, (const unsigned char*)connectMessage);
+         }
+
          cl->nextClient = mClientList;
          mClientList = cl;
       }
+   }
+   else if (!tel.CheckListenFn(cfg.telnetUser, KorkApi::TELNET_CONSOLE))
+   {
+      disconnect();
    }
    
    char recvBuf[256];
@@ -185,13 +187,16 @@ void TelnetConsole::process()
    
    for(TelnetClient *client = mClientList; client; client = client->nextClient)
    {
-      S32 numBytes;
-      Net::Error err = Net::recv(client->socket, (unsigned char*)recvBuf, sizeof(recvBuf), &numBytes);
-      
-      if((err != Net::NoError && err != Net::WouldBlock) || numBytes == 0)
+      U32 numBytes = 0;
+      if (!tel.RecvDataFn(cfg.telnetUser, client->socket, (unsigned char*)recvBuf, sizeof(recvBuf), &numBytes))
       {
-         Net::closeSocket(client->socket);
-         client->socket = NetSocket::INVALID;
+         tel.StopSocketFn(cfg.telnetUser, client->socket);
+         client->socket = 0;
+         continue;
+      }
+
+      if (numBytes == 0)
+      {
          continue;
       }
       
@@ -210,27 +215,34 @@ void TelnetConsole::process()
             client->curLine[client->curPos] = 0;
             client->curPos = 0;
             
-            if(client->state == FullAccessConnected)
+            if (client->state == FullAccessConnected)
             {
-               if ( client->socket != NetSocket::INVALID )
-                  Net::send(client->socket, (const unsigned char*)reply, replyPos);
+               if (client->socket != 0)
+               {
+                  tel.SendDataFn(cfg.telnetUser, client->socket, replyPos, (const unsigned char*)reply);
+               }
                replyPos = 0;
                
-               /* TOFIX
-               dStrcpy(mPostEvent.data, client->curLine);
-               mPostEvent.size = ConsoleEventHeaderSize + dStrlen(client->curLine) + 1;
-               Game->postEvent(mPostEvent);
-               */
+               if (cfg.iTelnet.QueueEvaluateFn)
+               {
+                  tel.QueueEvaluateFn(cfg.telnetUser, client->curLine);
+               }
                
                // note - send prompt next
-               const char *prompt = ""; // TOFIX Con::getVariable("Con::Prompt");
-               if ( client->socket != NetSocket::INVALID )
-                  Net::send(client->socket, (const unsigned char*)prompt, dStrlen(prompt));
+               KorkApi::ConsoleValue promptV = mVMInternal->mVM->getGlobalVariable(StringTable->insert("Con::Prompt"));
+               const char* prompt = mVMInternal->valueAsString(promptV);
+
+               if (client->socket != 0)
+               {
+                  tel.SendDataFn(cfg.telnetUser, client->socket, dStrlen(prompt), (const unsigned char*)prompt);
+               }
             }
             else if(client->state == ReadOnlyConnected)
             {
-               if ( client->socket != NetSocket::INVALID )
-                  Net::send(client->socket, (const unsigned char*)reply, replyPos);
+               if (client->socket != 0)
+               {
+                  tel.SendDataFn(cfg.telnetUser, client->socket, replyPos, (const unsigned char*)reply);
+               }
                replyPos = 0;
             }
             else
@@ -238,26 +250,34 @@ void TelnetConsole::process()
                client->state++;
                if(!dStrncmp(client->curLine, mTelnetPassword, PasswordMaxLength))
                {
-                  if ( client->socket != NetSocket::INVALID )
-                     Net::send(client->socket, (const unsigned char*)reply, replyPos);
+                  if (client->socket != 0)
+                  {
+                     tel.SendDataFn(cfg.telnetUser, client->socket, replyPos, (const unsigned char*)reply);
+                  }
                   replyPos = 0;
                   
                   // send prompt
                   const char *prompt = ""; // TOFIX Con::getVariable("Con::Prompt");
-                  if ( client->socket != NetSocket::INVALID )
-                     Net::send(client->socket, (const unsigned char*)prompt, dStrlen(prompt));
+                  if (client->socket != 0)
+                  {
+                     tel.SendDataFn(cfg.telnetUser, client->socket, dStrlen(prompt), (const unsigned char*)prompt);
+                  }
                   client->state = FullAccessConnected;
                }
                else if(!dStrncmp(client->curLine, mListenPassword, PasswordMaxLength))
                {
-                  if ( client->socket != NetSocket::INVALID )
-                     Net::send(client->socket, (const unsigned char*)reply, replyPos);
+                  if (client->socket != 0)
+                  {
+                     tel.SendDataFn(cfg.telnetUser, client->socket, replyPos, (const unsigned char*)reply);
+                  }
                   replyPos = 0;
                   
                   // send prompt
                   const char *listenConnected = "Connected.\r\n";
-                  if ( client->socket != NetSocket::INVALID )
-                     Net::send(client->socket, (const unsigned char*)listenConnected, dStrlen(listenConnected));
+                  if (client->socket != 0)
+                  {
+                     tel.SendDataFn(cfg.telnetUser, client->socket, dStrlen(listenConnected), (const unsigned char*)listenConnected);
+                  }
                   client->state = ReadOnlyConnected;
                }
                else
@@ -267,12 +287,16 @@ void TelnetConsole::process()
                      sendStr = "Too many tries... cya.";
                   else
                      sendStr = "Nope... try agian.\r\nEnter Password:";
-                  if ( client->socket != NetSocket::INVALID )
-                     Net::send(client->socket, (const unsigned char*)sendStr, dStrlen(sendStr));
-                  if(client->state == DisconnectThisDude)
+                  
+                  if (client->socket != 0)
                   {
-                     Net::closeSocket(client->socket);
-                     client->socket = NetSocket::INVALID;
+                     tel.SendDataFn(cfg.telnetUser, client->socket, dStrlen(sendStr), (const unsigned char*)sendStr);
+                  }
+
+                  if (client->state == DisconnectThisDude)
+                  {
+                     tel.StopSocketFn(cfg.telnetUser, client->socket);
+                     client->socket = 0;
                   }
                }
             }
@@ -304,8 +328,10 @@ void TelnetConsole::process()
       // is disabled (by default)
       if(replyPos && mRemoteEchoEnabled)
       {
-         if ( client->socket != NetSocket::INVALID )
-            Net::send(client->socket, (const unsigned char*)reply, replyPos);
+         if (client->socket != 0)
+         {
+            tel.SendDataFn(cfg.telnetUser, client->socket, replyPos, (const unsigned char*)reply);
+         }
       }
    }
    
@@ -313,7 +339,7 @@ void TelnetConsole::process()
    TelnetClient *cl;
    while((cl = *walk) != NULL)
    {
-      if(cl->socket == NetSocket::INVALID)
+      if(cl->socket == 0)
       {
          *walk = cl->nextClient;
          delete cl;
@@ -325,6 +351,26 @@ void TelnetConsole::process()
 
 void TelnetConsole::disconnect()
 {
-   // TODO
+   if (!mValid)
+   {
+      return;
+   }
+
+   KorkApi::Config& cfg = mVMInternal->mConfig;
+   KorkApi::TelnetInterface& tel = cfg.iTelnet;
+   TelnetClient* client = NULL;
+
+   for (client = mClientList; client; client = client->nextClient)
+   {
+      tel.StopSocketFn(cfg.telnetUser, client->socket);
+   }
+
+   client = mClientList;
+   while (client != NULL)
+   {
+      TelnetClient* delClient = client;
+      client = mClientList->nextClient;
+      delete delClient;
+   }
 }
 

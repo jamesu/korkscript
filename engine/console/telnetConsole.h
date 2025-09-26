@@ -57,14 +57,13 @@
 ///
 class TelnetConsole
 {
-   NetSocket mAcceptSocket;
-   S32 mAcceptPort;
-
    enum {
       PasswordMaxLength = 32  ///< Maximum length of the telnet and listen passwords.
    };
 
+   bool mValid;
    bool mRemoteEchoEnabled;
+   S32 mAcceptPort;
    char mTelnetPassword[PasswordMaxLength+1];
    char mListenPassword[PasswordMaxLength+1];
    //ConsoleEvent mPostEvent; // TOFIX
@@ -85,7 +84,7 @@ class TelnetConsole
    /// This is also a linked list.
    struct TelnetClient
    {
-      NetSocket socket;
+      U32 socket;
       char curLine[KorkApi::MaxLineLength];
       S32 curPos;
       S32 state;                       ///< State of the client.

@@ -738,7 +738,7 @@ VmInternal::VmInternal(Vm* vm, Config* cfg) : mSTR(&mAllocBase), mEvalState(this
    mCurrentCodeBlock = NULL;
    mNSState.init(this);
 
-   if (cfg.initTelnet)
+   if (mConfig.initTelnet)
    {
       mTelDebugger = new TelnetDebugger(this);
       mTelConsole = new TelnetConsole(this);
