@@ -7,13 +7,18 @@
 #include <stdio.h>
 #include "embed/api.h"
 #include "embed/internalApi.h" // debug
+#include "core/freeListHandleHelpers.h"
 #include <emscripten/bind.h>
 
 using namespace KorkApi;
 using JsVal = emscripten::val;
+using Handle = emscripten::EM_VAL;
+
+class VmJS;
 
 struct JsEnv
 {
+   VmJS* vm;
    JsVal logFn = JsVal::undefined();
    
    // iFind functions (optional; may be undefined)
@@ -21,6 +26,9 @@ struct JsEnv
    JsVal findByPath         = JsVal::undefined();
    JsVal findByInternalName = JsVal::undefined();
    JsVal findById           = JsVal::undefined();
+
+
+   JsEnv(VmJS* js) : vm(js) {;}
 };
 
 struct WrappedConsoleValue
@@ -106,9 +114,8 @@ struct TypeBinding
 // Converted from input objects in VmJS::registerClass
 struct ClassBinding 
 {
-   Vm* vm;
-   VMObject* vmObject;
-   
+   JsVal peer;
+
    // stable storage for C-string fields
    std::string nameBuf;
    
@@ -129,8 +136,6 @@ struct ClassBinding
    JsVal cb_cf_setByName;
    
    ClassBinding() : 
-   vm(NULL),
-   vmObject(NULL),
    cb_create(JsVal::undefined()),
    cb_destroy(JsVal::undefined()),
    cb_processArgs(JsVal::undefined()),
@@ -148,14 +153,57 @@ struct ClassBinding
 // Per-object binding stored in VMObject::userPtr
 struct ObjBinding
 {
+   U32 mAllocNumber;
+   U8 mGeneration : 7;
+
+   Vm* vm;
+   VMObject* vmObject;
    ClassBinding* klass;  // backlink to class binding
    JsVal         peer; // JS peer returned by create()
    
-   ObjBinding() : klass(nullptr), peer(JsVal::undefined())
+   ObjBinding() : mAllocNumber(0), mGeneration(0), 
+                  vm(nullptr), vmObject(nullptr), 
+                  klass(nullptr), peer(JsVal::undefined())
    {
       
    }
+
+   void reset()
+   {
+      vm = NULL;
+      vmObject = NULL;
+      klass = NULL;
+   }
 };
+
+typedef FreeListPtr<ObjBinding, FreeListHandle::Basic32> ObjToIdList;
+
+static ObjToIdList g_byHandle;
+
+U32 register_object_binding(ObjBinding& ob) 
+{
+   ObjToIdList::HandleType handle = g_byHandle.allocListHandle(&ob);
+   return handle.getValue();
+}
+
+void unregister_object_binding(ObjBinding& w) 
+{
+   g_byHandle.freeListPtr(&w);
+}
+
+ObjBinding* find_wrapper_from_js(const U32 handleNum) 
+{
+   return g_byHandle.getItem(handleNum);
+}
+
+ObjBinding* lookup_wrapper_from_peer(JsVal& val)
+{
+   if (val.hasOwnProperty("vmBindingId"))
+   {
+      return find_wrapper_from_js(val["vmBindingId"].as<U32>());
+   }
+   return NULL;
+}
 
 // Attach a JS object to VMObject::userPtr (replaces existing if present)
 inline void attachJsUser(VMObject* o, JsVal js)
@@ -350,7 +398,7 @@ public:
    
    VmJS(JsVal jsCfg)
    {
-      mEnv = std::make_unique<JsEnv>();
+      mEnv = std::make_unique<JsEnv>(this);
       
       if (!jsCfg.isUndefined() && !jsCfg.isNull())
       {
@@ -469,7 +517,7 @@ public:
    {
       // Build & own a ClassBinding for this registration
       auto kb = std::make_unique<ClassBinding>();
-      kb->vm = mVm;
+      kb->peer = jsSpec;
       
       // name (required)
       if (!js_has_own(jsSpec, "name")) 
@@ -607,6 +655,26 @@ public:
       mVm->setNamespaceUsage((VMNamespace*)nsPtr, usage.c_str());
    }
    
+   void setObjectNamespace(JsVal peer, uintptr_t nsPtr)
+   {
+      ObjBinding* ob = lookup_wrapper_from_peer(peer);
+      if (ob)
+      {
+         //mVm->mInternal->printf(0, "setObjectNamespace being called obj=%p ns=%p", ob->vmObject, nsPtr);
+         mVm->setObjectNamespace(ob->vmObject, (NamespaceId)nsPtr);
+      }
+   }
+   
+   uintptr_t getObjectNamespace(JsVal peer)
+   {
+      ObjBinding* binding = lookup_wrapper_from_peer(peer);
+      if (binding)
+      {
+         return (uintptr_t)binding->vmObject->ns;
+      }
+      return 0;
+   }
+
    void activatePackage(const std::string& pkg)    
    { 
       mVm->activatePackage(StringTable->insert(pkg.c_str())); 
@@ -695,7 +763,7 @@ public:
                              const std::string& kind,
                              JsVal cb)
    {
-      mVm->mInternal->printf(0, "addNamespaceFunction start ptr=%u", nsPtr);
+      //mVm->mInternal->printf(0, "addNamespaceFunction start ptr=%u", nsPtr);
       
       if (cb.isUndefined() || cb.isNull()) return;
       
@@ -706,7 +774,7 @@ public:
       NSFuncCtx* raw = ctx.get();
       mNSFuncBindings.push_back(std::move(ctx));
       
-      mVm->mInternal->printf(0, "Adding as %s uptr=%p", kind.c_str(), raw);
+      //mVm->mInternal->printf(0, "Adding as %s uptr=%p", kind.c_str(), raw);
       
       if (kind == "string") 
       {
@@ -763,6 +831,8 @@ EMSCRIPTEN_BINDINGS(kork_mVmmodule) {
       .function("findNamespace",        &VmJS::findNamespace)
       .function("getGlobalNamespace",   &VmJS::getGlobalNamespace)
       .function("setNamespaceUsage",    &VmJS::setNamespaceUsage)
+      .function("setObjectNamespace",   &VmJS::setObjectNamespace)
+      .function("getObjectNamespace",   &VmJS::getObjectNamespace)
       .function("activatePackage",      &VmJS::activatePackage)
       .function("deactivatePackage",    &VmJS::deactivatePackage)
       .function("linkNamespace",        &VmJS::linkNamespace)
@@ -908,13 +978,13 @@ static VMObject* FindByNameThunk(void* user, StringTableEntry name, VMObject* pa
    }
    JsVal ret = env->findByName(JsVal(name ? name : ""),
                                JsVal(reinterpret_cast<uintptr_t>(parent)));
-   // JS must return a pointer (number) or 0/null
-   uintptr_t p = 0;
-   if (!ret.isNull() && !ret.isUndefined()) 
+   // JS must return wrapped object
+   if (!js_is_nullish(ret)) 
    {
-      p = ret.as<uintptr_t>();
+      ObjBinding* binding = lookup_wrapper_from_peer(ret);
+      return binding ? binding->vmObject : NULL;
    }
-   return reinterpret_cast<VMObject*>(p);
+   return NULL;
 }
 
 static VMObject* FindByPathThunk(void* user, const char* path)
@@ -924,14 +994,17 @@ static VMObject* FindByPathThunk(void* user, const char* path)
    {
       return nullptr;
    }
+
    
    JsVal ret = env->findByPath(JsVal(path ? path : ""));
-   uintptr_t p = 0;
-   if (!ret.isNull() && !ret.isUndefined()) 
+   // JS must return wrapped object
+   if (!js_is_nullish(ret)) 
    {
-      p = ret.as<uintptr_t>();
+      ObjBinding* binding = lookup_wrapper_from_peer(ret);
+      return binding ? binding->vmObject : NULL;
    }
-   return reinterpret_cast<VMObject*>(p);
+
+   return NULL;
 }
 
 static VMObject* FindByInternalNameThunk(void* user, StringTableEntry internalName, bool recursive, VMObject* parent)
@@ -945,12 +1018,13 @@ static VMObject* FindByInternalNameThunk(void* user, StringTableEntry internalNa
    JsVal ret = env->findByInternalName(JsVal(internalName ? internalName : ""),
                                        JsVal(recursive),
                                        JsVal(reinterpret_cast<uintptr_t>(parent)));
-   uintptr_t p = 0;
-   if (!ret.isNull() && !ret.isUndefined()) 
+   // JS must return wrapped object
+   if (!js_is_nullish(ret)) 
    {
-      p = ret.as<uintptr_t>();
+      ObjBinding* binding = lookup_wrapper_from_peer(ret);
+      return binding ? binding->vmObject : NULL;
    }
-   return reinterpret_cast<VMObject*>(p);
+   return NULL;
 }
 
 static VMObject* FindByIdThunk(void* user, SimObjectId objectId)
@@ -963,7 +1037,7 @@ static VMObject* FindByIdThunk(void* user, SimObjectId objectId)
    
    JsVal ret = env->findById(JsVal(objectId));
    uintptr_t p = 0;
-   if (!ret.isNull() && !ret.isUndefined()) 
+   if (!js_is_nullish(ret)) 
    {
       p = ret.as<uintptr_t>();
    }
@@ -979,10 +1053,11 @@ static void Class_CreateThunk(void* user, Vm* vm, CreateClassReturn* outP)
    auto* kb = static_cast<ClassBinding*>(user);
    auto* ob = new ObjBinding();
    ob->klass = kb;
+   VmJS* vmPeer = static_cast<VmJS*>(vm->getUserPtr());
 
    if (!js_is_nullish(kb->cb_create))
    {
-      ob->peer = kb->cb_create();
+      ob->peer = kb->cb_create(kb->peer, vmPeer);
    }
    else
    {
@@ -990,17 +1065,37 @@ static void Class_CreateThunk(void* user, Vm* vm, CreateClassReturn* outP)
       ob = NULL;
    }
 
+   if (!js_is_nullish(ob->peer))
+   {
+      ob->peer.set("vmBindingId", JsVal(register_object_binding(*ob)));
+   }
+
    outP->userPtr = ob;
-   outP->initialFlags = 0;
+   outP->initialFlags = KorkApi::ModDynamicFields;
 }
 
 static void Class_DestroyThunk(void* user, Vm* vm, void* createdPtr)
 {
    auto* kb = static_cast<ClassBinding*>(user);
    auto* ob = static_cast<ObjBinding*>(createdPtr);
+   VmJS* vmPeer = static_cast<VmJS*>(vm->getUserPtr());
+
+   if (!js_is_nullish(ob->peer))
+   {
+      // Find peer
+      if (ob->peer.hasOwnProperty("vmBindingId"))
+      {
+         ObjBinding* wrapper = lookup_wrapper_from_peer(ob->peer);
+         if (wrapper)
+         {
+            unregister_object_binding(*wrapper);
+         }
+      }
+   }
+
    if (ob && !js_is_nullish(kb->cb_destroy))
    {
-      kb->cb_destroy(ob->peer);
+      kb->cb_destroy(kb->peer, vmPeer, ob->peer);
    }
    delete ob;
 }
@@ -1009,6 +1104,8 @@ static bool Class_ProcessArgsThunk(Vm* vm, void* createdPtr, const char* name, b
 {
    auto* ob = static_cast<ObjBinding*>(createdPtr);
    auto* kb = ob ? ob->klass : nullptr;
+   VmJS* vmPeer = static_cast<VmJS*>(vm->getUserPtr());
+
    if (!kb || js_is_nullish(kb->cb_processArgs)) 
    {
       return true; // default ok
@@ -1016,7 +1113,8 @@ static bool Class_ProcessArgsThunk(Vm* vm, void* createdPtr, const char* name, b
    std::vector<JsVal> jsArgv; jsArgv.reserve(argc);
    for (int i=0;i<argc;++i) jsArgv.emplace_back(JsVal(argv[i] ? std::string(argv[i]) : std::string()));
    JsVal jsArray = JsVal::array(jsArgv);
-   return kb->cb_processArgs(JsVal((uintptr_t)vm), JsVal((uintptr_t)0),
+
+   return kb->cb_processArgs(vmPeer, ob->peer,
                              JsVal(name ? name : ""), JsVal(isDatablock), JsVal(internalName), jsArray).as<bool>();
 }
 
@@ -1024,19 +1122,29 @@ static bool Class_AddObjectThunk(Vm* vm, VMObject* object, bool placeAtRoot, U32
 {
    auto* ob = static_cast<ObjBinding*>(object ? object->userPtr : nullptr);
    auto* kb = ob ? ob->klass : nullptr;
+   VmJS* vmPeer = static_cast<VmJS*>(vm->getUserPtr());
 
    if (!kb || js_is_nullish(kb->cb_addObject)) 
    {
       return false;
    }
+
+   ob->vm = vm;
+   ob->vmObject = object;
+   vm->incVMRef(object);
    
-   bool ret = kb->cb_addObject(JsVal((uintptr_t)vm), JsVal((uintptr_t)object),
+   bool ret = kb->cb_addObject(vmPeer, ob->peer,
                            JsVal(placeAtRoot), JsVal(groupAddId)).as<bool>();
 
    if (ret)
    {
-      kb->vmObject = object;
-      vm->incVMRef(object);
+      //vm->mInternal->printf(0, "AddObject vmObject=%p bid=%u", object, ob->mAllocNumber);
+   }
+   else
+   {
+      ob->vm = NULL;
+      ob->vmObject = NULL;
+      vm->decVMRef(object);
    }
 
    return ret;
@@ -1045,18 +1153,24 @@ static bool Class_AddObjectThunk(Vm* vm, VMObject* object, bool placeAtRoot, U32
 
 static void Class_RemoveObjectThunk(void* user, Vm* vm, VMObject* object)
 {
+   auto* kb = static_cast<ClassBinding*>(user);
    auto* ob = static_cast<ObjBinding*>(object ? object->userPtr : nullptr);
-   auto* kb = ob ? ob->klass : nullptr;
+   kb = ob ? ob->klass : kb;
+   VmJS* vmPeer = static_cast<VmJS*>(vm->getUserPtr());
 
    bool ret;
 
    if (kb && !js_is_nullish(kb->cb_removeObject)) 
    {
-      kb->cb_removeObject(JsVal((uintptr_t)object)).as<bool>();
+      kb->cb_removeObject(kb->peer, vmPeer, ob->peer).as<bool>();
    }
 
-   kb->vmObject = NULL;
-   vm->decVMRef(object);
+   if (ob)
+   {
+      vm->decVMRef(ob->vmObject);
+      ob->vm = NULL;
+      ob->vmObject = NULL;
+   }
 }
 
 static SimObjectId Class_GetIdThunk(VMObject* object)
@@ -1113,6 +1227,11 @@ static ConsoleValue CF_GetFieldByNameThunk(Vm* vm, VMObject* object, const char*
    auto* kb = ob ? ob->klass : nullptr;
    if (!kb || js_is_nullish(kb->cb_cf_getByName))
    {
+      if (ob->peer.hasOwnProperty(name))
+      {
+         CVFromJSReturn(vm, ob->peer[name], cv);
+         return cv;
+      }
       cv.setString(nullptr, ConsoleValue::ZoneExternal);
       return cv;
    }
@@ -1126,7 +1245,6 @@ static void CF_SetFieldByNameThunk(Vm* vm, VMObject* object, const char* name, C
 {
    auto* ob = static_cast<ObjBinding*>(object ? object->userPtr : nullptr);
    auto* kb = ob ? ob->klass : nullptr;
-   if (!kb || js_is_nullish(kb->cb_cf_setByName)) return;
    
    // CV -> JS (number or string). Use VM for string conversion when needed.
    JsVal jsV;
@@ -1140,10 +1258,18 @@ static void CF_SetFieldByNameThunk(Vm* vm, VMObject* object, const char* name, C
    }
    else 
    {
-      const char* s = kb->vm ? kb->vm->valueAsString(value) : "";
+      const char* s = vm->valueAsString(value);
       jsV = JsVal(s ? std::string(s) : std::string());
    }
-   kb->cb_cf_setByName(ob->peer, JsVal(name ? name : ""), jsV);
+
+   if (!kb || js_is_nullish(kb->cb_cf_setByName))
+   {
+      ob->peer.set(name, jsV);
+   }
+   else
+   {
+      kb->cb_cf_setByName(ob->peer, JsVal(name ? name : ""), jsV);
+   }
 }
 
 static void Type_SetValueThunk(
