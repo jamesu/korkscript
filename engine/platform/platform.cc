@@ -31,14 +31,6 @@ S32 sgBackgroundProcessSleepTime = 200;
 S32 sgTimeManagerProcessInterval = 0;
 
 
-void Platform::initConsole()
-{
-#if TOFIX
-   Con::addVariable("Pref::backgroundSleepTime", TypeS32, &sgBackgroundProcessSleepTime);
-   Con::addVariable("Pref::timeManagerProcessInterval", TypeS32, &sgTimeManagerProcessInterval);
-#endif
-}
-
 S32 Platform::getBackgroundSleepTime()
 {
    return sgBackgroundProcessSleepTime;
@@ -68,38 +60,6 @@ bool Platform::hasExtension(const char* pFilename, const char* pExtension)
     // Check if extension exists.
     return dStricmp( pFilename + filenameLength - extensionLength, pExtension ) == 0;
 }
-
-/*! @defgroup PlatformFunctions Platform
- @ingroup TorqueScriptFunctions
- @{
- */
-
-#if TOFIX
-//-----------------------------------------------------------------------------
-
-/*! Get the local time
- @return the local time formatted as: monthday/month/year hour/minute/second
- */
-ConsoleFunction( getLocalTime, const char*, 1, 1, "")
-{
-   char* buf = Con::getReturnBuffer(128);
-   
-   Platform::LocalTime lt;
-   Platform::getLocalTime(lt);
-   
-   dSprintf(buf, 128, "%d/%d/%d %02d:%02d:%02d",
-            lt.monthday,
-            lt.month + 1,
-            lt.year + 1900,
-            lt.hour,
-            lt.min,
-            lt.sec);
-   
-   return buf;
-}
-#endif
-
-/*! @} */ // group PlatformFunctions
 
 
 

@@ -63,7 +63,6 @@ static bool deleteDirectoryRecusrive( const char* pPath )
     if ( !Platform::dumpDirectories( pPath, directories, 0 ) )
     {
         // Warn.
-        // TOFIX Con::warnf( "Could not retrieve sub-directories of '%s'.", pPath );
         return false;
     }
 
@@ -86,8 +85,6 @@ static bool deleteDirectoryRecusrive( const char* pPath )
     Vector<Platform::FileInfo> files;
     if ( !Platform::dumpPath( pPath, files, 0 ) )
     {
-        // Warn.
-        // TOFIX Con::warnf( "Could not retrieve files for directory '%s'.", pPath );
         return false;
     }
 
@@ -100,8 +97,6 @@ static bool deleteDirectoryRecusrive( const char* pPath )
         // Delete file.
         if ( !Platform::fileDelete( filePathBuffer ) )
         {
-            // Warn.
-            // TOFIX Con::warnf( "Could not delete file '%s'.", filePathBuffer );
             return false;
         }
     }
@@ -109,8 +104,6 @@ static bool deleteDirectoryRecusrive( const char* pPath )
     // Delete the directory.
     if ( !Platform::fileDelete( pPath ) )
     {
-        // Warn.
-        // TOFIX Con::warnf( "Could not delete directory '%s'.", pPath );
         return false;
     }
 
@@ -127,18 +120,11 @@ bool Platform::deleteDirectory( const char* pPath )
     // Is the path a file?
     if ( Platform::isFile( pPath ) )
     {
-        // Yes, so warn.
-        // TOFIX Con::warnf( "Cannot delete directory '%s' as it specifies a file.", pPath );
         return false;
     }
-#if TOFIX
-    // Expand module location.
-    char pathBuffer[1024] ]
-    Con::expandPath( pathBuffer, sizeof(pathBuffer), pPath, NULL, true );
-
     // Delete directory recursively.
-    return deleteDirectoryRecusrive( pathBuffer );
-#endif
+
+    return deleteDirectoryRecusrive( pPath );
 }
 
 //-----------------------------------------------------------------------------
@@ -410,53 +396,6 @@ StringTableEntry Platform::stripBasePath(const char *path)
 
 StringTableEntry Platform::getPrefsPath(const char *file /* = NULL */)
 {
-#if TOFIX
-    char buf[1024];
-#if defined(TORQUE_OS_IOS) || defined(TORQUE_OS_ANDROID)
-    
-    if ( file )
-    {
-        if ( dStrstr( file, ".." ) || dStrstr( file, "./" ) || dStrstr( file, "~/" ) )
-        {
-            Con::errorf( "getPrefsPath - Filename (%s) cannot be relative.", file );
-            
-            return NULL;
-        }
-        
-        dSprintf( buf, sizeof( buf ), "%s/%s", Platform::getUserDataDirectory(), file );
-    }
-    else
-    {
-        dSprintf( buf, sizeof( buf ), "%s", Platform::getUserDataDirectory() );
-    }
-    
-    return StringTable->insert(buf, true);
-
-#endif
-
-   const char *company = Con::getVariable("$Game::CompanyName");
-   if(company == NULL || *company == 0)
-      company = "GarageGames";
-
-   const char *appName = Con::getVariable("$Game::ProductName");
-   if(appName == NULL || *appName == 0)
-      appName = TORQUE_GAME_NAME;
-
-   if(file)
-   {
-      if(dStrstr(file, "..") || dStrstr(file, "./") || dStrstr(file, "~/"))
-      {
-         Con::errorf("getPrefsPath - Filename (%s) cannot be relative.", file);
-         return NULL;
-      }
-
-      dSprintf(buf, sizeof(buf), "%s/%s/%s/%s", Platform::getUserDataDirectory(), company, appName, file);
-   }
-   else
-      dSprintf(buf, sizeof(buf), "%s/%s/%s", Platform::getUserDataDirectory(), company, appName);
-
-   return StringTable->insert(buf, true);
-#endif
    return "";
 }
 

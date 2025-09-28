@@ -158,7 +158,6 @@ struct Platform
 
     /// Application.
     static void init();
-    static void initConsole();
     static void process();
     static void shutdown();
     static void sleep(U32 ms);

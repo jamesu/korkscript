@@ -23,6 +23,10 @@
 #ifndef _TORQUE_TYPES_H_
 #define _TORQUE_TYPES_H_
 
+#include <cstddef>
+#include <stdlib.h>
+#include <algorithm>
+
 //------------------------------------------------------------------------------
 //-------------------------------------- Basic Types...
 
@@ -37,6 +41,8 @@ typedef unsigned int       U32;     ///< Compiler independent Unsigned 32-bit in
 
 typedef float              F32;     ///< Compiler independent 32-bit float
 typedef double             F64;     ///< Compiler independent 64-bit float
+
+typedef size_t  dsize_t;
 
 
 //------------------------------------------------------------------------------
@@ -76,7 +82,7 @@ static const F32 F32_MAX = F32(3.402823466e+38F);                 ///< Constant 
 //--------------------------------------
 // Identify the compiler being used
 
-// Metrowerks CodeWarrior
+// Visual studio
 #if defined(_MSC_VER)
 #  include "platform/types.visualc.h"
 // GNU GCC
@@ -84,6 +90,59 @@ static const F32 F32_MAX = F32(3.402823466e+38F);                 ///< Constant 
 #  include "platform/types.gcc.h"
 #else
 #  error "Unknown Compiler"
+#endif
+
+
+//--------------------------------------
+// Identify the Operating System
+#if defined(__WIN32__) || defined(_WIN32)
+#  define TORQUE_OS_STRING "Win32"
+#  define TORQUE_OS_WIN32
+#  include "platform/types.win32.h"
+#elif defined(__ANDROID__)
+#ifndef TORQUE_OS_ANDROID
+      #define TORQUE_OS_ANDROID
+#endif
+#elif defined(EMSCRIPTEN)
+#  define TORQUE_OS_STRING "Emscripten"
+#  define TORQUE_OS_EMSCRIPTEN
+#elif defined(__linux__)
+#  define TORQUE_OS_STRING "Linux"
+#  define TORQUE_OS_LINUX
+#elif defined(__OpenBSD__)
+#  define TORQUE_OS_STRING "OpenBSD"
+#  define TORQUE_OS_OPENBSD
+#elif defined(__FreeBSD__)
+#  define TORQUE_OS_STRING "FreeBSD"
+#  define TORQUE_OS_FREEBSD
+#elif defined(TORQUE_OS_IOS)
+   #ifndef TORQUE_OS_IOS
+      #define TORQUE_OS_IOS
+   #endif
+#elif defined(__APPLE__)
+#ifndef TORQUE_OS_MAC
+#  define TORQUE_OS_MAC
+#endif
+#ifndef TORQUE_OS_OSX
+#  define TORQUE_OS_OSX
+#endif
+#else 
+#  error "Unsupported Operating System"
+#endif
+
+// Set time constant
+#if defined(__WIN32__) || defined(_WIN32)
+struct FileTime                     
+{
+   U32 v1;
+   U32 v2;
+};
+#else
+typedef U64 FileTime;
+#endif
+
+#ifndef NULL
+#  define NULL 0
 #endif
 
 //--------------------------------------

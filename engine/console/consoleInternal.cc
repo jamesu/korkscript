@@ -45,9 +45,9 @@
 //
 //---------------------------------------------------------------
 
-static S32 QSORT_CALLBACK varCompare(const void* a,const void* b)
+bool varCompare(const Dictionary::Entry* a, const Dictionary::Entry* b)
 {
-   return dStricmp( (*((Dictionary::Entry **) a))->name, (*((Dictionary::Entry **) b))->name );
+    return dStricmp(a->name, b->name) < 0;
 }
 
 void Dictionary::exportVariables(const char *varString, const char *fileName, bool append)
@@ -70,7 +70,7 @@ void Dictionary::exportVariables(const char *varString, const char *fileName, bo
    if(!sortList.size())
       return;
    
-   dQsort((void *)sortList.address(), sortList.size(), sizeof(Entry *), varCompare);
+   std::sort(sortList.begin(), sortList.end(), varCompare);
    
    Vector<Entry *>::iterator s;
    char expandBuffer[1024];

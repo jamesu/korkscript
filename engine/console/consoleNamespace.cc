@@ -370,12 +370,9 @@ Namespace::Entry *Namespace::lookup(StringTableEntry name)
    return mHashTable[index];
 }
 
-static S32 QSORT_CALLBACK compareEntries(const void* a,const void* b)
+bool compareEntries(const Namespace::Entry* a, const Namespace::Entry* b)
 {
-   const Namespace::Entry* fa = *((Namespace::Entry**)a);
-   const Namespace::Entry* fb = *((Namespace::Entry**)b);
-
-   return dStricmp(fa->mFunctionName, fb->mFunctionName);
+    return dStricmp(a->mFunctionName, b->mFunctionName) < 0;
 }
 
 void Namespace::getEntryList(Vector<Entry *> *vec)
@@ -387,7 +384,7 @@ void Namespace::getEntryList(Vector<Entry *> *vec)
       if(mHashTable[i])
          vec->push_back(mHashTable[i]);
 
-   dQsort(vec->address(),vec->size(),sizeof(Namespace::Entry *),compareEntries);
+   std::sort(vec->begin(),vec->end(),compareEntries);
 }
 
 Namespace::Entry *Namespace::createLocalEntry(StringTableEntry name)

@@ -457,8 +457,4 @@ S32 dSscanf(const char *buffer, const char *format, ...)
 #endif
 }
 
-void dQsort(void *base, U32 nelem, U32 width, S32 (QSORT_CALLBACK *fcmp)(const void *, const void *))
-{
-   qsort(base, nelem, width, fcmp);
-}
 

@@ -62,8 +62,6 @@ File::Status File::open(const char *filename, const AccessMode openMode)
    
    if (fp == NULL)
    {
-      // handle not created successfully
-      // TOFIX Con::errorf("Can't open file: %s", filename);
       return setStatus();
    }
    else

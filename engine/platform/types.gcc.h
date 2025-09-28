@@ -54,67 +54,6 @@ typedef unsigned long long  U64;
 
 
 //--------------------------------------
-// Identify the Operating System
-#if defined(__WIN32__) || defined(_WIN32)
-#  define TORQUE_OS_STRING "Win32"
-#  define TORQUE_OS_WIN32
-#  define TORQUE_SUPPORTS_NASM
-#  define TORQUE_SUPPORTS_GCC_INLINE_X86_ASM
-#  include "platform/types.win32.h"
-#elif defined(__ANDROID__)
-#ifndef TORQUE_OS_ANDROID
-		#define TORQUE_OS_ANDROID
-#endif
-#  include "platform/types.arm.h"
-#elif defined(EMSCRIPTEN)
-#  define TORQUE_OS_STRING "Emscripten"
-#  define TORQUE_OS_EMSCRIPTEN
-#  include "platform/types.posix.h"
-#elif defined(__linux__)
-#  define TORQUE_OS_STRING "Linux"
-#  define TORQUE_OS_LINUX
-#  define TORQUE_SUPPORTS_NASM
-#  define TORQUE_SUPPORTS_GCC_INLINE_X86_ASM
-#  include "platform/types.posix.h"
-
-#elif defined(__OpenBSD__)
-#  define TORQUE_OS_STRING "OpenBSD"
-#  define TORQUE_OS_OPENBSD
-#  define TORQUE_SUPPORTS_NASM
-#  define TORQUE_SUPPORTS_GCC_INLINE_X86_ASM
-#  include "platform/types.posix.h"
-
-#elif defined(__FreeBSD__)
-#  define TORQUE_OS_STRING "FreeBSD"
-#  define TORQUE_OS_FREEBSD
-#  define TORQUE_SUPPORTS_NASM
-#  define TORQUE_SUPPORTS_GCC_INLINE_X86_ASM
-#  include "platform/types.posix.h"
-
-#elif defined(TORQUE_OS_IOS)
-	#ifndef TORQUE_OS_IOS
-		#define TORQUE_OS_IOS
-	#endif
-#  include "platform/types.arm.h"
-
-#elif defined(__APPLE__)
-#ifndef TORQUE_OS_MAC
-#  define TORQUE_OS_MAC
-#endif
-#ifndef TORQUE_OS_OSX
-#  define TORQUE_OS_OSX
-#endif
-#if defined(i386)
-//#  define TORQUE_SUPPORTS_NASM
-#endif
-#  include "platform/types.ppc.h"
-
-#else 
-#  error "GCC: Unsupported Operating System"
-#endif
-
-
-//--------------------------------------
 // Identify the CPU
 #if defined(i386)
 #  define TORQUE_CPU_STRING "Intel x86"

@@ -100,17 +100,16 @@ void SimObjectList::removeStable(SimObject* obj)
 
 //-----------------------------------------------------------------------------
 
-S32 QSORT_CALLBACK SimObjectList::compareId(const void* a,const void* b)
+bool SimObjectList::compareId(const SimObject* a, const SimObject* b)
 {
-   return (*reinterpret_cast<const SimObject* const*>(a))->getId() -
-      (*reinterpret_cast<const SimObject* const*>(b))->getId();
+    return a->getId() < b->getId();
 }
 
 //-----------------------------------------------------------------------------
 
 void SimObjectList::sortId()
 {
-   dQsort(address(),size(),sizeof(value_type),compareId);
+   std::sort(begin(),end(),compareId);
 }
 
 // END T2D BLOCK
@@ -253,11 +252,10 @@ void SimFieldDictionary::assignFrom(SimFieldDictionary *dict)
          setFieldValue(walk->slotName, walk->value);
 }
 
-static S32 QSORT_CALLBACK compareEntries(const void* a,const void* b)
+bool compareEntries(const SimFieldDictionary::Entry* fa,
+                    const SimFieldDictionary::Entry* fb)
 {
-   SimFieldDictionary::Entry *fa = *((SimFieldDictionary::Entry **)a);
-   SimFieldDictionary::Entry *fb = *((SimFieldDictionary::Entry **)b);
-   return dStricmp(fa->slotName, fb->slotName);
+    return dStricmp(fa->slotName, fb->slotName) < 0;
 }
 
 void SimFieldDictionary::writeFields(SimObject *obj, Stream &stream, U32 tabStop)
@@ -288,7 +286,7 @@ void SimFieldDictionary::writeFields(SimObject *obj, Stream &stream, U32 tabStop
    }
 
    // Sort Entries to prevent version control conflicts
-   dQsort(flist.address(),flist.size(),sizeof(Entry *),compareEntries);
+   std::sort(flist.begin(),flist.end(),compareEntries);
 
    // Save them out
    for(Vector<Entry *>::iterator itr = flist.begin(); itr != flist.end(); itr++)
@@ -328,7 +326,7 @@ void SimFieldDictionary::printFields(SimObject *obj)
          flist.push_back(walk);
       }
    }
-   dQsort(flist.address(),flist.size(),sizeof(Entry *),compareEntries);
+   std::sort(flist.begin(),flist.end(),compareEntries);
 
    for(Vector<Entry *>::iterator itr = flist.begin(); itr != flist.end(); itr++)
    {
@@ -1338,12 +1336,10 @@ ConsoleMethod(SimObject,schedule, S32, 4, 0, "time , command , [arg]* ")
    return ret;
 }
 
-static S32 QSORT_CALLBACK compareFields(const void* a,const void* b)
+static bool compareFields(const AbstractClassRep::Field* fa,
+                   const AbstractClassRep::Field* fb)
 {
-   const AbstractClassRep::Field* fa = *((const AbstractClassRep::Field**)a);
-   const AbstractClassRep::Field* fb = *((const AbstractClassRep::Field**)b);
-   
-   return dStricmp(fa->pFieldname, fb->pFieldname);
+    return dStricmp(fa->pFieldname, fb->pFieldname) < 0;
 }
 
 /*! return the number of dynamic ("add-on") fields.
@@ -1450,7 +1446,7 @@ void SimObject::dump()
    for(U32 i = 0; i < (U32)list.size(); i++)
       flist.push_back(&list[i]);
 
-   dQsort(flist.address(),flist.size(),sizeof(AbstractClassRep::Field *),compareFields);
+   std::sort(flist.begin(),flist.end(),compareFields);
 
    for(Vector<const AbstractClassRep::Field *>::iterator itr = flist.begin(); itr != flist.end(); itr++)
    {

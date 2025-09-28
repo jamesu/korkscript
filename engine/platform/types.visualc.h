@@ -40,29 +40,10 @@ typedef unsigned _int64 U64;
 
 //--------------------------------------
 // Identify the compiler string
-#if _MSC_VER < 1200
-   // No support for old compilers
-#  error "VC: Minimum VisualC++ 6.0 or newer required"
-#endif
-
 #if _MSC_VER < 1600
-#  define TORQUE_COMPILER_STRING "VisualC++"
-#  define for if(false) {} else for   ///< Hack to work around Microsoft VC's non-C++ compliance on variable scoping
-#else
-#  define TORQUE_COMPILER_STRING "VisualC++"
+   // No support for old compilers
+#  error "VC: Minimum Visual Studio 2010 or newer required"
 #endif
-
-
-//--------------------------------------
-// Identify the Operating System
-#if defined(_WIN32)
-#  define TORQUE_OS_STRING "Win32"
-#  define TORQUE_OS_WIN32
-#  include "platform/types.win32.h"
-#else 
-#  error "VC: Unsupported Operating System"
-#endif
-
 
 //--------------------------------------
 // Identify the CPU
@@ -70,16 +51,14 @@ typedef unsigned _int64 U64;
 #  define TORQUE_CPU_STRING "x86"
 #  define TORQUE_CPU_X86
 #  define TORQUE_LITTLE_ENDIAN
-//#  define TORQUE_SUPPORTS_NASM
-#  define TORQUE_SUPPORTS_VC_INLINE_X86_ASM
-#else
-
-#if defined(_M_AMD64)
+#elif defined(_M_AMD64)
 #  define TORQUE_CPU_STRING "x86_64"
 #  define TORQUE_64
 #  define TORQUE_LITTLE_ENDIAN
-//#  define TORQUE_SUPPORTS_NASM
-//#  define TORQUE_SUPPORTS_VC_INLINE_X86_ASM
+#elif defined(_M_ARM64)
+#  define TORQUE_CPU_STRING "arm64"
+#  define TORQUE_64
+#  define TORQUE_LITTLE_ENDIAN
 #  else
 #  error "VC: Unsupported Target CPU"
 #endif

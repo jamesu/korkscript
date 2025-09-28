@@ -375,14 +375,12 @@ void AbstractClassRep::registerClassWithVm(KorkApi::Vm* vm)
 
 //--------------------------------------
 
-S32 QSORT_CALLBACK ACRCompare(const void *aptr, const void *bptr)
+bool ACRCompare(const AbstractClassRep* a, const AbstractClassRep* b)
 {
-   const AbstractClassRep *a = *((const AbstractClassRep **) aptr);
-   const AbstractClassRep *b = *((const AbstractClassRep **) bptr);
+    if (a->mClassType != b->mClassType)
+        return a->mClassType < b->mClassType;
 
-   if(a->mClassType != b->mClassType)
-      return a->mClassType - b->mClassType;
-   return dStricmp(a->getClassName(), b->getClassName());
+    return dStricmp(a->getClassName(), b->getClassName()) < 0;
 }
 
 void AbstractClassRep::initialize()
@@ -442,7 +440,7 @@ void AbstractClassRep::initialize()
             continue; // If no classes matched, skip to next.
 
          // Sort by type and then by name.
-         dQsort((void *)dynamicTable.address(), dynamicTable.size(), sizeof(AbstractClassRep *), ACRCompare);
+         std::sort(dynamicTable.begin(), dynamicTable.end(), ACRCompare);
 
          // Allocate storage in the classTable
          classTable[group][type] = new AbstractClassRep*[NetClassCount[group][type]];

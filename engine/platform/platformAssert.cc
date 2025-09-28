@@ -23,25 +23,6 @@
 #include "platform/platformAssert.h"
 #include <stdarg.h>
 
-/*! @addtogroup ConsoleOutput Console Output
- @ingroup TorqueScriptFunctions
- @{
- */
-
-/*!  Fatal Script Assertion
- @param condition if false, exit the program
- @param message message to print on assertion
- */
-#if TOFIX
-ConsoleFunction( Assert, void, 3, 3, "condition, message")
-{
-   // Process Assertion.
-   AssertISV( dAtob(argv[1]), argv[2] );
-}
-#endif
-
-/*! @} */ // group ConsoleOutput
-
 //-------------------------------------- STATIC Declaration
 PlatformAssert *PlatformAssert::platformAssert = NULL;
 
@@ -76,7 +57,6 @@ void PlatformAssert::destroy()
 //--------------------------------------
 bool PlatformAssert::displayMessageBox(const char *title, const char *message, bool retry)
 {
-   // TOFIX
    return false;
 }
 
@@ -111,45 +91,11 @@ bool PlatformAssert::process(Type         assertType,
    if(processing)
       Platform::debugBreak();
 
-   processing = true;
-   bool ret = true;
+   // NOTE: should have derivative of this to bring up message box
 
-#if TOFIX
-   // always dump to the Assert to the Console
-   if (Con::isActive())
-   {
-      if (assertType == Warning)
-          Con::warnf(ConsoleLogEntry::Assert, "%s: (%s @ %ld) %s", typeName[assertType], filename, lineNumber, message);
-      else
-          Con::errorf(ConsoleLogEntry::Assert, "%s: (%s @ %ld) %s", typeName[assertType], filename, lineNumber, message);
-   }
-
-   // if not a WARNING pop-up a dialog box
-   if (assertType != Warning)
-   {
-      // used for processing navGraphs (an assert won't botch the whole build)
-      if(Con::getBoolVariable("$FP::DisableAsserts", false) == true)
-         Platform::forceShutdown(1);
-
-      char buffer[2048];
-      dSprintf(buffer, 2048, "%s: (%s @ %ld)", typeName[assertType], filename, lineNumber);
-
-#ifdef TORQUE_DEBUG
-      // In debug versions, allow a retry even for ISVs...
-      bool retry = displayMessageBox(buffer, message, true);
-#else
-      bool retry = displayMessageBox(buffer, message, ((assertType == Fatal) ? true : false) );
-#endif
-      if(!retry)
-         Platform::forceShutdown(1);
-      
-      ret = askToEnterDebugger(message);
-   }
-   
-#endif
    processing = false;
 
-   return ret;
+   return false;
 }
 
 bool PlatformAssert::processingAssert()

@@ -106,8 +106,6 @@ class Vector
    typedef S32    difference_type;
    typedef U32    size_type;
 
-   typedef difference_type (QSORT_CALLBACK *compare_func)(const T *a, const T *b);
-
    Vector<T>& operator=(const Vector<T>& p);
 
    iterator       begin();
@@ -165,7 +163,7 @@ class Vector
    void erase_fast(iterator);
    void clear();
    void compact();
-   void sort(compare_func f);
+   template<class C> void sort(C&& f);
    void fill( const T& value );
    
    T& first();
@@ -426,11 +424,9 @@ template<class T> inline void Vector<T>::compact()
    resize(mElementCount);
 }
 
-typedef int (QSORT_CALLBACK *qsort_compare_func)(const void *, const void *);
-
-template<class T> inline void Vector<T>::sort(compare_func f)
+template<class T> template<class C> inline void Vector<T>::sort(C&& f)
 {
-   qsort(address(), size(), sizeof(T), (qsort_compare_func) f);
+   std::sort(begin(), end(), f);
 }
 
 template< class T > inline void Vector< T >::fill( const T& value )

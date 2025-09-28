@@ -100,7 +100,7 @@ typedef U32 SimObjectId;
 // BEGIN T2D BLOCK
 class SimObjectList : public VectorPtr<SimObject*>
 {
-   static S32 QSORT_CALLBACK compareId(const void* a,const void* b);
+   static bool compareId(const SimObject* a, const SimObject* b);
 
 public:
    void pushBack(SimObject*);       ///< Add the SimObject* to the end of the list, unless it's already in the list.
@@ -1569,7 +1569,7 @@ private:
    S32 mLastModifiedKey;
 
 public:
-   static S32 QSORT_CALLBACK compareModifiedKey(const void* a,const void* b);
+   static bool compareModifiedKey(const SimObject* a,const SimObject* b);
    void sort();
    SimDataBlockGroup();
 };
