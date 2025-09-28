@@ -796,6 +796,11 @@ VmInternal::VmInternal(Vm* vm, Config* cfg) : mSTR(&mAllocBase), mEvalState(this
       mConfig.logFn = [](U32 level, const char* buffer, void* user) {
       };
    }
+   if (mConfig.addTagFn == NULL) {
+      mConfig.addTagFn = [](const char* vmString, void* user) {
+         return (U32)0;
+      };
+   }
 
    if (mConfig.iFind.FindObjectByNameFn == NULL) {
       mConfig.iFind.FindObjectByNameFn = [](void* userPtr, StringTableEntry name, VMObject* parent) {

@@ -1300,7 +1300,7 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
             // it's possible the string has already been converted
             if(U8(curStringTable[code[ip]]) != KorkApi::StringTagPrefixByte)
             {
-               U32 id = 0;// TOFIX GameAddTaggedString(curStringTable + code[ip]);
+               U32 id = mVM->mConfig.addTagFn(curStringTable + code[ip], mVM->mConfig.addTagUser);
                dSprintf(curStringTable + code[ip] + 1, 7, "%d", id);
                *(curStringTable + code[ip]) = KorkApi::StringTagPrefixByte;
             }

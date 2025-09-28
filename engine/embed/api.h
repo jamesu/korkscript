@@ -167,6 +167,7 @@ struct VMIterator {
 typedef S32 ClassId;
 
 typedef void (*ConsumerCallback)(U32 level, const char *consoleLine, void* userPtr);
+typedef U32 (*AddTaggedStringCallback)(const char* vmString, void* userPtr);
 
 
 struct Vm;
@@ -286,6 +287,9 @@ struct Config {
 
   FindObjectsInterface iFind;
    void* findUser;
+
+   AddTaggedStringCallback addTagFn;
+   void* addTagUser;
 
    void* vmUser;
 
