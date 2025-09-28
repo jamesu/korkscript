@@ -2,7 +2,6 @@
 #include "console/console.h"
 
 #include "core/fileStream.h"
-#include "console/compiler.h"
 
 // This is a temporary hack to get tools using the library to
 // link in this module which contains no other references.
@@ -11,13 +10,15 @@ bool LinkConsoleFunctions = false;
 // Buffer for expanding script filenames.
 static char scriptFilenameBuffer[1024];
 
-#if TOFIX
+extern KorkApi::Vm* sVM;
+
 //----------------------------------------------------------------
 
 ConsoleFunction(expandFilename, const char*, 2, 2, "(string filename)")
 {
    argc;
-   char* ret = Con::getReturnBuffer( 1024 );
+   KorkApi::ConsoleValue retV = Con::getReturnBuffer( 1024 );
+   char *ret = (char*)retV.evaluatePtr(vmPtr->getAllocBase());
    Con::expandScriptFilename(ret, 1024, argv[1]);
    return ret;
 }
@@ -99,7 +100,8 @@ ConsoleFunction(rtrim, const char *,2,2,"(string value)")
          firstWhitespace = pos + 1;
       pos++;
    }
-   char *ret = Con::getReturnBuffer(firstWhitespace + 1);
+   KorkApi::ConsoleValue retV = Con::getReturnBuffer(firstWhitespace + 1);
+   char *ret = (char*)retV.evaluatePtr(vmPtr->getAllocBase());
    dStrncpy(ret, argv[1], firstWhitespace);
    ret[firstWhitespace] = 0;
    return ret;
@@ -120,7 +122,8 @@ ConsoleFunction(trim, const char *,2,2,"(string)")
          firstWhitespace = pos + 1;
       pos++;
    }
-   char *ret = Con::getReturnBuffer(firstWhitespace + 1);
+   KorkApi::ConsoleValue retV = Con::getReturnBuffer(firstWhitespace + 1);
+   char *ret = (char*)retV.evaluatePtr(vmPtr->getAllocBase());
    dStrncpy(ret, ptr, firstWhitespace);
    ret[firstWhitespace] = 0;
    return ret;
@@ -130,7 +133,8 @@ ConsoleFunction(stripChars, const char*, 3, 3, "(string value, string chars) "
                 "Remove all the characters in chars from value." )
 {
    argc;
-   char* ret = Con::getReturnBuffer( dStrlen( argv[1] ) + 1 );
+   KorkApi::ConsoleValue retV = Con::getReturnBuffer( dStrlen( argv[1] ) + 1 );
+   char *ret = (char*)retV.evaluatePtr(vmPtr->getAllocBase());
    dStrcpy( ret, argv[1] );
    U32 pos = dStrcspn( ret, argv[2] );
    while ( pos < dStrlen( ret ) )
@@ -144,7 +148,8 @@ ConsoleFunction(stripChars, const char*, 3, 3, "(string value, string chars) "
 ConsoleFunction(stripColorCodes, const char*, 2,2,  "(stringtoStrip) - "
                 "remove TorqueML color codes from the string.")
 {
-   char* ret = Con::getReturnBuffer( dStrlen( argv[1] ) + 1 );
+   KorkApi::ConsoleValue retV = Con::getReturnBuffer( dStrlen( argv[1] ) + 1 );
+   char *ret = (char*)retV.evaluatePtr(vmPtr->getAllocBase());
    dStrcpy(ret, argv[1]);
    Con::stripColorChars(ret);
    return ret;
@@ -154,7 +159,8 @@ ConsoleFunction(strlwr,const char *,2,2,"(string) "
                 "Convert string to lower case.")
 {
    argc;
-   char *ret = Con::getReturnBuffer(dStrlen(argv[1]) + 1);
+   KorkApi::ConsoleValue retV = Con::getReturnBuffer(dStrlen(argv[1]) + 1);
+   char *ret = (char*)retV.evaluatePtr(vmPtr->getAllocBase());
    dStrcpy(ret, argv[1]);
    return dStrlwr(ret);
 }
@@ -163,7 +169,8 @@ ConsoleFunction(strupr,const char *,2,2,"(string) "
                 "Convert string to upper case.")
 {
    argc;
-   char *ret = Con::getReturnBuffer(dStrlen(argv[1]) + 1);
+   KorkApi::ConsoleValue retV = Con::getReturnBuffer(dStrlen(argv[1]) + 1);
+   char *ret = (char*)retV.evaluatePtr(vmPtr->getAllocBase());
    dStrcpy(ret, argv[1]);
    return dStrupr(ret);
 }
@@ -194,7 +201,10 @@ ConsoleFunction(strreplace, const char *, 4, 4, "(string source, string from, st
          count++;
       }
    }
-   char *ret = Con::getReturnBuffer(dStrlen(argv[1]) + 1 + (toLen - fromLen) * count);
+
+   KorkApi::ConsoleValue retV = Con::getReturnBuffer(dStrlen(argv[1]) + 1 + (toLen - fromLen) * count);
+   char *ret = (char*)retV.evaluatePtr(vmPtr->getAllocBase());
+
    U32 scanp = 0;
    U32 dstp = 0;
    for(;;)
@@ -241,7 +251,8 @@ ConsoleFunction(getSubStr, const char *, 4, 4, "getSubStr(string str, int start,
    if (startPos + desiredLen > baseLen)
       actualLen = baseLen - startPos;
 
-   char *ret = Con::getReturnBuffer(actualLen + 1);
+   KorkApi::ConsoleValue retV = Con::getReturnBuffer(actualLen + 1);
+   char *ret = (char*)retV.evaluatePtr(vmPtr->getAllocBase());
    dStrncpy(ret, argv[1] + startPos, actualLen);
    ret[actualLen] = '\0';
 
@@ -260,7 +271,8 @@ ConsoleFunction( stripTrailingSpaces, const char*, 2, 2, "stripTrailingSpaces( s
 
       if ( temp )
       {
-         char* returnString = Con::getReturnBuffer( temp + 1 );
+         KorkApi::ConsoleValue returnStringV = Con::getReturnBuffer( temp + 1 );
+         char *returnString = (char*)returnStringV.evaluatePtr(vmPtr->getAllocBase());
          dStrncpy( returnString, argv[1], U32(temp) );
          returnString[temp] = '\0';
          return( returnString );			
@@ -289,7 +301,8 @@ static const char *getUnit(const char *string, U32 index, const char *set)
    sz = dStrcspn(string, set);
    if (sz == 0)
       return "";
-   char *ret = Con::getReturnBuffer(sz+1);
+   KorkApi::ConsoleValue retV = Con::getReturnBuffer(sz+1);
+   char *ret = (char*)retV.evaluatePtr(sVM->getAllocBase());
    dStrncpy(ret, string, sz);
    ret[sz] = '\0';
    return ret;
@@ -320,7 +333,8 @@ static const char *getUnits(const char *string, S32 startIndex, S32 endIndex, co
    if(!*string)
       string++;
    U32 totalSize = (U32(string - startString));
-   char *ret = Con::getReturnBuffer(totalSize);
+   KorkApi::ConsoleValue retV = Con::getReturnBuffer(totalSize);
+   char *ret = (char*)retV.evaluatePtr(sVM->getAllocBase());
    dStrncpy(ret, startString, totalSize - 1);
    ret[totalSize-1] = '\0';
    return ret;
@@ -354,7 +368,8 @@ static const char* setUnit(const char *string, U32 index, const char *replace, c
 {
    U32 sz;
    const char *start = string;
-   char *ret = Con::getReturnBuffer(dStrlen(string) + dStrlen(replace) + 1);
+   KorkApi::ConsoleValue retV = Con::getReturnBuffer(dStrlen(string) + dStrlen(replace) + 1);
+   char *ret = (char*)retV.evaluatePtr(sVM->getAllocBase());
    ret[0] = '\0';
    U32 padCount = 0;
 
@@ -395,7 +410,8 @@ static const char* removeUnit(const char *string, U32 index, const char *set)
 {
    U32 sz;
    const char *start = string;
-   char *ret = Con::getReturnBuffer(dStrlen(string) + 1);
+   KorkApi::ConsoleValue retV = Con::getReturnBuffer(dStrlen(string) + 1);
+   char *ret = (char*)retV.evaluatePtr(sVM->getAllocBase());
    ret[0] = '\0';
    U32 padCount = 0;
 
@@ -545,7 +561,8 @@ ConsoleFunction(firstWord, const char *, 2, 2, "firstWord(text)")
       len = dStrlen(argv[1]);
    else
       len = word - argv[1];
-   char *ret = Con::getReturnBuffer(len + 1);
+   KorkApi::ConsoleValue retV = Con::getReturnBuffer(len + 1);
+   char *ret = (char*)retV.evaluatePtr(vmPtr->getAllocBase());
    dStrncpy(ret, argv[1], len);
    ret[len] = 0;
    return ret;
@@ -557,7 +574,8 @@ ConsoleFunction(restWords, const char *, 2, 2, "restWords(text)")
    const char *word = dStrchr(argv[1], ' ');
    if(word == NULL)
       return "";
-   char *ret = Con::getReturnBuffer(dStrlen(word + 1) + 1);
+   KorkApi::ConsoleValue retV = Con::getReturnBuffer(dStrlen(word + 1) + 1);
+   char *ret = (char*)retV.evaluatePtr(vmPtr->getAllocBase());
    dStrcpy(ret, word + 1);
    return ret;
 }
@@ -622,12 +640,13 @@ ConsoleFunctionGroupBegin( TaggedStrings, "Functions dealing with tagging/detagg
 ConsoleFunction(detag, const char *, 2, 2, "detag(textTagString)")
 {
    argc;
-   if(argv[1][0] == StringTagPrefixByte)
+   if(argv[1][0] == KorkApi::StringTagPrefixByte)
    {
       const char *word = dStrchr(argv[1], ' ');
       if(word == NULL)
          return "";
-      char *ret = Con::getReturnBuffer(dStrlen(word + 1) + 1);
+      KorkApi::ConsoleValue retV = Con::getReturnBuffer(dStrlen(word + 1) + 1);
+      char *ret = (char*)retV.evaluatePtr(vmPtr->getAllocBase());
       dStrcpy(ret, word + 1);
       return ret;
    }
@@ -638,7 +657,7 @@ ConsoleFunction(detag, const char *, 2, 2, "detag(textTagString)")
 ConsoleFunction(getTag, const char *, 2, 2, "getTag(textTagString)")
 {
    argc;
-   if(argv[1][0] == StringTagPrefixByte)
+   if(argv[1][0] == KorkApi::StringTagPrefixByte)
    {
       const char * space = dStrchr(argv[1], ' ');
 
@@ -648,7 +667,8 @@ ConsoleFunction(getTag, const char *, 2, 2, "getTag(textTagString)")
       else
          len = dStrlen(argv[1]) + 1;
 
-      char * ret = Con::getReturnBuffer(len);
+      KorkApi::ConsoleValue retV = Con::getReturnBuffer(len);
+      char *ret = (char*)retV.evaluatePtr(vmPtr->getAllocBase());
       dStrncpy(ret, argv[1] + 1, len - 1);
       ret[len - 1] = 0;
 
@@ -662,7 +682,6 @@ ConsoleFunctionGroupEnd( TaggedStrings );
 
 //----------------------------------------------------------------
 
-#endif
 ConsoleFunctionGroupBegin( Output, "Functions to output to the console." );
 
 ConsoleFunction(echo, void, 2, 0, "echo(text [, ... ])")
@@ -758,7 +777,6 @@ ConsoleFunction(quitWithErrorMessage, void, 2, 2, "quitWithErrorMessage(msg)"
    AssertISV(false, argv[1]);
 }
 
-#if TOFIX
 //----------------------------------------------------------------
 
 ConsoleFunctionGroupBegin(MetaScripting, "Functions that let you manipulate the scripting engine programmatically.");
@@ -773,7 +791,6 @@ static U32 journalDepth = 1;
 
 ConsoleFunction(exec, bool, 2, 4, "exec(fileName [, nocalls [,journalScript]])")
 {
-#if TOFIX
    bool journal = false;
 
    execDepth++;
@@ -838,8 +855,12 @@ ConsoleFunction(exec, bool, 2, 4, "exec(fileName [, nocalls [,journalScript]])")
          Platform::getFileTimes(scriptFileName, NULL, &scrModifyTime);
    }
 
+   U8* blockBytes = NULL;
+   U32 blockSize = 0;
+
    // If we had a DSO, let's check to see if we should be reading from it.
-   if(compiled && compiledScriptExists && (!scriptExists || Platform::compareFileTimes(comModifyTime, scrModifyTime) >= 0))
+   if(compiled && compiledScriptExists && 
+      (!scriptExists || Platform::compareFileTimes(comModifyTime, scrModifyTime) >= 0))
    {
       if (compiledStream.open(nameBuffer, FileStream::Read))
       {
@@ -847,8 +868,16 @@ ConsoleFunction(exec, bool, 2, 4, "exec(fileName [, nocalls [,journalScript]])")
          compiledStream.read(&version);
          if(version != KorkApi::DSOVersion)
          {
-            Con::warnf("exec: Found an old DSO (%s, ver %d < %d), ignoring.", nameBuffer, version, Con::DSOVersion);
+            Con::warnf("exec: Found an old DSO (%s, ver %d < %d), ignoring.", 
+                       nameBuffer, version, KorkApi::DSOVersion);
             compiledStream.close();
+         }
+         else
+         {
+            compiledStream.setPosition(0);
+            blockSize = compiledStream.getStreamSize();
+            blockBytes = (U8*)dMalloc(blockSize);
+            compiledStream.read(blockSize, blockBytes);
          }
       }
    }
@@ -872,6 +901,10 @@ ConsoleFunction(exec, bool, 2, 4, "exec(fileName [, nocalls [,journalScript]])")
 
       if (!scriptSize || !script)
       {
+         if (blockBytes)
+         {
+            dFree(blockBytes);
+         }
          delete [] script;
          Con::errorf(ConsoleLogEntry::Script, "exec: invalid script file %s.", scriptFileName);
          execDepth--;
@@ -882,26 +915,33 @@ ConsoleFunction(exec, bool, 2, 4, "exec(fileName [, nocalls [,journalScript]])")
       {
          // compile this baddie.
          Con::printf("Compiling %s...", scriptFileName);
-         CodeBlock *code = new CodeBlock();
-         code->compile(nameBuffer, scriptFileName, script);
-         delete code;
-         code = NULL;
 
-         if(compiledStream.open(nameBuffer, FileStream::Read))
+         bool errorCond = true;
+
+         if (vmPtr->compileCodeBlock(script, scriptFileName, &blockSize, &blockBytes))
          {
-            compiledStream.read(&version);
+            if (!compiledStream.open(nameBuffer, FileStream::Write))
+            {
+               errorCond = true;
+            }
          }
-         else
+
+         if (errorCond)
          {
             // We have to exit out here, as otherwise we get double error reports.
             delete [] script;
             execDepth--;
+
+            if (blockBytes)
+            {
+               dFree(blockBytes);
+            }
             return false;
          }
       }
    }
 
-   if(compiledStream.getStatus() != Stream::Closed)
+   if(blockBytes)
    {
       // Delete the script object first to limit memory used
       // during recursive execs.
@@ -910,10 +950,9 @@ ConsoleFunction(exec, bool, 2, 4, "exec(fileName [, nocalls [,journalScript]])")
 
       // We're all compiled, so let's run it.
       Con::printf("Loading compiled script %s.", scriptFileName);
-      CodeBlock *code = new CodeBlock;
-      code->read(scriptFileName, compiledStream);
-      compiledStream.close();
-      code->exec(0, scriptFileName, NULL, 0, NULL, noCalls, NULL, 0);
+      vmPtr->execCodeBlock(blockSize, blockBytes, scriptFileName, noCalls, 0);
+
+      dFree(blockBytes);
       ret = true;
    }
    else if(script)
@@ -922,11 +961,13 @@ ConsoleFunction(exec, bool, 2, 4, "exec(fileName [, nocalls [,journalScript]])")
       // directly... this is either a mission file, or maybe
       // we're on a readonly volume.
       Con::printf("Executing %s.", scriptFileName);
-      CodeBlock *newCodeBlock = new CodeBlock();
-      StringTableEntry name = StringTable->insert(scriptFileName);
 
-      newCodeBlock->compileExec(name, script, noCalls, 0);
-      ret = true;
+      if (vmPtr->compileCodeBlock(script, scriptFileName, &blockSize, &blockBytes))
+      {
+         vmPtr->execCodeBlock(blockSize, blockBytes, scriptFileName, noCalls, 0);
+         dFree(blockBytes);
+         ret = true;
+      }
    }
    else
    {
@@ -938,9 +979,6 @@ ConsoleFunction(exec, bool, 2, 4, "exec(fileName [, nocalls [,journalScript]])")
    delete [] script;
    execDepth--;
    return ret;
-#else
-   return "";
-#endif
 }
 
 ConsoleFunction(eval, const char *, 2, 2, "eval(consoleString)")
@@ -948,8 +986,6 @@ ConsoleFunction(eval, const char *, 2, 2, "eval(consoleString)")
    argc;
    return Con::evaluate(argv[1], false, NULL);
 }
-
-#endif
 
 ConsoleFunction(getVariable, const char *, 2, 2, "(string varName)")
 {
@@ -1175,8 +1211,6 @@ ConsoleFunction(fileDelete, bool, 2,2, "fileDelete('path')")
 ConsoleFunctionGroupEnd( FileSystem );
 
 
-extern KorkApi::Vm* sVM;
-
 ConsoleFunctionGroupBegin(ConsoleDoc, "Console self-documentation functions. These output psuedo C++ suitable for feeeding through Doxygen or another auto documentation tool.");
 
 /*! @addtogroup ConsoleOutput Console Output
@@ -1222,4 +1256,35 @@ ConsoleFunction(dumpConsoleFunctions, void, 1, 3, "bool dumpScript = true, bool 
 }
 
 ConsoleFunctionGroupEnd(ConsoleDoc);
+
+
+ConsoleFunction( dbgSetParameters, void, 3, 4, "(int port, string password, bool waitForClient)"
+                "Open a debug server port on the specified port, requiring the specified password, "
+                "and optionally waiting for the debug client to connect.")
+{
+   sVM->dbgSetParameters(dAtoi(argv[1]), argv[2], argc > 3 ? dAtob(argv[3]) : false );
+}
+
+ConsoleFunction( dbgIsConnected, bool, 1, 1, "()"
+                "Returns true if a script debugging client is connected else return false.")
+{
+   return sVM->dbgIsConnected();
+}
+
+ConsoleFunction( dbgDisconnect, void, 1, 1, "()"
+                "Forcibly disconnects any attached script debugging client.")
+{
+   return sVM->dbgDisconnect();
+}
+
+
+ConsoleFunction( telnetSetParameters, void, 4, 5, "(int port, string consolePass, string listenPass, bool remoteEcho)"
+                "Initialize and open the telnet console.\n\n"
+                "@param port        Port to listen on for console connections (0 will shut down listening).\n"
+                "@param consolePass Password for read/write access to console.\n"
+                "@param listenPass  Password for read access to console."
+                "@param remoteEcho  [optional] Enable echoing back to the client, off by default.")
+{
+   sVM->telnetSetParameters(dAtoi(argv[1]), argv[2], argv[3], argc == 5 ? dAtob( argv[4] ) : false);
+}
 

@@ -457,11 +457,11 @@ bool Vm::isNamespaceFunction(NamespaceId nsId, StringTableEntry name)
    return ns->lookup(name) != NULL;
 }
 
-bool Vm::compileCodeBlock(const char* code, const char* filename, U32* outCodeSize, U32** outCode)
+bool Vm::compileCodeBlock(const char* code, const char* filename, U32* outCodeSize, U8** outCode)
 {
    CodeBlock* block = new CodeBlock(mInternal);
    
-   U32* buffer = new U32[1024 * 1024];
+   U8* buffer = (U8*)dMalloc(1024 * 1024);
    *outCode = NULL;
    *outCodeSize = 0;
    MemStream outS(1024*1024, buffer, true, true);

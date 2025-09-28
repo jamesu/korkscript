@@ -25,50 +25,6 @@
 #include "core/tVector.h"
 #include "core/stringTable.h"
 
-
-
-/*! @addtogroup FileSystem File System
- @ingroup TorqueScriptFunctions
- @{
- */
-
-#if TOFIX
-/*! Gets the path to the system's temporary directory
- @return Returns the path to the temporary directory as a string
- */
-ConsoleFunction(getTemporaryDirectory, const char*, 1, 1, "")
-{
-   return Platform::getTemporaryDirectory();
-}
-
-/*! Generates a temporary filename for use.
- @return Returns the formatted temporary filename for use
- */
-ConsoleFunction(getTemporaryFileName, const char*, 1, 1, "")
-{
-   return Platform::getTemporaryFileName();
-}
-
-
-/*!
- @return Returns a string to the directory storing the user's data
- */
-ConsoleFunction(getUserDataDirectory, const char*, 1, 1, "")
-{
-   return Platform::getUserDataDirectory();
-}
-
-/*!
- @return Returns the path to the user's home directory.
- */
-ConsoleFunction(getUserHomeDirectory, const char*, 1, 1, "")
-{
-   return Platform::getUserHomeDirectory();
-}
-#endif
-
-/*! @} */ // group FileSystem
-
 //-----------------------------------------------------------------------------
 
 StringTableEntry Platform::getTemporaryDirectory()

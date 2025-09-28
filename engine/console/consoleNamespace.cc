@@ -79,7 +79,7 @@ void NamespaceState::activatePackage(StringTableEntry name)
 {
    if(mNumActivePackages == MaxActivePackages)
    {
-      // TOFIX Con::printf("ActivatePackage(%s) failed - Max package limit reached: %d", name, MaxActivePackages);
+      mVmInternal->printf(0, "ActivatePackage(%s) failed - Max package limit reached: %d", name, MaxActivePackages);
       return;
    }
    if(!name)
@@ -248,8 +248,8 @@ bool Namespace::unlinkClass(Namespace *parent)
 
    if(walk->mParent && walk->mParent != parent)
    {
-      // TOFIX Con::errorf(ConsoleLogEntry::General, "Error, cannot unlink namespace parent linkage for %s for %s.",
-      //   walk->mName, walk->mParent->mName);
+      mVmInternal->printf(0, "Error, cannot unlink namespace parent linkage for %s for %s.",
+         walk->mName, walk->mParent->mName);
       return false;
    }
 
@@ -271,8 +271,8 @@ bool Namespace::classLinkTo(Namespace *parent)
 
    if(walk->mParent && walk->mParent != parent)
    {
-      // TOFIX Con::errorf(ConsoleLogEntry::General, "Error: cannot change namespace parent linkage for %s from %s to %s.",
-      //   walk->mName, walk->mParent->mName, parent->mName);
+      mVmInternal->printf(0, "Error: cannot change namespace parent linkage for %s from %s to %s.",
+         walk->mName, walk->mParent->mName, parent->mName);
       return false;
    }
    mRefCountToParent++;
@@ -550,15 +550,14 @@ const char *Namespace::Entry::execute(S32 argc, const char **argv, ExprEvalState
 
    if((mMinArgs && argc < mMinArgs) || (mMaxArgs && argc > mMaxArgs))
    {
-      // TOFIX Con::warnf(ConsoleLogEntry::Script, "%s::%s - wrong number of arguments.", mNamespace->mName, mFunctionName);
-      //Con::warnf(ConsoleLogEntry::Script, "usage: %s", mUsage);
+      state->vmInternal->printf(0, "%s::%s - wrong number of arguments.", mNamespace->mName, mFunctionName);
+      state->vmInternal->printf(0, "usage: %s", mUsage);
       return "";
    }
 
    char* returnBuffer = state->vmInternal->mExecReturnBuffer;
    switch(mType)
    {
-         // TOFIX
       case StringCallbackType:
          return cb.mStringCallbackFunc((SimObject*)state->thisObject->userPtr, mUserPtr, argc, argv);
       case IntCallbackType:

@@ -390,7 +390,7 @@ public:
    void addNamespaceFunction(NamespaceId nsId, StringTableEntry name,  BoolFuncCallback, void* userPtr, const char *usage, S32 minArgs, S32 maxArgs);
    bool isNamespaceFunction(NamespaceId nsId, StringTableEntry name);
    
-   bool compileCodeBlock(const char* code, const char* filename, U32* outCodeSize, U32** outCode);
+   bool compileCodeBlock(const char* code, const char* filename, U32* outCodeSize, U8** outCode);
    ConsoleValue execCodeBlock(U32 codeSize, U8* code, const char* filename, bool noCalls, int setFrame);
 
    ConsoleValue evalCode(const char* code, const char* filename);

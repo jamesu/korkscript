@@ -98,29 +98,6 @@
 // BRKCLR file line - sent when a breakpoint cannot be moved to a breakable line on the client.
 //
 
-#if TOFIX
-ConsoleFunction( dbgSetParameters, void, 3, 4, "(int port, string password, bool waitForClient)"
-                "Open a debug server port on the specified port, requiring the specified password, "
-                "and optionally waiting for the debug client to connect.")
-{
-   if (TelDebugger)
-      TelDebugger->setDebugParameters(dAtoi(argv[1]), argv[2], argc > 3 ? dAtob(argv[3]) : false );
-}
-
-ConsoleFunction( dbgIsConnected, bool, 1, 1, "()"
-                "Returns true if a script debugging client is connected else return false.")
-{
-   return TelDebugger && TelDebugger->isConnected();
-}
-
-ConsoleFunction( dbgDisconnect, void, 1, 1, "()"
-                "Forcibly disconnects any attached script debugging client.")
-{
-   if (TelDebugger)
-      TelDebugger->disconnect();
-}
-#endif
-
 static void debuggerConsumer(U32 level, const char *line, void* userPtr)
 {
    TelnetDebugger* debugger = (TelnetDebugger*)userPtr;

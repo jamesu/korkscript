@@ -26,21 +26,6 @@
 #include "console/consoleNamespace.h"
 #include "console/telnetConsole.h"
 
-#if TOFIX
-
-ConsoleFunction( telnetSetParameters, void, 4, 5, "(int port, string consolePass, string listenPass, bool remoteEcho)"
-                "Initialize and open the telnet console.\n\n"
-                "@param port        Port to listen on for console connections (0 will shut down listening).\n"
-                "@param consolePass Password for read/write access to console.\n"
-                "@param listenPass  Password for read access to console."
-                "@param remoteEcho  [optional] Enable echoing back to the client, off by default.")
-{
-   if (TelConsole)
-   {
-	   TelConsole->setTelnetParameters(dAtoi(argv[1]), argv[2], argv[3], argc == 5 ? dAtob( argv[4] ) : false);
-   }
-}
-#endif
 
 static void telnetCallback(U32 level, const char *consoleLine, void* userPtr)
 {
@@ -158,7 +143,8 @@ void TelnetConsole::process()
          cl->state = PasswordTryOne;
 #endif
          
-         const char *prompt = "";// TOFIX Con::getVariable("Con::Prompt");
+         KorkApi::ConsoleValue promptV = mVMInternal->mVM->getGlobalVariable("Con::Prompt");
+         const char *prompt = (const char*)promptV.evaluatePtr(mVMInternal->mAllocBase);
          char connectMessage[1024];
          dSprintf(connectMessage, sizeof(connectMessage),
                   "Torque Telnet Remote Console\r\n\r\n%s",
@@ -255,7 +241,8 @@ void TelnetConsole::process()
                   replyPos = 0;
                   
                   // send prompt
-                  const char *prompt = ""; // TOFIX Con::getVariable("Con::Prompt");
+                  KorkApi::ConsoleValue promptV = mVMInternal->mVM->getGlobalVariable("Con::Prompt");
+                  const char *prompt = (const char*)promptV.evaluatePtr(mVMInternal->mAllocBase);
                   if (client->socket != 0)
                   {
                      tel.SendDataFn(cfg.telnetUser, client->socket, dStrlen(prompt), (const unsigned char*)prompt);

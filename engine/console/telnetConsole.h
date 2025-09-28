@@ -66,7 +66,6 @@ class TelnetConsole
    S32 mAcceptPort;
    char mTelnetPassword[PasswordMaxLength+1];
    char mListenPassword[PasswordMaxLength+1];
-   //ConsoleEvent mPostEvent; // TOFIX
 
    /// State of a TelnetClient.
    enum State
