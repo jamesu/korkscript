@@ -120,7 +120,7 @@ int main(int argc, char **argv)
    Sim::init();
 	Con::addConsumer(MyLogger, NULL);
    
-   //Con::evaluatef("echo(\"Hello world\" SPC TorqueScript SPC is SPC amazing);");
+   Con::evaluatef("echo(\"Hello world\" SPC TorqueScript SPC is SPC amazing);");
    
    FileStream fs;
    if (!fs.open(argv[1], FileStream::Read))
