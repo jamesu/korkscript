@@ -905,7 +905,7 @@ const char* VmInternal::tempFloatConv(F64 val)
    if (mConvIndex == MaxStringConvs)
       mConvIndex = 0;
 
-   snprintf(mTempStringConversions[mConvIndex], MaxTempStringSize, "%f", val);
+   snprintf(mTempStringConversions[mConvIndex], MaxTempStringSize, "%g", val);
    return mTempStringConversions[mConvIndex++];
 }
 
