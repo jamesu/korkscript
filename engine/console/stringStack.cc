@@ -39,8 +39,8 @@ void StringStack::getArgcArgv(StringTableEntry name, U32 *argc, KorkApi::Console
    {
       U16 typeId = mStartTypes[startStack + i];
       uintptr_t startData = mStartOffsets[startStack + i];
-      if (typeId == KorkApi::ConsoleValue::TypeInternalInt ||
-          typeId == KorkApi::ConsoleValue::TypeInternalFloat)
+      if (typeId == KorkApi::ConsoleValue::TypeInternalUnsigned ||
+          typeId == KorkApi::ConsoleValue::TypeInternalNumber)
       {
          // Copy value straight from buffer
          startData += (uintptr_t)mBuffer;

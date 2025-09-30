@@ -338,7 +338,7 @@ ConsoleType( bool, TypeBool, sizeof(bool), "" )
 
 ConsoleGetType( TypeBool )
 {
-   return KorkApi::ConsoleValue::makeInt(*((bool *) dptr) ? 1 : 0);
+   return KorkApi::ConsoleValue::makeUnsigned(*((bool *) dptr) ? 1 : 0);
 }
 
 ConsoleSetType( TypeBool )

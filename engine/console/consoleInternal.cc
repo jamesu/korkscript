@@ -94,10 +94,10 @@ void Dictionary::exportVariables(const char *varString, const char *fileName, bo
    {
       switch((*s)->mConsoleValue.typeId)
       {
-         case KorkApi::ConsoleValue::TypeInternalInt:
+         case KorkApi::ConsoleValue::TypeInternalUnsigned:
             dSprintf(buffer, sizeof(buffer), "%s = %d;%s", (*s)->name, (*s)->mConsoleValue.getInt(), cat);
             break;
-         case KorkApi::ConsoleValue::TypeInternalFloat:
+         case KorkApi::ConsoleValue::TypeInternalNumber:
             dSprintf(buffer, sizeof(buffer), "%s = %g;%s", (*s)->name, (*s)->mConsoleValue.getFloat(), cat);
             break;
          default:
@@ -341,14 +341,14 @@ Dictionary::Entry* Dictionary::getVariable(StringTableEntry name)
    return NULL;
 }
 
-U32 Dictionary::getEntryIntValue(Entry* e)
+U32 Dictionary::getEntryUnsignedValue(Entry* e)
 {
    switch (e->mConsoleValue.typeId)
    {
-      case KorkApi::ConsoleValue::TypeInternalInt:
+      case KorkApi::ConsoleValue::TypeInternalUnsigned:
       return e->mConsoleValue.getInt();
       break;
-      case KorkApi::ConsoleValue::TypeInternalFloat:
+      case KorkApi::ConsoleValue::TypeInternalNumber:
       return e->mConsoleValue.getFloat();
       break;
       case KorkApi::ConsoleValue::TypeInternalString:
@@ -364,21 +364,21 @@ U32 Dictionary::getEntryIntValue(Entry* e)
                       typePtr,
                       NULL,
                       0,
-                                            KorkApi::ConsoleValue::TypeInternalFloat,
+                                            KorkApi::ConsoleValue::TypeInternalNumber,
                                             KorkApi::ConsoleValue::ZoneExternal).getInt();
       }
       break;
    }
 }
 
-F32 Dictionary::getEntryFloatValue(Entry* e)
+F32 Dictionary::getEntryNumberValue(Entry* e)
 {
    switch (e->mConsoleValue.typeId)
    {
-      case KorkApi::ConsoleValue::TypeInternalInt:
+      case KorkApi::ConsoleValue::TypeInternalUnsigned:
       return e->mConsoleValue.getInt();
       break;
-      case KorkApi::ConsoleValue::TypeInternalFloat:
+      case KorkApi::ConsoleValue::TypeInternalNumber:
       return e->mConsoleValue.getFloat();
       break;
       case KorkApi::ConsoleValue::TypeInternalString:
@@ -394,7 +394,7 @@ F32 Dictionary::getEntryFloatValue(Entry* e)
                       typePtr,
                       NULL,
                       0,
-                                            KorkApi::ConsoleValue::TypeInternalInt,
+                                            KorkApi::ConsoleValue::TypeInternalUnsigned,
                                             KorkApi::ConsoleValue::ZoneExternal).getFloat();
       }
       break;
@@ -405,10 +405,10 @@ const char *Dictionary::getEntryStringValue(Entry* e)
 {
    switch (e->mConsoleValue.typeId)
    {
-      case KorkApi::ConsoleValue::TypeInternalInt:
+      case KorkApi::ConsoleValue::TypeInternalUnsigned:
       return vm->tempIntConv(e->mConsoleValue.getInt());
       break;
-      case KorkApi::ConsoleValue::TypeInternalFloat:
+      case KorkApi::ConsoleValue::TypeInternalNumber:
       return vm->tempFloatConv(e->mConsoleValue.getFloat());
       break;
       case KorkApi::ConsoleValue::TypeInternalString:
@@ -436,7 +436,7 @@ KorkApi::ConsoleValue Dictionary::getEntryValue(Entry* e)
    return e->mConsoleValue;
 }
 
-void Dictionary::setEntryIntValue(Entry* e, U32 val)
+void Dictionary::setEntryUnsignedValue(Entry* e, U64 val)
 {
    if( e->mIsConstant )
    {
@@ -448,10 +448,10 @@ void Dictionary::setEntryIntValue(Entry* e, U32 val)
    {
       clearEntry(e);
    }
-   e->mConsoleValue.setInt(val);
+   e->mConsoleValue.setUnsigned(val);
 }
 
-void Dictionary::setEntryFloatValue(Entry* e, F32 val)
+void Dictionary::setEntryNumberValue(Entry* e, F32 val)
 {
    if( e->mIsConstant )
    {
@@ -463,7 +463,7 @@ void Dictionary::setEntryFloatValue(Entry* e, F32 val)
    {
       clearEntry(e);
    }
-   e->mConsoleValue.setFloat(val);
+   e->mConsoleValue.setNumber(val);
 }
 
 void Dictionary::clearEntry(Entry* e)

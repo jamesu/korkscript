@@ -96,21 +96,21 @@ struct StringStack
    }
 
    /// Set the top of the stack to be an integer value.
-   void setIntValue(U32 i)
+   void setUnsignedValue(U32 i)
    {
       validateBufferSize(mStart + 16);
       mLen = 8;
       *((U64*)&mBuffer[mStart]) = i;
-      mType = KorkApi::ConsoleValue::TypeInternalInt;
+      mType = KorkApi::ConsoleValue::TypeInternalUnsigned;
    }
 
    /// Set the top of the stack to be a float value.
-   void setFloatValue(F64 v)
+   void setNumberValue(F64 v)
    {
       validateBufferSize(mStart + 16);
       mLen = 8;
       *((F64*)&mBuffer[mStart]) = v;
-      mType = KorkApi::ConsoleValue::TypeInternalFloat;
+      mType = KorkApi::ConsoleValue::TypeInternalNumber;
    }
 
    /// Return a temporary buffer we can use to return data.
@@ -174,8 +174,8 @@ struct StringStack
       mType = v.typeId;
       void* valueBase = NULL;
       
-      if (v.typeId == KorkApi::ConsoleValue::TypeInternalInt ||
-          v.typeId == KorkApi::ConsoleValue::TypeInternalFloat)
+      if (v.typeId == KorkApi::ConsoleValue::TypeInternalUnsigned ||
+          v.typeId == KorkApi::ConsoleValue::TypeInternalNumber)
       {
          mLen = 8;
          validateBufferSize(mStart + mLen);

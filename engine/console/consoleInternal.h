@@ -117,13 +117,13 @@ public:
    
    void clearEntry(Entry* e);
 
-   U32 getEntryIntValue(Entry* e);   
-   F32 getEntryFloatValue(Entry* e);
+   U32 getEntryUnsignedValue(Entry* e);   
+   F32 getEntryNumberValue(Entry* e);
    const char *getEntryStringValue(Entry* e);
    KorkApi::ConsoleValue getEntryValue(Entry* e);
 
-   void setEntryIntValue(Entry* e, U32 val);
-   void setEntryFloatValue(Entry* e, F32 val);
+   void setEntryUnsignedValue(Entry* e, U64 val);
+   void setEntryNumberValue(Entry* e, F32 val);
    void setEntryStringValue(Entry* e, const char *value);
    void setEntryTypeValue(Entry* e, U32 typeId, void * value);
    void setEntryValue(Entry* e, KorkApi::ConsoleValue value);
@@ -265,8 +265,8 @@ public:
    F64 getFloatVariable();
    const char *getStringVariable();
    KorkApi::ConsoleValue getConsoleVariable();
-   void setIntVariable(S32 val);
-   void setFloatVariable(F64 val);
+   void setUnsignedVariable(U32 val);
+   void setNumberVariable(F64 val);
    void setStringVariable(const char *str);
    void setConsoleValue(KorkApi::ConsoleValue value);
    void setCopyVariable();

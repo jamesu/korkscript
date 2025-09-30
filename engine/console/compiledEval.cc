@@ -174,12 +174,12 @@ inline void ExprEvalState::setCurVarNameCreate(StringTableEntry name)
 
 inline S32 ExprEvalState::getIntVariable()
 {
-   return currentVariable ? currentDictionary->getEntryIntValue(currentVariable) : 0;
+   return currentVariable ? currentDictionary->getEntryUnsignedValue(currentVariable) : 0;
 }
 
 inline F64 ExprEvalState::getFloatVariable()
 {
-   return currentVariable ? currentDictionary->getEntryFloatValue(currentVariable) : 0;
+   return currentVariable ? currentDictionary->getEntryNumberValue(currentVariable) : 0;
 }
 
 inline const char *ExprEvalState::getStringVariable()
@@ -195,16 +195,16 @@ inline KorkApi::ConsoleValue ExprEvalState::getConsoleVariable()
 
 //------------------------------------------------------------
 
-inline void ExprEvalState::setIntVariable(S32 val)
+inline void ExprEvalState::setUnsignedVariable(U32 val)
 {
    AssertFatal(currentVariable != NULL, "Invalid evaluator state - trying to set null variable!");
-   currentDictionary->setEntryIntValue(currentVariable, val);
+   currentDictionary->setEntryUnsignedValue(currentVariable, val);
 }
 
-inline void ExprEvalState::setFloatVariable(F64 val)
+inline void ExprEvalState::setNumberVariable(F64 val)
 {
    AssertFatal(currentVariable != NULL, "Invalid evaluator state - trying to set null variable!");
-   currentDictionary->setEntryFloatValue(currentVariable, val);
+   currentDictionary->setEntryNumberValue(currentVariable, val);
 }
 
 inline void ExprEvalState::setStringVariable(const char *val)
@@ -225,11 +225,11 @@ inline void ExprEvalState::setCopyVariable()
    {
       switch (copyVariable->mConsoleValue.typeId)
       {
-         case KorkApi::ConsoleValue::TypeInternalInt:
-            currentDictionary->setEntryIntValue(currentVariable, copyDictionary->getEntryIntValue(copyVariable));
+         case KorkApi::ConsoleValue::TypeInternalUnsigned:
+            currentDictionary->setEntryUnsignedValue(currentVariable, copyDictionary->getEntryUnsignedValue(copyVariable));
          break;
-         case KorkApi::ConsoleValue::TypeInternalFloat:
-            currentDictionary->setEntryIntValue(currentVariable, copyDictionary->getEntryFloatValue(copyVariable));
+         case KorkApi::ConsoleValue::TypeInternalNumber:
+            currentDictionary->setEntryNumberValue(currentVariable, copyDictionary->getEntryNumberValue(copyVariable));
          break;
          default:
             currentDictionary->setEntryStringValue(currentVariable, copyDictionary->getEntryStringValue(copyVariable));
@@ -273,9 +273,9 @@ static U32 castValueToU32(KorkApi::ConsoleValue retValue, KorkApi::ConsoleValue:
 {
    switch (retValue.typeId)
    {
-      case KorkApi::ConsoleValue::TypeInternalInt:
+      case KorkApi::ConsoleValue::TypeInternalUnsigned:
          return (U32)retValue.getInt();
-      case KorkApi::ConsoleValue::TypeInternalFloat:
+      case KorkApi::ConsoleValue::TypeInternalNumber:
          return (F32)retValue.getFloat();
       case KorkApi::ConsoleValue::TypeInternalString:
          return (U32)atoll((const char*)retValue.evaluatePtr(allocBase));
@@ -288,9 +288,9 @@ static F32 castValueToF32(KorkApi::ConsoleValue retValue, KorkApi::ConsoleValue:
 {
    switch (retValue.typeId)
    {
-      case KorkApi::ConsoleValue::TypeInternalInt:
+      case KorkApi::ConsoleValue::TypeInternalUnsigned:
          return (U32)retValue.getInt();
-      case KorkApi::ConsoleValue::TypeInternalFloat:
+      case KorkApi::ConsoleValue::TypeInternalNumber:
          return (F32)retValue.getFloat();
       case KorkApi::ConsoleValue::TypeInternalString:
          return atoll((const char*)retValue.evaluatePtr(allocBase));
@@ -855,7 +855,7 @@ KorkApi::ConsoleValue CodeBlock::exec(U32 ip, const char *functionName, Namespac
                
             }
 
-            mVM->mSTR.setFloatValue( mVM->mEvalState.floatStack[mVM->mEvalState._FLT] );
+            mVM->mSTR.setNumberValue( mVM->mEvalState.floatStack[mVM->mEvalState._FLT] );
             mVM->mEvalState._FLT--;
                
             goto execFinished;
@@ -880,7 +880,7 @@ KorkApi::ConsoleValue CodeBlock::exec(U32 ip, const char *functionName, Namespac
                }
             }
 
-            mVM->mSTR.setIntValue( mVM->mEvalState.intStack[mVM->mEvalState._UINT] );
+            mVM->mSTR.setUnsignedValue( mVM->mEvalState.intStack[mVM->mEvalState._UINT] );
             mVM->mEvalState._UINT--;
                
             goto execFinished;
@@ -1087,11 +1087,11 @@ KorkApi::ConsoleValue CodeBlock::exec(U32 ip, const char *functionName, Namespac
             break;
             
          case OP_SAVEVAR_UINT:
-            mVM->mEvalState.setIntVariable((S32)mVM->mEvalState.intStack[mVM->mEvalState._UINT]);
+            mVM->mEvalState.setUnsignedVariable((S32)mVM->mEvalState.intStack[mVM->mEvalState._UINT]);
             break;
             
          case OP_SAVEVAR_FLT:
-            mVM->mEvalState.setFloatVariable(mVM->mEvalState.floatStack[mVM->mEvalState._FLT]);
+            mVM->mEvalState.setNumberVariable(mVM->mEvalState.floatStack[mVM->mEvalState._FLT]);
             break;
             
          case OP_SAVEVAR_STR:
@@ -1167,7 +1167,7 @@ KorkApi::ConsoleValue CodeBlock::exec(U32 ip, const char *functionName, Namespac
          case OP_LOADFIELD_UINT:
             if(curObject)
             {
-               KorkApi::ConsoleValue retValue = mVM->getObjectField(curObject, curField, curFieldArray, KorkApi::ConsoleValue::TypeInternalInt, KorkApi::ConsoleValue::ZoneExternal);
+               KorkApi::ConsoleValue retValue = mVM->getObjectField(curObject, curField, curFieldArray, KorkApi::ConsoleValue::TypeInternalUnsigned, KorkApi::ConsoleValue::ZoneExternal);
                mVM->mEvalState.intStack[mVM->mEvalState._UINT+1] = castValueToU32(retValue, mVM->mAllocBase);
             }
             else
@@ -1184,7 +1184,7 @@ KorkApi::ConsoleValue CodeBlock::exec(U32 ip, const char *functionName, Namespac
          case OP_LOADFIELD_FLT:
             if(curObject)
             {
-               KorkApi::ConsoleValue retValue =  mVM->getObjectField(curObject, curField, curFieldArray, KorkApi::ConsoleValue::TypeInternalFloat, KorkApi::ConsoleValue::ZoneExternal);
+               KorkApi::ConsoleValue retValue =  mVM->getObjectField(curObject, curField, curFieldArray, KorkApi::ConsoleValue::TypeInternalNumber, KorkApi::ConsoleValue::ZoneExternal);
                mVM->mEvalState.floatStack[mVM->mEvalState._FLT+1] = castValueToF32(retValue, mVM->mAllocBase);
             }
             else
@@ -1213,7 +1213,7 @@ KorkApi::ConsoleValue CodeBlock::exec(U32 ip, const char *functionName, Namespac
             break;
             
          case OP_SAVEFIELD_UINT:
-            mVM->mSTR.setIntValue((U32)mVM->mEvalState.intStack[mVM->mEvalState._UINT]);
+            mVM->mSTR.setUnsignedValue((U32)mVM->mEvalState.intStack[mVM->mEvalState._UINT]);
             if(curObject)
             {
                KorkApi::ConsoleValue cv = mVM->mSTR.getConsoleValue();
@@ -1229,7 +1229,7 @@ KorkApi::ConsoleValue CodeBlock::exec(U32 ip, const char *functionName, Namespac
             break;
             
          case OP_SAVEFIELD_FLT:
-            mVM->mSTR.setFloatValue(mVM->mEvalState.floatStack[mVM->mEvalState._FLT]);
+            mVM->mSTR.setNumberValue(mVM->mEvalState.floatStack[mVM->mEvalState._FLT]);
             if(curObject)
             {
                KorkApi::ConsoleValue cv = KorkApi::ConsoleValue::makeString(mVM->mSTR.getStringValue());
@@ -1541,7 +1541,7 @@ KorkApi::ConsoleValue CodeBlock::exec(U32 ip, const char *functionName, Namespac
                         else if(code[ip] == OP_STR_TO_NONE)
                            ip++;
                         else
-                           mVM->mSTR.setIntValue(result);
+                           mVM->mSTR.setUnsignedValue(result);
                         break;
                      }
                      case Namespace::Entry::FloatCallbackType:
@@ -1563,7 +1563,7 @@ KorkApi::ConsoleValue CodeBlock::exec(U32 ip, const char *functionName, Namespac
                         else if(code[ip] == OP_STR_TO_NONE)
                            ip++;
                         else
-                           mVM->mSTR.setFloatValue(result);
+                           mVM->mSTR.setNumberValue(result);
                         break;
                      }
                      case Namespace::Entry::VoidCallbackType:
@@ -1594,7 +1594,7 @@ KorkApi::ConsoleValue CodeBlock::exec(U32 ip, const char *functionName, Namespac
                         else if(code[ip] == OP_STR_TO_NONE)
                            ip++;
                         else
-                           mVM->mSTR.setIntValue(result);
+                           mVM->mSTR.setUnsignedValue(result);
                         break;
                      }
                      case Namespace::Entry::ValueCallbackType:
@@ -1666,13 +1666,13 @@ KorkApi::ConsoleValue CodeBlock::exec(U32 ip, const char *functionName, Namespac
             
          case OP_PUSH_UINT:
             // OPmVM->mEvalState._UINT_TO_STR, OP_PUSH
-            mVM->mSTR.setIntValue((U32)mVM->mEvalState.intStack[mVM->mEvalState._UINT]);
+            mVM->mSTR.setUnsignedValue((U32)mVM->mEvalState.intStack[mVM->mEvalState._UINT]);
             mVM->mEvalState._UINT--;
             mVM->mSTR.push();
             break;
          case OP_PUSH_FLT:
             // OPmVM->mEvalState._FLT_TO_STR, OP_PUSH
-            mVM->mSTR.setFloatValue(mVM->mEvalState.floatStack[mVM->mEvalState._FLT]);
+            mVM->mSTR.setNumberValue(mVM->mEvalState.floatStack[mVM->mEvalState._FLT]);
             mVM->mEvalState._FLT--;
             mVM->mSTR.push();
             break;
@@ -1843,7 +1843,7 @@ KorkApi::ConsoleValue CodeBlock::exec(U32 ip, const char *functionName, Namespac
                }
                
                KorkApi::VMObject* atObject = set->klass->iEnum.GetObjectAtIndex(set, index);
-               iter.mDictionary->setEntryIntValue(iter.mVariable, atObject ? atObject->klass->iCreate.GetIdFn(atObject) : 0);
+               iter.mDictionary->setEntryUnsignedValue(iter.mVariable, atObject ? atObject->klass->iCreate.GetIdFn(atObject) : 0);
                iter.mData.mObj.mIndex = index + 1;
             }
             

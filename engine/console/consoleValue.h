@@ -16,8 +16,8 @@ struct ConsoleValue
    enum TypeEnum : U16
    {
       TypeInternalString = 0,   // const char*
-      TypeInternalInt    = 1,   // U64
-      TypeInternalFloat  = 2,   // F64
+      TypeInternalUnsigned    = 1,   // U64
+      TypeInternalNumber  = 2,   // F64
       TypeBeginCustom    = 3    // void*
    };
    
@@ -55,13 +55,13 @@ struct ConsoleValue
       flags = static_cast<U16>((flags & ~MaskVMZone) | ((U16)(z)));
    }
    
-   static ConsoleValue makeInt(U64 i)
+   static ConsoleValue makeUnsigned(U64 i)
    {
-      ConsoleValue v; v.setInt(i); return v;
+      ConsoleValue v; v.setUnsigned(i); return v;
    }
-   static ConsoleValue makeFloat(F64 d)
+   static ConsoleValue makeNumber(F64 d)
    {
-      ConsoleValue v; v.setFloat(d); return v;
+      ConsoleValue v; v.setNumber(d); return v;
    }
    static ConsoleValue makeString(const char* p, Zone zone=ZoneExternal)
    {
@@ -80,16 +80,16 @@ struct ConsoleValue
       ConsoleValue v; v.setTyped(p, typeId, zone); return v;
    }
    
-   inline void setInt(U64 i)
+   inline void setUnsigned(U64 i)
    {
-      typeId = TypeInternalInt;
+      typeId = TypeInternalUnsigned;
       setZone(ZoneExternal); // zone irrelevant for immediates
       *((U64*)&cvalue) = i;
    }
    
-   inline void setFloat(F64 d)
+   inline void setNumber(F64 d)
    {
-      typeId = TypeInternalFloat;
+      typeId = TypeInternalNumber;
       setZone(ZoneExternal); // zone irrelevant for immediates
       *((F64*)&cvalue) = d;
    }
@@ -117,13 +117,13 @@ struct ConsoleValue
    
    inline U64 getInt(U64 def = 0) const
    {
-      if (typeId != TypeInternalInt) return def;
+      if (typeId != TypeInternalUnsigned) return def;
       return *((U64*)&cvalue);
    }
    
    inline F64 getFloat(F64 def = 0.0) const
    {
-      if (typeId != TypeInternalFloat) return def;
+      if (typeId != TypeInternalNumber) return def;
       return *((F64*)&cvalue);
    }
 
@@ -172,11 +172,11 @@ struct ConsoleValue
    }
    inline bool isInt()    const
    {
-      return typeId == TypeInternalInt;
+      return typeId == TypeInternalUnsigned;
    }
    inline bool isFloat()  const
    {
-      return typeId == TypeInternalFloat;
+      return typeId == TypeInternalNumber;
    }
    inline bool isCustom() const
    {

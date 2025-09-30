@@ -764,14 +764,14 @@ void setBoolVariable(const char *varName, bool value)
    setVariable(varName, value ? "1" : "0");
 }
 
-void setIntVariable(const char *varName, S32 value)
+void setUnsignedVariable(const char *varName, S32 value)
 {
    char scratchBuffer[32];
    dSprintf(scratchBuffer, sizeof(scratchBuffer), "%d", value);
    setVariable(varName, scratchBuffer);
 }
 
-void setFloatVariable(const char *varName, F32 value)
+void setNumberVariable(const char *varName, F32 value)
 {
    char scratchBuffer[32];
    dSprintf(scratchBuffer, sizeof(scratchBuffer), "%.9g", value);
@@ -930,17 +930,17 @@ KorkApi::ConsoleValue getArgBuffer(U32 bufferSize)
 
 KorkApi::ConsoleValue getFloatArg(F64 arg)
 {
-   return KorkApi::ConsoleValue::makeFloat(arg);
+   return KorkApi::ConsoleValue::makeNumber(arg);
 }
 
 KorkApi::ConsoleValue getIntArg(S32 arg)
 {
-   return KorkApi::ConsoleValue::makeInt(arg);
+   return KorkApi::ConsoleValue::makeNumber(arg);
 }
 
 KorkApi::ConsoleValue getBoolArg(bool arg)
 {
-   return KorkApi::ConsoleValue::makeInt(arg);
+   return KorkApi::ConsoleValue::makeUnsigned(arg);
 }
 
 KorkApi::ConsoleValue getStringArg( const char *arg )

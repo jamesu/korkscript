@@ -398,7 +398,7 @@ namespace Con
    bool getBoolVariable (const char* name,bool def = false);
 
    /// Same as setVariable(), but for ints.
-   void setIntVariable  (const char* name,S32 var);
+   void setUnsignedVariable  (const char* name,S32 var);
 
    /// Same as getVariable(), but for ints.
    ///
@@ -407,7 +407,7 @@ namespace Con
    S32  getIntVariable  (const char* name,S32 def = 0);
 
    /// Same as setVariable(), but for floats.
-   void setFloatVariable(const char* name,F32 var);
+   void setNumberVariable(const char* name,F32 var);
 
    /// Same as getVariable(), but for floats.
    ///

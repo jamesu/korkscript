@@ -553,7 +553,7 @@ bool Vm::callObjectFunction(VMObject* self, StringTableEntry funcName, int argc,
    // Twiddle %this argument
    KorkApi::ConsoleValue oldArg1 = argv[1];
    SimObjectId cv = self->klass->iCreate.GetIdFn(self);
-   argv[1] = KorkApi::ConsoleValue::makeInt(cv);
+   argv[1] = KorkApi::ConsoleValue::makeUnsigned(cv);
 
    if (ent->mType == Namespace::Entry::ScriptFunctionType)
    {
@@ -1055,10 +1055,10 @@ F64 VmInternal::valueAsFloat(ConsoleValue v)
 {
    switch (v.typeId)
    {
-      case KorkApi::ConsoleValue::TypeInternalInt:
+      case KorkApi::ConsoleValue::TypeInternalUnsigned:
       return v.getInt();
       break;
-      case KorkApi::ConsoleValue::TypeInternalFloat:
+      case KorkApi::ConsoleValue::TypeInternalNumber:
       return v.getFloat();
       break;
       case KorkApi::ConsoleValue::TypeInternalString:
@@ -1074,7 +1074,7 @@ F64 VmInternal::valueAsFloat(ConsoleValue v)
                          typePtr,
                          NULL,
                          0,
-                                               KorkApi::ConsoleValue::TypeInternalFloat,
+                                               KorkApi::ConsoleValue::TypeInternalNumber,
                                                KorkApi::ConsoleValue::ZoneReturn).getFloat();
          }
          break;
@@ -1086,10 +1086,10 @@ S64 VmInternal::valueAsBool(ConsoleValue v)
 {
    switch (v.typeId)
    {
-      case KorkApi::ConsoleValue::TypeInternalInt:
+      case KorkApi::ConsoleValue::TypeInternalUnsigned:
       return v.getInt();
       break;
-      case KorkApi::ConsoleValue::TypeInternalFloat:
+      case KorkApi::ConsoleValue::TypeInternalNumber:
       return v.getFloat();
       break;
       case KorkApi::ConsoleValue::TypeInternalString:
@@ -1105,7 +1105,7 @@ S64 VmInternal::valueAsBool(ConsoleValue v)
                          typePtr,
                          NULL,
                          0,
-                                               KorkApi::ConsoleValue::TypeInternalInt,
+                                               KorkApi::ConsoleValue::TypeInternalUnsigned,
                                                KorkApi::ConsoleValue::ZoneReturn).getInt();
          }
          break;
@@ -1118,10 +1118,10 @@ S64 VmInternal::valueAsInt(ConsoleValue v)
 {
    switch (v.typeId)
    {
-      case KorkApi::ConsoleValue::TypeInternalInt:
+      case KorkApi::ConsoleValue::TypeInternalUnsigned:
       return v.getInt();
       break;
-      case KorkApi::ConsoleValue::TypeInternalFloat:
+      case KorkApi::ConsoleValue::TypeInternalNumber:
       return v.getFloat();
       break;
       case KorkApi::ConsoleValue::TypeInternalString:
@@ -1137,7 +1137,7 @@ S64 VmInternal::valueAsInt(ConsoleValue v)
                          typePtr,
                          NULL,
                          0,
-                                               KorkApi::ConsoleValue::TypeInternalInt,
+                                               KorkApi::ConsoleValue::TypeInternalUnsigned,
                                                KorkApi::ConsoleValue::ZoneReturn).getInt();
          }
          break;
@@ -1149,10 +1149,10 @@ const char* VmInternal::valueAsString(ConsoleValue v)
 {
    switch (v.typeId)
    {
-      case KorkApi::ConsoleValue::TypeInternalInt:
+      case KorkApi::ConsoleValue::TypeInternalUnsigned:
       return tempIntConv(v.getInt());
       break;
-      case KorkApi::ConsoleValue::TypeInternalFloat:
+      case KorkApi::ConsoleValue::TypeInternalNumber:
       return tempFloatConv(v.getFloat());
       break;
       case KorkApi::ConsoleValue::TypeInternalString:
