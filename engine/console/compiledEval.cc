@@ -1414,7 +1414,6 @@ KorkApi::ConsoleValue CodeBlock::exec(U32 ip, const char *functionName, Namespac
             
             ip += 5;
             mVM->mSTR.getArgcArgv(fnName, &callArgc, &callArgv);
-            mVM->mSTR.convertArgv(mVM, callArgc, &callArgvS);
             
             if(callType == FuncCallExprNode::FunctionCall)
             {
@@ -1428,12 +1427,13 @@ KorkApi::ConsoleValue CodeBlock::exec(U32 ip, const char *functionName, Namespac
             else if(callType == FuncCallExprNode::MethodCall)
             {
                saveObject = mVM->mEvalState.thisObject;
-               mVM->mEvalState.thisObject = mVM->mConfig.iFind.FindObjectByPathFn(mVM->mConfig.findUser, callArgvS[1]);
+               const char* objName = mVM->valueAsString(callArgv[1]);
+               mVM->mEvalState.thisObject = mVM->mConfig.iFind.FindObjectByPathFn(mVM->mConfig.findUser, objName);
                
                if(!mVM->mEvalState.thisObject)
                {
                   mVM->mEvalState.thisObject = 0;
-                  mVM->printf(0,"%s: Unable to find object: '%s' attempting to call function '%s'", getFileLine(ip-6), callArgvS[1], fnName);
+                  mVM->printf(0,"%s: Unable to find object: '%s' attempting to call function '%s'", getFileLine(ip-6), objName, fnName);
                   mVM->mSTR.popFrame();
                   mVM->mSTR.setStringValue("");
                   break;
@@ -1479,6 +1479,7 @@ KorkApi::ConsoleValue CodeBlock::exec(U32 ip, const char *functionName, Namespac
                mVM->mSTR.setStringValue("");
                break;
             }
+            
             if(nsEntry->mType == Namespace::Entry::ScriptFunctionType)
             {
                KorkApi::ConsoleValue ret;
@@ -1504,6 +1505,7 @@ KorkApi::ConsoleValue CodeBlock::exec(U32 ip, const char *functionName, Namespac
                {
                   if (nsEntry->mType != Namespace::Entry::ValueCallbackType)
                   {
+                     // Need to convert to strings for old callbacks
                      //printf("Converting %i argv calling %s\n", callArgc, fnName);
                      mVM->mSTR.convertArgv(mVM, callArgc, &callArgvS);
                   }
