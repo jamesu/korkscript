@@ -829,7 +829,7 @@ void TelnetDebugger::evaluateExpression(const char *tag, S32 frame, const char *
    
    // Execute the eval.
    CodeBlock *newCodeBlock = new CodeBlock(mVMInternal);
-   const char* result = newCodeBlock->compileExec( NULL, buffer, false, frame );
+   const char* result = ""; // TOFIX newCodeBlock->compileExec( NULL, buffer, false, frame );
    delete [] buffer;
    
    // Create a new buffer that fits the result.

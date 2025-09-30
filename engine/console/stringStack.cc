@@ -20,9 +20,11 @@
 // IN THE SOFTWARE.
 //-----------------------------------------------------------------------------
 
+#include "embed/api.h"
+#include "embed/internalApi.h"
 #include "stringStack.h"
 
-void StringStack::getArgcArgv(StringTableEntry name, U32 *argc, const char ***in_argv, bool popStackFrame /* = false */)
+void StringStack::getArgcArgv(StringTableEntry name, U32 *argc, KorkApi::ConsoleValue **in_argv, bool popStackFrame /* = false */)
 {
    AssertFatal(mNumFrames != 0, "Stack underflow!");
    U32 startStack = mFrameOffsets[mNumFrames-1] + 1;
@@ -31,14 +33,71 @@ void StringStack::getArgcArgv(StringTableEntry name, U32 *argc, const char ***in
    AssertFatal(argCount != MaxArgs-1, "WTF");
    
    *in_argv = mArgV;
-   mArgV[0] = name;
+   mArgV[0] = KorkApi::ConsoleValue::makeString(name);
    
    for(U32 i = 0; i < argCount; i++)
-      mArgV[i+1] = mBuffer + mStartOffsets[startStack + i];
+   {
+      U16 typeId = mStartTypes[startStack + i];
+      uintptr_t startData = mStartOffsets[startStack + i];
+      if (typeId == KorkApi::ConsoleValue::TypeInternalInt ||
+          typeId == KorkApi::ConsoleValue::TypeInternalFloat)
+      {
+         // Copy value straight from buffer
+         startData += (uintptr_t)mBuffer;
+         mArgV[i+1] = KorkApi::ConsoleValue::makeRaw(((U64*)startData)[0], typeId);
+      }
+      else
+      {
+         mArgV[i+1] = KorkApi::ConsoleValue::makeTyped((void*)startData,
+                                                       mStartTypes[startStack + i],
+                                                       KorkApi::ConsoleValue::ZoneFunc);
+      }
+   }
    argCount++;
    
    *argc = argCount;
    
    if(popStackFrame)
       popFrame();
+}
+
+void StringStack::convertArgv(KorkApi::VmInternal* vm, U32 argc, const char*** in_argv)
+{
+   *in_argv = mArgVStr;
+
+   for(U32 i = 0; i < argc; i++)
+   {
+      if (mArgV[i].isString())
+      {
+         mArgVStr[i] = (const char*)mArgV[i].evaluatePtr(*mAllocBase);
+      }
+      else
+      {
+         mArgVStr[i] = vm->valueAsString(mArgV[i]);
+      }
+   }
+}
+
+void StringStack::convertArgs(KorkApi::VmInternal* vm, U32 numArgs, KorkApi::ConsoleValue* args, const char **outArgs)
+{
+   for(U32 i = 0; i < numArgs; i++)
+   {
+      if (!args[i].isString())
+      {
+         outArgs[i] = (const char*)args[i].evaluatePtr(vm->mAllocBase);
+      }
+      else
+      {
+         outArgs[i] = vm->valueAsString(args[i]);
+      }
+   }
+
+}
+
+void StringStack::convertArgsReverse(KorkApi::VmInternal* vm, U32 numArgs, const char **args, KorkApi::ConsoleValue* outArgs)
+{
+   for(U32 i = 0; i < numArgs; i++)
+   {
+      outArgs[i] = KorkApi::ConsoleValue::makeString(args[i]);
+   }
 }

@@ -29,6 +29,7 @@
 #include "console/console.h"
 #include "console/consoleObject.h"
 #include "console/consoleTypes.h"
+#include "console/stringStack.h"
 
 #include "sim/simBase.h"
 
@@ -1120,7 +1121,10 @@ const char *execute(S32 argc, const char *argv[])
       StringTableEntry funcName = StringTable->insert(argv[0]);
       
       KorkApi::ConsoleValue retValue = KorkApi::ConsoleValue();
-      sVM->callNamespaceFunction(sVM->getGlobalNamespace(), funcName, argc, argv, retValue);
+
+      KorkApi::ConsoleValue localArgv[StringStack::MaxArgs];
+      StringStack::convertArgsReverse(sVM->mInternal, argc, argv, localArgv);
+      sVM->callNamespaceFunction(sVM->getGlobalNamespace(), funcName, argc, localArgv, retValue);
 
       return (const char*)retValue.evaluatePtr(sVM->getAllocBase());
 
@@ -1149,8 +1153,11 @@ const char *execute(SimObject *object, S32 argc, const char *argv[],bool thisCal
       StringTableEntry funcName = StringTable->insert(argv[0]);
 
       KorkApi::ConsoleValue retValue = KorkApi::ConsoleValue();
+      KorkApi::ConsoleValue localArgv[StringStack::MaxArgs];
+
       object->pushScriptCallbackGuard();
-      sVM->callObjectFunction(object->getVMObject(), funcName, argc, argv, retValue);
+      StringStack::convertArgsReverse(sVM->mInternal, argc, argv, localArgv);
+      sVM->callObjectFunction(object->getVMObject(), funcName, argc, localArgv, retValue);
       object->popScriptCallbackGuard();
 
       return (const char*)retValue.evaluatePtr(sVM->getAllocBase());

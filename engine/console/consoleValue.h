@@ -75,6 +75,10 @@ struct ConsoleValue
    {
       ConsoleValue v; v.setTyped((U64)p, typeId, zone); return v;
    }
+   static ConsoleValue makeRaw(U64 p, U16 typeId, Zone zone=ZoneExternal)
+   {
+      ConsoleValue v; v.setTyped(p, typeId, zone); return v;
+   }
    
    inline void setInt(U64 i)
    {

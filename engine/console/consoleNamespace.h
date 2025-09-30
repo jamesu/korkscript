@@ -36,7 +36,8 @@ class Namespace
          IntCallbackType,
          FloatCallbackType,
          VoidCallbackType,
-         BoolCallbackType
+         BoolCallbackType,
+         ValueCallbackType
       };
 
       Namespace *mNamespace;
@@ -57,13 +58,13 @@ class Namespace
          KorkApi::VoidFuncCallback mVoidCallbackFunc;
          KorkApi::FloatFuncCallback mFloatCallbackFunc;
          KorkApi::BoolFuncCallback mBoolCallbackFunc;
+         KorkApi::ValueFuncCallback mValueCallbackFunc;
          const char* mGroupName;
       } cb;
       Entry();
       void clear();
 
-      const char *execute(S32 argc, const char **argv, ExprEvalState *state);
-
+      KorkApi::ConsoleValue execute(S32 argc, KorkApi::ConsoleValue* argv, ExprEvalState *state);
    };
    Entry *mEntryList;
 
@@ -82,6 +83,7 @@ class Namespace
    void addCommand(StringTableEntry name, KorkApi::FloatFuncCallback, void* userPtr, const char* usage, S32 minArgs, S32 maxArgs);
    void addCommand(StringTableEntry name, KorkApi::VoidFuncCallback, void* userPtr, const char* usage, S32 minArgs, S32 maxArgs);
    void addCommand(StringTableEntry name, KorkApi::BoolFuncCallback, void* userPtr, const char* usage, S32 minArgs, S32 maxArgs);
+   void addCommand(StringTableEntry name, KorkApi::ValueFuncCallback, void* userPtr, const char* usage, S32 minArgs, S32 maxArgs);
 
    void addOverload(const char *name, const char* altUsage);
 

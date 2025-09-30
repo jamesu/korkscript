@@ -551,7 +551,7 @@ bool CodeBlock::compileToStream(Stream &st, StringTableEntry fileName, const cha
    return true;
 }
 
-const char *CodeBlock::compileExec(StringTableEntry fileName, const char *inString, bool noCalls, int setFrame)
+ KorkApi::ConsoleValue CodeBlock::compileExec(StringTableEntry fileName, const char *inString, bool noCalls, int setFrame)
 {
    // Check for a UTF8 script file
    char *string;
@@ -607,7 +607,7 @@ const char *CodeBlock::compileExec(StringTableEntry fileName, const char *inStri
    if(!rootNode)
    {
       delete this;
-      return "";
+      return KorkApi::ConsoleValue();
    }
    
    mVM->mCompilerResources->resetTables();

@@ -451,6 +451,12 @@ void Vm::addNamespaceFunction(NamespaceId nsId, StringTableEntry name, BoolFuncC
    ns->addCommand(name, cb, userPtr, usage, minArgs, maxArgs);
 }
 
+void Vm::addNamespaceFunction(NamespaceId nsId, StringTableEntry name, ValueFuncCallback cb, void* userPtr, const char* usage, S32 minArgs, S32 maxArgs)
+{
+   Namespace* ns = (Namespace*)nsId;
+   ns->addCommand(name, cb, userPtr, usage, minArgs, maxArgs);
+}
+
 bool Vm::isNamespaceFunction(NamespaceId nsId, StringTableEntry name)
 {
    Namespace* ns = (Namespace*)nsId;
@@ -490,32 +496,30 @@ ConsoleValue Vm::execCodeBlock(U32 codeSize, U8* code, const char* filename, boo
       return ConsoleValue();
    }
    
-   const char* ret = block->exec(0, filename, NULL, 0, 0, noCalls, NULL, setFrame);
-   return ConsoleValue();
+   return block->exec(0, filename, NULL, 0, 0, noCalls, NULL, setFrame);
 }
 
 ConsoleValue Vm::evalCode(const char* code, const char* filename)
 {
     CodeBlock *newCodeBlock = new CodeBlock(mInternal);
-    const char* result = newCodeBlock->compileExec(filename, code, false, filename ? -1 : 0); // TODO: should this be 0 or -1?
-    return ConsoleValue();
+    return newCodeBlock->compileExec(filename, code, false, filename ? -1 : 0); // TODO: should this be 0 or -1?
 }
 
-ConsoleValue Vm::call(int argc, const char** argv)
+ConsoleValue Vm::call(int argc, ConsoleValue* argv)
 {
    ConsoleValue retValue = ConsoleValue();
-   callNamespaceFunction(getGlobalNamespace(), StringTable->insert(argv[1]), argc, argv, retValue);
+   callNamespaceFunction(getGlobalNamespace(), StringTable->insert(mInternal->valueAsString(argv[1])), argc, argv, retValue);
    return retValue;
 }
 
-ConsoleValue Vm::callObject(VMObject* h, int argc, const char** argv)
+ConsoleValue Vm::callObject(VMObject* h, int argc, ConsoleValue* argv)
 {
    ConsoleValue retValue = ConsoleValue();
-   callObjectFunction(h, StringTable->insert(argv[1]), argc, argv, retValue);
+   callObjectFunction(h, StringTable->insert(mInternal->valueAsString(argv[1])), argc, argv, retValue);
    return retValue;
 }
 
-bool Vm::callObjectFunction(VMObject* self, StringTableEntry funcName, int argc, const char** argv, ConsoleValue& retValue)
+bool Vm::callObjectFunction(VMObject* self, StringTableEntry funcName, int argc, KorkApi::ConsoleValue* argv, ConsoleValue& retValue)
 {
    char idBuf[16];
    if (argc < 2)
@@ -547,10 +551,9 @@ bool Vm::callObjectFunction(VMObject* self, StringTableEntry funcName, int argc,
    }
 
    // Twiddle %this argument
-   const char *oldArg1 = argv[1];
+   KorkApi::ConsoleValue oldArg1 = argv[1];
    SimObjectId cv = self->klass->iCreate.GetIdFn(self);
-   dSprintf(idBuf, sizeof(idBuf), "%u", cv);
-   argv[1] = idBuf;
+   argv[1] = KorkApi::ConsoleValue::makeInt(cv);
 
    if (ent->mType == Namespace::Entry::ScriptFunctionType)
    {
@@ -561,10 +564,10 @@ bool Vm::callObjectFunction(VMObject* self, StringTableEntry funcName, int argc,
 
    KorkApi::VMObject* save = mInternal->mEvalState.thisObject;
    mInternal->mEvalState.thisObject = self;
-   const char *ret = ent->execute(argc, argv, &mInternal->mEvalState);
+   KorkApi::ConsoleValue ret = ent->execute(argc, argv, &mInternal->mEvalState);
    mInternal->mEvalState.thisObject = save;
    
-   retValue = ConsoleValue::makeString(ret);
+   retValue = ret;
 
    if (ent->mType == Namespace::Entry::ScriptFunctionType)
    {
@@ -581,7 +584,7 @@ bool Vm::callObjectFunction(VMObject* self, StringTableEntry funcName, int argc,
    return true;
 }
 
-bool Vm::callNamespaceFunction(NamespaceId nsId, StringTableEntry name, int argc, const char** argv, ConsoleValue& retValue)
+bool Vm::callNamespaceFunction(NamespaceId nsId, StringTableEntry name, int argc, KorkApi::ConsoleValue* argv, ConsoleValue& retValue)
 {
    Namespace* ns = (Namespace*)nsId;
    Namespace::Entry* ent = ns->lookup(name);
@@ -594,13 +597,11 @@ bool Vm::callNamespaceFunction(NamespaceId nsId, StringTableEntry name, int argc
       return false;
    }
 
-   const char *ret = ent->execute(argc, argv, &mInternal->mEvalState);
+   retValue = ent->execute(argc, argv, &mInternal->mEvalState);
 
    // Reset the function offset so the stack
    // doesn't continue to grow unnecessarily
    mInternal->mSTR.clearFunctionOffset();
-
-   retValue = ConsoleValue::makeString(ret);
 
    return true;
 }
@@ -1155,7 +1156,11 @@ const char* VmInternal::valueAsString(ConsoleValue v)
       return tempFloatConv(v.getFloat());
       break;
       case KorkApi::ConsoleValue::TypeInternalString:
-      return (const char*)v.evaluatePtr(mAllocBase);
+      {
+         const char* r = (const char*)v.evaluatePtr(mAllocBase);
+         return r ? r : "";
+      }
+         
       break;
    default:
       {

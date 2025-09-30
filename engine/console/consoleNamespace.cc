@@ -491,6 +491,20 @@ void Namespace::addCommand(StringTableEntry name, KorkApi::BoolFuncCallback cb, 
    ent->cb.mBoolCallbackFunc = cb;
 }
 
+void Namespace::addCommand(StringTableEntry name, KorkApi::ValueFuncCallback cb, void* userPtr, const char* usage, S32 minArgs, S32 maxArgs)
+{
+   Entry *ent = createLocalEntry(name);
+   mVmInternal->mNSState.trashCache();
+
+   ent->mUsage = usage;
+   ent->mMinArgs = minArgs;
+   ent->mMaxArgs = maxArgs;
+   ent->mUserPtr = userPtr;
+
+   ent->mType = Entry::ValueCallbackType;
+   ent->cb.mValueCallbackFunc = cb;
+}
+
 void Namespace::addOverload(const char * name, const char *altUsage)
 {
    char buffer[1024];
@@ -533,46 +547,55 @@ void Namespace::markGroup(const char* name, const char* usage)
    ent->cb.mGroupName = name;
 }
 
-extern S32 executeBlock(StmtNode *block, ExprEvalState *state);
-
-const char *Namespace::Entry::execute(S32 argc, const char **argv, ExprEvalState *state)
+KorkApi::ConsoleValue Namespace::Entry::execute(S32 argc, KorkApi::ConsoleValue* argv, ExprEvalState *state)
 {
    if(mType == ScriptFunctionType)
    {
       if(mFunctionOffset)
-         return mCode->exec(mFunctionOffset, argv[0], mNamespace, argc, argv, false, mPackage);
+         return mCode->exec(mFunctionOffset, StringTable->insert(mNamespace->mVmInternal->valueAsString(argv[0])), mNamespace, argc, argv, false, mPackage);
       else
-         return "";
+         return KorkApi::ConsoleValue();
    }
 
    if((mMinArgs && argc < mMinArgs) || (mMaxArgs && argc > mMaxArgs))
    {
       state->vmInternal->printf(0, "%s::%s - wrong number of arguments.", mNamespace->mName, mFunctionName);
       state->vmInternal->printf(0, "usage: %s", mUsage);
-      return "";
+      return KorkApi::ConsoleValue();
+   }
+
+   const char* localArgv[StringStack::MaxArgs];
+
+   if (mType != ValueCallbackType)
+   {
+      StringStack::convertArgs(mNamespace->mVmInternal, argc, argv, localArgv);
    }
 
    char* returnBuffer = state->vmInternal->mExecReturnBuffer;
    switch(mType)
    {
+      case ValueCallbackType:
+         return cb.mValueCallbackFunc((SimObject*)state->thisObject->userPtr, mUserPtr, argc, argv);
+      break;
       case StringCallbackType:
-         return cb.mStringCallbackFunc((SimObject*)state->thisObject->userPtr, mUserPtr, argc, argv);
+         return KorkApi::ConsoleValue::makeString(cb.mStringCallbackFunc((SimObject*)state->thisObject->userPtr, mUserPtr, argc, localArgv));
       case IntCallbackType:
          dSprintf(returnBuffer, KorkApi::VmInternal::ExecReturnBufferSize, "%d",
-            cb.mIntCallbackFunc((SimObject*)state->thisObject->userPtr, mUserPtr, argc, argv));
-         return returnBuffer;
+            cb.mIntCallbackFunc((SimObject*)state->thisObject->userPtr, mUserPtr, argc, localArgv));
+         return KorkApi::ConsoleValue::makeString(returnBuffer);
       case FloatCallbackType:
          dSprintf(returnBuffer, KorkApi::VmInternal::ExecReturnBufferSize, "%g",
-            cb.mFloatCallbackFunc((SimObject*)state->thisObject->userPtr, mUserPtr, argc, argv));
-         return returnBuffer;
+            cb.mFloatCallbackFunc((SimObject*)state->thisObject->userPtr, mUserPtr, argc, localArgv));
+         return KorkApi::ConsoleValue::makeString(returnBuffer);
       case VoidCallbackType:
-         cb.mVoidCallbackFunc((SimObject*)state->thisObject->userPtr, mUserPtr, argc, argv);
-         return "";
+         cb.mVoidCallbackFunc((SimObject*)state->thisObject->userPtr, mUserPtr, argc, localArgv);
       case BoolCallbackType:
          dSprintf(returnBuffer, KorkApi::VmInternal::ExecReturnBufferSize, "%d",
-            (U32)cb.mBoolCallbackFunc((SimObject*)state->thisObject->userPtr, mUserPtr, argc, argv));
-         return returnBuffer;
+            (U32)cb.mBoolCallbackFunc((SimObject*)state->thisObject->userPtr, mUserPtr, argc, localArgv));
+         return KorkApi::ConsoleValue::makeString(returnBuffer);
+      default:
+         break;
    }
 
-   return "";
+   return KorkApi::ConsoleValue();
 }

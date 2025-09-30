@@ -22,6 +22,7 @@ typedef S32             (*IntFuncCallback)(void *obj, void* userPtr, S32 argc, c
 typedef F32           (*FloatFuncCallback)(void *obj, void* userPtr, S32 argc, const char *argv[]);
 typedef void           (*VoidFuncCallback)(void *obj, void* userPtr, S32 argc, const char *argv[]); // We have it return a value so things don't break..
 typedef bool           (*BoolFuncCallback)(void *obj, void* userPtr, S32 argc, const char *argv[]);
+typedef ConsoleValue   (*ValueFuncCallback)(void *obj, void* userPtr, S32 argc, ConsoleValue argv[]);
 
 template <typename C, auto ThunkFn> struct APIThunk;
 
@@ -388,17 +389,18 @@ public:
    void addNamespaceFunction(NamespaceId nsId, StringTableEntry name,  FloatFuncCallback, void* userPtr, const char *usage, S32 minArgs, S32 maxArgs);
    void addNamespaceFunction(NamespaceId nsId, StringTableEntry name,  VoidFuncCallback, void* userPtr, const char *usage, S32 minArgs, S32 maxArgs);
    void addNamespaceFunction(NamespaceId nsId, StringTableEntry name,  BoolFuncCallback, void* userPtr, const char *usage, S32 minArgs, S32 maxArgs);
+   void addNamespaceFunction(NamespaceId nsId, StringTableEntry name,  ValueFuncCallback, void* userPtr, const char *usage, S32 minArgs, S32 maxArgs);
    bool isNamespaceFunction(NamespaceId nsId, StringTableEntry name);
    
    bool compileCodeBlock(const char* code, const char* filename, U32* outCodeSize, U8** outCode);
    ConsoleValue execCodeBlock(U32 codeSize, U8* code, const char* filename, bool noCalls, int setFrame);
 
    ConsoleValue evalCode(const char* code, const char* filename);
-   ConsoleValue call(int argc, const char** argv);
-   ConsoleValue callObject(VMObject* h, int argc, const char** argv);
+   ConsoleValue call(int argc, ConsoleValue* argv);
+   ConsoleValue callObject(VMObject* h, int argc, ConsoleValue* argv);
 
-   bool callNamespaceFunction(NamespaceId nsId, StringTableEntry name, int argc, const char** argv, ConsoleValue& retValue);
-    bool callObjectFunction(VMObject* self, StringTableEntry name, int argc, const char** argv, ConsoleValue& retValue);
+   bool callNamespaceFunction(NamespaceId nsId, StringTableEntry name, int argc, ConsoleValue* argv, ConsoleValue& retValue);
+   bool callObjectFunction(VMObject* self, StringTableEntry name, int argc, ConsoleValue* argv, ConsoleValue& retValue);
 
    // Helpers (should call into user funcs)
    VMObject* findObjectByName(const char* name);

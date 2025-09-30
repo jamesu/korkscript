@@ -40,14 +40,17 @@ struct StringStack
    };
    char *mBuffer;
    U32   mBufferSize;
-   const char *mArgV[MaxArgs];
-   U32 mFrameOffsets[MaxStackDepth];
-   U32 mStartOffsets[MaxStackDepth];
+   const char *mArgVStr[MaxArgs];
+   KorkApi::ConsoleValue mArgV[MaxArgs];
+   U32 mFrameOffsets[MaxStackDepth]; // this is FRAME offset
+   U32 mStartOffsets[MaxStackDepth]; // this is FUNCTION PARAM offset
+   U8 mStartTypes[MaxStackDepth]; // this is annotated type
+   U8 mType; // current type
    
    KorkApi::ConsoleValue::AllocBase* mAllocBase;
+   KorkApi::TypeInfo* mTypes;
 
    U32 mNumFrames;
-   U32 mArgc;
 
    U32 mStart;
    U32 mLen;
@@ -76,7 +79,7 @@ struct StringStack
       }
    }
    
-   StringStack(KorkApi::ConsoleValue::AllocBase* allocBase = NULL)
+   StringStack(KorkApi::ConsoleValue::AllocBase* allocBase = NULL, KorkApi::TypeInfo* typeInfos = NULL)
    {
       mBufferSize = 0;
       mBuffer = NULL;
@@ -88,22 +91,26 @@ struct StringStack
       mAllocBase = allocBase;
       validateBufferSize(8192);
       validateReturnBufferSize(2048);
+      mType = KorkApi::ConsoleValue::TypeInternalString;
+      mTypes = typeInfos;
    }
 
    /// Set the top of the stack to be an integer value.
    void setIntValue(U32 i)
    {
-      validateBufferSize(mStart + 32);
-      dSprintf(mBuffer + mStart, 32, "%d", i);
-      mLen = dStrlen(mBuffer + mStart);
+      validateBufferSize(mStart + 16);
+      mLen = 8;
+      *((U64*)&mBuffer[mStart]) = i;
+      mType = KorkApi::ConsoleValue::TypeInternalInt;
    }
 
    /// Set the top of the stack to be a float value.
    void setFloatValue(F64 v)
    {
-      validateBufferSize(mStart + 32);
-      dSprintf(mBuffer + mStart, 32, "%.9g", v);
-      mLen = dStrlen(mBuffer + mStart);
+      validateBufferSize(mStart + 16);
+      mLen = 8;
+      *((F64*)&mBuffer[mStart]) = v;
+      mType = KorkApi::ConsoleValue::TypeInternalFloat;
    }
 
    /// Return a temporary buffer we can use to return data.
@@ -154,34 +161,55 @@ struct StringStack
          return;
       }
       mLen = dStrlen(s);
+      mType = KorkApi::ConsoleValue::TypeInternalString;
 
       validateBufferSize(mStart + mLen + 2);
       dStrcpy(mBuffer + mStart, s);
+
    }
 
    /// Set a string value on the top of the stack.
-   void setStringValue(KorkApi::ConsoleValue v)
+   void setConsoleValue(KorkApi::ConsoleValue v)
    {
-      char shortBuf[16];
-      switch (v.typeId)
+      mType = v.typeId;
+      void* valueBase = NULL;
+      
+      if (v.typeId == KorkApi::ConsoleValue::TypeInternalInt ||
+          v.typeId == KorkApi::ConsoleValue::TypeInternalFloat)
       {
-         case KorkApi::ConsoleValue::TypeInternalFloat:
-         dSprintf(shortBuf, sizeof(shortBuf), "%g", v.getFloat());
-         setStringValue(shortBuf);
-         break;
-         case KorkApi::ConsoleValue::TypeInternalInt:
-         dSprintf(shortBuf, sizeof(shortBuf), "%i", v.getInt());
-         setStringValue(shortBuf);
-         break;
-         case KorkApi::ConsoleValue::TypeInternalString:
-         setStringValue((const char*)v.evaluatePtr(*mAllocBase));
-         break;
-      default:
-         // TOFIX
-         break;
+         mLen = 8;
+         validateBufferSize(mStart + mLen);
+         *((U64*)&mBuffer[mStart]) = v.cvalue;
+         return;
+      }
+      else
+      {
+         valueBase = v.evaluatePtr(*mAllocBase);
+         if (v.typeId == KorkApi::ConsoleValue::TypeInternalString)
+         {
+            mLen = dStrlen((const char*)valueBase);
+         }
+         else
+         {
+            mLen = mTypes[v.typeId].size;
+         }
       }
    }
 
+   void setStringIntValue(U32 value)
+   {
+      char shortBuf[16];
+      dSprintf(shortBuf, sizeof(shortBuf), "%i", value);
+      setStringValue(shortBuf);
+   }
+
+   void setStringFloatValue(F64 value)
+   {
+      char shortBuf[16];
+      dSprintf(shortBuf, sizeof(shortBuf), "%g", value);
+      setStringValue(shortBuf);
+   }
+   
    /// Get the top of the stack, as a StringTableEntry.
    ///
    /// @note Don't free this memory!
@@ -210,6 +238,20 @@ struct StringStack
       return mBuffer + mStart;
    }
 
+   inline KorkApi::ConsoleValue getConsoleValue()
+   {
+      if (mType == KorkApi::ConsoleValue::TypeInternalString || mType >= KorkApi::ConsoleValue::TypeBeginCustom)
+      {
+         // Strings and types are put on stack
+         return KorkApi::ConsoleValue::makeTyped(&mBuffer[mStart], mType, KorkApi::ConsoleValue::ZoneFunc);
+      }
+      else
+      {
+         // Raw values are just placed directly on the stack
+         return KorkApi::ConsoleValue::makeRaw(*((U64*)&mBuffer[mStart]), mType, KorkApi::ConsoleValue::ZoneFunc);
+      }
+   }
+
    /// Advance the start stack, placing a zero length string on the top.
    ///
    /// @note You should use StringStack::push, not this, if you want to
@@ -217,9 +259,11 @@ struct StringStack
    void advance()
    {
       AssertFatal(mStartStackSize < MaxStackDepth-1, "Stack overflow!");
+      mStartTypes[mStartStackSize] = mType;
       mStartOffsets[mStartStackSize++] = mStart;
       mStart += mLen;
       mLen = 0;
+      mType = KorkApi::ConsoleValue::TypeInternalString; // reset
    }
 
    /// Advance the start stack, placing a single character, null-terminated strong
@@ -230,12 +274,14 @@ struct StringStack
    void advanceChar(char c)
    {
       AssertFatal(mStartStackSize < MaxStackDepth-1, "Stack overflow!");
+      mStartTypes[mStartStackSize] = mType;
       mStartOffsets[mStartStackSize++] = mStart;
       mStart += mLen;
       mBuffer[mStart] = c;
       mBuffer[mStart+1] = 0;
       mStart += 1;
       mLen = 0;
+      mType = KorkApi::ConsoleValue::TypeInternalString; // reset
    }
 
    /// Push the stack, placing a zero-length string on the top.
@@ -244,8 +290,9 @@ struct StringStack
       advanceChar(0);
    }
 
-   inline void setLen(U32 newlen)
+   inline void setTypedLen(U8 typeId, U32 newlen)
    {
+      mType = typeId;
       mLen = newlen;
    }
 
@@ -254,6 +301,7 @@ struct StringStack
    {
       mStart = mStartOffsets[--mStartStackSize];
       mLen = dStrlen(mBuffer + mStart);
+      mType = mStartTypes[mStartStackSize];
    }
 
    // Terminate the current string, and pop the start stack.
@@ -262,6 +310,7 @@ struct StringStack
       mBuffer[mStart] = 0;
       mStart = mStartOffsets[--mStartStackSize];
       mLen   = dStrlen(mBuffer + mStart);
+      mType = mStartTypes[mStartStackSize];
    }
 
    /// Compare 1st and 2nd items on stack, consuming them in the process,
@@ -270,10 +319,12 @@ struct StringStack
    {
       // Figure out the 1st and 2nd item offsets.
       U32 oldStart = mStart;
+      U8 oldType = mType;
       mStart = mStartOffsets[--mStartStackSize];
+      mType = mStartTypes[mStartStackSize];
 
       // Compare current and previous strings.
-      U32 ret = !dStricmp(mBuffer + mStart, mBuffer + oldStart);
+      U32 ret = mType == oldType ? !dStricmp(mBuffer + mStart, mBuffer + oldStart) : 0;
 
       // Put an empty string on the top of the stack.
       mLen = 0;
@@ -299,11 +350,17 @@ struct StringStack
       mStartStackSize = mFrameOffsets[--mNumFrames];
       mStart = mStartOffsets[mStartStackSize];
       mLen = 0;
+      mType = KorkApi::ConsoleValue::TypeInternalString; // reset
       //Con::printf("StringStack::popFrame");
    }
 
    /// Get the arguments for a function call from the stack.
-   void getArgcArgv(StringTableEntry name, U32 *argc, const char ***in_argv, bool popStackFrame = false);
+   void getArgcArgv(StringTableEntry name, U32 *argc, KorkApi::ConsoleValue **in_argv, bool popStackFrame = false);
+   void convertArgv(KorkApi::VmInternal* vm, U32 numArgs, const char ***in_argv);
+
+
+   static void convertArgs(KorkApi::VmInternal* vm, U32 numArgs, KorkApi::ConsoleValue* args, const char **outArgs);
+   static void convertArgsReverse(KorkApi::VmInternal* vm, U32 numArgs, const char **args, KorkApi::ConsoleValue* outArgs);
 };
 
 #endif

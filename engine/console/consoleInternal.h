@@ -264,9 +264,11 @@ public:
    S32 getIntVariable();
    F64 getFloatVariable();
    const char *getStringVariable();
+   KorkApi::ConsoleValue getConsoleVariable();
    void setIntVariable(S32 val);
    void setFloatVariable(F64 val);
    void setStringVariable(const char *str);
+   void setConsoleValue(KorkApi::ConsoleValue value);
    void setCopyVariable();
    
    void pushFrame(StringTableEntry frameName, Namespace *ns);
