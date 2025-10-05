@@ -95,11 +95,54 @@ set(KS_AST_PRINT_SRCS
 	test/astPrint.cpp
 )
 
+
+set(TORQUESIM_BRIDGE_SRCS )
+set(ENABLE_WASM3_BRIDGE ON)
+set(ENABLE_WASMTIME_BRIDGE ON)
+set(WASM3_DIR "../wasm3")
+
+if (ENABLE_WASM3_BRIDGE)
+	set(TORQUESIM_BRIDGE_SRCS 
+		${TORQUESIM_BRIDGE_SRCS} 
+		./torqueSim/bridges/wasm/wasm3_embed.cpp
+	)
+
+	file(GLOB WASM3_SOURCES
+	     "${WASM3_DIR}/source/*.c")
+	add_library(wasm3 STATIC ${WASM3_SOURCES})
+	target_include_directories(wasm3 PUBLIC "${WASM3_DIR}/source")
+	target_compile_definitions(wasm3 PUBLIC WASM3_NO_FILESYSTEM)
+endif()
+
+
+if (ENABLE_WASMTIME_BRIDGE)
+	if (NOT WASMTIME_C_API_DIR)
+	  message(FATAL_ERROR "Please set WASMTIME_C_API_DIR to your wasmtime folder")
+	endif()
+
+	set(_WT_INC "${WASMTIME_C_API_DIR}/include")
+	set(_WT_LIB_DIR "${WASMTIME_C_API_DIR}/lib")
+	set(_WT_LIB "${_WT_LIB_DIR}/libwasmtime.a")
+
+	add_library(Wasmtime::wasmtime INTERFACE IMPORTED)
+	set_target_properties(Wasmtime::wasmtime PROPERTIES
+	  INTERFACE_INCLUDE_DIRECTORIES "${_WT_INC}"
+	  INTERFACE_LINK_LIBRARIES      "${_WT_LIB}"
+	)
+
+	set(TORQUESIM_BRIDGE_SRCS 
+		${TORQUESIM_BRIDGE_SRCS} 
+		./torqueSim/bridges/wasm/wasmtime_embed.cpp
+	)
+endif()
+
 set(KS_TORQUE_TEST_SRCS
 	${KS_SRCS}
 	${TORQUESIM_SRCS}
+	${TORQUESIM_BRIDGE_SRCS}
 	test/torqueTest.cpp
 )
+
 
 
 if (EMSCRIPTEN)
@@ -122,10 +165,18 @@ target_link_options(korkscript PRIVATE
   )
 
 else()
-add_executable(cstest ${KS_TEST_SRCS})
+#add_executable(cstest ${KS_TEST_SRCS})
 add_executable(csprintast ${KS_AST_PRINT_SRCS})
 add_executable(csapitest ${KS_API_TEST_SRCS})
 add_executable(torquetest ${KS_TORQUE_TEST_SRCS})
+
+if (ENABLE_WASM3_BRIDGE)
+	target_link_libraries(torquetest wasm3)
+endif()
+
+if (ENABLE_WASMTIME_BRIDGE)
+	target_link_libraries(torquetest Wasmtime::wasmtime)
+endif()
 
 target_include_directories(torquetest PRIVATE ./torqueSim)
 endif()
