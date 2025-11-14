@@ -636,6 +636,8 @@ KorkApi::ConsoleValue CodeBlock::exec(U32 ip, const char *functionName, Namespac
    StringTableEntry tmpFnNamespace = NULL;
    StringTableEntry tmpFnPackage = NULL;
    
+   ExprEvalState& evalState = mVM->mEvalState;
+   
    // Setup frame state
    ConsoleFrame& frame = setupExecFrame(code,
                                         ip,
@@ -877,7 +879,7 @@ KorkApi::ConsoleValue CodeBlock::exec(U32 ip, const char *functionName, Namespac
                break;
             }
             
-            U32 groupAddId = (U32)mVM->mEvalState.intStack[frame._UINT];
+            U32 groupAddId = (U32)evalState.intStack[frame._UINT];
             if(!frame.currentNewObject->klass->iCreate.AddObjectFn(mVMPublic, frame.currentNewObject, placeAtRoot, groupAddId))
             {
                // This error is usually caused by failing to call Parent::initPersistFields in the class' initPersistFields().
@@ -893,9 +895,9 @@ KorkApi::ConsoleValue CodeBlock::exec(U32 ip, const char *functionName, Namespac
             // store the new object's ID on the stack (overwriting the group/set
             // id, if one was given, otherwise getting pushed)
             if(placeAtRoot)
-               mVM->mEvalState.intStack[frame._UINT] = frame.currentNewObject->klass->iCreate.GetIdFn(frame.currentNewObject);
+               evalState.intStack[frame._UINT] = frame.currentNewObject->klass->iCreate.GetIdFn(frame.currentNewObject);
             else
-               mVM->mEvalState.intStack[++frame._UINT] = frame.currentNewObject->klass->iCreate.GetIdFn(frame.currentNewObject);
+               evalState.intStack[++frame._UINT] = frame.currentNewObject->klass->iCreate.GetIdFn(frame.currentNewObject);
             
             break;
          }
@@ -917,7 +919,7 @@ KorkApi::ConsoleValue CodeBlock::exec(U32 ip, const char *functionName, Namespac
          }
             
          case OP_JMPIFFNOT:
-            if(mVM->mEvalState.floatStack[frame._FLT--])
+            if(evalState.floatStack[frame._FLT--])
             {
                ip++;
                break;
@@ -925,7 +927,7 @@ KorkApi::ConsoleValue CodeBlock::exec(U32 ip, const char *functionName, Namespac
             ip = code[ip];
             break;
          case OP_JMPIFNOT:
-            if(mVM->mEvalState.intStack[frame._UINT--])
+            if(evalState.intStack[frame._UINT--])
             {
                ip++;
                break;
@@ -933,7 +935,7 @@ KorkApi::ConsoleValue CodeBlock::exec(U32 ip, const char *functionName, Namespac
             ip = code[ip];
             break;
          case OP_JMPIFF:
-            if(!mVM->mEvalState.floatStack[frame._FLT--])
+            if(!evalState.floatStack[frame._FLT--])
             {
                ip++;
                break;
@@ -941,7 +943,7 @@ KorkApi::ConsoleValue CodeBlock::exec(U32 ip, const char *functionName, Namespac
             ip = code[ip];
             break;
          case OP_JMPIF:
-            if(!mVM->mEvalState.intStack[frame._UINT--])
+            if(!evalState.intStack[frame._UINT--])
             {
                ip ++;
                break;
@@ -949,7 +951,7 @@ KorkApi::ConsoleValue CodeBlock::exec(U32 ip, const char *functionName, Namespac
             ip = code[ip];
             break;
          case OP_JMPIFNOT_NP:
-            if(mVM->mEvalState.intStack[frame._UINT])
+            if(evalState.intStack[frame._UINT])
             {
                frame._UINT--;
                ip++;
@@ -958,7 +960,7 @@ KorkApi::ConsoleValue CodeBlock::exec(U32 ip, const char *functionName, Namespac
             ip = code[ip];
             break;
          case OP_JMPIF_NP:
-            if(!mVM->mEvalState.intStack[frame._UINT])
+            if(!evalState.intStack[frame._UINT])
             {
                frame._UINT--;
                ip++;
@@ -984,7 +986,7 @@ KorkApi::ConsoleValue CodeBlock::exec(U32 ip, const char *functionName, Namespac
                // Clear iterator state.
                while ( frame._ITER > 0 )
                {
-                  IterStackRecord& iter = mVM->mEvalState.iterStack[ -- frame._ITER ];
+                  IterStackRecord& iter = evalState.iterStack[ -- frame._ITER ];
                   if (iter.mData.mObj.mSet)
                   {
                      mVM->decVMRef(iter.mData.mObj.mSet);
@@ -1009,7 +1011,7 @@ KorkApi::ConsoleValue CodeBlock::exec(U32 ip, const char *functionName, Namespac
                // Clear iterator state.
                while( frame._ITER > 0 )
                {
-                  IterStackRecord& iter = mVM->mEvalState.iterStack[ -- frame._ITER ];
+                  IterStackRecord& iter = evalState.iterStack[ -- frame._ITER ];
                   if (iter.mData.mObj.mSet)
                   {
                      mVM->decVMRef(iter.mData.mObj.mSet);
@@ -1020,7 +1022,7 @@ KorkApi::ConsoleValue CodeBlock::exec(U32 ip, const char *functionName, Namespac
                
             }
 
-            mVM->mSTR.setNumberValue( mVM->mEvalState.floatStack[frame._FLT] );
+            mVM->mSTR.setNumberValue( evalState.floatStack[frame._FLT] );
             frame._FLT--;
                
             goto execFinished;
@@ -1034,7 +1036,7 @@ KorkApi::ConsoleValue CodeBlock::exec(U32 ip, const char *functionName, Namespac
                // Clear iterator state.
                while( frame._ITER > 0 )
                {
-                  IterStackRecord& iter = mVM->mEvalState.iterStack[ -- frame._ITER ];
+                  IterStackRecord& iter = evalState.iterStack[ -- frame._ITER ];
                   if (iter.mData.mObj.mSet)
                   {
                      mVM->decVMRef(iter.mData.mObj.mSet);
@@ -1044,124 +1046,124 @@ KorkApi::ConsoleValue CodeBlock::exec(U32 ip, const char *functionName, Namespac
                }
             }
 
-            mVM->mSTR.setUnsignedValue( mVM->mEvalState.intStack[frame._UINT] );
+            mVM->mSTR.setUnsignedValue( evalState.intStack[frame._UINT] );
             frame._UINT--;
                
             goto execFinished;
 
          case OP_CMPEQ:
-            mVM->mEvalState.intStack[frame._UINT+1] = bool(mVM->mEvalState.floatStack[frame._FLT] == mVM->mEvalState.floatStack[frame._FLT-1]);
+            evalState.intStack[frame._UINT+1] = bool(evalState.floatStack[frame._FLT] == evalState.floatStack[frame._FLT-1]);
             frame._UINT++;
             frame._FLT -= 2;
             break;
             
          case OP_CMPGR:
-            mVM->mEvalState.intStack[frame._UINT+1] = bool(mVM->mEvalState.floatStack[frame._FLT] > mVM->mEvalState.floatStack[frame._FLT-1]);
+            evalState.intStack[frame._UINT+1] = bool(evalState.floatStack[frame._FLT] > evalState.floatStack[frame._FLT-1]);
             frame._UINT++;
             frame._FLT -= 2;
             break;
             
          case OP_CMPGE:
-            mVM->mEvalState.intStack[frame._UINT+1] = bool(mVM->mEvalState.floatStack[frame._FLT] >= mVM->mEvalState.floatStack[frame._FLT-1]);
+            evalState.intStack[frame._UINT+1] = bool(evalState.floatStack[frame._FLT] >= evalState.floatStack[frame._FLT-1]);
             frame._UINT++;
             frame._FLT -= 2;
             break;
             
          case OP_CMPLT:
-            mVM->mEvalState.intStack[frame._UINT+1] = bool(mVM->mEvalState.floatStack[frame._FLT] < mVM->mEvalState.floatStack[frame._FLT-1]);
+            evalState.intStack[frame._UINT+1] = bool(evalState.floatStack[frame._FLT] < evalState.floatStack[frame._FLT-1]);
             frame._UINT++;
             frame._FLT -= 2;
             break;
             
          case OP_CMPLE:
-            mVM->mEvalState.intStack[frame._UINT+1] = bool(mVM->mEvalState.floatStack[frame._FLT] <= mVM->mEvalState.floatStack[frame._FLT-1]);
+            evalState.intStack[frame._UINT+1] = bool(evalState.floatStack[frame._FLT] <= evalState.floatStack[frame._FLT-1]);
             frame._UINT++;
             frame._FLT -= 2;
             break;
             
          case OP_CMPNE:
-            mVM->mEvalState.intStack[frame._UINT+1] = bool(mVM->mEvalState.floatStack[frame._FLT] != mVM->mEvalState.floatStack[frame._FLT-1]);
+            evalState.intStack[frame._UINT+1] = bool(evalState.floatStack[frame._FLT] != evalState.floatStack[frame._FLT-1]);
             frame._UINT++;
             frame._FLT -= 2;
             break;
             
          case OP_XOR:
-            mVM->mEvalState.intStack[frame._UINT-1] = mVM->mEvalState.intStack[frame._UINT] ^ mVM->mEvalState.intStack[frame._UINT-1];
+            evalState.intStack[frame._UINT-1] = evalState.intStack[frame._UINT] ^ evalState.intStack[frame._UINT-1];
             frame._UINT--;
             break;
             
          case OP_MOD:
-            if(  mVM->mEvalState.intStack[frame._UINT-1] != 0 )
-               mVM->mEvalState.intStack[frame._UINT-1] = mVM->mEvalState.intStack[frame._UINT] % mVM->mEvalState.intStack[frame._UINT-1];
+            if(  evalState.intStack[frame._UINT-1] != 0 )
+               evalState.intStack[frame._UINT-1] = evalState.intStack[frame._UINT] % evalState.intStack[frame._UINT-1];
             else
-               mVM->mEvalState.intStack[frame._UINT-1] = 0;
+               evalState.intStack[frame._UINT-1] = 0;
             frame._UINT--;
             break;
             
          case OP_BITAND:
-            mVM->mEvalState.intStack[frame._UINT-1] = mVM->mEvalState.intStack[frame._UINT] & mVM->mEvalState.intStack[frame._UINT-1];
+            evalState.intStack[frame._UINT-1] = evalState.intStack[frame._UINT] & evalState.intStack[frame._UINT-1];
             frame._UINT--;
             break;
             
          case OP_BITOR:
-            mVM->mEvalState.intStack[frame._UINT-1] = mVM->mEvalState.intStack[frame._UINT] | mVM->mEvalState.intStack[frame._UINT-1];
+            evalState.intStack[frame._UINT-1] = evalState.intStack[frame._UINT] | evalState.intStack[frame._UINT-1];
             frame._UINT--;
             break;
             
          case OP_NOT:
-            mVM->mEvalState.intStack[frame._UINT] = !mVM->mEvalState.intStack[frame._UINT];
+            evalState.intStack[frame._UINT] = !evalState.intStack[frame._UINT];
             break;
             
          case OP_NOTF:
-            mVM->mEvalState.intStack[frame._UINT+1] = !mVM->mEvalState.floatStack[frame._FLT];
+            evalState.intStack[frame._UINT+1] = !evalState.floatStack[frame._FLT];
             frame._FLT--;
             frame._UINT++;
             break;
             
          case OP_ONESCOMPLEMENT:
-            mVM->mEvalState.intStack[frame._UINT] = ~mVM->mEvalState.intStack[frame._UINT];
+            evalState.intStack[frame._UINT] = ~evalState.intStack[frame._UINT];
             break;
             
          case OP_SHR:
-            mVM->mEvalState.intStack[frame._UINT-1] = mVM->mEvalState.intStack[frame._UINT] >> mVM->mEvalState.intStack[frame._UINT-1];
+            evalState.intStack[frame._UINT-1] = evalState.intStack[frame._UINT] >> evalState.intStack[frame._UINT-1];
             frame._UINT--;
             break;
             
          case OP_SHL:
-            mVM->mEvalState.intStack[frame._UINT-1] = mVM->mEvalState.intStack[frame._UINT] << mVM->mEvalState.intStack[frame._UINT-1];
+            evalState.intStack[frame._UINT-1] = evalState.intStack[frame._UINT] << evalState.intStack[frame._UINT-1];
             frame._UINT--;
             break;
             
          case OP_AND:
-            mVM->mEvalState.intStack[frame._UINT-1] = mVM->mEvalState.intStack[frame._UINT] && mVM->mEvalState.intStack[frame._UINT-1];
+            evalState.intStack[frame._UINT-1] = evalState.intStack[frame._UINT] && evalState.intStack[frame._UINT-1];
             frame._UINT--;
             break;
             
          case OP_OR:
-            mVM->mEvalState.intStack[frame._UINT-1] = mVM->mEvalState.intStack[frame._UINT] || mVM->mEvalState.intStack[frame._UINT-1];
+            evalState.intStack[frame._UINT-1] = evalState.intStack[frame._UINT] || evalState.intStack[frame._UINT-1];
             frame._UINT--;
             break;
             
          case OP_ADD:
-            mVM->mEvalState.floatStack[frame._FLT-1] = mVM->mEvalState.floatStack[frame._FLT] + mVM->mEvalState.floatStack[frame._FLT-1];
+            evalState.floatStack[frame._FLT-1] = evalState.floatStack[frame._FLT] + evalState.floatStack[frame._FLT-1];
             frame._FLT--;
             break;
             
          case OP_SUB:
-            mVM->mEvalState.floatStack[frame._FLT-1] = mVM->mEvalState.floatStack[frame._FLT] - mVM->mEvalState.floatStack[frame._FLT-1];
+            evalState.floatStack[frame._FLT-1] = evalState.floatStack[frame._FLT] - evalState.floatStack[frame._FLT-1];
             frame._FLT--;
             break;
             
          case OP_MUL:
-            mVM->mEvalState.floatStack[frame._FLT-1] = mVM->mEvalState.floatStack[frame._FLT] * mVM->mEvalState.floatStack[frame._FLT-1];
+            evalState.floatStack[frame._FLT-1] = evalState.floatStack[frame._FLT] * evalState.floatStack[frame._FLT-1];
             frame._FLT--;
             break;
          case OP_DIV:
-            mVM->mEvalState.floatStack[frame._FLT-1] = mVM->mEvalState.floatStack[frame._FLT] / mVM->mEvalState.floatStack[frame._FLT-1];
+            evalState.floatStack[frame._FLT-1] = evalState.floatStack[frame._FLT] / evalState.floatStack[frame._FLT-1];
             frame._FLT--;
             break;
          case OP_NEG:
-            mVM->mEvalState.floatStack[frame._FLT] = -mVM->mEvalState.floatStack[frame._FLT];
+            evalState.floatStack[frame._FLT] = -evalState.floatStack[frame._FLT];
             break;
             
          case OP_SETCURVAR:
@@ -1231,12 +1233,12 @@ KorkApi::ConsoleValue CodeBlock::exec(U32 ip, const char *functionName, Namespac
             break;
             
          case OP_LOADVAR_UINT:
-            mVM->mEvalState.intStack[frame._UINT+1] = frame.getIntVariable();
+            evalState.intStack[frame._UINT+1] = frame.getIntVariable();
             frame._UINT++;
             break;
             
          case OP_LOADVAR_FLT:
-            mVM->mEvalState.floatStack[frame._FLT+1] = frame.getFloatVariable();
+            evalState.floatStack[frame._FLT+1] = frame.getFloatVariable();
             frame._FLT++;
             break;
             
@@ -1251,11 +1253,11 @@ KorkApi::ConsoleValue CodeBlock::exec(U32 ip, const char *functionName, Namespac
             break;
             
          case OP_SAVEVAR_UINT:
-            frame.setUnsignedVariable((S32)mVM->mEvalState.intStack[frame._UINT]);
+            frame.setUnsignedVariable((S32)evalState.intStack[frame._UINT]);
             break;
             
          case OP_SAVEVAR_FLT:
-            frame.setNumberVariable(mVM->mEvalState.floatStack[frame._FLT]);
+            frame.setNumberVariable(evalState.floatStack[frame._FLT]);
             break;
             
          case OP_SAVEVAR_STR:
@@ -1301,7 +1303,7 @@ KorkApi::ConsoleValue CodeBlock::exec(U32 ip, const char *functionName, Namespac
                StringTableEntry intName = StringTable->insert(mVM->mSTR.getStringValue());
                bool recurse = code[ip-1];
                KorkApi::VMObject* obj = mVM->mConfig.iFind.FindObjectByInternalNameFn(mVM->mConfig.findUser, intName, recurse, frame.curObject);
-               mVM->mEvalState.intStack[frame._UINT+1] = obj ? obj->klass->iCreate.GetIdFn(obj) : 0;
+               evalState.intStack[frame._UINT+1] = obj ? obj->klass->iCreate.GetIdFn(obj) : 0;
             }
             break;
             
@@ -1332,7 +1334,7 @@ KorkApi::ConsoleValue CodeBlock::exec(U32 ip, const char *functionName, Namespac
             if (frame.curObject)
             {
                KorkApi::ConsoleValue retValue = mVM->getObjectField(frame.curObject, frame.curField, frame.curFieldArray, KorkApi::ConsoleValue::TypeInternalUnsigned, KorkApi::ConsoleValue::ZoneExternal);
-               mVM->mEvalState.intStack[frame._UINT+1] = castValueToU32(retValue, mVM->mAllocBase);
+               evalState.intStack[frame._UINT+1] = castValueToU32(retValue, mVM->mAllocBase);
             }
             else
             {
@@ -1340,7 +1342,7 @@ KorkApi::ConsoleValue CodeBlock::exec(U32 ip, const char *functionName, Namespac
                // a special accessor?
                
                //getFieldComponent( prevObject, prevField, prevFieldArray, curField, valBuffer, VAL_BUFFER_SIZE );
-               mVM->mEvalState.intStack[frame._UINT+1] = 0;//dAtoi( valBuffer );
+               evalState.intStack[frame._UINT+1] = 0;//dAtoi( valBuffer );
             }
             frame._UINT++;
             break;
@@ -1349,14 +1351,14 @@ KorkApi::ConsoleValue CodeBlock::exec(U32 ip, const char *functionName, Namespac
             if (frame.curObject)
             {
                KorkApi::ConsoleValue retValue =  mVM->getObjectField(frame.curObject, frame.curField, frame.curFieldArray, KorkApi::ConsoleValue::TypeInternalNumber, KorkApi::ConsoleValue::ZoneExternal);
-               mVM->mEvalState.floatStack[frame._FLT+1] = castValueToF32(retValue, mVM->mAllocBase);
+               evalState.floatStack[frame._FLT+1] = castValueToF32(retValue, mVM->mAllocBase);
             }
             else
             {
                // The field is not being retrieved from an object. Maybe it's
                // a special accessor?
                //getFieldComponent( prevObject, prevField, prevFieldArray, curField, valBuffer, VAL_BUFFER_SIZE );
-               mVM->mEvalState.floatStack[frame._FLT+1] = 0.0f;//dAtof( valBuffer );
+               evalState.floatStack[frame._FLT+1] = 0.0f;//dAtof( valBuffer );
             }
             frame._FLT++;
             break;
@@ -1377,7 +1379,7 @@ KorkApi::ConsoleValue CodeBlock::exec(U32 ip, const char *functionName, Namespac
             break;
             
          case OP_SAVEFIELD_UINT:
-            mVM->mSTR.setUnsignedValue((U32)mVM->mEvalState.intStack[frame._UINT]);
+            mVM->mSTR.setUnsignedValue((U32)evalState.intStack[frame._UINT]);
             if (frame.curObject)
             {
                KorkApi::ConsoleValue cv = mVM->mSTR.getConsoleValue();
@@ -1393,7 +1395,7 @@ KorkApi::ConsoleValue CodeBlock::exec(U32 ip, const char *functionName, Namespac
             break;
             
          case OP_SAVEFIELD_FLT:
-            mVM->mSTR.setNumberValue(mVM->mEvalState.floatStack[frame._FLT]);
+            mVM->mSTR.setNumberValue(evalState.floatStack[frame._FLT]);
             if (frame.curObject)
             {
                KorkApi::ConsoleValue cv = KorkApi::ConsoleValue::makeString(mVM->mSTR.getStringValue());
@@ -1424,12 +1426,12 @@ KorkApi::ConsoleValue CodeBlock::exec(U32 ip, const char *functionName, Namespac
             break;
             
          case OP_STR_TO_UINT:
-            mVM->mEvalState.intStack[frame._UINT+1] = mVM->mSTR.getIntValue();
+            evalState.intStack[frame._UINT+1] = mVM->mSTR.getIntValue();
             frame._UINT++;
             break;
             
          case OP_STR_TO_FLT:
-            mVM->mEvalState.floatStack[frame._FLT+1] = mVM->mSTR.getFloatValue();
+            evalState.floatStack[frame._FLT+1] = mVM->mSTR.getFloatValue();
             frame._FLT++;
             break;
             
@@ -1438,13 +1440,13 @@ KorkApi::ConsoleValue CodeBlock::exec(U32 ip, const char *functionName, Namespac
             break;
             
          case OP_FLT_TO_UINT:
-            mVM->mEvalState.intStack[frame._UINT+1] = (S64)mVM->mEvalState.floatStack[frame._FLT];
+            evalState.intStack[frame._UINT+1] = (S64)evalState.floatStack[frame._FLT];
             frame._FLT--;
             frame._UINT++;
             break;
             
          case OP_FLT_TO_STR:
-            mVM->mSTR.setStringFloatValue(mVM->mEvalState.floatStack[frame._FLT]);
+            mVM->mSTR.setStringFloatValue(evalState.floatStack[frame._FLT]);
             frame._FLT--;
             break;
             
@@ -1453,13 +1455,13 @@ KorkApi::ConsoleValue CodeBlock::exec(U32 ip, const char *functionName, Namespac
             break;
             
          case OP_UINT_TO_FLT:
-            mVM->mEvalState.floatStack[frame._FLT+1] = (F64)mVM->mEvalState.intStack[frame._UINT];
+            evalState.floatStack[frame._FLT+1] = (F64)evalState.intStack[frame._UINT];
             frame._UINT--;
             frame._FLT++;
             break;
             
          case OP_UINT_TO_STR:
-            mVM->mSTR.setStringIntValue((U32)mVM->mEvalState.intStack[frame._UINT]);
+            mVM->mSTR.setStringIntValue((U32)evalState.intStack[frame._UINT]);
             frame._UINT--;
             break;
             
@@ -1472,12 +1474,12 @@ KorkApi::ConsoleValue CodeBlock::exec(U32 ip, const char *functionName, Namespac
             break;
             
          case OP_LOADIMMED_UINT:
-            mVM->mEvalState.intStack[frame._UINT+1] = code[ip++];
+            evalState.intStack[frame._UINT+1] = code[ip++];
             frame._UINT++;
             break;
             
          case OP_LOADIMMED_FLT:
-            mVM->mEvalState.floatStack[frame._FLT+1] = frame.curFloatTable[code[ip]];
+            evalState.floatStack[frame._FLT+1] = frame.curFloatTable[code[ip]];
             ip++;
             frame._FLT++;
             break;
@@ -1568,10 +1570,10 @@ KorkApi::ConsoleValue CodeBlock::exec(U32 ip, const char *functionName, Namespac
             tmpFnName = Compiler::CodeToSTE(NULL, code, ip);
             
             //if this is called from inside a function, append the ip and codeptr
-            if (!mVM->mEvalState.vmFrames.empty())
+            if (!evalState.vmFrames.empty())
             {
-               mVM->mEvalState.vmFrames.last()->code = this;
-               mVM->mEvalState.vmFrames.last()->ip = ip - 1;
+               evalState.vmFrames.last()->code = this;
+               evalState.vmFrames.last()->ip = ip - 1;
             }
             
             U32 callType = code[ip+4];
@@ -1693,13 +1695,13 @@ KorkApi::ConsoleValue CodeBlock::exec(U32 ip, const char *functionName, Namespac
                         if(code[ip] == OP_STR_TO_UINT)
                         {
                            ip++;
-                           mVM->mEvalState.intStack[++frame._UINT] = result;
+                           evalState.intStack[++frame._UINT] = result;
                            break;
                         }
                         else if(code[ip] == OP_STR_TO_FLT)
                         {
                            ip++;
-                           mVM->mEvalState.floatStack[++frame._FLT] = result;
+                           evalState.floatStack[++frame._FLT] = result;
                            break;
                         }
                         else if(code[ip] == OP_STR_TO_NONE)
@@ -1715,13 +1717,13 @@ KorkApi::ConsoleValue CodeBlock::exec(U32 ip, const char *functionName, Namespac
                         if(code[ip] == OP_STR_TO_UINT)
                         {
                            ip++;
-                           mVM->mEvalState.intStack[++frame._UINT] = (S64)result;
+                           evalState.intStack[++frame._UINT] = (S64)result;
                            break;
                         }
                         else if(code[ip] == OP_STR_TO_FLT)
                         {
                            ip++;
-                           mVM->mEvalState.floatStack[++frame._FLT] = result;
+                           evalState.floatStack[++frame._FLT] = result;
                            break;
                         }
                         else if(code[ip] == OP_STR_TO_NONE)
@@ -1746,13 +1748,13 @@ KorkApi::ConsoleValue CodeBlock::exec(U32 ip, const char *functionName, Namespac
                         if(code[ip] == OP_STR_TO_UINT)
                         {
                            ip++;
-                           mVM->mEvalState.intStack[++frame._UINT] = result;
+                           evalState.intStack[++frame._UINT] = result;
                            break;
                         }
                         else if(code[ip] == OP_STR_TO_FLT)
                         {
                            ip++;
-                           mVM->mEvalState.floatStack[++frame._FLT] = result;
+                           evalState.floatStack[++frame._FLT] = result;
                            break;
                         }
                         else if(code[ip] == OP_STR_TO_NONE)
@@ -1768,13 +1770,13 @@ KorkApi::ConsoleValue CodeBlock::exec(U32 ip, const char *functionName, Namespac
                         if(code[ip] == OP_STR_TO_UINT)
                         {
                            ip++;
-                           mVM->mEvalState.intStack[++frame._UINT] = mVM->valueAsInt(result);
+                           evalState.intStack[++frame._UINT] = mVM->valueAsInt(result);
                            break;
                         }
                         else if(code[ip] == OP_STR_TO_FLT)
                         {
                            ip++;
-                           mVM->mEvalState.floatStack[++frame._FLT] = mVM->valueAsFloat(result);
+                           evalState.floatStack[++frame._FLT] = mVM->valueAsFloat(result);
                            break;
                         }
                         else if(code[ip] == OP_STR_TO_NONE)
@@ -1822,7 +1824,7 @@ KorkApi::ConsoleValue CodeBlock::exec(U32 ip, const char *functionName, Namespac
             break;
             
          case OP_COMPARE_STR:
-            mVM->mEvalState.intStack[++frame._UINT] = mVM->mSTR.compare();
+            evalState.intStack[++frame._UINT] = mVM->mSTR.compare();
             break;
          case OP_PUSH:
             mVM->mSTR.push();
@@ -1830,13 +1832,13 @@ KorkApi::ConsoleValue CodeBlock::exec(U32 ip, const char *functionName, Namespac
             
          case OP_PUSH_UINT:
             // OPframe._UINT_TO_STR, OP_PUSH
-            mVM->mSTR.setUnsignedValue((U32)mVM->mEvalState.intStack[frame._UINT]);
+            mVM->mSTR.setUnsignedValue((U32)evalState.intStack[frame._UINT]);
             frame._UINT--;
             mVM->mSTR.push();
             break;
          case OP_PUSH_FLT:
             // OPframe._FLT_TO_STR, OP_PUSH
-            mVM->mSTR.setNumberValue(mVM->mEvalState.floatStack[frame._FLT]);
+            mVM->mSTR.setNumberValue(evalState.floatStack[frame._FLT]);
             frame._FLT--;
             mVM->mSTR.push();
             break;
@@ -1853,7 +1855,7 @@ KorkApi::ConsoleValue CodeBlock::exec(U32 ip, const char *functionName, Namespac
 
          case OP_ASSERT:
          {
-            if( !mVM->mEvalState.intStack[frame._UINT--] )
+            if( !evalState.intStack[frame._UINT--] )
             {
                const char *message = frame.curStringTable + code[ip];
 
@@ -1882,8 +1884,8 @@ KorkApi::ConsoleValue CodeBlock::exec(U32 ip, const char *functionName, Namespac
          {
             //append the ip and codeptr before managing the breakpoint!
             AssertFatal( !frame.stack.empty(), "Empty eval stack on break!");
-            mVM->mEvalState.vmFrames.last()->code = this;
-            mVM->mEvalState.vmFrames.last()->ip = ip - 1;
+            evalState.vmFrames.last()->code = this;
+            evalState.vmFrames.last()->ip = ip - 1;
             
             U32 breakLine;
             findBreakLine(ip-1, breakLine, instruction);
@@ -1896,7 +1898,7 @@ KorkApi::ConsoleValue CodeBlock::exec(U32 ip, const char *functionName, Namespac
          
          case OP_ITER_BEGIN_STR:
          {
-            mVM->mEvalState.iterStack[ frame._ITER ].mIsStringIter = true;
+            evalState.iterStack[ frame._ITER ].mIsStringIter = true;
             /* fallthrough */
          }
          
@@ -1905,10 +1907,10 @@ KorkApi::ConsoleValue CodeBlock::exec(U32 ip, const char *functionName, Namespac
             StringTableEntry varName = Compiler::CodeToSTE(NULL, code, ip);
             U32 failIp = code[ ip + 2 ];
             
-            IterStackRecord& iter = mVM->mEvalState.iterStack[ frame._ITER ];
+            IterStackRecord& iter = evalState.iterStack[ frame._ITER ];
             
-            iter.mVariable = mVM->mEvalState.getCurrentFrame().dictionary->add( varName );
-            iter.mDictionary = mVM->mEvalState.getCurrentFrame().dictionary;
+            iter.mVariable = evalState.getCurrentFrame().dictionary->add( varName );
+            iter.mDictionary = evalState.getCurrentFrame().dictionary;
             
             if( iter.mIsStringIter )
             {
@@ -1948,7 +1950,7 @@ KorkApi::ConsoleValue CodeBlock::exec(U32 ip, const char *functionName, Namespac
          case OP_ITER:
          {
             U32 breakIp = code[ ip ];
-            IterStackRecord& iter = mVM->mEvalState.iterStack[ frame._ITER - 1 ];
+            IterStackRecord& iter = evalState.iterStack[ frame._ITER - 1 ];
             
             if( iter.mIsStringIter )
             {
@@ -2017,7 +2019,7 @@ KorkApi::ConsoleValue CodeBlock::exec(U32 ip, const char *functionName, Namespac
          case OP_ITER_END:
          {
             -- frame._ITER;
-            IterStackRecord& iter = mVM->mEvalState.iterStack[frame._ITER];
+            IterStackRecord& iter = evalState.iterStack[frame._ITER];
 
             if (iter.mData.mObj.mSet)
             {
@@ -2028,7 +2030,7 @@ KorkApi::ConsoleValue CodeBlock::exec(U32 ip, const char *functionName, Namespac
 
             mVM->mSTR.rewind();
             
-            mVM->mEvalState.iterStack[ frame._ITER ].mIsStringIter = false;
+            evalState.iterStack[ frame._ITER ].mIsStringIter = false;
             break;
          }
 
@@ -2047,32 +2049,32 @@ execFinished:
       mVM->mTelDebugger->popStackFrame();
    
    if ( frame.popFrame )
-      mVM->mEvalState.popFrame();
+      evalState.popFrame();
    
    if(argv)
    {
-      if(mVM->mEvalState.traceOn)
+      if(evalState.traceOn)
       {
-         mVM->mEvalState.traceBuffer[0] = 0;
-         dStrcat(mVM->mEvalState.traceBuffer, "Leaving ");
+         evalState.traceBuffer[0] = 0;
+         dStrcat(evalState.traceBuffer, "Leaving ");
          
          if(packageName)
          {
-            dStrcat(mVM->mEvalState.traceBuffer, "[");
-            dStrcat(mVM->mEvalState.traceBuffer, packageName);
-            dStrcat(mVM->mEvalState.traceBuffer, "]");
+            dStrcat(evalState.traceBuffer, "[");
+            dStrcat(evalState.traceBuffer, packageName);
+            dStrcat(evalState.traceBuffer, "]");
          }
          if(thisNamespace && thisNamespace->mName)
          {
-            dSprintf(mVM->mEvalState.traceBuffer + dStrlen(mVM->mEvalState.traceBuffer), ExprEvalState::TraceBufferSize - dStrlen(mVM->mEvalState.traceBuffer),
+            dSprintf(evalState.traceBuffer + dStrlen(evalState.traceBuffer), ExprEvalState::TraceBufferSize - dStrlen(evalState.traceBuffer),
                      "%s::%s() - return %s", thisNamespace->mName, frame.thisFunctionName, mVM->mSTR.getStringValue());
          }
          else
          {
-            dSprintf(mVM->mEvalState.traceBuffer + dStrlen(mVM->mEvalState.traceBuffer), ExprEvalState::TraceBufferSize - dStrlen(mVM->mEvalState.traceBuffer),
+            dSprintf(evalState.traceBuffer + dStrlen(evalState.traceBuffer), ExprEvalState::TraceBufferSize - dStrlen(evalState.traceBuffer),
                      "%s() - return %s", frame.thisFunctionName, mVM->mSTR.getStringValue());
          }
-         mVM->printf(0, "%s", mVM->mEvalState.traceBuffer);
+         mVM->printf(0, "%s", evalState.traceBuffer);
       }
    }
    else
