@@ -515,6 +515,7 @@ void ObjectCreationStack::clear(KorkApi::VmInternal* vm)
 }
 
 ConsoleFrame& CodeBlock::setupExecFrame(
+   ExprEvalState& eval,
    U32*        code,
    U32&             ip,
    const char*      packageName,
@@ -523,7 +524,6 @@ ConsoleFrame& CodeBlock::setupExecFrame(
    S32              argc,
    S32              setFrame)
 {
-   ExprEvalState& eval = mVM->mEvalState;
    ConsoleFrame* newFrame = NULL;
 
    // --- Function call case (argv != nullptr) ---
@@ -639,7 +639,8 @@ KorkApi::ConsoleValue CodeBlock::exec(U32 ip, const char *functionName, Namespac
    ExprEvalState& evalState = mVM->mEvalState;
    
    // Setup frame state
-   ConsoleFrame& frame = setupExecFrame(code,
+   ConsoleFrame& frame = setupExecFrame(evalState,
+                                        code,
                                         ip,
                                         packageName,
                                         thisNamespace,

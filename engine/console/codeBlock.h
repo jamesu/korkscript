@@ -123,7 +123,8 @@ public:
     KorkApi::ConsoleValue compileExec(StringTableEntry fileName, const char *script,
                            bool noCalls, int setFrame = -1 );
    
-   ConsoleFrame& setupExecFrame(U32*        code,
+   ConsoleFrame& setupExecFrame(ExprEvalState& eval,
+                                U32*        code,
                                 U32&             ip,
                                 const char*      packageName,
                                 Namespace*       thisNamespace,
