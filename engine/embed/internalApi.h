@@ -32,9 +32,6 @@ struct VmInternal
    CodeBlock*    mCurrentCodeBlock;
    TelnetDebugger* mTelDebugger;
    TelnetConsole* mTelConsole;
-
-   StringTableEntry mCurrentFile;
-   StringTableEntry mCurrentRoot;
    
    // Namespace stuff
    NamespaceState mNSState;

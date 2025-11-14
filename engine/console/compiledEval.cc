@@ -660,8 +660,8 @@ KorkApi::ConsoleValue CodeBlock::exec(U32 ip, const char *functionName, Namespac
    mVM->mCurrentCodeBlock = this;
    if(this->name)
    {
-      mVM->mCurrentFile = this->name;
-      mVM->mCurrentRoot = mRoot;
+      evalState.mCurrentFile = this->name;
+      evalState.mCurrentRoot = mRoot;
    }
    KorkApi::ConsoleValue val;
    
@@ -2089,8 +2089,8 @@ execFinished:
    mVM->mCurrentCodeBlock = frame.saveCodeBlock;
    if(frame.saveCodeBlock && frame.saveCodeBlock->name)
    {
-      mVM->mCurrentFile = frame.saveCodeBlock->name;
-      mVM->mCurrentRoot = frame.saveCodeBlock->mRoot;
+      evalState.mCurrentFile = frame.saveCodeBlock->name;
+      evalState.mCurrentRoot = frame.saveCodeBlock->mRoot;
    }
    
    KorkApi::ConsoleValue retValue = mVM->mSTR.getConsoleValue();

@@ -609,6 +609,9 @@ ExprEvalState::ExprEvalState(KorkApi::VmInternal* vm)
    memset(iterStack, 0, sizeof(iterStack));
    memset(floatStack, 0, sizeof(floatStack));
    memset(intStack, 0, sizeof(intStack));
+   
+   mCurrentFile = NULL;
+   mCurrentRoot = NULL;
 }
 
 ExprEvalState::~ExprEvalState()

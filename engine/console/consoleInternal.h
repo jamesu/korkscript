@@ -233,6 +233,9 @@ public:
    F64 floatStack[MaxStackSize];
    S64 intStack[MaxStackSize];
    
+   StringTableEntry mCurrentFile;
+   StringTableEntry mCurrentRoot;
+   
    ExprEvalState(KorkApi::VmInternal* vm);
    ~ExprEvalState();
    
