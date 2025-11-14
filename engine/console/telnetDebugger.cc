@@ -368,7 +368,7 @@ void TelnetDebugger::pushStackFrame()
       return;
    
    if(mBreakOnNextStatement && mStackPopBreakIndex > -1 &&
-      mVMInternal->mEvalState.stack.size() > mStackPopBreakIndex)
+      mVMInternal->mEvalState.vmFrames.size() > mStackPopBreakIndex)
       setBreakOnNextStatement( false );
 }
 
@@ -377,7 +377,7 @@ void TelnetDebugger::popStackFrame()
    if(mState == NotConnected)
       return;
    
-   if(mStackPopBreakIndex > -1 && mVMInternal->mEvalState.stack.size()-1 <= mStackPopBreakIndex)
+   if(mStackPopBreakIndex > -1 && mVMInternal->mEvalState.vmFrames.size()-1 <= mStackPopBreakIndex)
       setBreakOnNextStatement( true );
 }
 
@@ -415,14 +415,15 @@ void TelnetDebugger::sendBreak()
    
    S32 last = 0;
    
-   for(S32 i = (S32) mVMInternal->mEvalState.stack.size() - 1; i >= last; i--)
+   for(S32 i = (S32) mVMInternal->mEvalState.vmFrames.size() - 1; i >= last; i--)
    {
-      CodeBlock *code = mVMInternal->mEvalState.stack[i]->code;
+      ConsoleBasicFrame frameInfo = mVMInternal->mEvalState.getBasicFrameInfo(i);
+      CodeBlock *code = frameInfo.code;
       const char *file = "<none>";
       if (code && code->name && code->name[0])
          file = code->name;
       
-      Namespace *ns = mVMInternal->mEvalState.stack[i]->scopeNamespace;
+      Namespace *ns = frameInfo.scopeNamespace;
       scope[0] = 0;
       if ( ns ) {
          
@@ -436,13 +437,13 @@ void TelnetDebugger::sendBreak()
          }
       }
       
-      const char *function = mVMInternal->mEvalState.stack[i]->scopeName;
+      const char *function = frameInfo.scopeName;
       if ((!function) || (!function[0]))
          function = "<none>";
       dStrcat( scope, function );
       
       U32 line=0, inst;
-      U32 ip = mVMInternal->mEvalState.stack[i]->ip;
+      U32 ip = frameInfo.ip;
       if (code)
          code->findBreakLine(ip, line, inst);
       dSprintf(buffer, MaxCommandSize, " %s %d %s", file, line, scope);
@@ -795,7 +796,7 @@ void TelnetDebugger::debugStepOver()
       return;
    
    setBreakOnNextStatement( true );
-   mStackPopBreakIndex = mVMInternal->mEvalState.stack.size();
+   mStackPopBreakIndex = mVMInternal->mEvalState.vmFrames.size();
    mProgramPaused = false;
    send("RUNNING\r\n");
 }
@@ -806,7 +807,7 @@ void TelnetDebugger::debugStepOut()
       return;
    
    setBreakOnNextStatement( false );
-   mStackPopBreakIndex = mVMInternal->mEvalState.stack.size() - 1;
+   mStackPopBreakIndex = mVMInternal->mEvalState.vmFrames.size() - 1;
    if ( mStackPopBreakIndex == 0 )
       mStackPopBreakIndex = -1;
    mProgramPaused = false;
@@ -816,8 +817,8 @@ void TelnetDebugger::debugStepOut()
 void TelnetDebugger::evaluateExpression(const char *tag, S32 frame, const char *evalBuffer)
 {
    // Make sure we're passing a valid frame to the eval.
-   if ( frame > mVMInternal->mEvalState.stack.size() )
-      frame = mVMInternal->mEvalState.stack.size() - 1;
+   if ( frame > mVMInternal->mEvalState.vmFrames.size() )
+      frame = mVMInternal->mEvalState.vmFrames.size() - 1;
    if ( frame < 0 )
       frame = 0;
    

@@ -547,7 +547,12 @@ void Namespace::markGroup(const char* name, const char* usage)
    ent->cb.mGroupName = name;
 }
 
-KorkApi::ConsoleValue Namespace::Entry::execute(S32 argc, KorkApi::ConsoleValue* argv, ExprEvalState *state)
+inline void* safeObjectUserPtr(KorkApi::VMObject* obj)
+{
+   return obj ? obj->userPtr : NULL;
+}
+
+KorkApi::ConsoleValue Namespace::Entry::execute(S32 argc, KorkApi::ConsoleValue* argv, ExprEvalState *state, KorkApi::VMObject* resolvedThis)
 {
    if(mType == ScriptFunctionType)
    {
@@ -575,23 +580,23 @@ KorkApi::ConsoleValue Namespace::Entry::execute(S32 argc, KorkApi::ConsoleValue*
    switch(mType)
    {
       case ValueCallbackType:
-         return cb.mValueCallbackFunc((SimObject*)state->thisObject->userPtr, mUserPtr, argc, argv);
+         return cb.mValueCallbackFunc(safeObjectUserPtr(resolvedThis), mUserPtr, argc, argv);
       break;
       case StringCallbackType:
-         return KorkApi::ConsoleValue::makeString(cb.mStringCallbackFunc((SimObject*)state->thisObject->userPtr, mUserPtr, argc, localArgv));
+         return KorkApi::ConsoleValue::makeString(cb.mStringCallbackFunc(safeObjectUserPtr(resolvedThis), mUserPtr, argc, localArgv));
       case IntCallbackType:
          dSprintf(returnBuffer, KorkApi::VmInternal::ExecReturnBufferSize, "%d",
-            cb.mIntCallbackFunc((SimObject*)state->thisObject->userPtr, mUserPtr, argc, localArgv));
+            cb.mIntCallbackFunc(safeObjectUserPtr(resolvedThis), mUserPtr, argc, localArgv));
          return KorkApi::ConsoleValue::makeString(returnBuffer);
       case FloatCallbackType:
          dSprintf(returnBuffer, KorkApi::VmInternal::ExecReturnBufferSize, "%g",
-            cb.mFloatCallbackFunc((SimObject*)state->thisObject->userPtr, mUserPtr, argc, localArgv));
+            cb.mFloatCallbackFunc(safeObjectUserPtr(resolvedThis), mUserPtr, argc, localArgv));
          return KorkApi::ConsoleValue::makeString(returnBuffer);
       case VoidCallbackType:
-         cb.mVoidCallbackFunc((SimObject*)state->thisObject->userPtr, mUserPtr, argc, localArgv);
+         cb.mVoidCallbackFunc(safeObjectUserPtr(resolvedThis), mUserPtr, argc, localArgv);
       case BoolCallbackType:
          dSprintf(returnBuffer, KorkApi::VmInternal::ExecReturnBufferSize, "%d",
-            (U32)cb.mBoolCallbackFunc((SimObject*)state->thisObject->userPtr, mUserPtr, argc, localArgv));
+            (U32)cb.mBoolCallbackFunc(safeObjectUserPtr(resolvedThis), mUserPtr, argc, localArgv));
          return KorkApi::ConsoleValue::makeString(returnBuffer);
       default:
          break;

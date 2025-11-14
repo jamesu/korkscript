@@ -64,7 +64,7 @@ class Namespace
       Entry();
       void clear();
 
-      KorkApi::ConsoleValue execute(S32 argc, KorkApi::ConsoleValue* argv, ExprEvalState *state);
+      KorkApi::ConsoleValue execute(S32 argc, KorkApi::ConsoleValue* argv, ExprEvalState *state, KorkApi::VMObject* resolvedThis);
    };
    Entry *mEntryList;
 

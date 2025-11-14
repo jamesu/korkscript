@@ -562,10 +562,7 @@ bool Vm::callObjectFunction(VMObject* self, StringTableEntry funcName, int argc,
       //object->pushScriptCallbackGuard();
    }
 
-   KorkApi::VMObject* save = mInternal->mEvalState.thisObject;
-   mInternal->mEvalState.thisObject = self;
-   KorkApi::ConsoleValue ret = ent->execute(argc, argv, &mInternal->mEvalState);
-   mInternal->mEvalState.thisObject = save;
+   KorkApi::ConsoleValue ret = ent->execute(argc, argv, &mInternal->mEvalState, self);
    
    retValue = ret;
 
@@ -597,7 +594,7 @@ bool Vm::callNamespaceFunction(NamespaceId nsId, StringTableEntry name, int argc
       return false;
    }
 
-   retValue = ent->execute(argc, argv, &mInternal->mEvalState);
+   retValue = ent->execute(argc, argv, &mInternal->mEvalState, NULL);
 
    // Reset the function offset so the stack
    // doesn't continue to grow unnecessarily
@@ -650,11 +647,6 @@ void Vm::setGlobalVariable(StringTableEntry name, KorkApi::ConsoleValue value)
    mInternal->mEvalState.globalVars.setVariableValue(name, value);
 }
 
-void Vm::setLocalVariable(StringTableEntry name, KorkApi::ConsoleValue value)
-{
-   mInternal->mEvalState.stack.last()->setVariableValue(name, value);
-}
-
 ConsoleValue Vm::getGlobalVariable(StringTableEntry name)
 {
    Dictionary::Entry* e = mInternal->mEvalState.globalVars.getVariable(name);
@@ -667,16 +659,14 @@ ConsoleValue Vm::getGlobalVariable(StringTableEntry name)
    return mInternal->mEvalState.globalVars.getEntryValue(e);
 }
 
+void Vm::setLocalVariable(StringTableEntry name, KorkApi::ConsoleValue value)
+{
+   mInternal->mEvalState.setLocalFrameVariable(name, value);
+}
+
 ConsoleValue Vm::getLocalVariable(StringTableEntry name)
 {
-   Dictionary::Entry* e = mInternal->mEvalState.stack.last()->getVariable(name);
-   
-   if (!e)
-   {
-      return ConsoleValue();
-   }
-   
-   return mInternal->mEvalState.stack.last()->getEntryValue(e);
+   return mInternal->mEvalState.getLocalFrameVariable(name);
 }
 
 
@@ -702,7 +692,7 @@ bool Vm::isTracing()
 
 S32 Vm::getTracingStackPos()
 {
-   return mInternal->mEvalState.stack.size();
+   return mInternal->mEvalState.vmFrames.size();
 }
 
 void Vm::setTracing(bool value)

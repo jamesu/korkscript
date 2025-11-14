@@ -217,21 +217,13 @@ void Dictionary::remove(Dictionary::Entry *ent)
 
 Dictionary::Dictionary()
 :  hashTable( NULL ),
-exprState( NULL ),
-scopeName( NULL ),
-scopeNamespace( NULL ),
-code( NULL ),
-ip( 0 )
+exprState( NULL )
 {
 }
 
 Dictionary::Dictionary(ExprEvalState *state, Dictionary* ref)
 :  hashTable( NULL ),
-exprState( NULL ),
-scopeName( NULL ),
-scopeNamespace( NULL ),
-code( NULL ),
-ip( 0 )
+exprState( NULL )
 {
    setState(state,ref);
 }
@@ -605,71 +597,26 @@ void Dictionary::validate()
                "Dictionary::validate() - Dictionary not owner of own hashtable!" );
 }
 
-void ExprEvalState::pushFrame(StringTableEntry frameName, Namespace *ns)
-{
-   Dictionary *newFrame = new Dictionary(this);
-   newFrame->scopeName = frameName;
-   newFrame->scopeNamespace = ns;
-   stack.push_back(newFrame);
-   mStackDepth ++;
-   //Con::printf("ExprEvalState::pushFrame");
-}
-
-void ExprEvalState::popFrame()
-{
-   Dictionary *last = stack.last();
-   stack.pop_back();
-   delete last;
-   mStackDepth --;
-   //Con::printf("ExprEvalState::popFrame");
-}
-
-void ExprEvalState::pushFrameRef(S32 stackIndex)
-{
-   AssertFatal( stackIndex >= 0 && stackIndex < stack.size(), "You must be asking for a valid frame!" );
-   Dictionary *newFrame = new Dictionary(this, stack[stackIndex]);
-   stack.push_back(newFrame);
-   mStackDepth ++;
-   //Con::printf("ExprEvalState::pushFrameRef");
-}
-
 ExprEvalState::ExprEvalState(KorkApi::VmInternal* vm)
 {
    VECTOR_SET_ASSOCIATION(stack);
    vmInternal = vm;
    globalVars.setState(this);
-   thisObject = NULL;
-   traceOn = false;
    mStackDepth = 0;
+   traceOn = false;
+   traceBuffer[0] = '\0';
    
-   currentVariable = NULL;
-   copyVariable = NULL;
-   currentDictionary = NULL;
-   copyDictionary = NULL;
-
    memset(iterStack, 0, sizeof(iterStack));
    memset(floatStack, 0, sizeof(floatStack));
    memset(intStack, 0, sizeof(intStack));
-   
-   _FLT = 0;
-   _UINT = 0;
-   _ITER = 0;
 }
 
 ExprEvalState::~ExprEvalState()
 {
-   while(stack.size())
+   while(vmFrames.size())
       popFrame();
 }
 
-void ExprEvalState::validate()
-{
-   AssertFatal( mStackDepth <= stack.size(),
-               "ExprEvalState::validate() - Stack depth pointing beyond last stack frame!" );
-   
-   for( U32 i = 0; i < stack.size(); ++ i )
-      stack[ i ]->validate();
-}
 // !!!!! FOLLOWING NOT CHECKED YET !!!!!
 
 #if TOFIX
@@ -680,9 +627,9 @@ ConsoleFunction(backtrace, void, 1, 1, "Print the call stack.")
 
    for(U32 i = 0; i < gEvalState.stack.size(); i++)
    {
-      totalSize += dStrlen(gEvalState.stack[i]->scopeName) + 3;
-      if(gEvalState.stack[i]->scopeNamespace && gEvalState.stack[i]->scopeNamespace->mName)
-         totalSize += dStrlen(gEvalState.stack[i]->scopeNamespace->mName) + 2;
+      totalSize += dStrlen(gEvalState.vmFrames[i]->scopeName) + 3;
+      if(gEvalState.vmFrames[i]->scopeNamespace && gEvalState.vmFrames[i]->scopeNamespace->mName)
+         totalSize += dStrlen(gEvalState.vmFrames[i]->scopeNamespace->mName) + 2;
    }
 
    char *buf = Con::getReturnBuffer(totalSize);
@@ -690,12 +637,12 @@ ConsoleFunction(backtrace, void, 1, 1, "Print the call stack.")
    for(U32 i = 0; i < gEvalState.stack.size(); i++)
    {
       dStrcat(buf, "->");
-      if(gEvalState.stack[i]->scopeNamespace && gEvalState.stack[i]->scopeNamespace->mName)
+      if(gEvalState.vmFrames[i]->scopeNamespace && gEvalState.vmFramesi]->scopeNamespace->mName)
       {
-         dStrcat(buf, gEvalState.stack[i]->scopeNamespace->mName);
+         dStrcat(buf, gEvalState.vmFramesi]->scopeNamespace->mName);
          dStrcat(buf, "::");
       }
-      dStrcat(buf, gEvalState.stack[i]->scopeName);
+      dStrcat(buf, gEvalState.vmFramesi]->scopeName);
    }
    Con::printf("BackTrace: %s", buf);
 

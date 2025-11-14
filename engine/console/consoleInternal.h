@@ -59,6 +59,8 @@ enum EvalConstants {
    MethodOnComponent = -2
 };
 
+struct ConsoleFrame;
+
 class Dictionary
 {
 public:
@@ -67,6 +69,7 @@ public:
    {
       friend class Dictionary;
       friend class ExprEvalState;
+      friend struct ConsoleFrame;
       
       StringTableEntry name;
       Entry *nextEntry;
@@ -105,11 +108,6 @@ public:
    HashTableData *hashTable;
    ExprEvalState *exprState;
    KorkApi::VmInternal* vm;
-   
-   StringTableEntry scopeName;
-   Namespace *scopeNamespace;
-   CodeBlock *code;
-   U32 ip;
    
    Dictionary();
    Dictionary(ExprEvalState *state, Dictionary* ref=NULL);
@@ -206,6 +204,16 @@ struct IterStackRecord
    } mData;
 };
 
+struct ConsoleFrame;
+
+struct ConsoleBasicFrame
+{
+   CodeBlock* code;
+   Namespace* scopeNamespace;
+   const char* scopeName;
+   U32 ip;
+};
+
 class ExprEvalState
 {
 public:
@@ -220,25 +228,10 @@ public:
    
    ///
    KorkApi::VmInternal* vmInternal;
-   KorkApi::VMObject *thisObject;
-   Dictionary* currentDictionary;
-   Dictionary::Entry *currentVariable;
-   Dictionary* copyDictionary;
-   Dictionary::Entry *copyVariable;
-   bool traceOn;
-
-   char traceBuffer[TraceBufferSize];
-
+   
    IterStackRecord iterStack[ MaxStackSize ];
-
    F64 floatStack[MaxStackSize];
    S64 intStack[MaxStackSize];
-
-   U32 _FLT = 0;
-   U32 _UINT = 0;
-   U32 _ITER = 0;    ///< Stack pointer for iterStack.
-   
-   U32 mStackDepth;
    
    ExprEvalState(KorkApi::VmInternal* vm);
    ~ExprEvalState();
@@ -253,23 +246,19 @@ public:
    
    /// The stack of callframes.  The extra redirection is necessary since Dictionary holds
    /// an interior pointer that will become invalid when the object changes address.
-   Vector< Dictionary* > stack;
+   Vector< ConsoleFrame* > vmFrames;
+   
+   bool traceOn;
+   char traceBuffer[TraceBufferSize];
+   
+   U32 mStackDepth;
    
    ///
    Dictionary globalVars;
-   
-   void setCurVarName(StringTableEntry name);
-   void setCurVarNameCreate(StringTableEntry name);
-   
-   S32 getIntVariable();
-   F64 getFloatVariable();
-   const char *getStringVariable();
-   KorkApi::ConsoleValue getConsoleVariable();
-   void setUnsignedVariable(U32 val);
-   void setNumberVariable(F64 val);
-   void setStringVariable(const char *str);
-   void setConsoleValue(KorkApi::ConsoleValue value);
-   void setCopyVariable();
+
+   void setLocalFrameVariable(StringTableEntry name, KorkApi::ConsoleValue value);
+   KorkApi::ConsoleValue getLocalFrameVariable(StringTableEntry name);
+   ConsoleBasicFrame getBasicFrameInfo(U32 idx);
    
    void pushFrame(StringTableEntry frameName, Namespace *ns);
    void popFrame();
@@ -283,10 +272,7 @@ public:
       return mStackDepth;
    }
    
-   Dictionary& getCurrentFrame()
-   {
-      return *( stack[ mStackDepth - 1 ] );
-   }
+   ConsoleFrame& getCurrentFrame();
    
    /// @}
    

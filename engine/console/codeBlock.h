@@ -33,6 +33,7 @@ class VmInternal;
 }
 
 class Stream;
+struct ConsoleFrame;
 
 
 /// Core TorqueScript code management class.
@@ -121,6 +122,14 @@ public:
    /// top stack frame is used.
     KorkApi::ConsoleValue compileExec(StringTableEntry fileName, const char *script,
                            bool noCalls, int setFrame = -1 );
+   
+   ConsoleFrame& setupExecFrame(U32*        code,
+                                U32&             ip,
+                                const char*      packageName,
+                                Namespace*       thisNamespace,
+                                KorkApi::ConsoleValue*    argv,
+                                S32              argc,
+                                S32              setFrame);
    
    /// Executes the existing code in the CodeBlock. The return string is any
    /// result of the code executed, if any, or an empty string.
