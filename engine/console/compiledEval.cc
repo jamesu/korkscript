@@ -93,26 +93,6 @@ struct LocalRefTrack
    }
 };
 
-
-struct ObjectCreationStack
-{
-   struct Item
-   {
-      KorkApi::VMObject* newObject;
-      U32 failJump;
-   };
-
-   static const U32 objectCreationStackSize = 32;
-   U32 index;
-   Item stack[objectCreationStackSize];
-
-   ObjectCreationStack() : index(0) {;}
-
-   void push(KorkApi::VmInternal* vm, KorkApi::VMObject* object, U32 failJump);
-   void pop(KorkApi::VmInternal* vm, LocalRefTrack& outTrack, U32* outJump);
-   void clear(KorkApi::VmInternal* vm);
-};
-
 struct ConsoleVarRef
 {
    Dictionary* dictionary;
@@ -129,65 +109,68 @@ struct ConsoleFrame
    enum
    {
       NSDocLength = 128,
-      FieldArraySize = 256
+      FieldArraySize = 256,
    };
+
+   
+   // Context (16 bytes)
    
    Dictionary* dictionary;
    ExprEvalState* evalState;
    
-   // Frame state
+   // Frame state (24 bytes + 20 bytes)
    CodeBlock*      saveCodeBlock;
    F64*            curFloatTable;
    char*           curStringTable;
-   S32             curStringTableLen;
+   //S32             curStringTableLen;
    bool            popFrame;
    U32             failJump;
    U32             stackStart; // string stack offset
+   U32             callArgc;
+   U32             ip;
    
-   // Function state
+   // Function state (24 bytes)
    StringTableEntry  thisFunctionName;
    const char*       curFNDocBlock;
    const char*       curNSDocBlock;
 
-   // Local stacks
-   ObjectCreationStack creationStack;
-   
    // Generic state stuff
    
-   // Variable manipulation refs
+   // Variable manipulation refs (32 bytes)
    ConsoleVarRef currentVar;
    ConsoleVarRef copyVar;
    
-   // Stack offsets
-   U32 _FLT;
-   U32 _UINT;
-   U32 _ITER;
+   // Stack offsets (8 bytes)
+   U16 _FLT;
+   U16 _UINT;
+   U16 _ITER;
+   U16 _OBJ;
    
-   // These were from Dictionary
+   U16 _STARTOBJ;
+   
+   // These were from Dictionary (24 bytes)
    StringTableEntry scopeName;
    Namespace *scopeNamespace;
    CodeBlock *code;
-   U32 ip;
    
-   // References used across opcodes
+   // References used across opcodes (40 bytes + 16 bytes)
    LocalRefTrack currentNewObject;
-   StringTableEntry prevField;
-   StringTableEntry curField;
    LocalRefTrack thisObject;
    LocalRefTrack prevObject;
    LocalRefTrack curObject;
    LocalRefTrack saveObject;
+   StringTableEntry prevField;
+   StringTableEntry curField;
    
-   // These are used when calling functions but we might need them until exec ends
+   // These are used when calling functions but we might need them until exec ends (16 bytes)
    Namespace::Entry* nsEntry;
    Namespace*        ns;
 
-   // Args
-   U32 callArgc;
+   // Args (16 bytes)
    KorkApi::ConsoleValue* callArgv;
    const char**           callArgvS;
 
-   // Buffers
+   // Buffers (640 bytes)
    char nsDocBlockClass[NSDocLength];
    char curFieldArray[FieldArraySize];
    char prevFieldArray[FieldArraySize];
@@ -199,11 +182,10 @@ public:
       , evalState(nullptr)
       , curFloatTable(nullptr)
       , curStringTable(nullptr)
-      , curStringTableLen(0)
+      //, curStringTableLen(0)
       , thisFunctionName(nullptr)
       , popFrame(false)
       , failJump(0)
-      , creationStack()
       , scopeName( NULL )
       , scopeNamespace( NULL )
       , code( NULL )
@@ -212,6 +194,8 @@ public:
       , _FLT(0)
       , _UINT(0)
       , _ITER(0)
+      , _OBJ(0)
+      , _STARTOBJ(0)
       , currentNewObject(vm)
       , prevObject(vm)
       , curObject(vm)
@@ -300,6 +284,7 @@ inline void ConsoleFrame::copyFrom(ConsoleFrame* other)
    _FLT = other->_FLT;
    _UINT = other->_UINT;
    _ITER = other->_ITER;
+   _OBJ = _STARTOBJ = other->_OBJ;
 }
 
 inline void ConsoleFrame::setCurVarName(StringTableEntry name)
@@ -473,43 +458,39 @@ inline void* safeObjectUserPtr(KorkApi::VMObject* obj)
    return obj ? obj->userPtr : NULL;
 }
 
-void ObjectCreationStack::push(KorkApi::VmInternal* vm, KorkApi::VMObject* object, U32 failJump)
+
+void ExprEvalState::setCreatedObject(U32 index, KorkApi::VMObject* object, U32 failJump)
 {
-   stack[index].newObject = object;
-   stack[index++].failJump = failJump;
+   objectCreationStack[index].newObject = object;
+   objectCreationStack[index].failJump = failJump;
+   
    if (object)
    {
-      vm->incVMRef(object);
+      vmInternal->incVMRef(object);
    }
 }
 
-void ObjectCreationStack::pop(KorkApi::VmInternal* vm, LocalRefTrack& outTrack, U32* outJump)
+void ExprEvalState::clearCreatedObject(U32 index, LocalRefTrack& outTrack, U32* outJump)
 {
-   if (index == 0)
-   {
-      return;
-   }
-
-   U32 realIndex = index-1;
-   *outJump = stack[realIndex].failJump;
-   KorkApi::VMObject* newObject = stack[realIndex].newObject;
+   *outJump = objectCreationStack[index].failJump;
+   KorkApi::VMObject* newObject = objectCreationStack[index].newObject;
    outTrack = newObject;
    
    if (newObject)
    {
-      stack[realIndex].newObject = NULL;
-      vm->decVMRef(newObject);
+      objectCreationStack[index].newObject = NULL;
+      vmInternal->decVMRef(newObject);
    }
 }
 
-void ObjectCreationStack::clear(KorkApi::VmInternal* vm)
+void ExprEvalState::clearCreatedObjects(U32 start, U32 end)
 {
-   for (U32 i=0; i<index; i++)
+   for (U32 i=start; i<end; i++)
    {
-      if (stack[i].newObject)
+      if (objectCreationStack[i].newObject)
       {
-         vm->decVMRef(stack[i].newObject);
-         stack[i].newObject = NULL;
+         vmInternal->decVMRef(objectCreationStack[i].newObject);
+         objectCreationStack[i].newObject = NULL;
       }
    }
 }
@@ -590,7 +571,7 @@ ConsoleFrame& CodeBlock::setupExecFrame(
 
       newFrame->curFloatTable     = functionFloats;
       newFrame->curStringTable    = functionStrings;
-      newFrame->curStringTableLen = functionStringsMaxLen;
+      //newFrame->curStringTableLen = functionStringsMaxLen;
    }
    else
    {
@@ -612,7 +593,7 @@ ConsoleFrame& CodeBlock::setupExecFrame(
       newFrame->popFrame          = true;
       newFrame->curFloatTable     = globalFloats;
       newFrame->curStringTable    = globalStrings;
-      newFrame->curStringTableLen = globalStringsMaxLen;
+      //newFrame->curStringTableLen = globalStringsMaxLen;
    }
    
    return *newFrame;
@@ -621,6 +602,8 @@ ConsoleFrame& CodeBlock::setupExecFrame(
 U32 gExecCount = 0;
 KorkApi::ConsoleValue CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNamespace, U32 argc,  KorkApi::ConsoleValue* argv, bool noCalls, StringTableEntry packageName, S32 setFrame)
 {
+   
+   printf("Frame size=%u exprSize=%u dbSize=%u\n", sizeof(ConsoleFrame), sizeof(ExprEvalState), sizeof(CodeBlock));
    
 #ifdef TORQUE_DEBUG
    gExecCount++;
@@ -732,7 +715,7 @@ KorkApi::ConsoleValue CodeBlock::exec(U32 ip, const char *functionName, Namespac
             // Push the old info to the stack
             //Assert( objectCreationStackIndex < objectCreationStackSize );
 
-            frame.creationStack.push(mVM, frame.currentNewObject, frame.failJump);
+            mVM->mEvalState.setCreatedObject(frame._OBJ++, frame.currentNewObject, frame.failJump);
             
             // Get the constructor information off the stack.
             mVM->mSTR.getArgcArgv(NULL, &frame.callArgc, &frame.callArgv);
@@ -915,7 +898,8 @@ KorkApi::ConsoleValue CodeBlock::exec(U32 ip, const char *functionName, Namespac
             
          case OP_FINISH_OBJECT:
          {
-            frame.creationStack.pop(mVM, frame.currentNewObject, &frame.failJump);
+            frame._OBJ--;
+            mVM->mEvalState.clearCreatedObject(frame._OBJ, frame.currentNewObject, &frame.failJump);
             break;
          }
             
@@ -980,7 +964,7 @@ KorkApi::ConsoleValue CodeBlock::exec(U32 ip, const char *functionName, Namespac
             
          case OP_RETURN:
 
-            frame.creationStack.clear(mVM);
+            mVM->mEvalState.clearCreatedObjects(frame._STARTOBJ, frame._OBJ);
 
             if ( frame._ITER > 0 )
             {
@@ -1005,7 +989,7 @@ KorkApi::ConsoleValue CodeBlock::exec(U32 ip, const char *functionName, Namespac
 
          case OP_RETURN_FLT:
 
-            frame.creationStack.clear(mVM);
+            mVM->mEvalState.clearCreatedObjects(frame._STARTOBJ, frame._OBJ);
          
             if( frame._ITER > 0 )
             {
@@ -1030,7 +1014,7 @@ KorkApi::ConsoleValue CodeBlock::exec(U32 ip, const char *functionName, Namespac
 
          case OP_RETURN_UINT:
 
-            frame.creationStack.clear(mVM);
+            mVM->mEvalState.clearCreatedObjects(frame._STARTOBJ, frame._OBJ);
          
             if( frame._ITER > 0 )
             {
@@ -1655,6 +1639,7 @@ KorkApi::ConsoleValue CodeBlock::exec(U32 ip, const char *functionName, Namespac
                else // no body
                   mVM->mSTR.setStringValue("");
                
+               //const char* sVal = mVM->valueAsString(ret);
                mVM->mSTR.popFrame();
                mVM->mSTR.setStringValue(mVM->valueAsString(ret));
             }
@@ -2044,7 +2029,7 @@ KorkApi::ConsoleValue CodeBlock::exec(U32 ip, const char *functionName, Namespac
    }
 execFinished:
 
-   frame.creationStack.clear(mVM);
+   mVM->mEvalState.clearCreatedObjects(frame._STARTOBJ, frame._OBJ);
    
    if ( telDebuggerOn && setFrame < 0 )
       mVM->mTelDebugger->popStackFrame();
@@ -2094,6 +2079,10 @@ execFinished:
    }
    
    KorkApi::ConsoleValue retValue = mVM->mSTR.getConsoleValue();
+   if (retValue.cvalue >= 4096)
+   {
+      printf("WTF\n");
+   }
    
 #ifdef TORQUE_DEBUG
    AssertFatal(!(mVM->mSTR.mStartStackSize > stackStart), "String stack not popped enough in script exec");

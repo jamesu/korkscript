@@ -55,7 +55,13 @@ extern char *typeValueEmpty;
 class ExprEvalState;
 
 enum EvalConstants {
-   MaxStackSize = 1024,
+   ObjectCreationStackSize = 32,
+   MaxExpectedFunctionDepth = 10,
+   // NOTE: code gen uses 2 stack elememts per op, but if you do "func() + val" it needs to
+   // keep a stack position around while the function is running, so we use this
+   // logic to give us a reasonable maximum.
+   MaxStackSize = 2 + (MaxExpectedFunctionDepth),
+   MaxIterStackSize = 64,
    MethodOnComponent = -2
 };
 
@@ -205,6 +211,7 @@ struct IterStackRecord
 };
 
 struct ConsoleFrame;
+struct LocalRefTrack;
 
 struct ConsoleBasicFrame
 {
@@ -223,21 +230,32 @@ public:
       TraceBufferSize = 1024
    };
    
+   struct ObjectStackItem
+   {
+      KorkApi::VMObject* newObject;
+      U32 failJump;
+   };
+   
    /// @name Expression Evaluation
    /// @{
    
    ///
    KorkApi::VmInternal* vmInternal;
    
-   IterStackRecord iterStack[ MaxStackSize ];
+   IterStackRecord iterStack[MaxIterStackSize];
    F64 floatStack[MaxStackSize];
    S64 intStack[MaxStackSize];
+   ObjectStackItem objectCreationStack[ObjectCreationStackSize];
    
    StringTableEntry mCurrentFile;
    StringTableEntry mCurrentRoot;
    
    ExprEvalState(KorkApi::VmInternal* vm);
    ~ExprEvalState();
+   
+   void setCreatedObject(U32 index, KorkApi::VMObject* object, U32 failJump);
+   void clearCreatedObject(U32 index, LocalRefTrack& outTrack, U32* outJump);
+   void clearCreatedObjects(U32 start, U32 end);
    
    
    const char *getNamespaceList(Namespace *ns);

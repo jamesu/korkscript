@@ -243,7 +243,7 @@ struct StringStack
       if (mType == KorkApi::ConsoleValue::TypeInternalString || mType >= KorkApi::ConsoleValue::TypeBeginCustom)
       {
          // Strings and types are put on stack
-         return KorkApi::ConsoleValue::makeTyped(&mBuffer[mStart], mType, KorkApi::ConsoleValue::ZoneFunc);
+         return KorkApi::ConsoleValue::makeRaw(&mBuffer[mStart] - &mBuffer[0], mType, KorkApi::ConsoleValue::ZoneFunc);
       }
       else
       {
