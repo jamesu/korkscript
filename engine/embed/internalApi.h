@@ -37,7 +37,6 @@ struct VmInternal
    NamespaceState mNSState;
 
    ExprEvalState mEvalState;
-   StringStack mSTR;
 
    Vector<TypeInfo> mTypes;
    Vector<ClassInfo> mClassList;

@@ -603,14 +603,13 @@ U32 gExecCount = 0;
 KorkApi::ConsoleValue CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNamespace, U32 argc,  KorkApi::ConsoleValue* argv, bool noCalls, StringTableEntry packageName, S32 setFrame)
 {
    
-   printf("Frame size=%u exprSize=%u dbSize=%u\n", sizeof(ConsoleFrame), sizeof(ExprEvalState), sizeof(CodeBlock));
+   //printf("Frame size=%u exprSize=%u dbSize=%u\n", sizeof(ConsoleFrame), sizeof(ExprEvalState), sizeof(CodeBlock));
    
 #ifdef TORQUE_DEBUG
    gExecCount++;
 #endif
    
    incRefCount();
-   mVM->mSTR.clearFunctionOffset();
    
    // NOTE: these are only used temporarily inside opcode cases
    StringTableEntry tmpVar = NULL;
@@ -620,6 +619,7 @@ KorkApi::ConsoleValue CodeBlock::exec(U32 ip, const char *functionName, Namespac
    StringTableEntry tmpFnPackage = NULL;
    
    ExprEvalState& evalState = mVM->mEvalState;
+   evalState.mSTR.clearFunctionOffset();
    
    // Setup frame state
    ConsoleFrame& frame = setupExecFrame(evalState,
@@ -637,7 +637,7 @@ KorkApi::ConsoleValue CodeBlock::exec(U32 ip, const char *functionName, Namespac
    if ( telDebuggerOn && setFrame < 0 )
       mVM->mTelDebugger->pushStackFrame();
    
-   frame.stackStart = mVM->mSTR.mStartStackSize;
+   frame.stackStart = evalState.mSTR.mStartStackSize;
    frame.saveCodeBlock = mVM->mCurrentCodeBlock;
    
    mVM->mCurrentCodeBlock = this;
@@ -718,8 +718,8 @@ KorkApi::ConsoleValue CodeBlock::exec(U32 ip, const char *functionName, Namespac
             mVM->mEvalState.setCreatedObject(frame._OBJ++, frame.currentNewObject, frame.failJump);
             
             // Get the constructor information off the stack.
-            mVM->mSTR.getArgcArgv(NULL, &frame.callArgc, &frame.callArgv);
-            mVM->mSTR.convertArgv(mVM, frame.callArgc, &frame.callArgvS);
+            evalState.mSTR.getArgcArgv(NULL, &frame.callArgc, &frame.callArgv);
+            evalState.mSTR.convertArgv(mVM, frame.callArgc, &frame.callArgvS);
             const char *objectName = frame.callArgvS[ 2 ];
             
             // Con::printf("Creating object...");
@@ -758,7 +758,7 @@ KorkApi::ConsoleValue CodeBlock::exec(U32 ip, const char *functionName, Namespac
                if (oldObject)
                {                  
                   // Prevent stack value corruption
-                  mVM->mSTR.pushFrame();
+                  evalState.mSTR.pushFrame();
                   // --
                   
                   oldObject->klass->iCreate.RemoveObjectFn(oldObject->klass->userPtr, mVMPublic, oldObject);
@@ -767,11 +767,11 @@ KorkApi::ConsoleValue CodeBlock::exec(U32 ip, const char *functionName, Namespac
                   oldObject = NULL;
 
                   // Prevent stack value corruption
-                  mVM->mSTR.popFrame();
+                  evalState.mSTR.popFrame();
                }
             }
             
-            mVM->mSTR.popFrame();
+            evalState.mSTR.popFrame();
             
             if(!frame.currentNewObject.isValid())
             {
@@ -959,7 +959,7 @@ KorkApi::ConsoleValue CodeBlock::exec(U32 ip, const char *functionName, Namespac
             
          // This fixes a bug when not explicitly returning a value.
          case OP_RETURN_VOID:
-            mVM->mSTR.setStringValue("");
+            evalState.mSTR.setStringValue("");
             // We're falling thru here on purpose.
             
          case OP_RETURN:
@@ -980,9 +980,9 @@ KorkApi::ConsoleValue CodeBlock::exec(U32 ip, const char *functionName, Namespac
                   iter.mIsStringIter = false;
                }
                
-               const char* returnValue = mVM->mSTR.getStringValue();
-               mVM->mSTR.rewind();
-               mVM->mSTR.setStringValue( returnValue ); // Not nice but works.
+               const char* returnValue = evalState.mSTR.getStringValue();
+               evalState.mSTR.rewind();
+               evalState.mSTR.setStringValue( returnValue ); // Not nice but works.
             }
                
             goto execFinished;
@@ -1007,7 +1007,7 @@ KorkApi::ConsoleValue CodeBlock::exec(U32 ip, const char *functionName, Namespac
                
             }
 
-            mVM->mSTR.setNumberValue( evalState.floatStack[frame._FLT] );
+            evalState.mSTR.setNumberValue( evalState.floatStack[frame._FLT] );
             frame._FLT--;
                
             goto execFinished;
@@ -1031,7 +1031,7 @@ KorkApi::ConsoleValue CodeBlock::exec(U32 ip, const char *functionName, Namespac
                }
             }
 
-            mVM->mSTR.setUnsignedValue( evalState.intStack[frame._UINT] );
+            evalState.mSTR.setUnsignedValue( evalState.intStack[frame._UINT] );
             frame._UINT--;
                
             goto execFinished;
@@ -1188,7 +1188,7 @@ KorkApi::ConsoleValue CodeBlock::exec(U32 ip, const char *functionName, Namespac
             break;
             
          case OP_SETCURVAR_ARRAY:
-            tmpVar = mVM->mSTR.getSTValue();
+            tmpVar = evalState.mSTR.getSTValue();
             
             // See OP_SETCURVAR
             frame.prevField = NULL;
@@ -1203,7 +1203,7 @@ KorkApi::ConsoleValue CodeBlock::exec(U32 ip, const char *functionName, Namespac
             break;
             
          case OP_SETCURVAR_ARRAY_CREATE:
-            tmpVar = mVM->mSTR.getSTValue();
+            tmpVar = evalState.mSTR.getSTValue();
             
             // See OP_SETCURVAR
             frame.prevField = NULL;
@@ -1229,7 +1229,7 @@ KorkApi::ConsoleValue CodeBlock::exec(U32 ip, const char *functionName, Namespac
             
          case OP_LOADVAR_STR:
             val = frame.getConsoleVariable();
-            mVM->mSTR.setStringValue(mVM->valueAsString(val));
+            evalState.mSTR.setStringValue(mVM->valueAsString(val));
             break;
             
          case OP_LOADVAR_VAR:
@@ -1246,7 +1246,7 @@ KorkApi::ConsoleValue CodeBlock::exec(U32 ip, const char *functionName, Namespac
             break;
             
          case OP_SAVEVAR_STR:
-            frame.setStringVariable(mVM->mSTR.getStringValue());
+            frame.setStringVariable(evalState.mSTR.getStringValue());
             break;
             
          case OP_SAVEVAR_VAR:
@@ -1257,7 +1257,7 @@ KorkApi::ConsoleValue CodeBlock::exec(U32 ip, const char *functionName, Namespac
          case OP_SETCUROBJECT:
             // Save the previous object for parsing vector fields.
             frame.prevObject = frame.curObject;
-            val = mVM->mSTR.getConsoleValue();
+            val = evalState.mSTR.getConsoleValue();
             {
                const char* findPath = mVM->valueAsString(val);
 
@@ -1285,7 +1285,7 @@ KorkApi::ConsoleValue CodeBlock::exec(U32 ip, const char *functionName, Namespac
             ++ip; // To skip the recurse flag if the object wasnt found
             if (frame.curObject)
             {
-               StringTableEntry intName = StringTable->insert(mVM->mSTR.getStringValue());
+               StringTableEntry intName = StringTable->insert(evalState.mSTR.getStringValue());
                bool recurse = code[ip-1];
                KorkApi::VMObject* obj = mVM->mConfig.iFind.FindObjectByInternalNameFn(mVM->mConfig.findUser, intName, recurse, frame.curObject);
                evalState.intStack[frame._UINT+1] = obj ? obj->klass->iCreate.GetIdFn(obj) : 0;
@@ -1306,7 +1306,7 @@ KorkApi::ConsoleValue CodeBlock::exec(U32 ip, const char *functionName, Namespac
             break;
             
          case OP_SETCURFIELD_ARRAY:
-            dStrcpy(frame.curFieldArray, mVM->mSTR.getStringValue());
+            dStrcpy(frame.curFieldArray, evalState.mSTR.getStringValue());
             break;
 
          case OP_SETCURFIELD_TYPE:
@@ -1352,22 +1352,22 @@ KorkApi::ConsoleValue CodeBlock::exec(U32 ip, const char *functionName, Namespac
             if (frame.curObject)
             {
                KorkApi::ConsoleValue retValue =  mVM->getObjectField(frame.curObject, frame.curField, frame.curFieldArray, KorkApi::ConsoleValue::TypeInternalString, KorkApi::ConsoleValue::ZoneExternal);
-               mVM->mSTR.setStringValue(mVM->valueAsString(retValue));
+               evalState.mSTR.setStringValue(mVM->valueAsString(retValue));
             }
             else
             {
                // The field is not being retrieved from an object. Maybe it's
                // a special accessor?
                //getFieldComponent( prevObject, prevField, prevFieldArray, curField, valBuffer, VAL_BUFFER_SIZE );
-               mVM->mSTR.setStringValue( ""); //valBuffer );
+               evalState.mSTR.setStringValue( ""); //valBuffer );
             }
             break;
             
          case OP_SAVEFIELD_UINT:
-            mVM->mSTR.setUnsignedValue((U32)evalState.intStack[frame._UINT]);
+            evalState.mSTR.setUnsignedValue((U32)evalState.intStack[frame._UINT]);
             if (frame.curObject)
             {
-               KorkApi::ConsoleValue cv = mVM->mSTR.getConsoleValue();
+               KorkApi::ConsoleValue cv = evalState.mSTR.getConsoleValue();
                mVM->setObjectField(frame.curObject, frame.curField, frame.curFieldArray, cv);
             }
             else
@@ -1380,10 +1380,10 @@ KorkApi::ConsoleValue CodeBlock::exec(U32 ip, const char *functionName, Namespac
             break;
             
          case OP_SAVEFIELD_FLT:
-            mVM->mSTR.setNumberValue(evalState.floatStack[frame._FLT]);
+            evalState.mSTR.setNumberValue(evalState.floatStack[frame._FLT]);
             if (frame.curObject)
             {
-               KorkApi::ConsoleValue cv = KorkApi::ConsoleValue::makeString(mVM->mSTR.getStringValue());
+               KorkApi::ConsoleValue cv = KorkApi::ConsoleValue::makeString(evalState.mSTR.getStringValue());
                mVM->setObjectField(frame.curObject, frame.curField, frame.curFieldArray, cv);
             }
             else
@@ -1398,7 +1398,7 @@ KorkApi::ConsoleValue CodeBlock::exec(U32 ip, const char *functionName, Namespac
          case OP_SAVEFIELD_STR:
             if (frame.curObject)
             {
-               KorkApi::ConsoleValue cv = KorkApi::ConsoleValue::makeString(mVM->mSTR.getStringValue());
+               KorkApi::ConsoleValue cv = KorkApi::ConsoleValue::makeString(evalState.mSTR.getStringValue());
                mVM->setObjectField(frame.curObject, frame.curField, frame.curFieldArray, cv);
             }
             else
@@ -1411,12 +1411,12 @@ KorkApi::ConsoleValue CodeBlock::exec(U32 ip, const char *functionName, Namespac
             break;
             
          case OP_STR_TO_UINT:
-            evalState.intStack[frame._UINT+1] = mVM->mSTR.getIntValue();
+            evalState.intStack[frame._UINT+1] = evalState.mSTR.getIntValue();
             frame._UINT++;
             break;
             
          case OP_STR_TO_FLT:
-            evalState.floatStack[frame._FLT+1] = mVM->mSTR.getFloatValue();
+            evalState.floatStack[frame._FLT+1] = evalState.mSTR.getFloatValue();
             frame._FLT++;
             break;
             
@@ -1431,7 +1431,7 @@ KorkApi::ConsoleValue CodeBlock::exec(U32 ip, const char *functionName, Namespac
             break;
             
          case OP_FLT_TO_STR:
-            mVM->mSTR.setStringFloatValue(evalState.floatStack[frame._FLT]);
+            evalState.mSTR.setStringFloatValue(evalState.floatStack[frame._FLT]);
             frame._FLT--;
             break;
             
@@ -1446,7 +1446,7 @@ KorkApi::ConsoleValue CodeBlock::exec(U32 ip, const char *functionName, Namespac
             break;
             
          case OP_UINT_TO_STR:
-            mVM->mSTR.setStringIntValue((U32)evalState.intStack[frame._UINT]);
+            evalState.mSTR.setStringIntValue((U32)evalState.intStack[frame._UINT]);
             frame._UINT--;
             break;
             
@@ -1478,7 +1478,7 @@ KorkApi::ConsoleValue CodeBlock::exec(U32 ip, const char *functionName, Namespac
                *(frame.curStringTable + code[ip]) = KorkApi::StringTagPrefixByte;
             }
          case OP_LOADIMMED_STR:
-            mVM->mSTR.setStringValue(frame.curStringTable + code[ip++]);
+            evalState.mSTR.setStringValue(frame.curStringTable + code[ip++]);
             break;
             
          case OP_DOCBLOCK_STR:
@@ -1513,7 +1513,7 @@ KorkApi::ConsoleValue CodeBlock::exec(U32 ip, const char *functionName, Namespac
             break;
             
          case OP_LOADIMMED_IDENT:
-            mVM->mSTR.setStringValue(Compiler::CodeToSTE(NULL, code, ip));
+            evalState.mSTR.setStringValue(Compiler::CodeToSTE(NULL, code, ip));
             ip += 2;
             break;
             
@@ -1532,7 +1532,7 @@ KorkApi::ConsoleValue CodeBlock::exec(U32 ip, const char *functionName, Namespac
                           "%s: Unable to find function %s%s%s",
                           getFileLine(ip-4), tmpFnNamespace ? tmpFnNamespace : "",
                            tmpFnNamespace ? "::" : "", tmpFnName);
-               mVM->mSTR.popFrame();
+               evalState.mSTR.popFrame();
                break;
             }
             // Now, rewrite our code a bit (ie, avoid future lookups) and fall
@@ -1564,7 +1564,7 @@ KorkApi::ConsoleValue CodeBlock::exec(U32 ip, const char *functionName, Namespac
             U32 callType = code[ip+4];
             
             ip += 5;
-            mVM->mSTR.getArgcArgv(tmpFnName, &frame.callArgc, &frame.callArgv);
+            evalState.mSTR.getArgcArgv(tmpFnName, &frame.callArgc, &frame.callArgv);
             
             if(callType == FuncCallExprNode::FunctionCall)
             {
@@ -1585,8 +1585,8 @@ KorkApi::ConsoleValue CodeBlock::exec(U32 ip, const char *functionName, Namespac
                {
                   frame.thisObject = 0;
                   mVM->printf(0,"%s: Unable to find object: '%s' attempting to call function '%s'", getFileLine(ip-6), objName, tmpFnName);
-                  mVM->mSTR.popFrame();
-                  mVM->mSTR.setStringValue("");
+                  evalState.mSTR.popFrame();
+                  evalState.mSTR.setStringValue("");
                   break;
                }
                
@@ -1625,9 +1625,9 @@ KorkApi::ConsoleValue CodeBlock::exec(U32 ip, const char *functionName, Namespac
                                 frame.thisObject->getId(), getNamespaceList(ns) ); */
                   }
                }
-               mVM->mSTR.popFrame();
-               mVM->mSTR.setStringValue("");
-               mVM->mSTR.setStringValue("");
+               evalState.mSTR.popFrame();
+               evalState.mSTR.setStringValue("");
+               evalState.mSTR.setStringValue("");
                break;
             }
             
@@ -1637,11 +1637,11 @@ KorkApi::ConsoleValue CodeBlock::exec(U32 ip, const char *functionName, Namespac
                if(frame.nsEntry->mFunctionOffset)
                   ret = frame.nsEntry->mCode->exec(frame.nsEntry->mFunctionOffset, tmpFnName, frame.nsEntry->mNamespace, frame.callArgc, frame.callArgv, false, frame.nsEntry->mPackage);
                else // no body
-                  mVM->mSTR.setStringValue("");
+                  evalState.mSTR.setStringValue("");
                
                //const char* sVal = mVM->valueAsString(ret);
-               mVM->mSTR.popFrame();
-               mVM->mSTR.setStringValue(mVM->valueAsString(ret));
+               evalState.mSTR.popFrame();
+               evalState.mSTR.setStringValue(mVM->valueAsString(ret));
             }
             else
             {
@@ -1650,8 +1650,8 @@ KorkApi::ConsoleValue CodeBlock::exec(U32 ip, const char *functionName, Namespac
                   const char* nsName = frame.ns? frame.ns->mName: "";
                   mVM->printf(0, "%s: %s::%s - wrong number of arguments.", getFileLine(ip-4), nsName, tmpFnName);
                   mVM->printf(0, "%s: usage: %s", getFileLine(ip-4), frame.nsEntry->mUsage);
-                  mVM->mSTR.popFrame();
-                  mVM->mSTR.setStringValue("");
+                  evalState.mSTR.popFrame();
+                  evalState.mSTR.setStringValue("");
                }
                else
                {
@@ -1659,7 +1659,7 @@ KorkApi::ConsoleValue CodeBlock::exec(U32 ip, const char *functionName, Namespac
                   {
                      // Need to convert to strings for old callbacks
                      //printf("Converting %i argv calling %s\n", callArgc, fnName);
-                     mVM->mSTR.convertArgv(mVM, frame.callArgc, &frame.callArgvS);
+                     evalState.mSTR.convertArgv(mVM, frame.callArgc, &frame.callArgvS);
                   }
 
                   switch(frame.nsEntry->mType)
@@ -1667,17 +1667,17 @@ KorkApi::ConsoleValue CodeBlock::exec(U32 ip, const char *functionName, Namespac
                      case Namespace::Entry::StringCallbackType:
                      {
                         const char *ret = frame.nsEntry->cb.mStringCallbackFunc(safeObjectUserPtr(frame.thisObject), frame.nsEntry->mUserPtr, frame.callArgc, frame.callArgvS);
-                        mVM->mSTR.popFrame();
-                        if(ret != mVM->mSTR.getStringValue())
-                           mVM->mSTR.setStringValue(ret);
+                        evalState.mSTR.popFrame();
+                        if(ret != evalState.mSTR.getStringValue())
+                           evalState.mSTR.setStringValue(ret);
                         else
-                           mVM->mSTR.setTypedLen(KorkApi::ConsoleValue::TypeInternalString, dStrlen(ret));
+                           evalState.mSTR.setTypedLen(KorkApi::ConsoleValue::TypeInternalString, dStrlen(ret));
                         break;
                      }
                      case Namespace::Entry::IntCallbackType:
                      {
                         S32 result = frame.nsEntry->cb.mIntCallbackFunc(safeObjectUserPtr(frame.thisObject), frame.nsEntry->mUserPtr, frame.callArgc, frame.callArgvS);
-                        mVM->mSTR.popFrame();
+                        evalState.mSTR.popFrame();
                         if(code[ip] == OP_STR_TO_UINT)
                         {
                            ip++;
@@ -1693,13 +1693,13 @@ KorkApi::ConsoleValue CodeBlock::exec(U32 ip, const char *functionName, Namespac
                         else if(code[ip] == OP_STR_TO_NONE)
                            ip++;
                         else
-                           mVM->mSTR.setUnsignedValue(result);
+                           evalState.mSTR.setUnsignedValue(result);
                         break;
                      }
                      case Namespace::Entry::FloatCallbackType:
                      {
                         F64 result = frame.nsEntry->cb.mFloatCallbackFunc(safeObjectUserPtr(frame.thisObject), frame.nsEntry->mUserPtr, frame.callArgc, frame.callArgvS);
-                        mVM->mSTR.popFrame();
+                        evalState.mSTR.popFrame();
                         if(code[ip] == OP_STR_TO_UINT)
                         {
                            ip++;
@@ -1715,7 +1715,7 @@ KorkApi::ConsoleValue CodeBlock::exec(U32 ip, const char *functionName, Namespac
                         else if(code[ip] == OP_STR_TO_NONE)
                            ip++;
                         else
-                           mVM->mSTR.setNumberValue(result);
+                           evalState.mSTR.setNumberValue(result);
                         break;
                      }
                      case Namespace::Entry::VoidCallbackType:
@@ -1724,13 +1724,13 @@ KorkApi::ConsoleValue CodeBlock::exec(U32 ip, const char *functionName, Namespac
                         {
                            mVM->printf(0, "%s: Call to %s in %s uses result of void function call.", getFileLine(ip-4), tmpFnName, functionName);
                         }
-                        mVM->mSTR.popFrame();
-                        mVM->mSTR.setStringValue("");
+                        evalState.mSTR.popFrame();
+                        evalState.mSTR.setStringValue("");
                         break;
                      case Namespace::Entry::BoolCallbackType:
                      {
                         bool result = frame.nsEntry->cb.mBoolCallbackFunc(safeObjectUserPtr(frame.thisObject), frame.nsEntry->mUserPtr, frame.callArgc, frame.callArgvS);
-                        mVM->mSTR.popFrame();
+                        evalState.mSTR.popFrame();
                         if(code[ip] == OP_STR_TO_UINT)
                         {
                            ip++;
@@ -1746,13 +1746,13 @@ KorkApi::ConsoleValue CodeBlock::exec(U32 ip, const char *functionName, Namespac
                         else if(code[ip] == OP_STR_TO_NONE)
                            ip++;
                         else
-                           mVM->mSTR.setUnsignedValue(result);
+                           evalState.mSTR.setUnsignedValue(result);
                         break;
                      }
                      case Namespace::Entry::ValueCallbackType:
                      {
                         KorkApi::ConsoleValue result = frame.nsEntry->cb.mValueCallbackFunc(safeObjectUserPtr(frame.thisObject), frame.nsEntry->mUserPtr, frame.callArgc, frame.callArgv);
-                        mVM->mSTR.popFrame();
+                        evalState.mSTR.popFrame();
                         if(code[ip] == OP_STR_TO_UINT)
                         {
                            ip++;
@@ -1773,8 +1773,8 @@ KorkApi::ConsoleValue CodeBlock::exec(U32 ip, const char *functionName, Namespac
                         {
                            // NOTE: can't assume this since concat may occur after this; 
                            // ideally we need something like OP_STR_TO_VALUE
-                           //mVM->mSTR.setConsoleValue(result);
-                           mVM->mSTR.setStringValue(mVM->valueAsString(result));
+                           //evalState.mSTR.setConsoleValue(result);
+                           evalState.mSTR.setStringValue(mVM->valueAsString(result));
                         }
                         break;
                      }
@@ -1787,56 +1787,56 @@ KorkApi::ConsoleValue CodeBlock::exec(U32 ip, const char *functionName, Namespac
             break;
          }
          case OP_ADVANCE_STR:
-            mVM->mSTR.advance();
+            evalState.mSTR.advance();
             break;
          case OP_ADVANCE_STR_APPENDCHAR:
-            mVM->mSTR.advanceChar(code[ip++]);
+            evalState.mSTR.advanceChar(code[ip++]);
             break;
             
          case OP_ADVANCE_STR_COMMA:
-            mVM->mSTR.advanceChar('_');
+            evalState.mSTR.advanceChar('_');
             break;
             
          case OP_ADVANCE_STR_NUL:
-            mVM->mSTR.advanceChar(0);
+            evalState.mSTR.advanceChar(0);
             break;
             
          case OP_REWIND_STR:
-            mVM->mSTR.rewind();
+            evalState.mSTR.rewind();
             break;
             
          case OP_TERMINATE_REWIND_STR:
-            mVM->mSTR.rewindTerminate();
+            evalState.mSTR.rewindTerminate();
             break;
             
          case OP_COMPARE_STR:
-            evalState.intStack[++frame._UINT] = mVM->mSTR.compare();
+            evalState.intStack[++frame._UINT] = evalState.mSTR.compare();
             break;
          case OP_PUSH:
-            mVM->mSTR.push();
+            evalState.mSTR.push();
             break;
             
          case OP_PUSH_UINT:
             // OPframe._UINT_TO_STR, OP_PUSH
-            mVM->mSTR.setUnsignedValue((U32)evalState.intStack[frame._UINT]);
+            evalState.mSTR.setUnsignedValue((U32)evalState.intStack[frame._UINT]);
             frame._UINT--;
-            mVM->mSTR.push();
+            evalState.mSTR.push();
             break;
          case OP_PUSH_FLT:
             // OPframe._FLT_TO_STR, OP_PUSH
-            mVM->mSTR.setNumberValue(evalState.floatStack[frame._FLT]);
+            evalState.mSTR.setNumberValue(evalState.floatStack[frame._FLT]);
             frame._FLT--;
-            mVM->mSTR.push();
+            evalState.mSTR.push();
             break;
          case OP_PUSH_VAR:
             // OP_LOADVAR_STR, OP_PUSH
             val = frame.getConsoleVariable();
-            mVM->mSTR.setConsoleValue(val);
-            mVM->mSTR.push();
+            evalState.mSTR.setConsoleValue(val);
+            evalState.mSTR.push();
             break;
 
          case OP_PUSH_FRAME:
-            mVM->mSTR.pushFrame();
+            evalState.mSTR.pushFrame();
             break;
 
          case OP_ASSERT:
@@ -1900,17 +1900,17 @@ KorkApi::ConsoleValue CodeBlock::exec(U32 ip, const char *functionName, Namespac
             
             if( iter.mIsStringIter )
             {
-               iter.mData.mStr.mString = mVM->mSTR.getStringValue();
+               iter.mData.mStr.mString = evalState.mSTR.getStringValue();
                iter.mData.mStr.mIndex = 0;
             }
             else
             {
                // Look up the object.
-               KorkApi::VMObject* set = mVM->mConfig.iFind.FindObjectByPathFn(mVM->mConfig.findUser, mVM->mSTR.getStringValue());
+               KorkApi::VMObject* set = mVM->mConfig.iFind.FindObjectByPathFn(mVM->mConfig.findUser, evalState.mSTR.getStringValue());
                
                if( !set )
                {
-                  mVM->printf(0, "No SimSet object '%s'", mVM->mSTR.getStringValue());
+                  mVM->printf(0, "No SimSet object '%s'", evalState.mSTR.getStringValue());
                   mVM->printf(0, "Did you mean to use 'foreach$' instead of 'foreach'?");
                   ip = failIp;
                   continue;
@@ -1927,7 +1927,7 @@ KorkApi::ConsoleValue CodeBlock::exec(U32 ip, const char *functionName, Namespac
             
             frame._ITER ++;
             
-            mVM->mSTR.push();
+            evalState.mSTR.push();
             
             ip += 3;
             break;
@@ -2014,7 +2014,7 @@ KorkApi::ConsoleValue CodeBlock::exec(U32 ip, const char *functionName, Namespac
             }
             
 
-            mVM->mSTR.rewind();
+            evalState.mSTR.rewind();
             
             evalState.iterStack[ frame._ITER ].mIsStringIter = false;
             break;
@@ -2053,12 +2053,12 @@ execFinished:
          if(thisNamespace && thisNamespace->mName)
          {
             dSprintf(evalState.traceBuffer + dStrlen(evalState.traceBuffer), ExprEvalState::TraceBufferSize - dStrlen(evalState.traceBuffer),
-                     "%s::%s() - return %s", thisNamespace->mName, frame.thisFunctionName, mVM->mSTR.getStringValue());
+                     "%s::%s() - return %s", thisNamespace->mName, frame.thisFunctionName, evalState.mSTR.getStringValue());
          }
          else
          {
             dSprintf(evalState.traceBuffer + dStrlen(evalState.traceBuffer), ExprEvalState::TraceBufferSize - dStrlen(evalState.traceBuffer),
-                     "%s() - return %s", frame.thisFunctionName, mVM->mSTR.getStringValue());
+                     "%s() - return %s", frame.thisFunctionName, evalState.mSTR.getStringValue());
          }
          mVM->printf(0, "%s", evalState.traceBuffer);
       }
@@ -2078,15 +2078,11 @@ execFinished:
       evalState.mCurrentRoot = frame.saveCodeBlock->mRoot;
    }
    
-   KorkApi::ConsoleValue retValue = mVM->mSTR.getConsoleValue();
-   if (retValue.cvalue >= 4096)
-   {
-      printf("WTF\n");
-   }
-   
+   KorkApi::ConsoleValue retValue = evalState.mSTR.getConsoleValue();
+
 #ifdef TORQUE_DEBUG
-   AssertFatal(!(mVM->mSTR.mStartStackSize > stackStart), "String stack not popped enough in script exec");
-   AssertFatal(!(mVM->mSTR.mStartStackSize < stackStart), "String stack popped too much in script exec");
+   AssertFatal(!(evalState.mSTR.mStartStackSize > stackStart), "String stack not popped enough in script exec");
+   AssertFatal(!(evalState.mSTR.mStartStackSize < stackStart), "String stack popped too much in script exec");
 #endif
    
    decRefCount();

@@ -247,6 +247,8 @@ public:
    S64 intStack[MaxStackSize];
    ObjectStackItem objectCreationStack[ObjectCreationStackSize];
    
+   StringStack mSTR;
+   
    StringTableEntry mCurrentFile;
    StringTableEntry mCurrentRoot;
    

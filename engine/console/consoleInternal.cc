@@ -597,7 +597,7 @@ void Dictionary::validate()
                "Dictionary::validate() - Dictionary not owner of own hashtable!" );
 }
 
-ExprEvalState::ExprEvalState(KorkApi::VmInternal* vm)
+ExprEvalState::ExprEvalState(KorkApi::VmInternal* vm): mSTR(&vm->mAllocBase)
 {
    VECTOR_SET_ASSOCIATION(stack);
    vmInternal = vm;

@@ -328,36 +328,36 @@ ConsoleValue VmInternal::getTypeInZone(U16 zone, TypeId typeId)
 
 ConsoleValue VmInternal::getStringFuncBuffer(U32 size)
 {
-   return mSTR.getFuncBuffer(KorkApi::ConsoleValue::TypeInternalString, size);
+   return mEvalState.mSTR.getFuncBuffer(KorkApi::ConsoleValue::TypeInternalString, size);
 }
 
 ConsoleValue VmInternal::getStringReturnBuffer(U32 size)
 {
-   return mSTR.getReturnBuffer(KorkApi::ConsoleValue::TypeInternalString, size);
+   return mEvalState.mSTR.getReturnBuffer(KorkApi::ConsoleValue::TypeInternalString, size);
 }
 
 ConsoleValue VmInternal::getTypeFunc(TypeId typeId)
 {
    U32 size = mTypes[typeId].size;
-   return mSTR.getFuncBuffer(typeId, size);
+   return mEvalState.mSTR.getFuncBuffer(typeId, size);
 }
 
 ConsoleValue VmInternal::getTypeReturn(TypeId typeId)
 {
    U32 size = mTypes[typeId].size;
-   return mSTR.getReturnBuffer(typeId, size);
+   return mEvalState.mSTR.getReturnBuffer(typeId, size);
 }
 
 
 
 void Vm::pushValueFrame()
 {
-   return mInternal->mSTR.pushFrame();
+   return mInternal->mEvalState.mSTR.pushFrame();
 }
 
 void Vm::popValueFrame()
 {
-   return mInternal->mSTR.popFrame();
+   return mInternal->mEvalState.mSTR.popFrame();
 }
 
 // Public
@@ -546,7 +546,7 @@ bool Vm::callObjectFunction(VMObject* self, StringTableEntry funcName, int argc,
       mInternal->printf(0, "%s: undefined for object id %d", funcName, self->klass->iCreate.GetIdFn(self));
 
       // Clean up arg buffers, if any.
-      mInternal->mSTR.clearFunctionOffset();
+      mInternal->mEvalState.mSTR.clearFunctionOffset();
       return "";
    }
 
@@ -576,7 +576,7 @@ bool Vm::callObjectFunction(VMObject* self, StringTableEntry funcName, int argc,
 
    // Reset the function offset so the stack
    // doesn't continue to grow unnecessarily
-   mInternal->mSTR.clearFunctionOffset();
+   mInternal->mEvalState.mSTR.clearFunctionOffset();
 
    return true;
 }
@@ -590,7 +590,7 @@ bool Vm::callNamespaceFunction(NamespaceId nsId, StringTableEntry name, int argc
    {
       mInternal->printf(0, "%s: Unknown command.", argv[0]);
       // Clean up arg buffers, if any.
-      mInternal->mSTR.clearFunctionOffset();
+      mInternal->mEvalState.mSTR.clearFunctionOffset();
       return false;
    }
 
@@ -598,7 +598,7 @@ bool Vm::callNamespaceFunction(NamespaceId nsId, StringTableEntry name, int argc
 
    // Reset the function offset so the stack
    // doesn't continue to grow unnecessarily
-   mInternal->mSTR.clearFunctionOffset();
+   mInternal->mEvalState.mSTR.clearFunctionOffset();
 
    return true;
 }
@@ -721,7 +721,7 @@ void destroyVM(Vm* vm)
    delete vm;
 }
 
-VmInternal::VmInternal(Vm* vm, Config* cfg) : mSTR(&mAllocBase), mEvalState(this)
+VmInternal::VmInternal(Vm* vm, Config* cfg) : mEvalState(this)
 {
    mVM = vm;
    mConfig = *cfg;
