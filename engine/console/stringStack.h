@@ -34,7 +34,7 @@
 struct StringStack
 {
    enum {
-      MaxStackDepth = 1024,
+      MaxStackDepth = 16, // should be at least MaxStackSize
       MaxArgs = 20,
       ReturnBufferSpace = 512
    };
