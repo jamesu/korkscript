@@ -9,7 +9,7 @@ struct ConsoleValue
 {
    struct AllocBase
    {
-      void* func;
+      void** func;
       void* arg;
    };
    
@@ -26,33 +26,31 @@ struct ConsoleValue
       ZoneExternal = 0, // externally managed pointer
       ZonePacked   = 1, // packed into CV
       ZoneVmHeap   = 2, // pointer managed by a ConsoleHeapAlloc
-      ZoneReturn   = 3, // allocated inside return overflow buffer
-      ZoneFunc     = 4  // allocated inside main function buffer
-   };
-   
-   // flags
-   enum FlagMask : U16
-   {
-      MaskVMZone = BIT(1) | BIT(2)
+      ZoneReturn   = 3, // allocated inside thunk return buffer
+      
+      // Any zone beyond this is a repeat of func for each script fiber in the vm
+      ZoneFunc     = 4,  // allocated inside main function buffer
+      
+      ZoneFiberStart = ZoneFunc
    };
    
    // ---- Storage ----
    U64 cvalue;
    U16 typeId;
-   U16 flags;
+   U16 zoneId;
    
-   ConsoleValue() : cvalue(0), typeId(TypeInternalString), flags(0)
+   ConsoleValue() : cvalue(0), typeId(TypeInternalString), zoneId(0)
    {
    }
    
    inline Zone getZone() const
    {
-      return (Zone)(flags & MaskVMZone);
+      return (Zone)(zoneId);
    }
    
    inline void setZone(Zone z)
    {
-      flags = static_cast<U16>((flags & ~MaskVMZone) | ((U16)(z)));
+      zoneId = static_cast<U16>(z);
    }
    
    static ConsoleValue makeUnsigned(U64 i)
@@ -154,10 +152,8 @@ struct ConsoleValue
             return (void*)&cvalue;
          case ZoneReturn:
             return addOffset(base.arg, cvalue);
-         case ZoneFunc:
-            return addOffset(base.func, cvalue);
          default:
-            return NULL;
+            return addOffset(base.func[zoneId - ZoneFiberStart], cvalue);
       }
    }
    

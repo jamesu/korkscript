@@ -50,7 +50,7 @@ void StringStack::getArgcArgv(StringTableEntry name, U32 *argc, KorkApi::Console
       {
          mArgV[i+1] = KorkApi::ConsoleValue::makeTyped((void*)startData,
                                                        mStartTypes[startStack + i],
-                                                       KorkApi::ConsoleValue::ZoneFunc);
+                                                       (KorkApi::ConsoleValue::Zone)(KorkApi::ConsoleValue::ZoneFunc + (mZoneId * 2)));
       }
    }
    argCount++;

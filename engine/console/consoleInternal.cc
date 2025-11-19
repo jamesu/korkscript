@@ -216,22 +216,19 @@ void Dictionary::remove(Dictionary::Entry *ent)
 }
 
 Dictionary::Dictionary()
-:  hashTable( NULL ),
-exprState( NULL )
+:  hashTable( NULL )
 {
 }
 
-Dictionary::Dictionary(ExprEvalState *state, Dictionary* ref)
-:  hashTable( NULL ),
-exprState( NULL )
+Dictionary::Dictionary(KorkApi::VmInternal *state, Dictionary* ref)
+:  hashTable( NULL )
 {
    setState(state,ref);
 }
 
-void Dictionary::setState(ExprEvalState *state, Dictionary* ref)
+void Dictionary::setState(KorkApi::VmInternal *state, Dictionary* ref)
 {
-   exprState = state;
-   vm = state->vmInternal;
+   vm = state;
    
    if (ref)
       hashTable = ref->hashTable;
@@ -601,7 +598,7 @@ ExprEvalState::ExprEvalState(KorkApi::VmInternal* vm): mSTR(&vm->mAllocBase)
 {
    VECTOR_SET_ASSOCIATION(stack);
    vmInternal = vm;
-   globalVars.setState(this);
+   globalVars = &vm->mGlobalVars;
    mStackDepth = 0;
    traceOn = false;
    traceBuffer[0] = '\0';
@@ -613,9 +610,16 @@ ExprEvalState::ExprEvalState(KorkApi::VmInternal* vm): mSTR(&vm->mAllocBase)
    
    mCurrentFile = NULL;
    mCurrentRoot = NULL;
+   
+   mState = FIBER_INACTIVE;
 }
 
 ExprEvalState::~ExprEvalState()
+{
+   reset();
+}
+
+void ExprEvalState::reset()
 {
    while(vmFrames.size())
       popFrame();

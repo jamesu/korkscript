@@ -8,6 +8,7 @@ class TelnetConsole;
 #include "console/stringStack.h"
 #include "console/consoleNamespace.h"
 #include "console/consoleInternal.h"
+#include "core/freeListHandleHelpers.h"
 
 namespace Compiler
 {
@@ -16,6 +17,8 @@ namespace Compiler
 
 namespace KorkApi
 {
+
+typedef FreeListPtr<ExprEvalState, FreeListHandle::Basic32> InternalFiberList;
 
 struct VmInternal
 {
@@ -32,11 +35,15 @@ struct VmInternal
    CodeBlock*    mCurrentCodeBlock;
    TelnetDebugger* mTelDebugger;
    TelnetConsole* mTelConsole;
+
+   Dictionary mGlobalVars;
    
    // Namespace stuff
    NamespaceState mNSState;
 
-   ExprEvalState mEvalState;
+   ExprEvalState* mCurrentFiberState;
+   InternalFiberList mFiberStates;
+   ClassChunker<ExprEvalState> mFiberAllocator;
 
    Vector<TypeInfo> mTypes;
    Vector<ClassInfo> mClassList;
@@ -44,6 +51,8 @@ struct VmInternal
    KorkApi::ConsoleHeapAlloc* mHeapAllocs;
    Config mConfig;
    ConsoleValue::AllocBase mAllocBase;
+
+   Vector<U8> mReturnBuffer;
 
    U32 mConvIndex;
    char mTempStringConversions[MaxTempStringSize][MaxStringConvs];
@@ -73,15 +82,23 @@ struct VmInternal
       }
    }
 
-
+   
+   // Fiber API
+   void setCurrentFiberMain();
+   void setCurrentFiber(FiberId fiber);
+   FiberId createFiber(); // needs exec too
+   FiberId getCurrentFiber();
+   void cleanupFiber(FiberId fiber);
+   
+   void validateReturnBufferSize(U32 size);
 
    ConsoleHeapAllocRef createHeapRef(U32 size);
    void releaseHeapRef(ConsoleHeapAllocRef value);
 
    // Heap values (like strings)
-   ConsoleValue getStringFuncBuffer(U32 size);
+   ConsoleValue getStringFuncBuffer(FiberId fiberId, U32 size);
    ConsoleValue getStringReturnBuffer(U32 size);
-   ConsoleValue getTypeFunc(TypeId typeId);
+   ConsoleValue getTypeFunc(FiberId fiberId, TypeId typeId);
    ConsoleValue getTypeReturn(TypeId typeId);
 
    ConsoleValue getStringInZone(U16 zone, U32 size);

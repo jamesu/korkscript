@@ -368,7 +368,7 @@ void TelnetDebugger::pushStackFrame()
       return;
    
    if(mBreakOnNextStatement && mStackPopBreakIndex > -1 &&
-      mVMInternal->mEvalState.vmFrames.size() > mStackPopBreakIndex)
+      mVMInternal->mCurrentFiberState->vmFrames.size() > mStackPopBreakIndex)
       setBreakOnNextStatement( false );
 }
 
@@ -377,7 +377,7 @@ void TelnetDebugger::popStackFrame()
    if(mState == NotConnected)
       return;
    
-   if(mStackPopBreakIndex > -1 && mVMInternal->mEvalState.vmFrames.size()-1 <= mStackPopBreakIndex)
+   if(mStackPopBreakIndex > -1 && mVMInternal->mCurrentFiberState->vmFrames.size()-1 <= mStackPopBreakIndex)
       setBreakOnNextStatement( true );
 }
 
@@ -415,9 +415,9 @@ void TelnetDebugger::sendBreak()
    
    S32 last = 0;
    
-   for(S32 i = (S32) mVMInternal->mEvalState.vmFrames.size() - 1; i >= last; i--)
+   for(S32 i = (S32) mVMInternal->mCurrentFiberState->vmFrames.size() - 1; i >= last; i--)
    {
-      ConsoleBasicFrame frameInfo = mVMInternal->mEvalState.getBasicFrameInfo(i);
+      ConsoleBasicFrame frameInfo = mVMInternal->mCurrentFiberState->getBasicFrameInfo(i);
       CodeBlock *code = frameInfo.code;
       const char *file = "<none>";
       if (code && code->name && code->name[0])
@@ -796,7 +796,7 @@ void TelnetDebugger::debugStepOver()
       return;
    
    setBreakOnNextStatement( true );
-   mStackPopBreakIndex = mVMInternal->mEvalState.vmFrames.size();
+   mStackPopBreakIndex = mVMInternal->mCurrentFiberState->vmFrames.size();
    mProgramPaused = false;
    send("RUNNING\r\n");
 }
@@ -807,7 +807,7 @@ void TelnetDebugger::debugStepOut()
       return;
    
    setBreakOnNextStatement( false );
-   mStackPopBreakIndex = mVMInternal->mEvalState.vmFrames.size() - 1;
+   mStackPopBreakIndex = mVMInternal->mCurrentFiberState->vmFrames.size() - 1;
    if ( mStackPopBreakIndex == 0 )
       mStackPopBreakIndex = -1;
    mProgramPaused = false;
@@ -817,8 +817,8 @@ void TelnetDebugger::debugStepOut()
 void TelnetDebugger::evaluateExpression(const char *tag, S32 frame, const char *evalBuffer)
 {
    // Make sure we're passing a valid frame to the eval.
-   if ( frame > mVMInternal->mEvalState.vmFrames.size() )
-      frame = mVMInternal->mEvalState.vmFrames.size() - 1;
+   if ( frame > mVMInternal->mCurrentFiberState->vmFrames.size() )
+      frame = mVMInternal->mCurrentFiberState->vmFrames.size() - 1;
    if ( frame < 0 )
       frame = 0;
    

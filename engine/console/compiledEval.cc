@@ -176,7 +176,7 @@ struct ConsoleFrame
    char prevFieldArray[FieldArraySize];
 
 public:
-   ConsoleFrame(KorkApi::VmInternal* vm)
+   ConsoleFrame(KorkApi::VmInternal* vm, ExprEvalState* fiber)
       : stackStart(0)
       , dictionary(nullptr)
       , evalState(nullptr)
@@ -211,7 +211,7 @@ public:
       , callArgvS(nullptr)
       , saveCodeBlock(nullptr)
    {
-      evalState = &vm->mEvalState;
+      evalState = fiber;
       memset(nsDocBlockClass, 0, sizeof(nsDocBlockClass));
       memset(curFieldArray,   0, sizeof(curFieldArray));
       memset(prevFieldArray,  0, sizeof(prevFieldArray));
@@ -246,7 +246,7 @@ const char *ExprEvalState::getNamespaceList(Namespace *ns)
    Namespace * walk;
    for(walk = ns; walk; walk = walk->mParent)
       size += dStrlen(walk->mName) + 4;
-   char *ret = (char*)vmInternal->getStringFuncBuffer(size).ptr();
+   char *ret = (char*)mSTR.getFuncBuffer(KorkApi::ConsoleValue::TypeInternalString, size).evaluatePtr(vmInternal->mAllocBase);
    ret[0] = 0;
    for(walk = ns; walk; walk = walk->mParent)
    {
@@ -291,8 +291,8 @@ inline void ConsoleFrame::setCurVarName(StringTableEntry name)
 {
    if(name[0] == '$')
    {
-      currentVar.var = evalState->globalVars.lookup(name);
-      currentVar.dictionary = &evalState->globalVars;
+      currentVar.var = evalState->vmInternal->mGlobalVars.lookup(name);
+      currentVar.dictionary = &evalState->vmInternal->mGlobalVars;
    }
    else if (dictionary)
    {
@@ -309,8 +309,8 @@ inline void ConsoleFrame::setCurVarNameCreate(StringTableEntry name)
 {
    if(name[0] == '$')
    {
-      currentVar.var = evalState->globalVars.add(name);
-      currentVar.dictionary = &evalState->globalVars;
+      currentVar.var = evalState->vmInternal->mGlobalVars.add(name);
+      currentVar.dictionary = &evalState->vmInternal->mGlobalVars;
    }
    else if(dictionary)
    {
@@ -618,8 +618,10 @@ KorkApi::ConsoleValue CodeBlock::exec(U32 ip, const char *functionName, Namespac
    StringTableEntry tmpFnNamespace = NULL;
    StringTableEntry tmpFnPackage = NULL;
    
-   ExprEvalState& evalState = mVM->mEvalState;
+   ExprEvalState& evalState = *mVM->mCurrentFiberState;
    evalState.mSTR.clearFunctionOffset();
+   
+   evalState.mState = ExprEvalState::FIBER_RUNNING;
    
    // Setup frame state
    ConsoleFrame& frame = setupExecFrame(evalState,
@@ -715,7 +717,7 @@ KorkApi::ConsoleValue CodeBlock::exec(U32 ip, const char *functionName, Namespac
             // Push the old info to the stack
             //Assert( objectCreationStackIndex < objectCreationStackSize );
 
-            mVM->mEvalState.setCreatedObject(frame._OBJ++, frame.currentNewObject, frame.failJump);
+            evalState.setCreatedObject(frame._OBJ++, frame.currentNewObject, frame.failJump);
             
             // Get the constructor information off the stack.
             evalState.mSTR.getArgcArgv(NULL, &frame.callArgc, &frame.callArgv);
@@ -899,7 +901,7 @@ KorkApi::ConsoleValue CodeBlock::exec(U32 ip, const char *functionName, Namespac
          case OP_FINISH_OBJECT:
          {
             frame._OBJ--;
-            mVM->mEvalState.clearCreatedObject(frame._OBJ, frame.currentNewObject, &frame.failJump);
+            evalState.clearCreatedObject(frame._OBJ, frame.currentNewObject, &frame.failJump);
             break;
          }
             
@@ -964,7 +966,7 @@ KorkApi::ConsoleValue CodeBlock::exec(U32 ip, const char *functionName, Namespac
             
          case OP_RETURN:
 
-            mVM->mEvalState.clearCreatedObjects(frame._STARTOBJ, frame._OBJ);
+            evalState.clearCreatedObjects(frame._STARTOBJ, frame._OBJ);
 
             if ( frame._ITER > 0 )
             {
@@ -989,7 +991,7 @@ KorkApi::ConsoleValue CodeBlock::exec(U32 ip, const char *functionName, Namespac
 
          case OP_RETURN_FLT:
 
-            mVM->mEvalState.clearCreatedObjects(frame._STARTOBJ, frame._OBJ);
+            evalState.clearCreatedObjects(frame._STARTOBJ, frame._OBJ);
          
             if( frame._ITER > 0 )
             {
@@ -1014,7 +1016,7 @@ KorkApi::ConsoleValue CodeBlock::exec(U32 ip, const char *functionName, Namespac
 
          case OP_RETURN_UINT:
 
-            mVM->mEvalState.clearCreatedObjects(frame._STARTOBJ, frame._OBJ);
+            evalState.clearCreatedObjects(frame._STARTOBJ, frame._OBJ);
          
             if( frame._ITER > 0 )
             {
@@ -2029,7 +2031,7 @@ KorkApi::ConsoleValue CodeBlock::exec(U32 ip, const char *functionName, Namespac
    }
 execFinished:
 
-   mVM->mEvalState.clearCreatedObjects(frame._STARTOBJ, frame._OBJ);
+   evalState.clearCreatedObjects(frame._STARTOBJ, frame._OBJ);
    
    if ( telDebuggerOn && setFrame < 0 )
       mVM->mTelDebugger->popStackFrame();
@@ -2086,6 +2088,7 @@ execFinished:
 #endif
    
    decRefCount();
+   evalState.mState = evalState.vmFrames.empty() ? ExprEvalState::FIBER_INACTIVE : ExprEvalState::FIBER_RUNNING;
    return retValue;
 }
 
@@ -2109,8 +2112,8 @@ KorkApi::ConsoleValue ExprEvalState::getLocalFrameVariable(StringTableEntry name
 
 void ExprEvalState::pushFrame(StringTableEntry frameName, Namespace *ns)
 {
-   ConsoleFrame *newFrame = new ConsoleFrame(vmInternal);
-   newFrame->dictionary = new Dictionary(this);
+   ConsoleFrame *newFrame = new ConsoleFrame(vmInternal, this);
+   newFrame->dictionary = new Dictionary(vmInternal);
    newFrame->scopeName = frameName;
    newFrame->scopeNamespace = ns;
    if (vmFrames.size() > 0)
@@ -2141,8 +2144,8 @@ void ExprEvalState::popFrame()
 void ExprEvalState::pushFrameRef(S32 stackIndex)
 {
    AssertFatal( stackIndex >= 0 && stackIndex < stack.size(), "You must be asking for a valid frame!" );
-   ConsoleFrame *newFrame = new ConsoleFrame(vmInternal);
-   newFrame->dictionary = new Dictionary(this, vmFrames[stackIndex]->dictionary);
+   ConsoleFrame *newFrame = new ConsoleFrame(vmInternal, this);
+   newFrame->dictionary = new Dictionary(vmInternal, vmFrames[stackIndex]->dictionary);
    vmFrames.push_back(newFrame);
    newFrame->copyFrom(vmFrames[stackIndex]);
    mStackDepth ++;

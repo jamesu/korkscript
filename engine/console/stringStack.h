@@ -33,11 +33,25 @@
 /// used heavily by the console interpreter.
 struct StringStack
 {
+/*
+   NOTE: scenarios here
+
+   1. Native -> Native (only mFunctionOffset used)
+   2. Native -> Script (only mFunctionOffset, setStringValue, getStringValue used)
+   3. Script -> Native (pushFrame, setStringValue, push, popFrame used)
+   4. Script -> Script (pushFrame, setStringValue, push, popFrame used)
+
+   The return value buffer is now in VmInternal. This is primarily used 
+   when returning values from native functions.
+   EVERYTHING ends up either as a value in the stack OR a heap allocated variable.
+*/
+
    enum {
       MaxStackDepth = 16, // should be at least MaxStackSize
       MaxArgs = 20,
       ReturnBufferSpace = 512
    };
+
    char *mBuffer;
    U32   mBufferSize;
    const char *mArgVStr[MaxArgs];
@@ -50,6 +64,7 @@ struct StringStack
    KorkApi::ConsoleValue::AllocBase* mAllocBase;
    KorkApi::TypeInfo* mTypes;
 
+   U16 mFuncId;
    U32 mNumFrames;
 
    U32 mStart;
@@ -57,32 +72,24 @@ struct StringStack
    U32 mStartStackSize;
    U32 mFunctionOffset;
 
-   U32 mReturnBufferSize;
-   char *mReturnBuffer;
-
    void validateBufferSize(U32 size)
    {
       if(size > mBufferSize)
       {
          mBufferSize = size + 2048;
          mBuffer = (char *) dRealloc(mBuffer, mBufferSize);
-         if (mAllocBase) mAllocBase->func = mBuffer;
+         if (mAllocBase)
+         {
+            mAllocBase->func[mFuncId] = mBuffer;
+         }
       }
    }
-   void validateReturnBufferSize(U32 size)
-   {
-      if(size > mReturnBufferSize)
-      {
-         mReturnBufferSize = size + 2048;
-         mReturnBuffer = (char *) dRealloc(mReturnBuffer, mReturnBufferSize);
-         if (mAllocBase) mAllocBase->arg = mBuffer;
-      }
-   }
-   
+
    StringStack(KorkApi::ConsoleValue::AllocBase* allocBase = NULL, KorkApi::TypeInfo* typeInfos = NULL)
    {
       mBufferSize = 0;
       mBuffer = NULL;
+      mFuncId = 0;
       mNumFrames = 0;
       mStart = 0;
       mLen = 0;
@@ -90,7 +97,6 @@ struct StringStack
       mFunctionOffset = 0;
       mAllocBase = allocBase;
       validateBufferSize(8192);
-      validateReturnBufferSize(2048);
       mType = KorkApi::ConsoleValue::TypeInternalString;
       mTypes = typeInfos;
    }
@@ -116,21 +122,12 @@ struct StringStack
    /// Return a temporary buffer we can use to return data.
    ///
    /// @note This clobbers anything in our buffers!
-   KorkApi::ConsoleValue getReturnBuffer(U16 valueType, U32 size)
+   KorkApi::ConsoleValue getFrameBuffer(U16 valueType, U32 size)
    {
       KorkApi::ConsoleValue ret;
-      if(size > ReturnBufferSpace)
-      {
-         validateReturnBufferSize(size);
-         ret.setTyped((U64)0, valueType, KorkApi::ConsoleValue::ZoneReturn);
-         return ret;
-      }
-      else
-      {
-         validateBufferSize(mStart + size);
-         ret.setTyped((U64)(mStart), valueType, KorkApi::ConsoleValue::ZoneFunc);
-         return ret;
-      }
+      validateBufferSize(mStart + size);
+      ret.setTyped((U64)(mStart), valueType, (KorkApi::ConsoleValue::Zone)((U32)KorkApi::ConsoleValue::ZoneFunc + mFuncId));
+      return ret;
    }
 
    /// Return a buffer we can use for arguments.
@@ -165,7 +162,6 @@ struct StringStack
 
       validateBufferSize(mStart + mLen + 2);
       dStrcpy(mBuffer + mStart, s);
-
    }
 
    /// Set a string value on the top of the stack.

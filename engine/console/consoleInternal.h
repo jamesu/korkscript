@@ -116,7 +116,7 @@ public:
    KorkApi::VmInternal* vm;
    
    Dictionary();
-   Dictionary(ExprEvalState *state, Dictionary* ref=NULL);
+   Dictionary(KorkApi::VmInternal *state, Dictionary* ref=NULL);
    ~Dictionary();
    
    void clearEntry(Entry* e);
@@ -135,7 +135,7 @@ public:
    Entry *lookup(StringTableEntry name);
    Entry* getVariable(StringTableEntry name);
    Entry *add(StringTableEntry name);
-   void setState(ExprEvalState *state, Dictionary* ref=NULL);
+   void setState(KorkApi::VmInternal *state, Dictionary* ref=NULL);
    void remove(Entry *);
    void reset();
    
@@ -230,17 +230,28 @@ public:
       TraceBufferSize = 1024
    };
    
+   enum FiberState : U8
+   {
+      FIBER_INACTIVE,
+      FIBER_RUNNING,
+      FIBER_SUSPENDED
+   };
+   
    struct ObjectStackItem
    {
       KorkApi::VMObject* newObject;
       U32 failJump;
    };
    
+   U32 mAllocNumber : 24;
+   U32 mGeneration : 7;
+   
    /// @name Expression Evaluation
    /// @{
    
    ///
    KorkApi::VmInternal* vmInternal;
+   Dictionary* globalVars;
    
    IterStackRecord iterStack[MaxIterStackSize];
    F64 floatStack[MaxStackSize];
@@ -254,6 +265,8 @@ public:
    
    ExprEvalState(KorkApi::VmInternal* vm);
    ~ExprEvalState();
+   
+   void reset();
    
    void setCreatedObject(U32 index, KorkApi::VMObject* object, U32 failJump);
    void clearCreatedObject(U32 index, LocalRefTrack& outTrack, U32* outJump);
@@ -271,13 +284,12 @@ public:
    /// an interior pointer that will become invalid when the object changes address.
    Vector< ConsoleFrame* > vmFrames;
    
+   FiberState mState;
+   
    bool traceOn;
    char traceBuffer[TraceBufferSize];
    
    U32 mStackDepth;
-   
-   ///
-   Dictionary globalVars;
 
    void setLocalFrameVariable(StringTableEntry name, KorkApi::ConsoleValue value);
    KorkApi::ConsoleValue getLocalFrameVariable(StringTableEntry name);

@@ -89,7 +89,7 @@ const char* Vm::tabCompleteNamespace(NamespaceId nsId, const char *prevText, S32
 
 const char* Vm::tabCompleteVariable(const char *prevText, S32 baseLen, bool fForward)
 {
-   return mInternal->mEvalState.globalVars.tabComplete(prevText, baseLen, fForward);
+   return mInternal->mGlobalVars.tabComplete(prevText, baseLen, fForward);
 }
 
 TypeId Vm::registerType(TypeInfo& info)
@@ -278,7 +278,7 @@ void VmInternal::releaseHeapRef(ConsoleHeapAllocRef value)
 
 ConsoleValue Vm::getStringFuncBuffer(U32 size)
 {
-    return mInternal->getStringFuncBuffer(size);
+    return mInternal->getStringFuncBuffer(0, size);
 }
 
 ConsoleValue Vm::getStringReturnBuffer(U32 size)
@@ -293,7 +293,7 @@ ConsoleValue Vm::getTypeReturn(TypeId typeId)
 
 ConsoleValue Vm::getTypeFunc(TypeId typeId)
 {
-    return mInternal->getTypeFunc(typeId);
+    return mInternal->getTypeFunc(0, typeId);
 }
 
 ConsoleValue Vm::getStringInZone(U16 zone, U32 size)
@@ -309,55 +309,85 @@ ConsoleValue Vm::getTypeInZone(U16 zone, TypeId typeId)
 ConsoleValue VmInternal::getStringInZone(U16 zone, U32 size)
 {
    if (zone == ConsoleValue::ZoneReturn)
+   {
       return getStringReturnBuffer(size);
-   else if (zone == ConsoleValue::ZoneFunc)
-      return getStringFuncBuffer(size);
+   }
+   else if (zone >= ConsoleValue::ZoneFiberStart)
+   {
+      U16 fiberId = (zone - ConsoleValue::ZoneFiberStart) >> 1;
+      return getStringFuncBuffer(fiberId, size);
+   }
    else
+   {
       return ConsoleValue();
+   }
 }
 
 ConsoleValue VmInternal::getTypeInZone(U16 zone, TypeId typeId)
 {
+   U32 size = mTypes[typeId].size;
    if (zone == ConsoleValue::ZoneReturn)
-      return getTypeReturn(typeId);
-   else if (zone == ConsoleValue::ZoneFunc)
-      return getTypeFunc(typeId);
+   {
+      return getStringReturnBuffer(size);
+   }
+   else if (zone >= ConsoleValue::ZoneFiberStart)
+   {
+      U16 fiberId = (zone - ConsoleValue::ZoneFiberStart) >> 1;
+      return getStringFuncBuffer(fiberId, size);
+   }
    else
+   {
       return ConsoleValue();
+   }
 }
 
-ConsoleValue VmInternal::getStringFuncBuffer(U32 size)
+void VmInternal::validateReturnBufferSize(U32 size)
 {
-   return mEvalState.mSTR.getFuncBuffer(KorkApi::ConsoleValue::TypeInternalString, size);
+   if (mReturnBuffer.size() < size)
+   {
+      mReturnBuffer.setSize(size + 2048);
+      mAllocBase.arg = mReturnBuffer.address();
+   }
+}
+
+ConsoleValue VmInternal::getStringFuncBuffer(U32 fiberIndex, U32 size)
+{
+   return mFiberStates.mItems[fiberIndex] ? mFiberStates.mItems[fiberIndex]->mSTR.getFuncBuffer(KorkApi::ConsoleValue::TypeInternalString, size) : ConsoleValue();
 }
 
 ConsoleValue VmInternal::getStringReturnBuffer(U32 size)
 {
-   return mEvalState.mSTR.getReturnBuffer(KorkApi::ConsoleValue::TypeInternalString, size);
+   KorkApi::ConsoleValue ret;
+   validateReturnBufferSize(size);
+   ret.setTyped(0, KorkApi::ConsoleValue::TypeInternalString, KorkApi::ConsoleValue::ZoneReturn);
+   return ret;
 }
 
-ConsoleValue VmInternal::getTypeFunc(TypeId typeId)
+ConsoleValue VmInternal::getTypeFunc(U32 fiberIndex, TypeId typeId)
 {
    U32 size = mTypes[typeId].size;
-   return mEvalState.mSTR.getFuncBuffer(typeId, size);
+   return mFiberStates.mItems[fiberIndex] ? mFiberStates.mItems[fiberIndex]->mSTR.getFuncBuffer(typeId, size) : ConsoleValue();
 }
 
 ConsoleValue VmInternal::getTypeReturn(TypeId typeId)
 {
+   KorkApi::ConsoleValue ret;
    U32 size = mTypes[typeId].size;
-   return mEvalState.mSTR.getReturnBuffer(typeId, size);
+   validateReturnBufferSize(size);
+   ret.setTyped(0, KorkApi::ConsoleValue::TypeInternalString, KorkApi::ConsoleValue::ZoneReturn);
+   return ret;
 }
 
 
 
 void Vm::pushValueFrame()
 {
-   return mInternal->mEvalState.mSTR.pushFrame();
+   return mInternal->mCurrentFiberState->mSTR.pushFrame();
 }
 
 void Vm::popValueFrame()
 {
-   return mInternal->mEvalState.mSTR.popFrame();
+   return mInternal->mCurrentFiberState->mSTR.popFrame();
 }
 
 // Public
@@ -546,7 +576,7 @@ bool Vm::callObjectFunction(VMObject* self, StringTableEntry funcName, int argc,
       mInternal->printf(0, "%s: undefined for object id %d", funcName, self->klass->iCreate.GetIdFn(self));
 
       // Clean up arg buffers, if any.
-      mInternal->mEvalState.mSTR.clearFunctionOffset();
+      mInternal->mCurrentFiberState->mSTR.clearFunctionOffset();
       return "";
    }
 
@@ -562,7 +592,7 @@ bool Vm::callObjectFunction(VMObject* self, StringTableEntry funcName, int argc,
       //object->pushScriptCallbackGuard();
    }
 
-   KorkApi::ConsoleValue ret = ent->execute(argc, argv, &mInternal->mEvalState, self);
+   KorkApi::ConsoleValue ret = ent->execute(argc, argv, mInternal->mCurrentFiberState, self);
    
    retValue = ret;
 
@@ -576,7 +606,7 @@ bool Vm::callObjectFunction(VMObject* self, StringTableEntry funcName, int argc,
 
    // Reset the function offset so the stack
    // doesn't continue to grow unnecessarily
-   mInternal->mEvalState.mSTR.clearFunctionOffset();
+   mInternal->mCurrentFiberState->mSTR.clearFunctionOffset();
 
    return true;
 }
@@ -590,15 +620,15 @@ bool Vm::callNamespaceFunction(NamespaceId nsId, StringTableEntry name, int argc
    {
       mInternal->printf(0, "%s: Unknown command.", argv[0]);
       // Clean up arg buffers, if any.
-      mInternal->mEvalState.mSTR.clearFunctionOffset();
+      mInternal->mCurrentFiberState->mSTR.clearFunctionOffset();
       return false;
    }
 
-   retValue = ent->execute(argc, argv, &mInternal->mEvalState, NULL);
+   retValue = ent->execute(argc, argv, mInternal->mCurrentFiberState, NULL);
 
    // Reset the function offset so the stack
    // doesn't continue to grow unnecessarily
-   mInternal->mEvalState.mSTR.clearFunctionOffset();
+   mInternal->mCurrentFiberState->mSTR.clearFunctionOffset();
 
    return true;
 }
@@ -644,40 +674,40 @@ const char* Vm::getObjectFieldString(VMObject* object, StringTableEntry fieldNam
 
 void Vm::setGlobalVariable(StringTableEntry name, KorkApi::ConsoleValue value)
 {
-   mInternal->mEvalState.globalVars.setVariableValue(name, value);
+   mInternal->mGlobalVars.setVariableValue(name, value);
 }
 
 ConsoleValue Vm::getGlobalVariable(StringTableEntry name)
 {
-   Dictionary::Entry* e = mInternal->mEvalState.globalVars.getVariable(name);
+   Dictionary::Entry* e = mInternal->mGlobalVars.getVariable(name);
    
    if (!e)
    {
       return ConsoleValue();
    }
    
-   return mInternal->mEvalState.globalVars.getEntryValue(e);
+   return mInternal->mGlobalVars.getEntryValue(e);
 }
 
 void Vm::setLocalVariable(StringTableEntry name, KorkApi::ConsoleValue value)
 {
-   mInternal->mEvalState.setLocalFrameVariable(name, value);
+   mInternal->mCurrentFiberState->setLocalFrameVariable(name, value);
 }
 
 ConsoleValue Vm::getLocalVariable(StringTableEntry name)
 {
-   return mInternal->mEvalState.getLocalFrameVariable(name);
+   return mInternal->mCurrentFiberState->getLocalFrameVariable(name);
 }
 
 
 bool Vm::registerGlobalVariable(StringTableEntry name, S32 type, void *dptr, const char* usage)
 {
-   return mInternal->mEvalState.globalVars.addVariable( name, type, dptr, usage );
+   return mInternal->mGlobalVars.addVariable( name, type, dptr, usage );
 }
 
 bool Vm::removeGlobalVariable(StringTableEntry name)
 {
-   return name!=0 && mInternal->mEvalState.globalVars.removeVariable(name);
+   return name!=0 && mInternal->mGlobalVars.removeVariable(name);
 }
 
 ConsoleValue::AllocBase Vm::getAllocBase() const
@@ -687,17 +717,17 @@ ConsoleValue::AllocBase Vm::getAllocBase() const
 
 bool Vm::isTracing()
 {
-   return mInternal->mEvalState.traceOn;
+   return mInternal->mCurrentFiberState->traceOn;
 }
 
 S32 Vm::getTracingStackPos()
 {
-   return mInternal->mEvalState.vmFrames.size();
+   return mInternal->mCurrentFiberState->vmFrames.size();
 }
 
 void Vm::setTracing(bool value)
 {
-   mInternal->mEvalState.traceOn = value;
+   mInternal->mCurrentFiberState->traceOn = value;
 }
 
 
@@ -721,13 +751,22 @@ void destroyVM(Vm* vm)
    delete vm;
 }
 
-VmInternal::VmInternal(Vm* vm, Config* cfg) : mEvalState(this)
+VmInternal::VmInternal(Vm* vm, Config* cfg) : mGlobalVars(this)
 {
    mVM = vm;
    mConfig = *cfg;
    mCodeBlockList = NULL;
    mCurrentCodeBlock = NULL;
+   mReturnBuffer.setSize(2048);
    mNSState.init(this);
+   
+   if (cfg->maxFibers == 0)
+   {
+      cfg->maxFibers = 1024;
+   }
+   mAllocBase.func = new void*[cfg->maxFibers];
+   mAllocBase.arg = mReturnBuffer.address();
+   memset(mAllocBase.func, 0, sizeof(void*)*cfg->maxFibers);
 
    if (mConfig.initTelnet)
    {
@@ -822,10 +861,18 @@ VmInternal::VmInternal(Vm* vm, Config* cfg) : mEvalState(this)
          return (VMObject*)NULL;
       };
    }
+   
+   FiberId baseFiber = createFiber();
+   mCurrentFiberState = mFiberStates.mItems[0];
 }
 
 VmInternal::~VmInternal()
 {
+   ExprEvalState* mCurrentFiberState;
+   InternalFiberList mFiberStates;
+   ClassChunker<ExprEvalState> mFiberAllocator;
+   
+   
    delete mTelDebugger;
    delete mTelConsole;
    if (mOwnsResources)
@@ -833,12 +880,66 @@ VmInternal::~VmInternal()
       delete mCompilerResources;
    }
    mNSState.shutdown();
+   
+   // Cleanup remaining fibers
+   for (Vector<ExprEvalState*>::iterator itr = mFiberStates.mItems.begin(), itrEnd = mFiberStates.mItems.end(); itr != itrEnd; itr++)
+   {
+      delete *itr;
+      *itr = NULL;
+   }
+   mFiberStates.clear();
+   mFiberAllocator.freeBlocks();
 
    for (ConsoleHeapAlloc* alloc = mHeapAllocs; alloc; alloc = alloc->next)
    {
       mConfig.freeFn(alloc, mConfig.allocUser);
    }
    mHeapAllocs = NULL;
+}
+
+
+void VmInternal::setCurrentFiberMain()
+{
+   ExprEvalState* state = mFiberStates.mItems[0];
+   if (state)
+   {
+      mCurrentFiberState = state;
+   }
+}
+
+void VmInternal::setCurrentFiber(FiberId fiber)
+{
+   ExprEvalState* state = mFiberStates.getItem(fiber);
+   if (state)
+   {
+      mCurrentFiberState = state;
+   }
+}
+
+FiberId VmInternal::createFiber()
+{
+   ExprEvalState* newState = new ExprEvalState(this);
+   InternalFiberList::HandleType handle = mFiberStates.allocListHandle(newState);
+   newState->mSTR.mFuncId = handle.getIndex();
+   mAllocBase.func[handle.getIndex()] = newState->mSTR.mBuffer;
+   return handle.getValue();
+}
+
+FiberId VmInternal::getCurrentFiber()
+{
+   return mCurrentFiberState ? mFiberStates.getHandleValue(mCurrentFiberState) : 0;
+}
+
+void VmInternal::cleanupFiber(FiberId fiber)
+{
+   InternalFiberList::HandleType vh = InternalFiberList::HandleType::fromValue(fiber);
+   ExprEvalState* state = mFiberStates.getItem(fiber);
+   if (state && state != mFiberStates.mItems[0])
+   {
+      mFiberStates.freeListPtr(state);
+      delete state;
+      mAllocBase.func[vh.getIndex()] = NULL;
+   }
 }
 
 StringTableEntry VmInternal::getCurrentCodeBlockName()

@@ -44,7 +44,8 @@ struct APIThunk<C, ThunkFn> {
 
 typedef U32 SimObjectId;
 typedef Namespace* NamespaceId;
-typedef S32 CodeBlockId;
+typedef U32 CodeBlockId;
+typedef U32 FiberId;
 using VMNamespace = Namespace;
 
 //
@@ -298,6 +299,8 @@ struct Config {
 
    bool warnUndefinedScriptVariables;
    bool initTelnet;
+   
+   U16 maxFibers;
 };
 
 struct ConsoleHeapAlloc
@@ -368,6 +371,9 @@ public:
    ConsoleValue getStringReturnBuffer(U32 size);
    ConsoleValue getTypeFunc(TypeId typeId);
    ConsoleValue getTypeReturn(TypeId typeId);
+   
+   
+   // Gets a string in a specific zone
    ConsoleValue getStringInZone(U16 zone, U32 size);
    ConsoleValue getTypeInZone(U16 zone, TypeId typeId);
 
