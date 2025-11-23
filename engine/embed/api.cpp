@@ -535,21 +535,21 @@ ConsoleValue Vm::evalCode(const char* code, const char* filename)
     return newCodeBlock->compileExec(filename, code, false, filename ? -1 : 0); // TODO: should this be 0 or -1?
 }
 
-ConsoleValue Vm::call(int argc, ConsoleValue* argv)
+ConsoleValue Vm::call(int argc, ConsoleValue* argv, bool startSuspended)
 {
    ConsoleValue retValue = ConsoleValue();
-   callNamespaceFunction(getGlobalNamespace(), StringTable->insert(mInternal->valueAsString(argv[1])), argc, argv, retValue);
+   callNamespaceFunction(getGlobalNamespace(), StringTable->insert(mInternal->valueAsString(argv[1])), argc, argv, retValue, startSuspended);
    return retValue;
 }
 
-ConsoleValue Vm::callObject(VMObject* h, int argc, ConsoleValue* argv)
+ConsoleValue Vm::callObject(VMObject* h, int argc, ConsoleValue* argv, bool startSuspended)
 {
    ConsoleValue retValue = ConsoleValue();
-   callObjectFunction(h, StringTable->insert(mInternal->valueAsString(argv[1])), argc, argv, retValue);
+   callObjectFunction(h, StringTable->insert(mInternal->valueAsString(argv[1])), argc, argv, retValue, startSuspended);
    return retValue;
 }
 
-bool Vm::callObjectFunction(VMObject* self, StringTableEntry funcName, int argc, KorkApi::ConsoleValue* argv, ConsoleValue& retValue)
+bool Vm::callObjectFunction(VMObject* self, StringTableEntry funcName, int argc, KorkApi::ConsoleValue* argv, ConsoleValue& retValue, bool startSuspended)
 {
    char idBuf[16];
    if (argc < 2)
@@ -592,7 +592,7 @@ bool Vm::callObjectFunction(VMObject* self, StringTableEntry funcName, int argc,
       //object->pushScriptCallbackGuard();
    }
 
-   KorkApi::ConsoleValue ret = ent->execute(argc, argv, mInternal->mCurrentFiberState, self);
+   KorkApi::ConsoleValue ret = ent->execute(argc, argv, mInternal->mCurrentFiberState, self, startSuspended);
    
    retValue = ret;
 
@@ -611,7 +611,7 @@ bool Vm::callObjectFunction(VMObject* self, StringTableEntry funcName, int argc,
    return true;
 }
 
-bool Vm::callNamespaceFunction(NamespaceId nsId, StringTableEntry name, int argc, KorkApi::ConsoleValue* argv, ConsoleValue& retValue)
+bool Vm::callNamespaceFunction(NamespaceId nsId, StringTableEntry name, int argc, KorkApi::ConsoleValue* argv, ConsoleValue& retValue, bool startSuspended)
 {
    Namespace* ns = (Namespace*)nsId;
    Namespace::Entry* ent = ns->lookup(name);
@@ -624,7 +624,7 @@ bool Vm::callNamespaceFunction(NamespaceId nsId, StringTableEntry name, int argc
       return false;
    }
 
-   retValue = ent->execute(argc, argv, mInternal->mCurrentFiberState, NULL);
+   retValue = ent->execute(argc, argv, mInternal->mCurrentFiberState, NULL, startSuspended);
 
    // Reset the function offset so the stack
    // doesn't continue to grow unnecessarily
@@ -742,6 +742,7 @@ Vm* createVM(Config* cfg)
    
    Vm* vm = new Vm();
    vm->mInternal = new VmInternal(vm, cfg);
+   
    return vm;
 }
 
@@ -940,6 +941,19 @@ void VmInternal::cleanupFiber(FiberId fiber)
       delete state;
       mAllocBase.func[vh.getIndex()] = NULL;
    }
+}
+
+FiberRunResult VmInternal::resumeCurrentFiber(ConsoleValue value)
+{
+   if (mCurrentFiberState == NULL)
+      return;
+   
+   return mCurrentFiberState->runVM();
+}
+
+FiberRunResult::State VmInternal::getCurrentFiberState()
+{
+   return mCurrentFiberState ? mCurrentFiberState->mState : FiberRunResult::ERROR;
 }
 
 StringTableEntry VmInternal::getCurrentCodeBlockName()
@@ -1365,6 +1379,42 @@ void Vm::processTelnet()
    {
       mInternal->mTelDebugger->process();
    }
+}
+
+
+void Vm::setCurrentFiberMain()
+{
+   mInternal->setCurrentFiberMain();
+}
+
+void Vm::setCurrentFiber(FiberId fiber)
+{
+   mInternal->setCurrentFiber(fiber);
+}
+
+FiberId Vm::createFiber()
+{
+   return mInternal->createFiber();
+}
+
+FiberId Vm::getCurrentFiber()
+{
+   return mInternal->getCurrentFiber();
+}
+
+void Vm::cleanupFiber(FiberId fiber)
+{
+   mInternal->cleanupFiber(fiber);
+}
+
+FiberRunResult Vm::resumeCurrentFiber(ConsoleValue value)
+{
+   return mInternal->resumeCurrentFiber(value);
+}
+
+FiberRunResult::State Vm::getCurrentFiberState()
+{
+   return mInternal->getCurrentFiberState();
 }
 
 

@@ -125,7 +125,7 @@ public:
    
    ConsoleFrame& setupExecFrame(ExprEvalState& eval,
                                 U32*        code,
-                                U32&             ip,
+                                U32             ip,
                                 const char*      packageName,
                                 Namespace*       thisNamespace,
                                 KorkApi::ConsoleValue*    argv,
@@ -149,7 +149,12 @@ public:
    /// @param packageName The code package name or null.
     KorkApi::ConsoleValue exec(U32 offset, const char *fnName, Namespace *ns, U32 argc,
                     KorkApi::ConsoleValue *argv, bool noCalls, StringTableEntry packageName,
-                    S32 setFrame = -1);
+                    S32 setFrame = -1, bool startSuspended=false);
+   
+   /// Variant of exec which JUST sets up the frame (for script->script calls)
+   ConsoleFrame* beginExec(ExprEvalState& state, U32 offset, const char *fnName, Namespace *ns, U32 argc,
+                   KorkApi::ConsoleValue *argv, bool noCalls, StringTableEntry packageName,
+                   S32 setFrame = -1);
 };
 
 #endif

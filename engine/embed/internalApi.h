@@ -89,6 +89,8 @@ struct VmInternal
    FiberId createFiber(); // needs exec too
    FiberId getCurrentFiber();
    void cleanupFiber(FiberId fiber);
+   FiberRunResult resumeCurrentFiber(ConsoleValue value);
+   FiberRunResult::State getCurrentFiberState();
    
    void validateReturnBufferSize(U32 size);
 

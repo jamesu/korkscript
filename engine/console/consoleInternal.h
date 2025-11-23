@@ -112,7 +112,6 @@ public:
    };
    
    HashTableData *hashTable;
-   ExprEvalState *exprState;
    KorkApi::VmInternal* vm;
    
    Dictionary();
@@ -230,13 +229,6 @@ public:
       TraceBufferSize = 1024
    };
    
-   enum FiberState : U8
-   {
-      FIBER_INACTIVE,
-      FIBER_RUNNING,
-      FIBER_SUSPENDED
-   };
-   
    struct ObjectStackItem
    {
       KorkApi::VMObject* newObject;
@@ -284,7 +276,7 @@ public:
    /// an interior pointer that will become invalid when the object changes address.
    Vector< ConsoleFrame* > vmFrames;
    
-   FiberState mState;
+   KorkApi::FiberRunResult::State mState;
    
    bool traceOn;
    char traceBuffer[TraceBufferSize];
@@ -295,7 +287,7 @@ public:
    KorkApi::ConsoleValue getLocalFrameVariable(StringTableEntry name);
    ConsoleBasicFrame getBasicFrameInfo(U32 idx);
    
-   void pushFrame(StringTableEntry frameName, Namespace *ns);
+   void pushFrame(StringTableEntry frameName, Namespace *ns, StringTableEntry packageName, CodeBlock* block, U32 ip);
    void popFrame();
    
    /// Puts a reference to an existing stack frame
@@ -306,6 +298,11 @@ public:
    {
       return mStackDepth;
    }
+   
+   // Fiber API
+   KorkApi::FiberRunResult runVM();
+   void suspend(KorkApi::ConsoleValue value);
+   KorkApi::FiberRunResult resume(KorkApi::ConsoleValue value);
    
    ConsoleFrame& getCurrentFrame();
    

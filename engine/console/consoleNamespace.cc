@@ -552,12 +552,12 @@ inline void* safeObjectUserPtr(KorkApi::VMObject* obj)
    return obj ? obj->userPtr : NULL;
 }
 
-KorkApi::ConsoleValue Namespace::Entry::execute(S32 argc, KorkApi::ConsoleValue* argv, ExprEvalState *state, KorkApi::VMObject* resolvedThis)
+KorkApi::ConsoleValue Namespace::Entry::execute(S32 argc, KorkApi::ConsoleValue* argv, ExprEvalState *state, KorkApi::VMObject* resolvedThis, bool startSuspended)
 {
    if(mType == ScriptFunctionType)
    {
       if(mFunctionOffset)
-         return mCode->exec(mFunctionOffset, StringTable->insert(mNamespace->mVmInternal->valueAsString(argv[0])), mNamespace, argc, argv, false, mPackage);
+         return mCode->exec(mFunctionOffset, StringTable->insert(mNamespace->mVmInternal->valueAsString(argv[0])), mNamespace, argc, argv, false, mPackage, -1, startSuspended);
       else
          return KorkApi::ConsoleValue();
    }

@@ -71,6 +71,8 @@ set(TORQUESIM_SRCS
 	./torqueSim/sim/simBase.h
 	./torqueSim/sim/simDictionary.cc
 	./torqueSim/sim/simDictionary.h
+	./torqueSim/sim/simFiberManager.cc
+	./torqueSim/sim/simFiberManager.h
 	./torqueSim/sim/simManager.cc
 	./torqueSim/platform/platformNetAsync.cc
 	./torqueSim/platform/platformNetwork.cc

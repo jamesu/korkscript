@@ -323,6 +323,20 @@ typedef ConsoleHeapAlloc* ConsoleHeapAllocRef;
 
 struct VmInternal;
 
+struct FiberRunResult
+{
+   enum State : U8
+   {
+      INACTIVE,
+      RUNNING,
+      SUSPENDED,
+      ERROR, // some form of error occured (otherwise same as inactive)
+      FINISHED
+   };
+   
+   KorkApi::ConsoleValue yieldValue;
+   State state;
+};
 
 enum Constants 
 {
@@ -402,11 +416,11 @@ public:
    ConsoleValue execCodeBlock(U32 codeSize, U8* code, const char* filename, bool noCalls, int setFrame);
 
    ConsoleValue evalCode(const char* code, const char* filename);
-   ConsoleValue call(int argc, ConsoleValue* argv);
-   ConsoleValue callObject(VMObject* h, int argc, ConsoleValue* argv);
+   ConsoleValue call(int argc, ConsoleValue* argv, bool startSuspended=false);
+   ConsoleValue callObject(VMObject* h, int argc, ConsoleValue* argv, bool startSuspended=false);
 
-   bool callNamespaceFunction(NamespaceId nsId, StringTableEntry name, int argc, ConsoleValue* argv, ConsoleValue& retValue);
-   bool callObjectFunction(VMObject* self, StringTableEntry name, int argc, ConsoleValue* argv, ConsoleValue& retValue);
+   bool callNamespaceFunction(NamespaceId nsId, StringTableEntry name, int argc, ConsoleValue* argv, ConsoleValue& retValue, bool startSuspended=false);
+   bool callObjectFunction(VMObject* self, StringTableEntry name, int argc, ConsoleValue* argv, ConsoleValue& retValue, bool startSuspended=false);
 
    // Helpers (should call into user funcs)
    VMObject* findObjectByName(const char* name);
@@ -452,6 +466,14 @@ public:
 
    void processTelnet();
 
+   // Fiber API
+   void setCurrentFiberMain();
+   void setCurrentFiber(FiberId fiber);
+   FiberId createFiber(); // needs exec too
+   FiberId getCurrentFiber();
+   FiberRunResult::State getCurrentFiberState();
+   void cleanupFiber(FiberId fiber);
+   FiberRunResult resumeCurrentFiber(ConsoleValue value);
 };
 
 Vm* createVM(Config* cfg);

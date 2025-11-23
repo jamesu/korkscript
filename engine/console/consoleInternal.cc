@@ -611,7 +611,7 @@ ExprEvalState::ExprEvalState(KorkApi::VmInternal* vm): mSTR(&vm->mAllocBase)
    mCurrentFile = NULL;
    mCurrentRoot = NULL;
    
-   mState = FIBER_INACTIVE;
+   mState = KorkApi::FiberRunResult::INACTIVE;
 }
 
 ExprEvalState::~ExprEvalState()
