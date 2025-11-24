@@ -125,6 +125,7 @@ struct ConsoleFrame
    bool            popStringStack;
    bool            noCalls;
    bool            isReference;
+   bool            inNativeFunction;
    U32             failJump;
    U32             stackStart; // string stack offset
    U32             callArgc;
@@ -171,6 +172,8 @@ struct ConsoleFrame
    // Args (16 bytes)
    KorkApi::ConsoleValue* callArgv;
    const char**           callArgvS;
+   
+   U32 lastCallType;
 
    // Buffers (640 bytes)
    char nsDocBlockClass[NSDocLength];
@@ -189,6 +192,7 @@ public:
       , popStringStack(false)
       , noCalls(false)
       , isReference(false)
+      , inNativeFunction(false)
       , failJump(0)
       , scopeName( NULL )
       , scopePackage( NULL )
@@ -214,6 +218,7 @@ public:
       , callArgc(0)
       , callArgv(nullptr)
       , callArgvS(nullptr)
+      , lastCallType(0)
    {
       evalState = fiber;
       memset(nsDocBlockClass, 0, sizeof(nsDocBlockClass));
@@ -722,6 +727,47 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
       // TOFIX
       //evalState.mCurrentFile = frame.codeBlock->name;
       //evalState.mCurrentRoot = vmInternal->mRoot;
+   }
+   
+   // If we came from a native function, process it
+   if (frame.inNativeFunction)
+   {
+      // NOTE: result of the function should be in ExprEvalState mLastYield
+      evalState.mSTR.popFrame();
+      
+      if ((frame.nsEntry->mType == Namespace::Entry::VoidCallbackType) && (code[ip] != OP_STR_TO_NONE))
+      {
+         vmInternal->printf(0, "%s: Call to %s in %s uses result of void function call.", frame.codeBlock->getFileLine(ip-4), tmpFnName, frame.scopeName);
+      }
+      
+      if(code[ip] == OP_STR_TO_UINT)
+      {
+         ip++;
+         evalState.intStack[++frame._UINT] = vmInternal->valueAsInt(mLastYield);
+      }
+      else if(code[ip] == OP_STR_TO_FLT)
+      {
+         ip++;
+         evalState.floatStack[++frame._FLT] = vmInternal->valueAsFloat(mLastYield);
+      }
+      else
+      {
+         if (code[ip] == OP_STR_TO_NONE)
+         {
+            ip++;
+         }
+         
+         // NOTE: can't assume this since concat may occur after this;
+         // ideally we need something like OP_STR_TO_VALUE
+         //evalState.mSTR.setConsoleValue(result);
+         evalState.mSTR.setStringValue(vmInternal->valueAsString(mLastYield));
+      }
+      
+      if(frame.lastCallType == FuncCallExprNode::MethodCall)
+         frame.thisObject = frame.saveObject;
+      
+      frame.inNativeFunction = false;
+      frame.ip = ip;
    }
    
    for(;;)
@@ -1633,12 +1679,13 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
                evalState.vmFrames.last()->ip = ip - 1;
             }
             
-            U32 callType = code[ip+4];
+            frame.lastCallType = code[ip+4];
             
             ip += 5;
+            frame.ip = ip; // sync ip with frame
             evalState.mSTR.getArgcArgv(tmpFnName, &frame.callArgc, &frame.callArgv);
             
-            if(callType == FuncCallExprNode::FunctionCall)
+            if(frame.lastCallType == FuncCallExprNode::FunctionCall)
             {
 #ifdef TORQUE_64
                frame.nsEntry = ((Namespace::Entry *) *((U64*)(code+ip-3)));
@@ -1647,7 +1694,7 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
 #endif
                frame.ns = NULL;
             }
-            else if(callType == FuncCallExprNode::MethodCall)
+            else if(frame.lastCallType == FuncCallExprNode::MethodCall)
             {
                frame.saveObject = frame.thisObject;
                const char* objName = vmInternal->valueAsString(frame.callArgv[1]);
@@ -1690,7 +1737,7 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
                if(!noCalls)
                {
                   vmInternal->printf(0,"%s: Unknown command %s.", frame.codeBlock->getFileLine(ip-4), tmpFnName);
-                  if(callType == FuncCallExprNode::MethodCall)
+                  if(frame.lastCallType == FuncCallExprNode::MethodCall)
                   {
                      /* TOFIXvmInternal->printf(0, "  Object %s(%d) %s",
                                 frame.thisObject->getName() ? frame.thisObject->getName() : "",
@@ -1706,7 +1753,6 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
             if(frame.nsEntry->mType == Namespace::Entry::ScriptFunctionType)
             {
                KorkApi::ConsoleValue ret = KorkApi::ConsoleValue();
-               frame.ip = ip; // sync ip with frame
                
                // NOTE: script opcodes should have pushed a frame thus the need to pop it either
                // here or in execFinished
@@ -1753,128 +1799,77 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
                      //printf("Converting %i argv calling %s\n", callArgc, fnName);
                      evalState.mSTR.convertArgv(vmInternal, frame.callArgc, &frame.callArgvS);
                   }
-
+                  
+                  // Handle calling
+                  
                   switch(frame.nsEntry->mType)
                   {
                      case Namespace::Entry::StringCallbackType:
                      {
                         const char *ret = frame.nsEntry->cb.mStringCallbackFunc(safeObjectUserPtr(frame.thisObject), frame.nsEntry->mUserPtr, frame.callArgc, frame.callArgvS);
-                        evalState.mSTR.popFrame();
-                        if(ret != evalState.mSTR.getStringValue())
-                           evalState.mSTR.setStringValue(ret);
+                        if (mState != KorkApi::FiberRunResult::RUNNING)
+                        {
+                           vmInternal->printf(0,"String function yielded, ignoring result");
+                           mLastYield = KorkApi::ConsoleValue();
+                        }
                         else
-                           evalState.mSTR.setTypedLen(KorkApi::ConsoleValue::TypeInternalString, dStrlen(ret));
-                        break;
+                        {
+                           mLastYield = KorkApi::ConsoleValue::makeString(ret); // NOTE: none of these should yield
+                        }
+                        goto execFinished;
                      }
                      case Namespace::Entry::IntCallbackType:
                      {
                         S32 result = frame.nsEntry->cb.mIntCallbackFunc(safeObjectUserPtr(frame.thisObject), frame.nsEntry->mUserPtr, frame.callArgc, frame.callArgvS);
-                        evalState.mSTR.popFrame();
-                        if(code[ip] == OP_STR_TO_UINT)
-                        {
-                           ip++;
-                           evalState.intStack[++frame._UINT] = result;
-                           break;
-                        }
-                        else if(code[ip] == OP_STR_TO_FLT)
-                        {
-                           ip++;
-                           evalState.floatStack[++frame._FLT] = result;
-                           break;
-                        }
-                        else if(code[ip] == OP_STR_TO_NONE)
-                           ip++;
-                        else
-                           evalState.mSTR.setUnsignedValue(result);
-                        break;
+                        mLastYield = KorkApi::ConsoleValue::makeNumber(result);
+                        frame.inNativeFunction = true;
+                        loopFrameSetup = true;
+                        goto execFinished;
                      }
                      case Namespace::Entry::FloatCallbackType:
                      {
                         F64 result = frame.nsEntry->cb.mFloatCallbackFunc(safeObjectUserPtr(frame.thisObject), frame.nsEntry->mUserPtr, frame.callArgc, frame.callArgvS);
-                        evalState.mSTR.popFrame();
-                        if(code[ip] == OP_STR_TO_UINT)
-                        {
-                           ip++;
-                           evalState.intStack[++frame._UINT] = (S64)result;
-                           break;
-                        }
-                        else if(code[ip] == OP_STR_TO_FLT)
-                        {
-                           ip++;
-                           evalState.floatStack[++frame._FLT] = result;
-                           break;
-                        }
-                        else if(code[ip] == OP_STR_TO_NONE)
-                           ip++;
-                        else
-                           evalState.mSTR.setNumberValue(result);
-                        break;
+                        mLastYield = KorkApi::ConsoleValue::makeNumber(result);
+                        frame.inNativeFunction = true;
+                        loopFrameSetup = true;
+                        goto execFinished;
                      }
                      case Namespace::Entry::VoidCallbackType:
+                     {
                         frame.nsEntry->cb.mVoidCallbackFunc(safeObjectUserPtr(frame.thisObject), frame.nsEntry->mUserPtr, frame.callArgc, frame.callArgvS);
-                        if(code[ip] != OP_STR_TO_NONE)
-                        {
-                           vmInternal->printf(0, "%s: Call to %s in %s uses result of void function call.", frame.codeBlock->getFileLine(ip-4), tmpFnName, frame.scopeName);
-                        }
-                        evalState.mSTR.popFrame();
-                        evalState.mSTR.setStringValue("");
-                        break;
+                        mLastYield = KorkApi::ConsoleValue();
+                        frame.inNativeFunction = true;
+                        loopFrameSetup = true;
+                        goto execFinished;
+                     }
                      case Namespace::Entry::BoolCallbackType:
                      {
                         bool result = frame.nsEntry->cb.mBoolCallbackFunc(safeObjectUserPtr(frame.thisObject), frame.nsEntry->mUserPtr, frame.callArgc, frame.callArgvS);
-                        evalState.mSTR.popFrame();
-                        if(code[ip] == OP_STR_TO_UINT)
-                        {
-                           ip++;
-                           evalState.intStack[++frame._UINT] = result;
-                           break;
-                        }
-                        else if(code[ip] == OP_STR_TO_FLT)
-                        {
-                           ip++;
-                           evalState.floatStack[++frame._FLT] = result;
-                           break;
-                        }
-                        else if(code[ip] == OP_STR_TO_NONE)
-                           ip++;
-                        else
-                           evalState.mSTR.setUnsignedValue(result);
-                        break;
+                        mLastYield = KorkApi::ConsoleValue::makeUnsigned(result);
+                        frame.inNativeFunction = true;
+                        loopFrameSetup = true;
+                        goto execFinished;
                      }
                      case Namespace::Entry::ValueCallbackType:
                      {
-                        KorkApi::ConsoleValue result = frame.nsEntry->cb.mValueCallbackFunc(safeObjectUserPtr(frame.thisObject), frame.nsEntry->mUserPtr, frame.callArgc, frame.callArgv);
-                        evalState.mSTR.popFrame();
-                        if(code[ip] == OP_STR_TO_UINT)
-                        {
-                           ip++;
-                           evalState.intStack[++frame._UINT] = vmInternal->valueAsInt(result);
-                           break;
-                        }
-                        else if(code[ip] == OP_STR_TO_FLT)
-                        {
-                           ip++;
-                           evalState.floatStack[++frame._FLT] = vmInternal->valueAsFloat(result);
-                           break;
-                        }
-                        else if(code[ip] == OP_STR_TO_NONE)
-                        {
-                           ip++;
-                        }
-                        else
-                        {
-                           // NOTE: can't assume this since concat may occur after this;
-                           // ideally we need something like OP_STR_TO_VALUE
-                           //evalState.mSTR.setConsoleValue(result);
-                           evalState.mSTR.setStringValue(vmInternal->valueAsString(result));
-                        }
-                        break;
+                        mLastYield = frame.nsEntry->cb.mValueCallbackFunc(safeObjectUserPtr(frame.thisObject), frame.nsEntry->mUserPtr, frame.callArgc, frame.callArgv);
+                        frame.inNativeFunction = true;
+                        loopFrameSetup = true;
+                        goto execFinished;
                      }
                   }
+                  
+                  // NOTE: Code previously set the stack based on the next opcode and type of the function; instead
+                  // we mark the frame as being in a native function, then when the loop restarts the opcode checks are handled there.
+                  // We do this even if the function didn't suspend the fiber to keep behavior consistent
+                  
+                  if(frame.lastCallType == FuncCallExprNode::MethodCall) // NOTE: this is permissible here since nothing checks thisObject from user code.
+                     frame.thisObject = frame.saveObject;
+
                }
             }
             
-            if(callType == FuncCallExprNode::MethodCall)
+            if(frame.lastCallType == FuncCallExprNode::MethodCall)
                frame.thisObject = frame.saveObject;
             break;
          }
@@ -2320,12 +2315,12 @@ ConsoleBasicFrame ExprEvalState::getBasicFrameInfo(U32 idx)
    return outF;
 }
 
-void ExprEvalState::suspend(KorkApi::ConsoleValue value)
+void ExprEvalState::suspend()
 {
    if (mState == KorkApi::FiberRunResult::RUNNING)
    {
       mState = KorkApi::FiberRunResult::SUSPENDED;
-      // TOFIX mSTR = value;
+      mLastYield = KorkApi::ConsoleValue();
    }
 }
 
@@ -2334,6 +2329,7 @@ KorkApi::FiberRunResult ExprEvalState::resume(KorkApi::ConsoleValue value)
    if (mState == KorkApi::FiberRunResult::SUSPENDED)
    {
       mState = KorkApi::FiberRunResult::RUNNING;
+      mLastYield = value;
       KorkApi::FiberRunResult result = runVM();
       return result;
    }

@@ -948,7 +948,7 @@ FiberRunResult VmInternal::resumeCurrentFiber(ConsoleValue value)
    if (mCurrentFiberState == NULL)
       return;
    
-   return mCurrentFiberState->runVM();
+   return mCurrentFiberState->resume(value);
 }
 
 FiberRunResult::State VmInternal::getCurrentFiberState()

@@ -277,6 +277,7 @@ public:
    Vector< ConsoleFrame* > vmFrames;
    
    KorkApi::FiberRunResult::State mState;
+   KorkApi::ConsoleValue mLastYield; ///< Value yielded from function
    
    bool traceOn;
    char traceBuffer[TraceBufferSize];
@@ -301,7 +302,7 @@ public:
    
    // Fiber API
    KorkApi::FiberRunResult runVM();
-   void suspend(KorkApi::ConsoleValue value);
+   void suspend(); // Suspends fiber. NOTE: any params to this need to be handled elsewhere (like on scheduler layer)
    KorkApi::FiberRunResult resume(KorkApi::ConsoleValue value);
    
    ConsoleFrame& getCurrentFrame();
