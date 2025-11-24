@@ -863,7 +863,7 @@ VmInternal::VmInternal(Vm* vm, Config* cfg) : mGlobalVars(this)
       };
    }
    
-   FiberId baseFiber = createFiber();
+   FiberId baseFiber = createFiber(NULL);
    mCurrentFiberState = mFiberStates.mItems[0];
 }
 
@@ -917,11 +917,12 @@ void VmInternal::setCurrentFiber(FiberId fiber)
    }
 }
 
-FiberId VmInternal::createFiber()
+FiberId VmInternal::createFiber(void* userPtr)
 {
    ExprEvalState* newState = new ExprEvalState(this);
    InternalFiberList::HandleType handle = mFiberStates.allocListHandle(newState);
    newState->mSTR.mFuncId = handle.getIndex();
+   newState->mUserPtr = userPtr;
    mAllocBase.func[handle.getIndex()] = newState->mSTR.mBuffer;
    return handle.getValue();
 }
@@ -962,6 +963,11 @@ void VmInternal::suspendCurrentFiber()
 FiberRunResult::State VmInternal::getCurrentFiberState()
 {
    return mCurrentFiberState ? mCurrentFiberState->mState : FiberRunResult::ERROR;
+}
+
+void* VmInternal::getCurrentFiberUserPtr()
+{
+   return mCurrentFiberState ? mCurrentFiberState->mUserPtr : NULL;
 }
 
 StringTableEntry VmInternal::getCurrentCodeBlockName()
@@ -1400,9 +1406,9 @@ void Vm::setCurrentFiber(FiberId fiber)
    mInternal->setCurrentFiber(fiber);
 }
 
-FiberId Vm::createFiber()
+FiberId Vm::createFiber(void* userPtr)
 {
-   return mInternal->createFiber();
+   return mInternal->createFiber(userPtr);
 }
 
 FiberId Vm::getCurrentFiber()
@@ -1430,6 +1436,10 @@ FiberRunResult::State Vm::getCurrentFiberState()
    return mInternal->getCurrentFiberState();
 }
 
+void* Vm::getCurrentFiberUserPtr()
+{
+   return mInternal->getCurrentFiberUserPtr();
+}
 
 
 } // namespace KorkApi

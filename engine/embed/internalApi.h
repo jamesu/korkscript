@@ -86,12 +86,13 @@ struct VmInternal
    // Fiber API
    void setCurrentFiberMain();
    void setCurrentFiber(FiberId fiber);
-   FiberId createFiber(); // needs exec too
+   FiberId createFiber(void* userPtr); // needs exec too
    FiberId getCurrentFiber();
    void cleanupFiber(FiberId fiber);
    void suspendCurrentFiber();
    FiberRunResult resumeCurrentFiber(ConsoleValue value);
    FiberRunResult::State getCurrentFiberState();
+   void* getCurrentFiberUserPtr();
    
    void validateReturnBufferSize(U32 size);
 

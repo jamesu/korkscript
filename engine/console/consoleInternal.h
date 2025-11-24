@@ -276,6 +276,8 @@ public:
    /// an interior pointer that will become invalid when the object changes address.
    Vector< ConsoleFrame* > vmFrames;
    
+   void* mUserPtr;
+   
    KorkApi::FiberRunResult::State mState;
    KorkApi::ConsoleValue mLastFiberValue; ///< Value yielded from function or returned to fiber
    

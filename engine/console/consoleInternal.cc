@@ -612,6 +612,7 @@ ExprEvalState::ExprEvalState(KorkApi::VmInternal* vm): mSTR(&vm->mAllocBase)
    mCurrentRoot = NULL;
    
    mState = KorkApi::FiberRunResult::INACTIVE;
+   mUserPtr = NULL;
 }
 
 ExprEvalState::~ExprEvalState()

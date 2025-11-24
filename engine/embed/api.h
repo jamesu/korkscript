@@ -469,9 +469,10 @@ public:
    // Fiber API
    void setCurrentFiberMain();
    void setCurrentFiber(FiberId fiber);
-   FiberId createFiber(); // needs exec too
+   FiberId createFiber(void* userPtr = NULL); // needs exec too
    FiberId getCurrentFiber();
    FiberRunResult::State getCurrentFiberState();
+   void* getCurrentFiberUserPtr();
    void cleanupFiber(FiberId fiber);
    void suspendCurrentFiber();
    FiberRunResult resumeCurrentFiber(ConsoleValue value);
