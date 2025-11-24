@@ -89,6 +89,7 @@ struct VmInternal
    FiberId createFiber(); // needs exec too
    FiberId getCurrentFiber();
    void cleanupFiber(FiberId fiber);
+   void suspendCurrentFiber();
    FiberRunResult resumeCurrentFiber(ConsoleValue value);
    FiberRunResult::State getCurrentFiberState();
    

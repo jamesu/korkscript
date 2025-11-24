@@ -951,6 +951,14 @@ FiberRunResult VmInternal::resumeCurrentFiber(ConsoleValue value)
    return mCurrentFiberState->resume(value);
 }
 
+void VmInternal::suspendCurrentFiber()
+{
+   if (mCurrentFiberState == NULL)
+      return;
+   
+   mCurrentFiberState->suspend();
+}
+
 FiberRunResult::State VmInternal::getCurrentFiberState()
 {
    return mCurrentFiberState ? mCurrentFiberState->mState : FiberRunResult::ERROR;
@@ -1410,6 +1418,11 @@ void Vm::cleanupFiber(FiberId fiber)
 FiberRunResult Vm::resumeCurrentFiber(ConsoleValue value)
 {
    return mInternal->resumeCurrentFiber(value);
+}
+
+void Vm::suspendCurrentFiber()
+{
+   return mInternal->suspendCurrentFiber();
 }
 
 FiberRunResult::State Vm::getCurrentFiberState()

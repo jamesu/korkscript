@@ -334,7 +334,7 @@ struct FiberRunResult
       FINISHED
    };
    
-   KorkApi::ConsoleValue yieldValue;
+   KorkApi::ConsoleValue value;
    State state;
 };
 
@@ -473,6 +473,7 @@ public:
    FiberId getCurrentFiber();
    FiberRunResult::State getCurrentFiberState();
    void cleanupFiber(FiberId fiber);
+   void suspendCurrentFiber();
    FiberRunResult resumeCurrentFiber(ConsoleValue value);
 };
 
