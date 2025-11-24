@@ -166,6 +166,15 @@ namespace Compiler
       OP_ITER,             ///< Enter foreach loop.
       OP_ITER_END,         ///< End foreach loop.
 
+      
+      // NEW OPCODES
+      
+      // Exceptions
+      OP_PUSH_TRY,
+      OP_POP_TRY,
+      OP_THROW,
+      
+      
       OP_INVALID   // 90
    };
 

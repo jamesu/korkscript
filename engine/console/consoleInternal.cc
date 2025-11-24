@@ -602,11 +602,13 @@ ExprEvalState::ExprEvalState(KorkApi::VmInternal* vm): mSTR(&vm->mAllocBase)
    mStackDepth = 0;
    traceOn = false;
    traceBuffer[0] = '\0';
+   lastThrow = 0;
    
    memset(iterStack, 0, sizeof(iterStack));
    memset(floatStack, 0, sizeof(floatStack));
    memset(intStack, 0, sizeof(intStack));
    memset(objectCreationStack, 0, sizeof(objectCreationStack));
+   memset(tryStack, 0, sizeof(tryStack));
    
    mCurrentFile = NULL;
    mCurrentRoot = NULL;

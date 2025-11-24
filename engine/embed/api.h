@@ -298,6 +298,7 @@ struct Config {
    Compiler::Resources* userResources;
 
    bool warnUndefinedScriptVariables;
+   bool enableExceptions;
    bool initTelnet;
    
    U16 maxFibers;

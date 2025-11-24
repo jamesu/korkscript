@@ -147,6 +147,7 @@ struct ConsoleFrame
    U16 _UINT;
    U16 _ITER;
    U16 _OBJ;
+   U16 _TRY;
    
    U16 _STARTOBJ;
    
@@ -294,6 +295,7 @@ inline void ConsoleFrame::copyFrom(ConsoleFrame* other, bool includeScope)
    _UINT = other->_UINT;
    _ITER = other->_ITER;
    _OBJ = _STARTOBJ = other->_OBJ;
+   _TRY = other->_TRY;
    
    if (includeScope)
    {
@@ -696,6 +698,7 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
    
    KorkApi::ConsoleValue val = KorkApi::ConsoleValue();
    U32 startFrameSize = vmFrames.size();
+   lastThrow = 0;
    
    KorkApi::FiberRunResult result;
    result.state = mState;
@@ -2109,6 +2112,38 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
             evalState.iterStack[ frame._ITER ].mIsStringIter = false;
             break;
          }
+            
+         case OP_PUSH_TRY:
+            {
+               // !! IMPORTANT: should be only 1 of these invoked per try case. If multiple cases are needed,
+               // emit a bunch of conditional checks to the jump address to go to the correct catch block.
+               // Main block should always end with OP_POP_TRY; the vm will pop the actual try stack to the correct
+               // place when handling the main catch case.
+               TryItem item;
+               item.mask = code[ip++];
+               item.frameDepth = vmFrames.size()-1;
+               item.ip = code[ip++];
+               evalState.tryStack[ frame._TRY++ ] = item;
+            }
+            break;
+            
+         case OP_POP_TRY:
+            if (frame._TRY > 0)
+            {
+               frame._TRY--;
+            }
+            break;
+         
+         case OP_THROW:
+         {
+            // NOTE: in order to handle native function throws, we tack onto the loop setup
+            U32 throwMask = code[ip++];
+            frame.ip = ip;
+            lastThrow = throwMask;
+            loopFrameSetup = true;
+            goto execFinished;
+         }
+         break;
 
          case OP_INVALID:
             
@@ -2130,6 +2165,31 @@ execFinished:
       return result;
    }
    
+   if (lastThrow != 0)
+   {
+      for (U16 i=frame._TRY; i>=0; i--)
+      {
+         TryItem& item = evalState.tryStack[i];
+         if ((lastThrow & item.mask) != 0)
+         {
+            // Acceptable handler
+            handleThrow(i, &item, startFrameSize-1);
+            lastThrow = 0;
+            AssertFatal(vmFrames.size() > 0, "Too many frames popped!");
+            loopFrameSetup = true;
+            goto execFinished;
+         }
+      }
+      
+      // If nothing handled error, this is bad. Error the entire fiber
+      FIBER_STATE(KorkApi::FiberRunResult::ERROR);
+      handleThrow(-1, NULL, startFrameSize-1);
+      result.state = mState;
+      result.value = KorkApi::ConsoleValue::makeNumber(lastThrow);
+      lastThrow = 0;
+      return result;
+   }
+   
    // Do we need to setup a new frame? if so skip back to start
    // NOTE: we dont need this when resuming a yielded thread since we start in the
    // correct place in that case.
@@ -2148,10 +2208,6 @@ execFinished:
    // Stuff which follows is normally done when function exits...
    
    evalState.clearCreatedObjects(frame._STARTOBJ, frame._OBJ);
-   
-   const bool telDebuggerOn = vmInternal->mTelDebugger && vmInternal->mTelDebugger->isConnected();
-   if ( telDebuggerOn && !frame.isReference )
-      vmInternal->mTelDebugger->popStackFrame();
    
    // NOTE: previously happened in the ScriptFunctionType conditional, now tied to frame lifetime
    if (frame.popStringStack)
@@ -2181,32 +2237,7 @@ execFinished:
       FIBER_STATE(KorkApi::FiberRunResult::RUNNING);
    }
    
-   if (frame.callArgv)
-   {
-      if(evalState.traceOn)
-      {
-         evalState.traceBuffer[0] = 0;
-         dStrcat(evalState.traceBuffer, "Leaving ");
-         
-         if(packageName)
-         {
-            dStrcat(evalState.traceBuffer, "[");
-            dStrcat(evalState.traceBuffer, packageName);
-            dStrcat(evalState.traceBuffer, "]");
-         }
-         if(thisNamespace && thisNamespace->mName)
-         {
-            dSprintf(evalState.traceBuffer + dStrlen(evalState.traceBuffer), ExprEvalState::TraceBufferSize - dStrlen(evalState.traceBuffer),
-                     "%s::%s() - return %s", thisNamespace->mName, frame.thisFunctionName, evalState.mSTR.getStringValue());
-         }
-         else
-         {
-            dSprintf(evalState.traceBuffer + dStrlen(evalState.traceBuffer), ExprEvalState::TraceBufferSize - dStrlen(evalState.traceBuffer),
-                     "%s() - return %s", frame.thisFunctionName, evalState.mSTR.getStringValue());
-         }
-         vmInternal->printf(0, "%s", evalState.traceBuffer);
-      }
-   }
+   
    // NOTE: we rely on the inc count stuff to clear strings and such
    
 execCheck:
@@ -2266,6 +2297,38 @@ void ExprEvalState::popFrame()
    ConsoleFrame *last = vmFrames.last();
    vmFrames.pop_back();
    
+   // Handle trace log here
+   if (last->callArgv)
+   {
+      if(traceOn)
+      {
+         traceBuffer[0] = 0;
+         dStrcat(traceBuffer, "Leaving ");
+         
+         if(last->scopePackage)
+         {
+            dStrcat(traceBuffer, "[");
+            dStrcat(traceBuffer, last->scopePackage);
+            dStrcat(traceBuffer, "]");
+         }
+         if(last->scopeNamespace && last->scopeNamespace->mName)
+         {
+            dSprintf(traceBuffer + dStrlen(traceBuffer), ExprEvalState::TraceBufferSize - dStrlen(traceBuffer),
+                     "%s::%s() - return %s", last->scopeNamespace->mName, last->thisFunctionName, mSTR.getStringValue());
+         }
+         else
+         {
+            dSprintf(traceBuffer + dStrlen(traceBuffer), ExprEvalState::TraceBufferSize - dStrlen(traceBuffer),
+                     "%s() - return %s", last->thisFunctionName, mSTR.getStringValue());
+         }
+         vmInternal->printf(0, "%s", traceBuffer);
+      }
+   }
+   
+   const bool telDebuggerOn = vmInternal->mTelDebugger && vmInternal->mTelDebugger->isConnected();
+   if ( telDebuggerOn && !last->isReference )
+      vmInternal->mTelDebugger->popStackFrame();
+   
    if (last->codeBlock)
    {
       last->codeBlock->decRefCount();
@@ -2280,6 +2343,44 @@ void ExprEvalState::popFrame()
    delete last;
    mStackDepth --;
    //Con::printf("ExprEvalState::popFrame");
+}
+
+void ExprEvalState::handleThrow(S32 throwIdx, TryItem* info, S32 minStackPos)
+{
+   if (vmFrames.size() == 0)
+   {
+      return;
+   }
+   
+   ConsoleFrame* curFrame = vmFrames.last();
+   S32 minFrame = std::max<S32>(minStackPos, info ? info->frameDepth : -1);
+   
+   ConsoleFrame* frame = minFrame < 0 ? NULL : vmFrames[minFrame];
+   U32 minObj = frame ? frame->_OBJ : 0;
+   
+   // Clear objects
+   clearCreatedObjects(minObj, curFrame->_OBJ);
+   
+   // Pop down to correct frame
+   for (U32 i=vmFrames.size()-1; i>minFrame; i--)
+   {
+      ConsoleFrame* prevFrame = vmFrames[i];
+      if (prevFrame->popStringStack)
+      {
+         mSTR.setStringValue(""); // just in case trace is logging
+         mSTR.popFrame();
+      }
+      popFrame();
+   }
+   mSTR.setStringValue("");
+   
+   // If we have a frame left, try to restore it (UNLESS we are not on the right frame)
+   if (vmFrames.size() > 0 && info->frameDepth == vmFrames.size()-1)
+   {
+      curFrame = vmFrames.last();
+      curFrame->_TRY = throwIdx > 0 ? throwIdx-1 : 0; // pop try
+      curFrame->ip = info->ip;
+   }
 }
 
 void ExprEvalState::pushFrameRef(S32 stackIndex)

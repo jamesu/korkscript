@@ -62,6 +62,7 @@ enum EvalConstants {
    // logic to give us a reasonable maximum.
    MaxStackSize = 2 + (MaxExpectedFunctionDepth),
    MaxIterStackSize = 64,
+   MaxTryStackSize = MaxStackSize * 2,
    MethodOnComponent = -2
 };
 
@@ -235,6 +236,13 @@ public:
       U32 failJump;
    };
    
+   struct TryItem
+   {
+      U32 ip;
+      U32 mask;
+      U16 frameDepth;
+   };
+   
    U32 mAllocNumber : 24;
    U32 mGeneration : 7;
    
@@ -249,6 +257,7 @@ public:
    F64 floatStack[MaxStackSize];
    S64 intStack[MaxStackSize];
    ObjectStackItem objectCreationStack[ObjectCreationStackSize];
+   TryItem tryStack[MaxTryStackSize];
    
    StringStack mSTR;
    
@@ -282,6 +291,7 @@ public:
    KorkApi::ConsoleValue mLastFiberValue; ///< Value yielded from function or returned to fiber
    
    bool traceOn;
+   U32 lastThrow;
    char traceBuffer[TraceBufferSize];
    
    U32 mStackDepth;
@@ -306,6 +316,7 @@ public:
    KorkApi::FiberRunResult runVM(); // Runs VM
    void suspend(); // Suspends fiber; NOTE: use return value from function to set the fiber value.
    KorkApi::FiberRunResult resume(KorkApi::ConsoleValue value); // Resumes fiber
+   void handleThrow(S32 throwIdx, TryItem* info, S32 minStackPos);
    
    ConsoleFrame& getCurrentFrame();
    
