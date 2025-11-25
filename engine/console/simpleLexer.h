@@ -38,6 +38,7 @@ enum class TokenType : uint32_t
    rwIF, rwFOREACHSTR, rwFOREACH, rwFOR, rwCONTINUE, rwDEFINE, rwDECLARE,
    rwDECLARESINGLETON, rwDATABLOCK, rwCASE, rwSWITCHSTR, rwSWITCH,
    rwDEFAULT, rwPACKAGE, rwNAMESPACE,
+   rwTRY, rwCATCH,
    
    // Booleans become INTCONST in the original; we keep explicit ops below.
    // Operators / punctuation (single-char tokens return their char in Flex;
@@ -183,6 +184,7 @@ public:
          "rwIF", "rwFOREACHSTR", "rwFOREACH", "rwFOR", "rwCONTINUE", "rwDEFINE", "rwDECLARE",
          "rwDECLARESINGLETON", "rwDATABLOCK", "rwCASE", "rwSWITCHSTR", "rwSWITCH",
          "rwDEFAULT", "rwPACKAGE", "rwNAMESPACE",
+         "rwTRY", "rwCATCH",
          
          "opEQ", "opNE", "opGE", "opLE", "opAND", "opOR", "opCOLONCOLON",
          "opMINUSMINUS", "opPLUSPLUS", "opSTREQ", "opSTRNE", "opSHL", "opSHR",

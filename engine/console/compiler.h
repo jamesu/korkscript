@@ -293,6 +293,7 @@ namespace Compiler
       CompilerIdentTable   identTable;
 
       bool syntaxError;
+      bool allowExceptions;
 
       void (*STEtoCode)(Resources* res, StringTableEntry ste, U32 ip, U32 *ptr);
 
@@ -323,6 +324,7 @@ namespace Compiler
       {
          STEtoCode = evalSTEtoCode;
          syntaxError = false;
+         allowExceptions = false;
       }
    };
 };

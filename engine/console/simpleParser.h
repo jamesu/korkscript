@@ -286,6 +286,66 @@ private:
       return IfStmtNode::alloc(mResources, ifTok.pos.line, cond, thenS, elseS, false); // propagate=false
    }
    
+   // Handles try block
+   //
+   // try_stmt : rwTRY stmt_block catch_chain
+   TryStmtNode* parseTryStmt()
+   {
+      if (!mResources->allowExceptions)
+      {
+         errorHere(LA(), "Exceptions disabled");
+         return NULL;
+      }
+      
+      TOK tryTok = expect(TT::rwTRY, "'try' expected");
+      StmtNode* tryBlock = parseBlockStmt();
+      CatchStmtNode* catchChain = parseCatchChain();
+      if (!catchChain)
+      {
+         errorHere(LA(), "Expected one or more catch blocks");
+         return NULL;
+      }
+      
+      TryStmtNode* tryStmt = TryStmtNode::alloc(mResources, tryTok.pos.line, tryBlock, catchChain);
+      return tryStmt;
+   }
+   
+   // Handles series of catch blocks
+   // catch_block:  rwCATCH '(' expr ')' stmt_block
+   // catch_chain: catch_block | catch_block catch_chain
+   CatchStmtNode* parseCatchChain()
+   {
+      CatchStmtNode* startNode = NULL;
+      S32 catchLineNo = 0;
+      
+      while (match(TT::rwCATCH, &catchLineNo))
+      {
+         expectChar('(', "'(' expected");
+         ExprNode* testExpr = parseExprNode();
+         expectChar(')', "')' expected");
+         StmtNode* condBlock = parseBlockStmt();
+         if (!condBlock)
+         {
+            errorHere(LA(), "Expected {...}");
+            return NULL;
+         }
+         
+         // NOTE: Should be in reverse order so first catch will be at top of stack
+         CatchStmtNode* newCond = CatchStmtNode::alloc(mResources, catchLineNo, testExpr, condBlock);
+         if (startNode)
+         {
+            startNode->next = newCond;
+            startNode = newCond;
+         }
+         else
+         {
+            startNode = newCond;
+         }
+      }
+      
+      return startNode;
+   }
+   
    // Handles do / while conditionals
    //
    // while_stmt : rwWHILE '(' expr ')' stmt_block | rwDO stmt_block rwWHILE '(' expr ')'
@@ -853,7 +913,10 @@ private:
       {
          case TT::rwIF:
             return parseIfStmt();
-            
+         
+         case TT::rwTRY:
+            return parseTryStmt();
+         
          case TT::rwWHILE:
          case TT::rwDO:
             return parseWhileLike();

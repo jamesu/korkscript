@@ -794,6 +794,8 @@ VmInternal::VmInternal(Vm* vm, Config* cfg) : mGlobalVars(this)
       mCompilerResources = new Compiler::Resources();
       mOwnsResources = true;
    }
+
+   mCompilerResources->allowExceptions = cfg->enableExceptions;
    
    TypeInfo typeInfo = {};
    
