@@ -334,7 +334,7 @@ private:
          CatchStmtNode* newCond = CatchStmtNode::alloc(mResources, catchLineNo, testExpr, condBlock);
          if (startNode)
          {
-            startNode->next = newCond;
+            newCond->next = startNode;
             startNode = newCond;
          }
          else
