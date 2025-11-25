@@ -579,4 +579,32 @@ struct FunctionDeclStmtNode : StmtNode
    DBG_STMT_TYPE(FunctionDeclStmtNode);
 };
 
+struct CatchStmtNode;
+
+struct TryStmtNode : StmtNode
+{
+   StmtNode *tryBlock, *catchBlocks;
+   U32 startTryOffset;
+   U32 startEndJmpOffset;
+   U32 endTryFixOffset;
+   U32 endTryCatchOffset;
+
+   static TryStmtNode *alloc( Compiler::Resources* res, S32 lineNumber, StmtNode *tryBlock, CatchStmtNode* catchBlocks);
+   
+   U32 compileStmt(CodeStream &codeStream, U32 ip);
+   DBG_STMT_TYPE(TryStmtNode);
+};
+
+struct CatchStmtNode : StmtNode
+{
+   ExprNode* testExpr;
+   StmtNode* catchBlock;
+
+   static CatchStmtNode *alloc( Compiler::Resources* res, S32 lineNumber, ExprNode* testExpr, StmtNode *catchBlock);
+   
+   U32 compileStmt(CodeStream &codeStream, U32 ip);
+   DBG_STMT_TYPE(CatchStmtNode);
+};
+
+
 #endif

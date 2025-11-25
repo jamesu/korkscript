@@ -2112,15 +2112,16 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
             evalState.iterStack[ frame._ITER ].mIsStringIter = false;
             break;
          }
-            
+         
          case OP_PUSH_TRY:
+         case OP_PUSH_TRY_STACK:
             {
                // !! IMPORTANT: should be only 1 of these invoked per try case. If multiple cases are needed,
                // emit a bunch of conditional checks to the jump address to go to the correct catch block.
                // Main block should always end with OP_POP_TRY; the vm will pop the actual try stack to the correct
                // place when handling the main catch case.
                TryItem item;
-               item.mask = code[ip++];
+               item.mask = instruction == OP_PUSH_TRY_STACK ? (U32)evalState.intStack[frame._UINT--] : code[ip++];
                item.frameDepth = vmFrames.size()-1;
                item.ip = code[ip++];
                evalState.tryStack[ frame._TRY++ ] = item;
@@ -2142,6 +2143,13 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
             lastThrow = throwMask;
             loopFrameSetup = true;
             goto execFinished;
+         }
+
+         // NOTE: this opcode is just so we avoid using vars in try blocks
+         case OP_DUP_UINT:
+         {
+            evalState.intStack[frame._UINT+1] = evalState.intStack[frame._UINT];
+            frame._UINT++;
          }
          break;
 

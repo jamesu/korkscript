@@ -171,8 +171,10 @@ namespace Compiler
       
       // Exceptions
       OP_PUSH_TRY,
+      OP_PUSH_TRY_STACK,
       OP_POP_TRY,
       OP_THROW,
+      OP_DUP_UINT,
       
       
       OP_INVALID   // 90

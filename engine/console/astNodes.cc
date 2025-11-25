@@ -1588,5 +1588,81 @@ U32 FunctionDeclStmtNode::compileStmt(CodeStream &codeStream, U32 ip)
    codeStream.mResources->setCurrentStringTable(&codeStream.mResources->getGlobalStringTable());
    codeStream.mResources->setCurrentFloatTable(&codeStream.mResources->getGlobalFloatTable());
    
+   return codeStream.tell();
+}
+
+
+U32 CatchStmtNode::compileStmt(CodeStream &codeStream, U32 ip)
+{
+   if (catchBlock)
+      ip = catchBlock->compileStmt(codeStream, ip);
    return ip;
 }
+
+U32 TryStmtNode::compileStmt(CodeStream &codeStream, U32 ip)
+{
+   // If there are no catch blocks, just compile the try-block as a normal block.
+   if (!catchBlocks || !tryBlock)
+   {
+      if (tryBlock)
+         ip = tryBlock->compileStmt(codeStream, ip);
+      return ip;
+   }
+
+   // Pushed combined catch mask to uint stack
+   bool first = false;
+   for (CatchStmtNode* c = (CatchStmtNode*)catchBlocks; c; c=(CatchStmtNode*)c->next)
+   {
+      // Load to uint stack
+      ip = c->testExpr->compile(codeStream, codeStream.tell(), TypeReqUInt);
+
+      if (!first)
+      {
+         codeStream.emit(OP_BITOR);
+      }
+      else
+      {
+         first = false;
+      }
+   }
+
+   // Emit the main try block + its jmp at the end
+   codeStream.emit(OP_PUSH_TRY_STACK);
+   endTryFixOffset = codeStream.emit(0); // -> catch block code
+   ip = tryBlock->compileStmt(codeStream, ip);
+   codeStream.emit(OP_POP_TRY);
+   // Jump past catch blocks to end
+   startEndJmpOffset = codeStream.emit(OP_JMP);
+   endTryCatchOffset = codeStream.emit(0);
+   codeStream.patch(endTryFixOffset, codeStream.tell());
+
+   // Add catch handling code; input UINT stack contains value.
+   for (CatchStmtNode* c = (CatchStmtNode*)catchBlocks; c; c=(CatchStmtNode*)c->next)
+   {
+      // Test error int
+      codeStream.emit(OP_DUP_UINT);
+      ip = c->testExpr->compile(codeStream, codeStream.tell(), TypeReqUInt);
+      codeStream.emit(OP_BITOR);
+      codeStream.emit(OP_JMPIFNOT); // next check statement
+      U32 afterCatchBlockIp = codeStream.emit(0);
+
+      // If test passes, we run the catch block
+      c->catchBlock->compileStmt(codeStream, codeStream.tell());
+
+      // Use try block exit JMP to exit
+      codeStream.emit(OP_JMP);
+      codeStream.emit(startEndJmpOffset);
+
+      // Patch after block
+      codeStream.patch(afterCatchBlockIp, codeStream.tell());
+   }
+
+   // Ignore exception code if for some bizarre reason it isn't handled
+   codeStream.emit(OP_UINT_TO_NONE);
+
+   // Patch JMP at end of try block
+   codeStream.patch(endTryCatchOffset, codeStream.tell());
+
+   return codeStream.tell();
+}
+

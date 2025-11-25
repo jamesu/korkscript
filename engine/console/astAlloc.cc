@@ -448,3 +448,34 @@ FunctionDeclStmtNode *FunctionDeclStmtNode::alloc( Compiler::Resources* res, S32
    ret->argc = 0;
    return ret;
 }
+
+CatchStmtNode* CatchStmtNode::alloc(Compiler::Resources* res,
+                                    S32 lineNumber,
+                                    ExprNode* testExpr,
+                                    StmtNode* catchBlock)
+{
+   CatchStmtNode* ret = (CatchStmtNode *) res->consoleAlloc(sizeof(CatchStmtNode));
+   constructInPlace(ret);
+   ret->dbgLineNumber = lineNumber;
+   ret->testExpr   = testExpr;
+   ret->catchBlock = catchBlock;
+   return ret;
+}
+
+TryStmtNode* TryStmtNode::alloc(Compiler::Resources* res,
+                                S32 lineNumber,
+                                StmtNode *tryBlock,
+                                CatchStmtNode* catchBlocks)
+{
+   TryStmtNode* ret = (TryStmtNode *) res->consoleAlloc(sizeof(TryStmtNode));
+   constructInPlace(ret);
+   ret->dbgLineNumber = lineNumber;
+   ret->tryBlock      = tryBlock;
+   ret->catchBlocks   = catchBlocks;
+   ret->startTryOffset = 0;
+   ret->startEndJmpOffset   = 0;
+   ret->endTryFixOffset   = 0;
+   ret->endTryCatchOffset   = 0;
+   return ret;
+}
+
