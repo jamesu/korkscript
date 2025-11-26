@@ -1129,14 +1129,18 @@ const char *CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNam
                   bool recurse = code[ip-1];
                   SimObject *obj = group->findObjectByInternalName(intName, recurse);
                   intStack[_UINT+1] = obj ? obj->getId() : 0;
-                  _UINT++;
                }
                else
                {
                   Con::errorf(ConsoleLogEntry::Script, "%s: Attempt to use -> on non-group %s of class %s.", getFileLine(ip-2), curObject->getName(), curObject->getClassName());
-                  intStack[_UINT] = 0;
+                  intStack[_UINT+1] = 0;
                }
             }
+            else
+            {
+               intStack[_UINT+1] = 0;
+            }
+            _UINT++;
             break;
             
          case OP_SETCUROBJECT_NEW:
