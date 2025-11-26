@@ -22,6 +22,7 @@ struct Token
  */
 
 bool gPrintBytecode = false;
+bool gNoBisonPrint = false;
 
 void MyLogger(ConsoleLogEntry::Level level, const char *consoleLine)
 {
@@ -471,16 +472,20 @@ bool printAST(const char* buf, const char* filename)
          // Convert AST to bytecode
          Con::printf("== Parser Bytecode ==");
          dumpToInstructionsPrint(rootNode);
-         Con::printf("== Bison Bytecode ==");
-         
-         Compiler::consoleAllocReset();
-         gStatementList = NULL;
-         CodeBlock::smCurrentParser = Compiler::getParserForFile(filename);
-         CodeBlock::smCurrentParser->setScanBuffer(theBuf.c_str(), filename);
-         CodeBlock::smCurrentParser->restart(NULL);
-         CodeBlock::smCurrentParser->parse();
-         
-         dumpToInstructionsPrint(gStatementList);
+
+         if (!gNoBisonPrint)
+         {
+            Con::printf("== Bison Bytecode ==");
+            
+            Compiler::consoleAllocReset();
+            gStatementList = NULL;
+            CodeBlock::smCurrentParser = Compiler::getParserForFile(filename);
+            CodeBlock::smCurrentParser->setScanBuffer(theBuf.c_str(), filename);
+            CodeBlock::smCurrentParser->restart(NULL);
+            CodeBlock::smCurrentParser->parse();
+            
+            dumpToInstructionsPrint(gStatementList);
+         }
       }
       else
       {
@@ -510,6 +515,10 @@ int procMain(int argc, char **argv)
       if (strcmp(argv[i], "-b") == 0)
       {
          gPrintBytecode = true;
+      }
+      if (strcmp(argv[i], "-x") == 0)
+      {
+         gNoBisonPrint = true;
       }
    }
    
