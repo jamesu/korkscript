@@ -949,7 +949,10 @@ void VmInternal::cleanupFiber(FiberId fiber)
 FiberRunResult VmInternal::resumeCurrentFiber(ConsoleValue value)
 {
    if (mCurrentFiberState == NULL)
-      return;
+   {
+      FiberRunResult r = {};
+      return r;
+   }
    
    return mCurrentFiberState->resume(value);
 }
