@@ -21,6 +21,58 @@ void MyLogger(U32 level, const char *consoleLine, void* userPtr)
    printf("%s\n", consoleLine);
 }
 
+const char* opToStr(S32 op)
+{
+    switch ((SimpleLexer::TokenType)op)
+    {
+        case SimpleLexer::TokenType::opPCHAR_CARET:     return "^";
+        case SimpleLexer::TokenType::opPCHAR_PERCENT:   return "%";
+        case SimpleLexer::TokenType::opPCHAR_AMPERSAND: return "&";
+        case SimpleLexer::TokenType::opPCHAR_PIPE:      return "|";
+        case SimpleLexer::TokenType::opPCHAR_LESS:      return "<";
+        case SimpleLexer::TokenType::opPCHAR_GREATER:   return ">";
+        case SimpleLexer::TokenType::opPCHAR_PLUS:      return "+";
+        case SimpleLexer::TokenType::opPCHAR_MINUS:     return "-";
+        case SimpleLexer::TokenType::opPCHAR_ASTERISK:  return "*";
+        case SimpleLexer::TokenType::opPCHAR_SLASH:     return "/";
+
+        case SimpleLexer::TokenType::opPCHAR_EXCL:      return "!";
+        case SimpleLexer::TokenType::opPCHAR_TILDE:     return "~";
+        case SimpleLexer::TokenType::opCONCAT:      return "opCONCAT";
+        case SimpleLexer::TokenType::opCOLONCOLON:  return "opCOLONCOLON";
+        case SimpleLexer::TokenType::opMINUSMINUS:  return "opMINUSMINUS";
+        case SimpleLexer::TokenType::opPLUSPLUS:    return "opPLUSPLUS";
+        case SimpleLexer::TokenType::opSTREQ:   return "opSTREQ";
+        case SimpleLexer::TokenType::opSTRNE:   return "opSTRNE";
+        case SimpleLexer::TokenType::opPLASN:   return "opPLASN";
+        case SimpleLexer::TokenType::opMIASN:   return "opMIASN";
+        case SimpleLexer::TokenType::opMLASN:   return "opMLASN";
+        case SimpleLexer::TokenType::opDVASN:   return "opDVASN";
+        case SimpleLexer::TokenType::opMODASN:  return "opMODASN";
+        case SimpleLexer::TokenType::opANDASN:  return "opANDASN";
+        case SimpleLexer::TokenType::opXORASN:  return "opXORASN";
+        case SimpleLexer::TokenType::opORASN:   return "opORASN";
+        case SimpleLexer::TokenType::opSLASN:   return "opSLASN";
+        case SimpleLexer::TokenType::opSRASN:   return "opSRASN";
+        case SimpleLexer::TokenType::opINTNAME: return "opINTNAME";
+        case SimpleLexer::TokenType::opINTNAMER:return "opINTNAMER";
+
+
+        case SimpleLexer::TokenType::opGE:   return "opGE";
+        case SimpleLexer::TokenType::opLE:   return "opLE";
+        case SimpleLexer::TokenType::opEQ:   return "opEQ";
+        case SimpleLexer::TokenType::opNE:   return "opNE";
+        case SimpleLexer::TokenType::opOR:   return "opOR";
+        case SimpleLexer::TokenType::opAND:  return "opAND";
+        case SimpleLexer::TokenType::opSHR:  return "opSHR";
+        case SimpleLexer::TokenType::opSHL:  return "opSHL";
+
+        case SimpleLexer::TokenType::END: return "<NOT SET>";
+
+        default:
+            return "<!UNKNOWN!>";
+    }
+}
 
 namespace astprint {
 
@@ -155,7 +207,7 @@ static void printNode(const StmtNode* n, int pad) {
    }
    if (auto x = dynamic_cast<const FloatBinaryExprNode*>(n)) {
       open("FloatBinaryExprNode", pad);
-      indent(pad + 2); printf("op = %d\n", x->op);
+      indent(pad + 2); printf("op = %s\n", opToStr((S32)x->op));
       printChild("left",  x->left,  pad + 2);
       printChild("right", x->right, pad + 2);
       close(n, pad);
@@ -163,9 +215,9 @@ static void printNode(const StmtNode* n, int pad) {
    }
    if (auto x = dynamic_cast<const IntBinaryExprNode*>(n)) {
       open("IntBinaryExprNode", pad);
-      indent(pad + 2); printf("op = %d\n", x->op);
+      indent(pad + 2); printf("op = %s\n", opToStr((S32)x->op));
       indent(pad + 2); printf("subType = %s\n", typeReqName(x->subType));
-      indent(pad + 2); printf("operand = %u\n", x->operand);
+      indent(pad + 2); printf("operand = %s\n", opToStr((S32)x->operand));
       printChild("left",  x->left,  pad + 2);
       printChild("right", x->right, pad + 2);
       close(n, pad);
@@ -196,7 +248,7 @@ static void printNode(const StmtNode* n, int pad) {
    }
    if (auto x = dynamic_cast<const IntUnaryExprNode*>(n)) {
       open("IntUnaryExprNode", pad);
-      indent(pad + 2); printf("op = %d\n", x->op);
+      indent(pad + 2); printf("op = %s\n", opToStr((S32)x->op));
       indent(pad + 2); printf("integer = %s\n", yesno(x->integer));
       printChild("expr", x->expr, pad + 2);
       close(n, pad);
@@ -204,7 +256,7 @@ static void printNode(const StmtNode* n, int pad) {
    }
    if (auto x = dynamic_cast<const FloatUnaryExprNode*>(n)) {
       open("FloatUnaryExprNode", pad);
-      indent(pad + 2); printf("op = %d\n", x->op);
+      indent(pad + 2); printf("op = %s\n", opToStr((S32)x->op));
       printChild("expr", x->expr, pad + 2);
       close(n, pad);
       return;
@@ -255,7 +307,7 @@ static void printNode(const StmtNode* n, int pad) {
       open("AssignOpExprNode", pad);
       indent(pad + 2); printf("varName = \"%s\"\n", show(x->varName));
       indent(pad + 2); printf("op = %d\n",          x->op);
-      indent(pad + 2); printf("operand = %i\n", x->operand);
+      indent(pad + 2); printf("operand = %s\n", opToStr((S32)x->operand));
       indent(pad + 2); printf("subType = %s\n",     typeReqName(x->subType));
       printChild("arrayIndex", x->arrayIndex, pad + 2);
       printChild("expr",       x->expr,       pad + 2);
@@ -312,8 +364,8 @@ static void printNode(const StmtNode* n, int pad) {
    if (auto x = dynamic_cast<const SlotAssignOpNode*>(n)) {
       open("SlotAssignOpNode", pad);
       indent(pad + 2); printf("slotName = \"%s\"\n", show(x->slotName));
-      indent(pad + 2); printf("op = %d\n", x->op);
-      indent(pad + 2); printf("operand = %i\n", x->operand);
+      indent(pad + 2); printf("op = %s\n", opToStr((S32)x->op));
+      indent(pad + 2); printf("operand = %s\n", opToStr((S32)x->operand));
       indent(pad + 2); printf("subType = %s\n", typeReqName(x->subType));
       printChild("objectExpr", x->objectExpr, pad + 2);
       printChild("arrayExpr",  x->arrayExpr,  pad + 2);
