@@ -1414,9 +1414,9 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
             }
             else
             {
-               intStack[_UINT+1] = 0;
+               intStack[frame._UINT+1] = 0;
             }
-            _UINT++;
+            frame._UINT++;
             break;
             
          case OP_SETCUROBJECT_NEW:
