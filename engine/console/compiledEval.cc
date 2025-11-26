@@ -1412,6 +1412,11 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
                KorkApi::VMObject* obj = vmInternal->mConfig.iFind.FindObjectByInternalNameFn(vmInternal->mConfig.findUser, intName, recurse, frame.curObject);
                evalState.intStack[frame._UINT+1] = obj ? obj->klass->iCreate.GetIdFn(obj) : 0;
             }
+            else
+            {
+               intStack[_UINT+1] = 0;
+            }
+            _UINT++;
             break;
             
          case OP_SETCUROBJECT_NEW:
