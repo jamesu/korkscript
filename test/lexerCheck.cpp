@@ -180,7 +180,7 @@ bool ensureLexMatches(const char* buf, const char* filename)
    CMDSetScanBuffer(buf, filename);
    CMDrestart(NULL);
    std::string theBuf(buf);
-   SimpleLexer::Tokenizer lex(theBuf, filename);
+   SimpleLexer::Tokenizer lex(StringTable, theBuf, filename);
 
    int lexI = 0;
    SimpleLexer::Token t;
