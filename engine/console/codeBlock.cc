@@ -685,7 +685,7 @@ void CodeBlock::dumpInstructions( U32 startIp, bool upToReturn )
             U32 argc = code[ ip + 8 ];
             endFuncIp = newIp;
             
-            printf( "%i: OP_FUNC_DECL name=%s nspace=%s package=%s hasbody=%i newip=%i argc=%i",
+            mVM->printf(0, "%i: OP_FUNC_DECL name=%s nspace=%s package=%s hasbody=%i newip=%i argc=%i",
                ip - 1, fnName, fnNamespace, fnPackage, hasBody, newIp, argc );
                
             // Skip args.
@@ -704,7 +704,7 @@ void CodeBlock::dumpInstructions( U32 startIp, bool upToReturn )
             U32  lineNumber  =          code[ip + 5];
             U32 failJump     =          code[ip + 6];
             
-            printf( "%i: OP_CREATE_OBJECT objParent=%s isDataBlock=%i isInternal=%i isSingleton=%i lineNumber=%i failJump=%i",
+            mVM->printf(0, "%i: OP_CREATE_OBJECT objParent=%s isDataBlock=%i isInternal=%i isSingleton=%i lineNumber=%i failJump=%i",
                ip - 1, objParent, isDataBlock, isInternal, isSingleton, lineNumber, failJump );
 
             ip += 7;
@@ -714,75 +714,75 @@ void CodeBlock::dumpInstructions( U32 startIp, bool upToReturn )
          case OP_ADD_OBJECT:
          {
             bool placeAtRoot = code[ip++];
-            printf( "%i: OP_ADD_OBJECT placeAtRoot=%i", ip - 1, placeAtRoot );
+            mVM->printf(0, "%i: OP_ADD_OBJECT placeAtRoot=%i", ip - 1, placeAtRoot );
             break;
          }
          
          case OP_END_OBJECT:
          {
             bool placeAtRoot = code[ip++];
-            printf( "%i: OP_END_OBJECT placeAtRoot=%i", ip - 1, placeAtRoot );
+            mVM->printf(0, "%i: OP_END_OBJECT placeAtRoot=%i", ip - 1, placeAtRoot );
             break;
          }
          
          case OP_FINISH_OBJECT:
          {
-            printf( "%i: OP_FINISH_OBJECT", ip - 1 );
+            mVM->printf(0, "%i: OP_FINISH_OBJECT", ip - 1 );
             break;
          }
          
          case OP_JMPIFFNOT:
          {
-            printf( "%i: OP_JMPIFFNOT ip=%i", ip - 1, code[ ip ] );
+            mVM->printf(0, "%i: OP_JMPIFFNOT ip=%i", ip - 1, code[ ip ] );
             ++ ip;
             break;
          }
          
          case OP_JMPIFNOT:
          {
-            printf( "%i: OP_JMPIFNOT ip=%i", ip - 1, code[ ip ] );
+            mVM->printf(0, "%i: OP_JMPIFNOT ip=%i", ip - 1, code[ ip ] );
             ++ ip;
             break;
          }
          
          case OP_JMPIFF:
          {
-            printf( "%i: OP_JMPIFF ip=%i", ip - 1, code[ ip ] );
+            mVM->printf(0, "%i: OP_JMPIFF ip=%i", ip - 1, code[ ip ] );
             ++ ip;
             break;
          }
 
          case OP_JMPIF:
          {
-            printf( "%i: OP_JMPIF ip=%i", ip - 1, code[ ip ] );
+            mVM->printf(0, "%i: OP_JMPIF ip=%i", ip - 1, code[ ip ] );
             ++ ip;
             break;
          }
 
          case OP_JMPIFNOT_NP:
          {
-            printf( "%i: OP_JMPIFNOT_NP ip=%i", ip - 1, code[ ip ] );
+            mVM->printf(0, "%i: OP_JMPIFNOT_NP ip=%i", ip - 1, code[ ip ] );
             ++ ip;
             break;
          }
 
          case OP_JMPIF_NP:
          {
-            printf( "%i: OP_JMPIF_NP ip=%i", ip - 1, code[ ip ] );
+            mVM->printf(0, "%i: OP_JMPIF_NP ip=%i", ip - 1, code[ ip ] );
             ++ ip;
             break;
          }
 
          case OP_JMP:
          {
-            printf( "%i: OP_JMP ip=%i", ip - 1, code[ ip ] );
+            mVM->printf(0, "%i: OP_JMP ip=%i", ip - 1, code[ ip ] );
             ++ ip;
             break;
          }
 
          case OP_RETURN:
          {
-            printf( "%i: OP_RETURN", ip - 1 );
+            mVM->printf(0, "%i: OP_RETURN", ip - 1 );
             
             if( upToReturn )
                return;
@@ -792,7 +792,7 @@ void CodeBlock::dumpInstructions( U32 startIp, bool upToReturn )
 
          case OP_RETURN_VOID:
          {
-            printf( "%i: OP_RETURNVOID", ip - 1 );
+            mVM->printf(0, "%i: OP_RETURNVOID", ip - 1 );
 
             if( upToReturn )
                return;
@@ -802,7 +802,7 @@ void CodeBlock::dumpInstructions( U32 startIp, bool upToReturn )
 
          case OP_RETURN_UINT:
          {
-            printf( "%i: OP_RETURNUINT", ip - 1 );
+            mVM->printf(0, "%i: OP_RETURNUINT", ip - 1 );
 
             if( upToReturn )
                return;
@@ -812,7 +812,7 @@ void CodeBlock::dumpInstructions( U32 startIp, bool upToReturn )
 
          case OP_RETURN_FLT:
          {
-            printf( "%i: OP_RETURNFLT", ip - 1 );
+            mVM->printf(0, "%i: OP_RETURNFLT", ip - 1 );
 
             if( upToReturn )
                return;
@@ -822,133 +822,133 @@ void CodeBlock::dumpInstructions( U32 startIp, bool upToReturn )
 
          case OP_CMPEQ:
          {
-            printf( "%i: OP_CMPEQ", ip - 1 );
+            mVM->printf(0, "%i: OP_CMPEQ", ip - 1 );
             break;
          }
 
          case OP_CMPGR:
          {
-            printf( "%i: OP_CMPGR", ip - 1 );
+            mVM->printf(0, "%i: OP_CMPGR", ip - 1 );
             break;
          }
 
          case OP_CMPGE:
          {
-            printf( "%i: OP_CMPGE", ip - 1 );
+            mVM->printf(0, "%i: OP_CMPGE", ip - 1 );
             break;
          }
 
          case OP_CMPLT:
          {
-            printf( "%i: OP_CMPLT", ip - 1 );
+            mVM->printf(0, "%i: OP_CMPLT", ip - 1 );
             break;
          }
 
          case OP_CMPLE:
          {
-            printf( "%i: OP_CMPLE", ip - 1 );
+            mVM->printf(0, "%i: OP_CMPLE", ip - 1 );
             break;
          }
 
          case OP_CMPNE:
          {
-            printf( "%i: OP_CMPNE", ip - 1 );
+            mVM->printf(0, "%i: OP_CMPNE", ip - 1 );
             break;
          }
 
          case OP_XOR:
          {
-            printf( "%i: OP_XOR", ip - 1 );
+            mVM->printf(0, "%i: OP_XOR", ip - 1 );
             break;
          }
 
          case OP_MOD:
          {
-            printf( "%i: OP_MOD", ip - 1 );
+            mVM->printf(0, "%i: OP_MOD", ip - 1 );
             break;
          }
 
          case OP_BITAND:
          {
-            printf( "%i: OP_BITAND", ip - 1 );
+            mVM->printf(0, "%i: OP_BITAND", ip - 1 );
             break;
          }
 
          case OP_BITOR:
          {
-            printf( "%i: OP_BITOR", ip - 1 );
+            mVM->printf(0, "%i: OP_BITOR", ip - 1 );
             break;
          }
 
          case OP_NOT:
          {
-            printf( "%i: OP_NOT", ip - 1 );
+            mVM->printf(0, "%i: OP_NOT", ip - 1 );
             break;
          }
 
          case OP_NOTF:
          {
-            printf( "%i: OP_NOTF", ip - 1 );
+            mVM->printf(0, "%i: OP_NOTF", ip - 1 );
             break;
          }
 
          case OP_ONESCOMPLEMENT:
          {
-            printf( "%i: OP_ONESCOMPLEMENT", ip - 1 );
+            mVM->printf(0, "%i: OP_ONESCOMPLEMENT", ip - 1 );
             break;
          }
 
          case OP_SHR:
          {
-            printf( "%i: OP_SHR", ip - 1 );
+            mVM->printf(0, "%i: OP_SHR", ip - 1 );
             break;
          }
 
          case OP_SHL:
          {
-            printf( "%i: OP_SHL", ip - 1 );
+            mVM->printf(0, "%i: OP_SHL", ip - 1 );
             break;
          }
 
          case OP_AND:
          {
-            printf( "%i: OP_AND", ip - 1 );
+            mVM->printf(0, "%i: OP_AND", ip - 1 );
             break;
          }
 
          case OP_OR:
          {
-            printf( "%i: OP_OR", ip - 1 );
+            mVM->printf(0, "%i: OP_OR", ip - 1 );
             break;
          }
 
          case OP_ADD:
          {
-            printf( "%i: OP_ADD", ip - 1 );
+            mVM->printf(0, "%i: OP_ADD", ip - 1 );
             break;
          }
 
          case OP_SUB:
          {
-            printf( "%i: OP_SUB", ip - 1 );
+            mVM->printf(0, "%i: OP_SUB", ip - 1 );
             break;
          }
 
          case OP_MUL:
          {
-            printf( "%i: OP_MUL", ip - 1 );
+            mVM->printf(0, "%i: OP_MUL", ip - 1 );
             break;
          }
 
          case OP_DIV:
          {
-            printf( "%i: OP_DIV", ip - 1 );
+            mVM->printf(0, "%i: OP_DIV", ip - 1 );
             break;
          }
 
          case OP_NEG:
          {
-            printf( "%i: OP_NEG", ip - 1 );
+            mVM->printf(0, "%i: OP_NEG", ip - 1 );
             break;
          }
 
@@ -956,7 +956,7 @@ void CodeBlock::dumpInstructions( U32 startIp, bool upToReturn )
          {
             StringTableEntry var = CodeToSTE(NULL, code, ip);
             
-            printf( "%i: OP_SETCURVAR var=%s", ip - 1, var );
+            mVM->printf(0, "%i: OP_SETCURVAR var=%s", ip - 1, var );
             ip += 2;
             break;
          }
@@ -965,86 +965,86 @@ void CodeBlock::dumpInstructions( U32 startIp, bool upToReturn )
          {
             StringTableEntry var = CodeToSTE(NULL, code, ip);
             
-            printf( "%i: OP_SETCURVAR_CREATE var=%s", ip - 1, var );
+            mVM->printf(0, "%i: OP_SETCURVAR_CREATE var=%s", ip - 1, var );
             ip += 2;
             break;
          }
          
          case OP_SETCURVAR_ARRAY:
          {
-            printf( "%i: OP_SETCURVAR_ARRAY", ip - 1 );
+            mVM->printf(0, "%i: OP_SETCURVAR_ARRAY", ip - 1 );
             break;
          }
          
          case OP_SETCURVAR_ARRAY_CREATE:
          {
-            printf( "%i: OP_SETCURVAR_ARRAY_CREATE", ip - 1 );
+            mVM->printf(0, "%i: OP_SETCURVAR_ARRAY_CREATE", ip - 1 );
             break;
          }
          
          case OP_LOADVAR_UINT:
          {
-            printf( "%i: OP_LOADVAR_UINT", ip - 1 );
+            mVM->printf(0, "%i: OP_LOADVAR_UINT", ip - 1 );
             break;
          }
          
          case OP_LOADVAR_FLT:
          {
-            printf( "%i: OP_LOADVAR_FLT", ip - 1 );
+            mVM->printf(0, "%i: OP_LOADVAR_FLT", ip - 1 );
             break;
          }
 
          case OP_LOADVAR_STR:
          {
-            printf( "%i: OP_LOADVAR_STR", ip - 1 );
+            mVM->printf(0, "%i: OP_LOADVAR_STR", ip - 1 );
             break;
          }
 
          case OP_LOADVAR_VAR:
          {
-            printf( "%i: OP_LOADVAR_VAR", ip - 1 );
+            mVM->printf(0, "%i: OP_LOADVAR_VAR", ip - 1 );
             break;
          }
 
          case OP_SAVEVAR_UINT:
          {
-            printf( "%i: OP_SAVEVAR_UINT", ip - 1 );
+            mVM->printf(0, "%i: OP_SAVEVAR_UINT", ip - 1 );
             break;
          }
 
          case OP_SAVEVAR_FLT:
          {
-            printf( "%i: OP_SAVEVAR_FLT", ip - 1 );
+            mVM->printf(0, "%i: OP_SAVEVAR_FLT", ip - 1 );
             break;
          }
 
          case OP_SAVEVAR_STR:
          {
-            printf( "%i: OP_SAVEVAR_STR", ip - 1 );
+            mVM->printf(0, "%i: OP_SAVEVAR_STR", ip - 1 );
             break;
          }
 
          case OP_SAVEVAR_VAR:
          {
-            printf( "%i: OP_SAVEVAR_VAR", ip - 1 );
+            mVM->printf(0, "%i: OP_SAVEVAR_VAR", ip - 1 );
             break;
          }
 
          case OP_SETCUROBJECT:
          {
-            printf( "%i: OP_SETCUROBJECT", ip - 1 );
+            mVM->printf(0, "%i: OP_SETCUROBJECT", ip - 1 );
             break;
          }
 
          case OP_SETCUROBJECT_NEW:
          {
-            printf( "%i: OP_SETCUROBJECT_NEW", ip - 1 );
+            mVM->printf(0, "%i: OP_SETCUROBJECT_NEW", ip - 1 );
             break;
          }
          
          case OP_SETCUROBJECT_INTERNAL:
          {
-            printf( "%i: OP_SETCUROBJECT_INTERNAL", ip - 1 );
+            mVM->printf(0, "%i: OP_SETCUROBJECT_INTERNAL", ip - 1 );
             ++ ip;
             break;
          }
@@ -1052,125 +1052,125 @@ void CodeBlock::dumpInstructions( U32 startIp, bool upToReturn )
          case OP_SETCURFIELD:
          {
             StringTableEntry curField = CodeToSTE(NULL, code, ip);
-            printf( "%i: OP_SETCURFIELD field=%s", ip - 1, curField );
+            mVM->printf(0, "%i: OP_SETCURFIELD field=%s", ip - 1, curField );
             ip += 2;
             break;
          }
          
          case OP_SETCURFIELD_ARRAY:
          {
-            printf( "%i: OP_SETCURFIELD_ARRAY", ip - 1 );
+            mVM->printf(0, "%i: OP_SETCURFIELD_ARRAY", ip - 1 );
             break;
          }
 
          case OP_SETCURFIELD_TYPE:
          {
             U32 type = code[ ip ];
-            printf( "%i: OP_SETCURFIELD_TYPE type=%i", ip - 1, type );
+            mVM->printf(0, "%i: OP_SETCURFIELD_TYPE type=%i", ip - 1, type );
             ++ ip;
             break;
          }
 
          case OP_LOADFIELD_UINT:
          {
-            printf( "%i: OP_LOADFIELD_UINT", ip - 1 );
+            mVM->printf(0, "%i: OP_LOADFIELD_UINT", ip - 1 );
             break;
          }
 
          case OP_LOADFIELD_FLT:
          {
-            printf( "%i: OP_LOADFIELD_FLT", ip - 1 );
+            mVM->printf(0, "%i: OP_LOADFIELD_FLT", ip - 1 );
             break;
          }
 
          case OP_LOADFIELD_STR:
          {
-            printf( "%i: OP_LOADFIELD_STR", ip - 1 );
+            mVM->printf(0, "%i: OP_LOADFIELD_STR", ip - 1 );
             break;
          }
 
          case OP_SAVEFIELD_UINT:
          {
-            printf( "%i: OP_SAVEFIELD_UINT", ip - 1 );
+            mVM->printf(0, "%i: OP_SAVEFIELD_UINT", ip - 1 );
             break;
          }
 
          case OP_SAVEFIELD_FLT:
          {
-            printf( "%i: OP_SAVEFIELD_FLT", ip - 1 );
+            mVM->printf(0, "%i: OP_SAVEFIELD_FLT", ip - 1 );
             break;
          }
 
          case OP_SAVEFIELD_STR:
          {
-            printf( "%i: OP_SAVEFIELD_STR", ip - 1 );
+            mVM->printf(0, "%i: OP_SAVEFIELD_STR", ip - 1 );
             break;
          }
 
          case OP_STR_TO_UINT:
          {
-            printf( "%i: OP_STR_TO_UINT", ip - 1 );
+            mVM->printf(0, "%i: OP_STR_TO_UINT", ip - 1 );
             break;
          }
 
          case OP_STR_TO_FLT:
          {
-            printf( "%i: OP_STR_TO_FLT", ip - 1 );
+            mVM->printf(0, "%i: OP_STR_TO_FLT", ip - 1 );
             break;
          }
 
          case OP_STR_TO_NONE:
          {
-            printf( "%i: OP_STR_TO_NONE", ip - 1 );
+            mVM->printf(0, "%i: OP_STR_TO_NONE", ip - 1 );
             break;
          }
 
          case OP_FLT_TO_UINT:
          {
-            printf( "%i: OP_FLT_TO_UINT", ip - 1 );
+            mVM->printf(0, "%i: OP_FLT_TO_UINT", ip - 1 );
             break;
          }
 
          case OP_FLT_TO_STR:
          {
-            printf( "%i: OP_FLT_TO_STR", ip - 1 );
+            mVM->printf(0, "%i: OP_FLT_TO_STR", ip - 1 );
             break;
          }
 
          case OP_FLT_TO_NONE:
          {
-            printf( "%i: OP_FLT_TO_NONE", ip - 1 );
+            mVM->printf(0, "%i: OP_FLT_TO_NONE", ip - 1 );
             break;
          }
 
          case OP_UINT_TO_FLT:
          {
-            printf( "%i: OP_SAVEFIELD_STR", ip - 1 );
+            mVM->printf(0, "%i: OP_SAVEFIELD_STR", ip - 1 );
             break;
          }
 
          case OP_UINT_TO_STR:
          {
-            printf( "%i: OP_UINT_TO_STR", ip - 1 );
+            mVM->printf(0, "%i: OP_UINT_TO_STR", ip - 1 );
             break;
          }
 
          case OP_UINT_TO_NONE:
          {
-            printf( "%i: OP_UINT_TO_NONE", ip - 1 );
+            mVM->printf(0, "%i: OP_UINT_TO_NONE", ip - 1 );
             break;
          }
 
          case OP_COPYVAR_TO_NONE:
          {
-            printf( "%i: OP_COPYVAR_TO_NONE", ip - 1 );
+            mVM->printf(0, "%i: OP_COPYVAR_TO_NONE", ip - 1 );
             break;
          }
 
          case OP_LOADIMMED_UINT:
          {
             U32 val = code[ ip ];
-            printf( "%i: OP_LOADIMMED_UINT val=%i", ip - 1, val );
+            mVM->printf(0, "%i: OP_LOADIMMED_UINT val=%i", ip - 1, val );
             ++ ip;
             break;
          }
@@ -1178,7 +1178,7 @@ void CodeBlock::dumpInstructions( U32 startIp, bool upToReturn )
          case OP_LOADIMMED_FLT:
          {
             F64 val = (inFunction ? functionFloats : globalFloats)[ code[ ip ] ];
-            printf( "%i: OP_LOADIMMED_FLT val=%f", ip - 1, val );
+            mVM->printf(0, "%i: OP_LOADIMMED_FLT val=%f", ip - 1, val );
             ++ ip;
             break;
          }
@@ -1186,7 +1186,7 @@ void CodeBlock::dumpInstructions( U32 startIp, bool upToReturn )
          case OP_TAG_TO_STR:
          {
             const char* str = (inFunction ? functionStrings : globalStrings) + code[ ip ];
-            printf( "%i: OP_TAG_TO_STR str=%s", ip - 1, str );
+            mVM->printf(0, "%i: OP_TAG_TO_STR str=%s", ip - 1, str );
             ++ ip;
             break;
          }
@@ -1194,7 +1194,7 @@ void CodeBlock::dumpInstructions( U32 startIp, bool upToReturn )
          case OP_LOADIMMED_STR:
          {
             const char* str = (inFunction ? functionStrings : globalStrings) + code[ ip ];
-            printf( "%i: OP_LOADIMMED_STR str=%s", ip - 1, str );
+            mVM->printf(0, "%i: OP_LOADIMMED_STR str=%s", ip - 1, str );
             ++ ip;
             break;
          }
@@ -1202,7 +1202,7 @@ void CodeBlock::dumpInstructions( U32 startIp, bool upToReturn )
          case OP_DOCBLOCK_STR:
          {
             const char* str = (inFunction ? functionStrings : globalStrings) + code[ ip ];
-            printf( "%i: OP_DOCBLOCK_STR str=%s", ip - 1, str );
+            mVM->printf(0, "%i: OP_DOCBLOCK_STR str=%s", ip - 1, str );
             ++ ip;
             break;
          }
@@ -1210,7 +1210,7 @@ void CodeBlock::dumpInstructions( U32 startIp, bool upToReturn )
          case OP_LOADIMMED_IDENT:
          {
             StringTableEntry str = CodeToSTE(NULL, code, ip);
-            printf( "%i: OP_LOADIMMED_IDENT str=%s", ip - 1, str );
+            mVM->printf(0, "%i: OP_LOADIMMED_IDENT str=%s", ip - 1, str );
             ip += 2;
             break;
          }
@@ -1221,7 +1221,7 @@ void CodeBlock::dumpInstructions( U32 startIp, bool upToReturn )
             StringTableEntry fnName      = CodeToSTE(NULL, code, ip);
             U32 callType = code[ip+2];
 
-            printf( "%i: OP_CALLFUNC_RESOLVE name=%s nspace=%s callType=%s", ip - 1, fnName, fnNamespace,
+            mVM->printf(0, "%i: OP_CALLFUNC_RESOLVE name=%s nspace=%s callType=%s", ip - 1, fnName, fnNamespace,
                callType == FuncCallExprNode::FunctionCall ? "FunctionCall"
                   : callType == FuncCallExprNode::MethodCall ? "MethodCall" : "ParentCall" );
             
@@ -1235,7 +1235,7 @@ void CodeBlock::dumpInstructions( U32 startIp, bool upToReturn )
             StringTableEntry fnName      = CodeToSTE(NULL, code, ip);
             U32 callType = code[ip+4];
 
-            printf( "%i: OP_CALLFUNC name=%s nspace=%s callType=%s", ip - 1, fnName, fnNamespace,
+            mVM->printf(0, "%i: OP_CALLFUNC name=%s nspace=%s callType=%s", ip - 1, fnName, fnNamespace,
                callType == FuncCallExprNode::FunctionCall ? "FunctionCall"
                   : callType == FuncCallExprNode::MethodCall ? "MethodCall" : "ParentCall" );
             
@@ -1245,89 +1245,89 @@ void CodeBlock::dumpInstructions( U32 startIp, bool upToReturn )
 
          case OP_ADVANCE_STR:
          {
-            printf( "%i: OP_ADVANCE_STR", ip - 1 );
+            mVM->printf(0, "%i: OP_ADVANCE_STR", ip - 1 );
             break;
          }
 
          case OP_ADVANCE_STR_APPENDCHAR:
          {
             char ch = code[ ip ];
-            printf( "%i: OP_ADVANCE_STR_APPENDCHAR char=%c", ip - 1, ch );
+            mVM->printf(0, "%i: OP_ADVANCE_STR_APPENDCHAR char=%c", ip - 1, ch );
             ++ ip;
             break;
          }
 
          case OP_ADVANCE_STR_COMMA:
          {
-            printf( "%i: OP_ADVANCE_STR_COMMA", ip - 1 );
+            mVM->printf(0, "%i: OP_ADVANCE_STR_COMMA", ip - 1 );
             break;
          }
 
          case OP_ADVANCE_STR_NUL:
          {
-            printf( "%i: OP_ADVANCE_STR_NUL", ip - 1 );
+            mVM->printf(0, "%i: OP_ADVANCE_STR_NUL", ip - 1 );
             break;
          }
 
          case OP_REWIND_STR:
          {
-            printf( "%i: OP_REWIND_STR", ip - 1 );
+            mVM->printf(0, "%i: OP_REWIND_STR", ip - 1 );
             break;
          }
 
          case OP_TERMINATE_REWIND_STR:
          {
-            printf( "%i: OP_TERMINATE_REWIND_STR", ip - 1 );
+            mVM->printf(0, "%i: OP_TERMINATE_REWIND_STR", ip - 1 );
             break;
          }
 
          case OP_COMPARE_STR:
          {
-            printf( "%i: OP_COMPARE_STR", ip - 1 );
+            mVM->printf(0, "%i: OP_COMPARE_STR", ip - 1 );
             break;
          }
 
          case OP_PUSH:
          {
-            printf( "%i: OP_PUSH", ip - 1 );
+            mVM->printf(0, "%i: OP_PUSH", ip - 1 );
             break;
          }
 
          case OP_PUSH_UINT:
          {
-            printf( "%i: OP_PUSH_UINT", ip - 1 );
+            mVM->printf(0, "%i: OP_PUSH_UINT", ip - 1 );
             break;
          }
 
          case OP_PUSH_FLT:
          {
-            printf( "%i: OP_PUSH_FLT", ip - 1 );
+            mVM->printf(0, "%i: OP_PUSH_FLT", ip - 1 );
             break;
          }
 
          case OP_PUSH_VAR:
          {
-            printf( "%i: OP_PUSH_VAR", ip - 1 );
+            mVM->printf(0, "%i: OP_PUSH_VAR", ip - 1 );
             break;
          }
 
          case OP_PUSH_FRAME:
          {
-            printf( "%i: OP_PUSH_FRAME", ip - 1 );
+            mVM->printf(0, "%i: OP_PUSH_FRAME", ip - 1 );
             break;
          }
 
          case OP_ASSERT:
          {
             const char* message = (inFunction ? functionStrings : globalStrings) + code[ ip ];
-            printf( "%i: OP_ASSERT message=%s", ip - 1, message );
+            mVM->printf(0, "%i: OP_ASSERT message=%s", ip - 1, message );
             ++ ip;
             break;
          }
 
          case OP_BREAK:
          {
-            printf( "%i: OP_BREAK", ip - 1 );
+            mVM->printf(0, "%i: OP_BREAK", ip - 1 );
             break;
          }
          
@@ -1336,7 +1336,7 @@ void CodeBlock::dumpInstructions( U32 startIp, bool upToReturn )
             StringTableEntry varName = CodeToSTE(NULL, code, ip);
             U32 failIp = code[ ip + 2 ];
             
-            printf( "%i: OP_ITER_BEGIN varName=%s failIp=%i", ip - 1, varName, failIp );
+            mVM->printf(0, "%i: OP_ITER_BEGIN varName=%s failIp=%i", ip - 1, varName, failIp );
 
             ip += 3;
             break;
@@ -1347,7 +1347,7 @@ void CodeBlock::dumpInstructions( U32 startIp, bool upToReturn )
             StringTableEntry varName = CodeToSTE(NULL, code, ip);
             U32 failIp = code[ ip + 2 ];
             
-            printf( "%i: OP_ITER_BEGIN varName=%s failIp=%i", ip - 1, varName, failIp );
+            mVM->printf(0, "%i: OP_ITER_BEGIN varName=%s failIp=%i", ip - 1, varName, failIp );
 
             ip += 3;
             break;
@@ -1357,7 +1357,7 @@ void CodeBlock::dumpInstructions( U32 startIp, bool upToReturn )
          {
             U32 breakIp = code[ ip ];
             
-            printf( "%i: OP_ITER breakIp=%i", ip - 1, breakIp );
+            mVM->printf(0, "%i: OP_ITER breakIp=%i", ip - 1, breakIp );
 
             ++ ip;
             break;
@@ -1365,12 +1365,12 @@ void CodeBlock::dumpInstructions( U32 startIp, bool upToReturn )
          
          case OP_ITER_END:
          {
-            printf( "%i: OP_ITER_END", ip - 1 );
+            mVM->printf(0, "%i: OP_ITER_END", ip - 1 );
             break;
          }
 
          default:
-            printf( "%i: !!INVALID!!", ip - 1 );
+            mVM->printf(0, "%i: !!INVALID!!", ip - 1 );
             break;
       }
    }
