@@ -316,7 +316,7 @@ static void printNode(const StmtNode* n, int pad) {
    if (auto x = dynamic_cast<const AssignOpExprNode*>(n)) {
       open("AssignOpExprNode", pad);
       indent(pad + 2); printf("varName = \"%s\"\n", show(x->varName));
-      indent(pad + 2); printf("op = %d\n",          x->op);
+      indent(pad + 2); printf("op = %s\n",          opToStr((S32)x->op));
       indent(pad + 2); printf("operand = %s\n", opToStr(x->operand));
       indent(pad + 2); printf("subType = %s\n",     typeReqName(x->subType));
       printChild("arrayIndex", x->arrayIndex, pad + 2);
