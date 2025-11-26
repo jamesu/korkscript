@@ -7,6 +7,14 @@
 #include "core/fileStream.h"
 #include <stdio.h>
 
+template< typename T >
+struct Token
+{
+   T value;
+   U32 lineNumber;
+};
+#include "console/cmdgram.h"
+
 /*
  
  Prints AST nodes for script
@@ -18,6 +26,60 @@ bool gPrintBytecode = false;
 void MyLogger(ConsoleLogEntry::Level level, const char *consoleLine)
 {
    printf("%s\n", consoleLine);
+}
+
+const char* opToStr(S32 op)
+{
+switch (op)
+{
+   case '^': return "^";
+   case '%': return "%";
+   case '&': return "&";
+   case '|': return "|";
+   case '<': return "<";
+   case '>': return ">";
+   case '+': return "+";
+   case '-': return "-";
+   case '*': return "*";
+   case '/': return "/";
+
+  case '!':      return "!";
+  case '~':     return "~";
+  case '@': return "opCONCAT";
+
+  case opCOLONCOLON:  return "opCOLONCOLON";
+  case opMINUSMINUS:  return "opMINUSMINUS";
+  case opPLUSPLUS:    return "opPLUSPLUS";
+  case opSTREQ:   return "opSTREQ";
+  case opSTRNE:   return "opSTRNE";
+  case opPLASN:   return "opPLASN";
+  case opMIASN:   return "opMIASN";
+  case opMLASN:   return "opMLASN";
+  case opDVASN:   return "opDVASN";
+  case opMODASN:  return "opMODASN";
+  case opANDASN:  return "opANDASN";
+  case opXORASN:  return "opXORASN";
+  case opORASN:   return "opORASN";
+  case opSLASN:   return "opSLASN";
+  case opSRASN:   return "opSRASN";
+  case opINTNAME: return "opINTNAME";
+  case opINTNAMER:return "opINTNAMER";
+
+   case opGE:  return "opGE";
+   case opLE:  return "opLE";
+   case opEQ:  return "opEQ";
+   case opNE:  return "opNE";
+   case opOR:  return "opOR";
+   case opAND: return "opAND";
+   case opSHR: return "opSHR";
+   case opSHL: return "opSHL";
+
+   case 0:
+      return "<NOT SET>";
+
+   default:
+      return "<!UNKNOWN!>";
+}
 }
 
 
@@ -154,7 +216,7 @@ static void printNode(const StmtNode* n, int pad) {
    }
    if (auto x = dynamic_cast<const FloatBinaryExprNode*>(n)) {
       open("FloatBinaryExprNode", pad);
-      indent(pad + 2); printf("op = %d\n", x->op);
+      indent(pad + 2); printf("op = %s\n", opToStr(x->op));
       printChild("left",  x->left,  pad + 2);
       printChild("right", x->right, pad + 2);
       close(n, pad);
@@ -162,9 +224,9 @@ static void printNode(const StmtNode* n, int pad) {
    }
    if (auto x = dynamic_cast<const IntBinaryExprNode*>(n)) {
       open("IntBinaryExprNode", pad);
-      indent(pad + 2); printf("op = %d\n", x->op);
+      indent(pad + 2); printf("op = %s\n", opToStr(x->op));
       indent(pad + 2); printf("subType = %s\n", typeReqName(x->subType));
-      indent(pad + 2); printf("operand = %u\n", x->operand);
+      indent(pad + 2); printf("operand = %s\n", opToStr(x->operand));
       printChild("left",  x->left,  pad + 2);
       printChild("right", x->right, pad + 2);
       close(n, pad);
@@ -195,7 +257,7 @@ static void printNode(const StmtNode* n, int pad) {
    }
    if (auto x = dynamic_cast<const IntUnaryExprNode*>(n)) {
       open("IntUnaryExprNode", pad);
-      indent(pad + 2); printf("op = %d\n", x->op);
+      indent(pad + 2); printf("op = %s\n", opToStr(x->op));
       indent(pad + 2); printf("integer = %s\n", yesno(x->integer));
       printChild("expr", x->expr, pad + 2);
       close(n, pad);
@@ -203,7 +265,7 @@ static void printNode(const StmtNode* n, int pad) {
    }
    if (auto x = dynamic_cast<const FloatUnaryExprNode*>(n)) {
       open("FloatUnaryExprNode", pad);
-      indent(pad + 2); printf("op = %d\n", x->op);
+      indent(pad + 2); printf("op = %s\n", opToStr(x->op));
       printChild("expr", x->expr, pad + 2);
       close(n, pad);
       return;
@@ -254,7 +316,7 @@ static void printNode(const StmtNode* n, int pad) {
       open("AssignOpExprNode", pad);
       indent(pad + 2); printf("varName = \"%s\"\n", show(x->varName));
       indent(pad + 2); printf("op = %d\n",          x->op);
-      indent(pad + 2); printf("operand = %i\n", x->operand);
+      indent(pad + 2); printf("operand = %s\n", opToStr(x->operand));
       indent(pad + 2); printf("subType = %s\n",     typeReqName(x->subType));
       printChild("arrayIndex", x->arrayIndex, pad + 2);
       printChild("expr",       x->expr,       pad + 2);
@@ -311,8 +373,8 @@ static void printNode(const StmtNode* n, int pad) {
    if (auto x = dynamic_cast<const SlotAssignOpNode*>(n)) {
       open("SlotAssignOpNode", pad);
       indent(pad + 2); printf("slotName = \"%s\"\n", show(x->slotName));
-      indent(pad + 2); printf("op = %d\n", x->op);
-      indent(pad + 2); printf("operand = %i\n", x->operand);
+      indent(pad + 2); printf("op = %s\n", opToStr(x->op));
+      indent(pad + 2); printf("operand = %s\n", opToStr(x->operand));
       indent(pad + 2); printf("subType = %s\n", typeReqName(x->subType));
       printChild("objectExpr", x->objectExpr, pad + 2);
       printChild("arrayExpr",  x->arrayExpr,  pad + 2);
