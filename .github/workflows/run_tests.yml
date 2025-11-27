@@ -24,6 +24,13 @@ jobs:
       - name: Prepare AST regression scripts
         run: |
           set -euo pipefail
+
+          echo "=== AST Corpus Setup ==="
+          echo "TEST_SCRIPTS_DIR = $TEST_SCRIPTS_DIR"
+          echo "RUNNER_TEMP      = $RUNNER_TEMP"
+          echo "PWD              = $(pwd)"
+          echo
+
           mkdir -p "$TEST_SCRIPTS_DIR"
 
           if [ -z "${AST_CORPUS_REPO:-}" ] || [ -z "${AST_CORPUS_TOKEN:-}" ]; then
@@ -31,12 +38,21 @@ jobs:
             exit 0
           fi
 
-          echo "Cloning AST corpus repo..."
-          git clone --depth 1 "https://${AST_CORPUS_TOKEN}@${AST_CORPUS_REPO}" /tmp/ast_corpus_repo
-          cd /tmp/ast_corpus_repo
+          echo "=== Cloning AST corpus repo ==="
+          git clone --depth 1 "https://${AST_CORPUS_TOKEN}@${AST_CORPUS_REPO}" "$RUNNER_TEMP/ast_corpus_repo"
 
+          echo "Repository cloned to:"
+          echo "$RUNNER_TEMP/ast_corpus_repo"
+          ls -al "$RUNNER_TEMP/ast_corpus_repo" || true
+          echo
+
+          echo "Searching for .7z bundles:"          
           shopt -s nullglob
           bundles=( ./*.7z )
+          printf 'Found %d bundles\n' "${#bundles[@]}"
+          printf 'Bundle list:\n'
+          printf '  %s\n' "${bundles[@]:-<none>}"
+          echo
 
           if [ ${#bundles[@]} -eq 0 ]; then
             echo "No .7z bundles found in corpus repo root; nothing to extract."
@@ -45,7 +61,7 @@ jobs:
 
           for bundle in "${bundles[@]}"; do
             echo "Extracting bundle: $bundle"
-            7z x -p"$AST_CORPUS_PASSWORD" -y "$bundle" -o"$TEST_SCRIPTS_DIR"
+            7z x -p"$AST_CORPUS_PASSWORD" -y -bb3 -bso1 "$bundle" -o"$TEST_SCRIPTS_DIR"
           done
         env:
           AST_CORPUS_REPO:      ${{ secrets.AST_CORPUS_REPO }}

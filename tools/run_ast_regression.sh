@@ -9,6 +9,7 @@ fi
 ORIG_BIN="$1"
 CURR_BIN="$2"
 SCRIPTS_DIR="$3"
+echo "Processing scripts in #{$SCRIPTS_DIR}"
 
 TMP_ROOT="${TMP_ROOT:-$(mktemp -d)}"
 trap 'rm -rf "$TMP_ROOT"' EXIT
