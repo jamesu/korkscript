@@ -683,7 +683,7 @@ void CodeBlock::dumpInstructions( U32 startIp, bool upToReturn, bool downcaseStr
    
    while( ip < codeSize )
    {
-      if (ip > endFuncIp)
+      if (ip >= endFuncIp)
       {
          inFunction = false;
       }
