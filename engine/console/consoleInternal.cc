@@ -596,6 +596,9 @@ void Dictionary::validate()
 
 ExprEvalState::ExprEvalState(KorkApi::VmInternal* vm): mSTR(&vm->mAllocBase)
 {
+   mAllocNumber = 0;
+   mGeneration = 0;
+   
    VECTOR_SET_ASSOCIATION(stack);
    vmInternal = vm;
    globalVars = &vm->mGlobalVars;
