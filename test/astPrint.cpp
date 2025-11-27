@@ -465,7 +465,7 @@ void dumpToInstructionsPrint(StmtNode* rootNode)
    cb->globalFloats    = Compiler::getGlobalFloatTable().build();
    cb->functionFloats  = Compiler::getFunctionFloatTable().build();
    
-   cb->dumpInstructions();
+   cb->dumpInstructions(false, true);
 }
 
 bool printAST(const char* buf, const char* filename)
