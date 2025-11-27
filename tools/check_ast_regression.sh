@@ -23,7 +23,7 @@ git worktree add "$VERIFY_WORKTREE_DIR" "$VERIFY_BRANCH"
 
 cleanup() {
   echo "Cleaning up worktree..."
-  #git worktree remove "$VERIFY_WORKTREE_DIR" --force || true
+  git worktree remove "$VERIFY_WORKTREE_DIR" --force || true
 }
 trap cleanup EXIT
 
