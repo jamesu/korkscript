@@ -564,9 +564,6 @@ void ExprEvalState::pushFrameRef(S32 stackIndex)
 
 ExprEvalState::ExprEvalState()
 {
-   mAllocNumber = 0;
-   mGeneration = 0;
-   
    VECTOR_SET_ASSOCIATION(stack);
    globalVars.setState(this);
    thisObject = NULL;
