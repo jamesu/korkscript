@@ -94,7 +94,7 @@ static inline const char* show(const char* s)
 {
     if (!s) return "null";
 
-    thread_local std::string buf;
+    static std::string buf;
     buf.clear();
     buf.reserve(strlen(s));
 
