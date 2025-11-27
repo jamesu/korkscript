@@ -48,7 +48,7 @@ jobs:
 
           echo "Searching for .7z bundles:"          
           shopt -s nullglob
-          bundles=( ./*.7z )
+          bundles=( $RUNNER_TEMP/ast_corpus_repo/*.7z )
           printf 'Found %d bundles\n' "${#bundles[@]}"
           printf 'Bundle list:\n'
           printf '  %s\n' "${bundles[@]:-<none>}"
