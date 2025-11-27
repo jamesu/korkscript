@@ -8,7 +8,7 @@ jobs:
 
     env:
       VERIFY_BRANCH: verify_branch
-      TEST_SCRIPTS_DIR: tests/parser_samples
+      TEST_SCRIPTS_DIR: test/parser_samples
       CS_BIN_NAME: csprintast
 
     steps:
