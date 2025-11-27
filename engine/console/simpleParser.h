@@ -156,7 +156,20 @@ private:
       }
       else
       {
-         return t.kind;
+         // Map compound-assign tokens to their underlying binary operator.
+         switch (t.kind) {
+             case TT::opPLASN:  return TT::opPCHAR_PLUS;       // +=  → +
+             case TT::opMIASN:  return TT::opPCHAR_MINUS;      // -=  → -
+             case TT::opMLASN:  return TT::opPCHAR_ASTERISK;   // *=  → *
+             case TT::opDVASN:  return TT::opPCHAR_SLASH;      // /=  → /
+             case TT::opMODASN: return TT::opPCHAR_PERCENT;    // %=  → %
+             case TT::opANDASN: return TT::opPCHAR_AMPERSAND;  // &=  → &
+             case TT::opXORASN: return TT::opPCHAR_CARET;      // ^=  → ^
+             case TT::opORASN:  return TT::opPCHAR_PIPE;       // |=  → |
+             case TT::opSLASN:  return TT::opSHL;              // <<= → <<
+             case TT::opSRASN:  return TT::opSHR;              // >>= → >>
+             default:           return t.kind;                 // fallback (shouldn’t hit for assigns)
+         }
       }
    }
    
