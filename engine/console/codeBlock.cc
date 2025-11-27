@@ -659,11 +659,27 @@ void CodeBlock::decRefCount()
 
 //-------------------------------------------------------------------------
 
-void CodeBlock::dumpInstructions( U32 startIp, bool upToReturn )
+void CodeBlock::dumpInstructions( U32 startIp, bool upToReturn, bool downcaseStrings )
 {
    U32 ip = startIp;
    U32 endFuncIp = 0;
    bool inFunction = false;
+
+   auto codeToSte = [downcaseStrings](Resources* res, U32 *code, U32 ip) {
+      StringTableEntry ste = Compiler::CodeToSTE(res, code, ip);
+      if (!ste || !downcaseStrings)
+         return ste;
+
+      const char *src = ste;
+      static char buf[4096];
+      U32 i = 0;
+
+      for (; src[i] && i < sizeof(buf) - 1; ++i)
+         buf[i] = dTolower(src[i]);
+
+      buf[i] = '\0';
+      return StringTable->insert(buf);
+   };
    
    while( ip < codeSize )
    {
@@ -677,9 +693,9 @@ void CodeBlock::dumpInstructions( U32 startIp, bool upToReturn )
             
          case OP_FUNC_DECL:
          {
-            StringTableEntry fnName       = CodeToSTE(NULL, code, ip);
-            StringTableEntry fnNamespace  = CodeToSTE(NULL, code, ip+2);
-            StringTableEntry fnPackage    = CodeToSTE(NULL, code, ip+4);
+            StringTableEntry fnName       = codeToSte(NULL, code, ip);
+            StringTableEntry fnNamespace  = codeToSte(NULL, code, ip+2);
+            StringTableEntry fnPackage    = codeToSte(NULL, code, ip+4);
             bool hasBody = bool(code[ip+6]);
             U32 newIp = code[ ip + 7 ];
             U32 argc = code[ ip + 8 ];
@@ -697,7 +713,7 @@ void CodeBlock::dumpInstructions( U32 startIp, bool upToReturn )
             
          case OP_CREATE_OBJECT:
          {
-            StringTableEntry objParent = CodeToSTE(NULL, code, ip);
+            StringTableEntry objParent = codeToSte(NULL, code, ip);
             bool isDataBlock =          code[ip + 2];
             bool isInternal  =          code[ip + 3];
             bool isSingleton =          code[ip + 4];
@@ -954,7 +970,7 @@ void CodeBlock::dumpInstructions( U32 startIp, bool upToReturn )
 
          case OP_SETCURVAR:
          {
-            StringTableEntry var = CodeToSTE(NULL, code, ip);
+            StringTableEntry var = codeToSte(NULL, code, ip);
             
             mVM->printf(0, "%i: OP_SETCURVAR var=%s", ip - 1, var );
             ip += 2;
@@ -963,7 +979,7 @@ void CodeBlock::dumpInstructions( U32 startIp, bool upToReturn )
          
          case OP_SETCURVAR_CREATE:
          {
-            StringTableEntry var = CodeToSTE(NULL, code, ip);
+            StringTableEntry var = codeToSte(NULL, code, ip);
             
             mVM->printf(0, "%i: OP_SETCURVAR_CREATE var=%s", ip - 1, var );
             ip += 2;
@@ -1051,7 +1067,7 @@ void CodeBlock::dumpInstructions( U32 startIp, bool upToReturn )
          
          case OP_SETCURFIELD:
          {
-            StringTableEntry curField = CodeToSTE(NULL, code, ip);
+            StringTableEntry curField = codeToSte(NULL, code, ip);
             mVM->printf(0, "%i: OP_SETCURFIELD field=%s", ip - 1, curField );
             ip += 2;
             break;
@@ -1209,7 +1225,7 @@ void CodeBlock::dumpInstructions( U32 startIp, bool upToReturn )
          
          case OP_LOADIMMED_IDENT:
          {
-            StringTableEntry str = CodeToSTE(NULL, code, ip);
+            StringTableEntry str = codeToSte(NULL, code, ip);
             mVM->printf(0, "%i: OP_LOADIMMED_IDENT str=%s", ip - 1, str );
             ip += 2;
             break;
@@ -1217,8 +1233,8 @@ void CodeBlock::dumpInstructions( U32 startIp, bool upToReturn )
 
          case OP_CALLFUNC_RESOLVE:
          {
-            StringTableEntry fnNamespace = CodeToSTE(NULL, code, ip+2);
-            StringTableEntry fnName      = CodeToSTE(NULL, code, ip);
+            StringTableEntry fnNamespace = codeToSte(NULL, code, ip+2);
+            StringTableEntry fnName      = codeToSte(NULL, code, ip);
             U32 callType = code[ip+2];
 
             mVM->printf(0, "%i: OP_CALLFUNC_RESOLVE name=%s nspace=%s callType=%s", ip - 1, fnName, fnNamespace,
@@ -1231,8 +1247,8 @@ void CodeBlock::dumpInstructions( U32 startIp, bool upToReturn )
          
          case OP_CALLFUNC:
          {
-            StringTableEntry fnNamespace = CodeToSTE(NULL, code, ip+2);
-            StringTableEntry fnName      = CodeToSTE(NULL, code, ip);
+            StringTableEntry fnNamespace = codeToSte(NULL, code, ip+2);
+            StringTableEntry fnName      = codeToSte(NULL, code, ip);
             U32 callType = code[ip+4];
 
             mVM->printf(0, "%i: OP_CALLFUNC name=%s nspace=%s callType=%s", ip - 1, fnName, fnNamespace,
@@ -1333,7 +1349,7 @@ void CodeBlock::dumpInstructions( U32 startIp, bool upToReturn )
          
          case OP_ITER_BEGIN:
          {
-            StringTableEntry varName = CodeToSTE(NULL, code, ip);
+            StringTableEntry varName = codeToSte(NULL, code, ip);
             U32 failIp = code[ ip + 2 ];
             
             mVM->printf(0, "%i: OP_ITER_BEGIN varName=%s failIp=%i", ip - 1, varName, failIp );
@@ -1344,7 +1360,7 @@ void CodeBlock::dumpInstructions( U32 startIp, bool upToReturn )
 
          case OP_ITER_BEGIN_STR:
          {
-            StringTableEntry varName = CodeToSTE(NULL, code, ip);
+            StringTableEntry varName = codeToSte(NULL, code, ip);
             U32 failIp = code[ ip + 2 ];
             
             mVM->printf(0, "%i: OP_ITER_BEGIN varName=%s failIp=%i", ip - 1, varName, failIp );

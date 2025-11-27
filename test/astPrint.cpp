@@ -466,8 +466,8 @@ void dumpToInstructionsPrint(Compiler::Resources& res, StmtNode* rootNode)
    
    cb->globalFloats    = res.getGlobalFloatTable().build();
    cb->functionFloats  = res.getFunctionFloatTable().build();
-   
-   cb->dumpInstructions();
+
+   cb->dumpInstructions(false, true);
 
    KorkApi::destroyVM(vm);
 }
