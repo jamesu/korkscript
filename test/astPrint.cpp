@@ -465,7 +465,9 @@ void dumpToInstructionsPrint(StmtNode* rootNode)
    cb->globalFloats    = Compiler::getGlobalFloatTable().build();
    cb->functionFloats  = Compiler::getFunctionFloatTable().build();
    
-   cb->dumpInstructions(false, true);
+   cb->dumpInstructions(0, false, true);
+
+   KorkApi::destroyVM(vm);
 }
 
 bool printAST(const char* buf, const char* filename)
