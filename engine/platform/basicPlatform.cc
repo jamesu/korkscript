@@ -202,19 +202,19 @@ File::Status File::read(U32 size, char *dst, U32 *bytesRead)
       return currentStatus;
    else
    {
-      long lastBytes;
-      long *bytes = (NULL == bytesRead) ? &lastBytes : (long *)bytesRead;
-      *bytes = fread(dst, 1, size, (FILE*)handle);
+      U32 lastBytes;
+      U32 *bytes = (NULL == bytesRead) ? &lastBytes : (U32 *)bytesRead;
+      *bytes = (U32)fread(dst, 1, size, (FILE*)handle);
       if (*bytes == 0)
       {
-      	if (feof((FILE*)handle))
-      	{
-      		return currentStatus = EOS;
-      	}
-      	else
-      	{
-      		setStatus();
-      	}
+         if (feof((FILE*)handle))
+         {
+            return currentStatus = EOS;
+         }
+         else
+         {
+            setStatus();
+         }
       }
       return currentStatus = Ok;                        // end of stream
    }
