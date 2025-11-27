@@ -678,7 +678,7 @@ void CodeBlock::dumpInstructions( U32 startIp, bool upToReturn, bool downcaseStr
          buf[i] = dTolower(src[i]);
 
       buf[i] = '\0';
-      return StringTable->insert(buf);
+      return StringTable->insert(buf, true);
    };
    
    while( ip < codeSize )
