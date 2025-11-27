@@ -21,7 +21,7 @@
 //-----------------------------------------------------------------------------
 
 #include "platform/platform.h"
-#include "core/memstream.h"
+#include "core/memStream.h"
 
 MemStream::MemStream(const U32 in_bufferSize,
                      void*        io_pBuffer,
