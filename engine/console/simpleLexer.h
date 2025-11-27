@@ -15,7 +15,7 @@ struct SrcPos
    S32 col;
 };
 
-enum class TokenType : uint32_t
+enum class TokenType : U32
 {
    // Special
    END = 0,

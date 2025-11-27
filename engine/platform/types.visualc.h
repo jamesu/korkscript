@@ -66,6 +66,13 @@ typedef unsigned _int64 U64;
 #endif
 
 
+#ifdef TORQUE_64
+typedef unsigned _int64  UINTPTR;
+#else
+typedef unsigned int UINTPTR;
+#endif
+
+
 #define FN_CDECL __cdecl            ///< Calling convention
 
 // disable warning caused by memory layer

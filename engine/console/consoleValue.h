@@ -157,9 +157,9 @@ struct ConsoleValue
       }
    }
    
-   static inline void* addOffset(const void* base, uint64_t off)
+   static inline void* addOffset(const void* base, U64 off)
    {
-      return (!base) ? NULL : reinterpret_cast<void*>(reinterpret_cast<uintptr_t>(base) + static_cast<uintptr_t>(off));
+      return (!base) ? NULL : reinterpret_cast<void*>(reinterpret_cast<UINTPTR>(base) + static_cast<UINTPTR>(off));
    }
    
    inline bool isString() const
