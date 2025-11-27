@@ -1,0 +1,57 @@
+name: Run Tests
+on:
+  push:
+  workflow_dispatch:
+jobs:
+  ast-regression:
+    runs-on: ubuntu-latest
+
+    env:
+      VERIFY_BRANCH: verify_branch
+      TEST_SCRIPTS_DIR: tests/parser_samples
+      CS_BIN_NAME: csprintast
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install build deps
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential cmake p7zip-full
+      - name: Prepare AST regression scripts
+        run: |
+          set -euo pipefail
+          mkdir -p "$TEST_SCRIPTS_DIR"
+
+          if [ -z "${AST_CORPUS_REPO:-}" ] || [ -z "${AST_CORPUS_TOKEN:-}" ]; then
+            echo "No AST_CORPUS_REPO / AST_CORPUS_TOKEN; using in-repo tests only."
+            exit 0
+          fi
+
+          echo "Cloning AST corpus repo..."
+          git clone --depth 1 "https://${AST_CORPUS_TOKEN}@${AST_CORPUS_REPO}" /tmp/ast_corpus_repo
+          cd /tmp/ast_corpus_repo
+
+          shopt -s nullglob
+          bundles=( ./*.7z )
+
+          if [ ${#bundles[@]} -eq 0 ]; then
+            echo "No .7z bundles found in corpus repo root; nothing to extract."
+            exit 0
+          fi
+
+          for bundle in "${bundles[@]}"; do
+            echo "Extracting bundle: $bundle"
+            7z x -p"$AST_CORPUS_PASSWORD" -y "$bundle" -o"$TEST_SCRIPTS_DIR"
+          done
+        env:
+          AST_CORPUS_REPO:      ${{ secrets.AST_CORPUS_REPO }}
+          AST_CORPUS_TOKEN:     ${{ secrets.AST_CORPUS_TOKEN }}
+          AST_CORPUS_PASSWORD:  ${{ secrets.AST_CORPUS_PASSWORD }}
+
+      - name: Run AST regression script
+        run: |
+          ./tools/check_ast_regression.sh
