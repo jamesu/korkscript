@@ -192,4 +192,16 @@ inline U32 endianSwap(const U32 in_swap)
 #define Offset(x, cls) offsetof(cls, x)
 #endif
 
+inline dsize_t dAlignSize(const dsize_t size, const U16 alignment)
+{
+    return (size + (alignment - 1)) & ~(alignment - 1);
+}
+
+template <typename T>
+inline T* dAdvancePointer(T* ptr, dsize_t byte_stride) {
+    U8* byte_ptr = reinterpret_cast<U8*>(ptr);
+    byte_ptr += byte_stride;
+    return reinterpret_cast<T*>(byte_ptr);
+}
+
 #endif //_TORQUE_TYPES_H_
