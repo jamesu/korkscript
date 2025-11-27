@@ -162,7 +162,7 @@ U32 CompilerStringTable::add(const char *str, bool caseSens, bool tag)
    if(tag && len < 7) // alloc space for the numeric tag 1 for tag, 5 for # and 1 for nul
       len = 7;
    totalLen += len;
-   newStr->string = (char *) consoleAlloc(len);
+   newStr->string = (char *) consoleAlloc(dAlignSize(len, 8));
    newStr->len = len;
    newStr->tag = tag;
    dStrcpy(newStr->string, str);
