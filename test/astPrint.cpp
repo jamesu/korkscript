@@ -80,8 +80,19 @@ static inline void indent(int n) { while (n--) std::fputc(' ', stdout); }
 
 static inline const char* yesno(bool b) { return b ? "true" : "false"; }
 
-static inline const char* show(const char* s)      { return s ? s : "null"; }
+static inline const char* show(const char* s)
+{
+    if (!s) return "null";
 
+    std::string buf;
+    buf.clear();
+    buf.reserve(strlen(s));
+
+    for (const char* p = s; *p; ++p)
+        buf.push_back(std::tolower((unsigned char)*p));
+
+    return buf.c_str();
+}
 static void printNode(const StmtNode* n, int pad = 0);
 
 template <class T>
