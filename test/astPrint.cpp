@@ -110,6 +110,23 @@ template <class T>
 static void printChild(const char* key, const T* child, int pad) {
    indent(pad); printf("%s = ", key);
    if (!child) { puts("null"); return; }
+
+   // If we are NOT an expression, print everything on the same level and dont recurse
+   if (dynamic_cast<const ExprNode*>(child) == NULL) {
+      if (child->next) {
+         puts("{");
+         const StmtNode* it = child;
+         while (it) {
+            printNode(it, pad + 2);
+            it = it->next;
+            if (it) puts("");
+         }
+         indent(pad);
+         puts("}");
+         return;
+      }
+   }
+   
    printNode(child, pad);
 }
 
@@ -142,9 +159,6 @@ static void open(const char* klass, int pad) {
 }
 
 static void close(const StmtNode* n, int pad) {
-   if (n && n->next) {
-      printChild("next", n->next, pad + 2);
-   }
    indent(pad); puts("}");
 }
 
