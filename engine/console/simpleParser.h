@@ -200,20 +200,23 @@ private:
    // statement_list : (empty) | statement_list stmt
    StmtNode* parseStmtNodeListUntilSC()
    {
-      StmtNode* list = NULL;
+      StmtNode* listHead = NULL;
+      StmtNode* listTail = NULL;
       while (!atEnd() && !(LA().kind == TT::opCHAR && LA().ivalue == '}'))
       {
          StmtNode* s = parseStmtNode();
-         if (list)
+         if (listTail)
          {
-            list->append(s);
+            listTail->append(s);
+            listTail = s;
          }
          else
          {
-            list = s;
+            listHead = s;
+            listTail = s;
          }
       }
-      return list;
+      return listHead;
    }
    
    // Handles var lists
