@@ -1215,7 +1215,7 @@ template<class T> class SimNetDataBlockRef
 public:
    union
    {
-      uintptr_t mId;
+      UINTPTR mId;
       T* mDataBlock;
    };
    
@@ -1664,7 +1664,7 @@ template<class T> inline bool SimNetDataBlockRef<T>::resolve()
    if (isResolved())
       return true;
    
-   uintptr_t realId = mId >> 1;
+   UINTPTR realId = mId >> 1;
    if (realId == 0)
    {
       mDataBlock = NULL;
