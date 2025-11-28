@@ -12,4 +12,4 @@ mkdir -p "$BUILD_DIR"
 cd "$BUILD_DIR"
 
 cmake .. -DCMAKE_BUILD_TYPE=Release
-cmake --build . --target "$CS_BIN_NAME" -- -j"$(nproc)"
+cmake --build . -- -j"$(nproc)"
