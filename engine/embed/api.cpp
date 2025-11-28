@@ -967,6 +967,11 @@ void VmInternal::suspendCurrentFiber()
    mCurrentFiberState->suspend();
 }
 
+void Vm::throwFiber(U32 mask)
+{
+   mInternal->throwFiber(mask);
+}
+
 void VmInternal::throwFiber(U32 mask)
 {
    if (mCurrentFiberState == NULL)

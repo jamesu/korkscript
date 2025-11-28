@@ -93,6 +93,7 @@ struct VmInternal
    FiberRunResult resumeCurrentFiber(ConsoleValue value);
    FiberRunResult::State getCurrentFiberState();
    void* getCurrentFiberUserPtr();
+   void throwFiber(U32 mask);
    
    void validateReturnBufferSize(U32 size);
 

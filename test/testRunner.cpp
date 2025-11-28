@@ -73,7 +73,7 @@ ConsoleFunction(yieldFiber, S32, 2, 2, "value")
 
 ConsoleFunction(throwFiber, void, 2, 2, "value")
 {
-   vmPtr->throwMask(dAtoi(argv[1]));
+   vmPtr->throwFiber(dAtoi(argv[1]));
 }
 
 
