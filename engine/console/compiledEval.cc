@@ -2396,6 +2396,11 @@ void ExprEvalState::handleThrow(S32 throwIdx, TryItem* info, S32 minStackPos)
    }
 }
 
+void ExprEvalState::throwMask(U32 mask)
+{
+   lastThrow = mask; // should get caught by loop setup
+}
+
 void ExprEvalState::pushFrameRef(S32 stackIndex)
 {
    AssertFatal( stackIndex >= 0 && stackIndex < stack.size(), "You must be asking for a valid frame!" );

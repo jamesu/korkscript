@@ -6,6 +6,9 @@ include (CheckIncludeFiles)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+#set(CMAKE_C_FLAGS "-g -fsanitize=address,undefined")
+#set(CMAKE_CXX_FLAGS "-g -fsanitize=address,undefined")
+
 add_definitions(-DUNICODE -D_UNICODE -DINITGUIDE)
 
 include_directories(
@@ -96,6 +99,11 @@ set(KS_AST_PRINT_SRCS
 	${KS_SRCS}
 	test/astPrint.cpp
 )
+set(TEST_RUNNER_SRCS
+	${KS_SRCS}
+	${TORQUESIM_SRCS}
+	test/testRunner.cpp
+)
 
 
 set(TORQUESIM_BRIDGE_SRCS )
@@ -171,6 +179,7 @@ else()
 add_executable(csprintast ${KS_AST_PRINT_SRCS})
 add_executable(csapitest ${KS_API_TEST_SRCS})
 add_executable(torquetest ${KS_TORQUE_TEST_SRCS})
+add_executable(testrunner ${TEST_RUNNER_SRCS})
 
 if (ENABLE_WASM3_BRIDGE)
 	target_link_libraries(torquetest wasm3)
@@ -181,4 +190,5 @@ if (ENABLE_WASMTIME_BRIDGE)
 endif()
 
 target_include_directories(torquetest PRIVATE ./torqueSim)
+target_include_directories(testrunner PRIVATE ./torqueSim)
 endif()

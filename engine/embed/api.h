@@ -476,6 +476,7 @@ public:
    void* getCurrentFiberUserPtr();
    void cleanupFiber(FiberId fiber);
    void suspendCurrentFiber();
+   void throwFiber(U32 mask);
    FiberRunResult resumeCurrentFiber(ConsoleValue value);
 };
 

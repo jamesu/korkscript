@@ -317,6 +317,7 @@ public:
    void suspend(); // Suspends fiber; NOTE: use return value from function to set the fiber value.
    KorkApi::FiberRunResult resume(KorkApi::ConsoleValue value); // Resumes fiber
    void handleThrow(S32 throwIdx, TryItem* info, S32 minStackPos);
+   void throwMask(U32 mask);
    
    ConsoleFrame& getCurrentFrame();
    

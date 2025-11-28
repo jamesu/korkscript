@@ -71,3 +71,7 @@ jobs:
       - name: Run AST regression script
         run: |
           ./tools/check_ast_regression.sh
+
+      - name: Run Generic test script
+        run: |
+          ./tools/run_test_scripts.sh

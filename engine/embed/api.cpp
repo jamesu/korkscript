@@ -874,6 +874,8 @@ VmInternal::~VmInternal()
    ExprEvalState* mCurrentFiberState;
    InternalFiberList mFiberStates;
    ClassChunker<ExprEvalState> mFiberAllocator;
+
+   delete[] mAllocBase.func;
    
    
    delete mTelDebugger;
@@ -963,6 +965,14 @@ void VmInternal::suspendCurrentFiber()
       return;
    
    mCurrentFiberState->suspend();
+}
+
+void VmInternal::throwFiber(U32 mask)
+{
+   if (mCurrentFiberState == NULL)
+      return;
+   
+   mCurrentFiberState->throwMask(mask);
 }
 
 FiberRunResult::State VmInternal::getCurrentFiberState()
