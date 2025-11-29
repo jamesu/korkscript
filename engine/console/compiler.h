@@ -431,7 +431,7 @@ public:
    {
       U32* ptr = (U32*)allocCode(8);
       ptr[0] = 0;
-      ptr[1] = 1;
+      ptr[1] = 0;
       mResources->STEtoCode(mResources, code, mCodePos, (U32*)ptr);
 #ifdef DEBUG_CODESTREAM
       printf("code[%u] = %s\n", mCodePos, code);
