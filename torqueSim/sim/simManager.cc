@@ -447,7 +447,7 @@ void SimDataBlockGroup::sort()
 
 // BEGIN T2D BLOCK (moved back to here)
 
-bool SimObject::registerObject(KorkApi::Vm* vm, KorkApi::VMObject* evalObject)
+bool SimObject::registerObject(KorkApi::Vm* inVm, KorkApi::VMObject* evalObject)
 {
    AssertFatal( !isProperlyAdded(), "reigsterObject - Object already registered!");
    
@@ -469,12 +469,13 @@ bool SimObject::registerObject(KorkApi::Vm* vm, KorkApi::VMObject* evalObject)
    // Register this with the VM if not already registered
    if (evalObject != NULL)
    {
-      setupVM(vm, evalObject);
+      setupVM(inVm, evalObject);
    }
-   else if (vm == NULL || vmObject == NULL)
+   else if (inVm == NULL || vmObject == NULL)
    {
-      vm = Con::getVM();
-      vmObject = vm->createVMObject(getClassRep()->getRegisteredId(), this); // NOTE: rc=1
+      inVm = Con::getVM();
+      vm = inVm;
+      vmObject = inVm->createVMObject(getClassRep()->getRegisteredId(), this); // NOTE: rc=1
    }
 
    mSimFlags |= ~(Deleted | Removed);

@@ -4,7 +4,7 @@ namespace KorkApi
 {
 
 // Duck typed cvalue
-#pragma pack(1)
+#pragma pack(push, 2)
 struct ConsoleValue
 {
    struct AllocBase
@@ -96,14 +96,14 @@ struct ConsoleValue
    {
       typeId = TypeInternalString;
       setZone(zone);
-      *((const char**)&cvalue) = p;
+      cvalue = (UINTPTR)p;
    }
    
    inline void setDynString(char* p, Zone zone=ZoneExternal)
    {
       typeId = TypeInternalString;
       setZone(zone);
-      *((char**)&cvalue) = p;
+      cvalue = (UINTPTR)p;
    }
    
    inline void setTyped(U64 p, U16 customTypeId, Zone zone=ZoneExternal)
@@ -116,13 +116,15 @@ struct ConsoleValue
    inline U64 getInt(U64 def = 0) const
    {
       if (typeId != TypeInternalUnsigned) return def;
-      return *((U64*)&cvalue);
+      U64 val = cvalue;
+      return *((U64*)&val);
    }
    
    inline F64 getFloat(F64 def = 0.0) const
    {
       if (typeId != TypeInternalNumber) return def;
-      return *((F64*)&cvalue);
+      U64 val = cvalue;
+      return *((F64*)&val);
    }
 
    void* ptr() const
@@ -132,8 +134,9 @@ struct ConsoleValue
 
    void* advancePtr(size_t bytes)
    {
-      *((char**)&cvalue) += bytes;
-      return *((char**)&cvalue);
+      cvalue += bytes;
+      U64 val = cvalue;
+      return *((char**)&val);
    }
    
    void* evaluatePtr(AllocBase base = {}) const
@@ -183,6 +186,6 @@ struct ConsoleValue
       return typeId == TypeInternalString && cvalue == 0;
    }
 };
-#pragma pack()
+#pragma pack(pop)
 
 }

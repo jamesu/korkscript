@@ -84,9 +84,6 @@ public:
       /// Usage doc string.
       const char* mUsage;
       
-      /// Whether this is a constant that cannot be assigned to.
-      bool mIsConstant;
-      
    protected:
       
       // NOTE: This is protected to ensure no one outside
@@ -97,6 +94,11 @@ public:
       // large strings in function calls can be a problem.
       KorkApi::ConsoleValue mConsoleValue;
       KorkApi::ConsoleHeapAllocRef mHeapAlloc;
+
+   protected:
+      
+      /// Whether this is a constant that cannot be assigned to.
+      bool mIsConstant;
 
    public:
       
