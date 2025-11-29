@@ -55,7 +55,7 @@ struct VmInternal
    Vector<U8> mReturnBuffer;
 
    U32 mConvIndex;
-   char mTempStringConversions[MaxTempStringSize][MaxStringConvs];
+   char mTempStringConversions[MaxStringConvs][MaxTempStringSize];
 
    Compiler::Resources* mCompilerResources;
    bool mOwnsResources;

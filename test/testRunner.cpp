@@ -107,6 +107,8 @@ int main(int argc, char **argv)
    
    Con::evaluate(data);
 
+   delete[] data;
+
    Con::printf("Tests passed: %i, failed: %i\n", gNumPasses, gNumFails);
 
 	return gReturnCode;
