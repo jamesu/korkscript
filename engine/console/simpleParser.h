@@ -332,6 +332,7 @@ private:
    CatchStmtNode* parseCatchChain()
    {
       CatchStmtNode* startNode = NULL;
+      CatchStmtNode* tailNode = NULL;
       S32 catchLineNo = 0;
       
       while (match(TT::rwCATCH, &catchLineNo))
@@ -346,16 +347,18 @@ private:
             return NULL;
          }
          
-         // NOTE: Should be in reverse order so first catch will be at top of stack
+         // NOTE: Should be in definition order despite the stack implying otherwise,
+         // since the actual case statements are checked in the bytecode not on the stack.
          CatchStmtNode* newCond = CatchStmtNode::alloc(mResources, catchLineNo, testExpr, condBlock);
          if (startNode)
          {
-            newCond->next = startNode;
-            startNode = newCond;
+            tailNode->append(newCond);
+            tailNode = newCond;
          }
          else
          {
             startNode = newCond;
+            tailNode = newCond;
          }
       }
       

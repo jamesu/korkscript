@@ -307,7 +307,7 @@ public:
    
    /// Puts a reference to an existing stack frame
    /// on the top of the stack.
-   void pushFrameRef(S32 stackIndex);
+   void pushFrameRef(S32 stackIndex, CodeBlock* codeBlock, U32 ip);
    
    U32 getStackDepth() const
    {
@@ -318,7 +318,7 @@ public:
    KorkApi::FiberRunResult runVM(); // Runs VM
    void suspend(); // Suspends fiber; NOTE: use return value from function to set the fiber value.
    KorkApi::FiberRunResult resume(KorkApi::ConsoleValue value); // Resumes fiber
-   void handleThrow(S32 throwIdx, TryItem* info, S32 minStackPos);
+   bool handleThrow(S32 throwIdx, TryItem* info, S32 minStackPos);
    void throwMask(U32 mask);
    
    ConsoleFrame& getCurrentFrame();

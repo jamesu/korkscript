@@ -15,6 +15,7 @@
  */
 
 bool gPrintBytecode = false;
+bool gEnableExtensions = false;
 
 void MyLogger(U32 level, const char *consoleLine, void* userPtr)
 {
@@ -412,6 +413,20 @@ static void printNode(const StmtNode* n, int pad) {
       close(n, pad);
       return;
    }
+   if (auto x = dynamic_cast<const TryStmtNode*>(n)) {
+      open("TryStmtNode", pad);
+      printChild("tryBlock",   x->tryBlock,    pad + 2);
+      printList("catchBlocks", x->catchBlocks, pad + 2);
+      close(n, pad);
+      return;
+   }
+   if (auto x = dynamic_cast<const CatchStmtNode*>(n)) {
+      open("CatchStmtNode", pad);
+      printChild("testExpr",    x->testExpr,    pad + 2);
+      printList("catchBlock",  x->catchBlock,  pad + 2);
+      close(n, pad);
+      return;
+   }
    
    open(typeid(*n).name(), pad);
    close(n, pad);
@@ -443,6 +458,7 @@ void dumpToInstructionsPrint(Compiler::Resources& res, StmtNode* rootNode)
    };
    cfg.logFn = MyLogger;
    cfg.userResources = &res;
+   cfg.enableExceptions = gEnableExtensions;
 
    KorkApi::Vm* vm = KorkApi::createVM(&cfg);
 
@@ -478,6 +494,8 @@ bool printAST(const char* buf, const char* filename)
    Compiler::Resources res;
    SimpleLexer::Tokenizer lex(StringTable, theBuf, filename);
    SimpleParser::ASTGen astGen(&lex, &res);
+
+   res.allowExceptions = gEnableExtensions;
    
    StmtNode* rootNode = NULL;
    
@@ -519,6 +537,10 @@ int procMain(int argc, char **argv)
       if (strcmp(argv[i], "-b") == 0)
       {
          gPrintBytecode = true;
+      }
+      if (strcmp(argv[i], "-e") == 0)
+      {
+         gEnableExtensions = true;
       }
    }
    

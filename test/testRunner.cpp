@@ -71,9 +71,9 @@ ConsoleFunction(yieldFiber, S32, 2, 2, "value")
    return dAtoi(argv[1]); // NOTE: this will be set as yield value
 }
 
-ConsoleFunction(throwFiber, void, 2, 2, "value")
+ConsoleFunction(throwFiber, void, 3, 3, "value, soft")
 {
-   vmPtr->throwFiber(dAtoi(argv[1]));
+   vmPtr->throwFiber(((U32)dAtoi(argv[1])) | (dAtob(argv[2]) ? BIT(31) : 0));
 }
 
 

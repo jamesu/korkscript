@@ -92,6 +92,7 @@ struct VmInternal
    void suspendCurrentFiber();
    FiberRunResult resumeCurrentFiber(ConsoleValue value);
    FiberRunResult::State getCurrentFiberState();
+   void clearCurrentFiberError();
    void* getCurrentFiberUserPtr();
    void throwFiber(U32 mask);
    

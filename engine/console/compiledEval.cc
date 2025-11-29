@@ -603,7 +603,7 @@ ConsoleFrame& CodeBlock::setupExecFrame(
          // Copy a reference to an existing stack frame onto the top of the stack.
          // Any change to locals during this new frame also affects the original frame.
          S32 stackIndex = eval.vmFrames.size() - setFrame - 1;
-         eval.pushFrameRef(stackIndex);
+         eval.pushFrameRef(stackIndex, this, ip);
       }
       
       newFrame = eval.vmFrames.last();
@@ -697,7 +697,7 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
    }
    
    KorkApi::ConsoleValue val = KorkApi::ConsoleValue();
-   U32 startFrameSize = vmFrames.size();
+   S32 startFrameSize = vmFrames.size();
    lastThrow = 0;
    
    KorkApi::FiberRunResult result;
@@ -2180,25 +2180,40 @@ execFinished:
    
    if (lastThrow != 0)
    {
-      for (U16 i=frame._TRY; i>=0; i--)
+      frame.ip = ip;
+      
+      for (S32 i=frame._TRY-1; i>=0; i--)
       {
          TryItem& item = evalState.tryStack[i];
+         
+         // If item is before the frame we started at, ignore it
+         if ((S32)item.frameDepth < startFrameSize-1)
+         {
+            break;
+         }
+         
          if ((lastThrow & item.mask) != 0)
          {
             // Acceptable handler
-            handleThrow(i, &item, startFrameSize-1);
-            lastThrow = 0;
-            AssertFatal(vmFrames.size() > 0, "Too many frames popped!");
-            loopFrameSetup = true;
-            goto execFinished;
+            if (handleThrow(i, &item, startFrameSize-1))
+            {
+               lastThrow = 0;
+               AssertFatal(vmFrames.size() > 0, "Too many frames popped!");
+               loopFrameSetup = true;
+               goto execFinished;
+            }
          }
       }
       
       // If nothing handled error, this is bad. Error the entire fiber
-      FIBER_STATE(KorkApi::FiberRunResult::ERROR);
-      handleThrow(-1, NULL, startFrameSize-1);
-      result.state = mState;
-      result.value = KorkApi::ConsoleValue::makeNumber(lastThrow);
+      // UNLESS last bit 31 is set in which case continue execution.
+      if ((lastThrow & BIT(31)) == 0)
+      {
+         FIBER_STATE(KorkApi::FiberRunResult::ERROR);
+         handleThrow(-1, NULL, startFrameSize-1);
+         result.state = mState;
+         result.value = KorkApi::ConsoleValue::makeNumber(lastThrow);
+      }
       lastThrow = 0;
       return result;
    }
@@ -2358,15 +2373,26 @@ void ExprEvalState::popFrame()
    //Con::printf("ExprEvalState::popFrame");
 }
 
-void ExprEvalState::handleThrow(S32 throwIdx, TryItem* info, S32 minStackPos)
+bool ExprEvalState::handleThrow(S32 throwIdx, TryItem* info, S32 minStackPos)
 {
    if (vmFrames.size() == 0)
    {
-      return;
+      return false;
    }
    
    ConsoleFrame* curFrame = vmFrames.last();
    S32 minFrame = std::max<S32>(minStackPos, info ? info->frameDepth : -1);
+   
+   // Exit native function state so we dont get weird errors in loop
+   if (curFrame->inNativeFunction)
+   {
+      mSTR.popFrame();
+      
+      if(curFrame->lastCallType == FuncCallExprNode::MethodCall)
+         curFrame->thisObject = curFrame->saveObject;
+      
+      curFrame->inNativeFunction = false;
+   }
    
    ConsoleFrame* frame = minFrame < 0 ? NULL : vmFrames[minFrame];
    U32 minObj = frame ? frame->_OBJ : 0;
@@ -2388,12 +2414,20 @@ void ExprEvalState::handleThrow(S32 throwIdx, TryItem* info, S32 minStackPos)
    mSTR.setStringValue("");
    
    // If we have a frame left, try to restore it (UNLESS we are not on the right frame)
-   if (vmFrames.size() > 0 && info->frameDepth == vmFrames.size()-1)
+   if (vmFrames.size() > 0 &&
+       info &&
+       info->frameDepth == vmFrames.size()-1)
    {
       curFrame = vmFrames.last();
       curFrame->_TRY = throwIdx > 0 ? throwIdx-1 : 0; // pop try
       curFrame->ip = info->ip;
    }
+   else
+   {
+      return false; // ran out of frames in this case
+   }
+   
+   return true;
 }
 
 void ExprEvalState::throwMask(U32 mask)
@@ -2401,13 +2435,17 @@ void ExprEvalState::throwMask(U32 mask)
    lastThrow = mask; // should get caught by loop setup
 }
 
-void ExprEvalState::pushFrameRef(S32 stackIndex)
+void ExprEvalState::pushFrameRef(S32 stackIndex, CodeBlock* codeBlock, U32 ip)
 {
    AssertFatal( stackIndex >= 0 && stackIndex < stack.size(), "You must be asking for a valid frame!" );
    ConsoleFrame *newFrame = new ConsoleFrame(vmInternal, this);
    newFrame->dictionary = new Dictionary(vmInternal, vmFrames[stackIndex]->dictionary);
    vmFrames.push_back(newFrame);
-   newFrame->copyFrom(vmFrames[stackIndex], true);
+   
+   ConsoleFrame* oldFrame = vmFrames[stackIndex];
+   newFrame->copyFrom(oldFrame, true);
+   newFrame->ip = ip;
+   newFrame->codeBlock = codeBlock;
    newFrame->codeBlock->incRefCount();
    newFrame->isReference = true;
    mStackDepth ++;

@@ -199,7 +199,7 @@ public:
       return map[(unsigned int)k];
    }
    
-   std::string stringValue(Token& t)
+   std::string stringValue(const Token& t)
    {
       if (t.kind == TokenType::TAGATOM || t.kind == TokenType::STRATOM || t.kind == TokenType::DOCBLOCK)
       {
@@ -1044,6 +1044,8 @@ private:
          {"while",      TokenType::rwWHILE},
          {"do",         TokenType::rwDO},
          {"if",         TokenType::rwIF},
+         {"try",         TokenType::rwTRY},
+         {"catch",         TokenType::rwCATCH},
          {"foreach$",   TokenType::rwFOREACHSTR},
          {"foreach",    TokenType::rwFOREACH},
          {"for",        TokenType::rwFOR},

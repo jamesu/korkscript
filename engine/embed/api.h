@@ -473,6 +473,7 @@ public:
    FiberId createFiber(void* userPtr = NULL); // needs exec too
    FiberId getCurrentFiber();
    FiberRunResult::State getCurrentFiberState();
+   void clearCurrentFiberError();
    void* getCurrentFiberUserPtr();
    void cleanupFiber(FiberId fiber);
    void suspendCurrentFiber();

@@ -1595,7 +1595,9 @@ U32 FunctionDeclStmtNode::compileStmt(CodeStream &codeStream, U32 ip)
 U32 CatchStmtNode::compileStmt(CodeStream &codeStream, U32 ip)
 {
    if (catchBlock)
-      ip = catchBlock->compileStmt(codeStream, ip);
+   {
+      ip = compileBlock(catchBlock, codeStream, ip);
+   }
    return ip;
 }
 
@@ -1605,12 +1607,12 @@ U32 TryStmtNode::compileStmt(CodeStream &codeStream, U32 ip)
    if (!catchBlocks || !tryBlock)
    {
       if (tryBlock)
-         ip = tryBlock->compileStmt(codeStream, ip);
+         ip = compileBlock(tryBlock, codeStream, ip);
       return ip;
    }
 
    // Pushed combined catch mask to uint stack
-   bool first = false;
+   bool first = true;
    for (CatchStmtNode* c = (CatchStmtNode*)catchBlocks; c; c=(CatchStmtNode*)c->next)
    {
       // Load to uint stack
@@ -1629,7 +1631,7 @@ U32 TryStmtNode::compileStmt(CodeStream &codeStream, U32 ip)
    // Emit the main try block + its jmp at the end
    codeStream.emit(OP_PUSH_TRY_STACK);
    endTryFixOffset = codeStream.emit(0); // -> catch block code
-   ip = tryBlock->compileStmt(codeStream, ip);
+   ip = compileBlock(tryBlock, codeStream, ip);
    codeStream.emit(OP_POP_TRY);
    // Jump past catch blocks to end
    startEndJmpOffset = codeStream.emit(OP_JMP);
@@ -1647,7 +1649,7 @@ U32 TryStmtNode::compileStmt(CodeStream &codeStream, U32 ip)
       U32 afterCatchBlockIp = codeStream.emit(0);
 
       // If test passes, we run the catch block
-      c->catchBlock->compileStmt(codeStream, codeStream.tell());
+      compileBlock(c->catchBlock, codeStream, codeStream.tell());
 
       // Use try block exit JMP to exit
       codeStream.emit(OP_JMP);

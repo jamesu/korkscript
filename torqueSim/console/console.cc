@@ -224,6 +224,11 @@ void init()
 {
    // Setup VM
    KorkApi::Config config = {};
+
+   // Extra stuff
+   config.enableExceptions = true;
+
+
    config.mallocFn = [](size_t size, void*){
       return dMalloc(size);
    };
@@ -1125,6 +1130,7 @@ const char *execute(S32 argc, const char *argv[])
       KorkApi::ConsoleValue localArgv[StringStack::MaxArgs];
       StringStack::convertArgsReverse(sVM->mInternal, argc, argv, localArgv);
       sVM->callNamespaceFunction(sVM->getGlobalNamespace(), funcName, argc, localArgv, retValue);
+      sVM->clearCurrentFiberError();
 
       return (const char*)retValue.evaluatePtr(sVM->getAllocBase());
 

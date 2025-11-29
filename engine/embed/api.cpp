@@ -985,6 +985,19 @@ FiberRunResult::State VmInternal::getCurrentFiberState()
    return mCurrentFiberState ? mCurrentFiberState->mState : FiberRunResult::ERROR;
 }
 
+void VmInternal::clearCurrentFiberError()
+{
+   // NOTE: this is needed as its possible for native functions to throw errors,
+   // but we want to continue executing so long as we have active frames.
+   // (e.g. throw from an eval)
+   if (mCurrentFiberState &&
+       mCurrentFiberState->mState == FiberRunResult::ERROR &&
+       mCurrentFiberState->vmFrames.size() > 0)
+   {
+      mCurrentFiberState->mState = FiberRunResult::RUNNING;
+   }
+}
+
 void* VmInternal::getCurrentFiberUserPtr()
 {
    return mCurrentFiberState ? mCurrentFiberState->mUserPtr : NULL;
@@ -1201,7 +1214,10 @@ F64 VmInternal::valueAsFloat(ConsoleValue v)
       return v.getFloat();
       break;
       case KorkApi::ConsoleValue::TypeInternalString:
-      return atof((const char*)v.evaluatePtr(mAllocBase));
+      {
+         const char* ptr = (const char*)v.evaluatePtr(mAllocBase);
+         return ptr ? atof(ptr) : 0.0;
+      }
       break;
       default:
          {
@@ -1232,7 +1248,10 @@ S64 VmInternal::valueAsBool(ConsoleValue v)
       return v.getFloat();
       break;
       case KorkApi::ConsoleValue::TypeInternalString:
-      return dAtob((const char*)v.evaluatePtr(mAllocBase));
+      {
+         const char* ptr = (const char*)v.evaluatePtr(mAllocBase);
+         return ptr ? dAtob(ptr) : false;
+      }
       break;
       default:
          {
@@ -1264,7 +1283,10 @@ S64 VmInternal::valueAsInt(ConsoleValue v)
       return v.getFloat();
       break;
       case KorkApi::ConsoleValue::TypeInternalString:
-      return atoi((const char*)v.evaluatePtr(mAllocBase));
+      {
+         const char* ptr = (const char*)v.evaluatePtr(mAllocBase);
+         return ptr ? atoi(ptr) : 0;
+      }
       break;
       default:
          {
@@ -1454,6 +1476,11 @@ void Vm::suspendCurrentFiber()
 FiberRunResult::State Vm::getCurrentFiberState()
 {
    return mInternal->getCurrentFiberState();
+}
+
+void Vm::clearCurrentFiberError()
+{
+   return mInternal->clearCurrentFiberError();
 }
 
 void* Vm::getCurrentFiberUserPtr()

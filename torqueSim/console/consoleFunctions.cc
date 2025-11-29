@@ -783,7 +783,9 @@ ConsoleFunctionGroupBegin(MetaScripting, "Functions that let you manipulate the 
 
 ConsoleFunction(call, const char *, 2, 0, "call(funcName [,args ...])")
 {
-   return Con::execute(argc - 1, argv + 1);
+   const char* result = Con::execute(argc - 1, argv + 1);
+   vmPtr->clearCurrentFiberError();
+   return result;
 }
 
 static U32 execDepth = 0;
@@ -951,6 +953,7 @@ ConsoleFunction(exec, bool, 2, 4, "exec(fileName [, nocalls [,journalScript]])")
       // We're all compiled, so let's run it.
       Con::printf("Loading compiled script %s.", scriptFileName);
       vmPtr->execCodeBlock(blockSize, blockBytes, scriptFileName, noCalls, 0);
+      vmPtr->clearCurrentFiberError();
 
       dFree(blockBytes);
       ret = true;
@@ -965,6 +968,7 @@ ConsoleFunction(exec, bool, 2, 4, "exec(fileName [, nocalls [,journalScript]])")
       if (vmPtr->compileCodeBlock(script, scriptFileName, &blockSize, &blockBytes))
       {
          vmPtr->execCodeBlock(blockSize, blockBytes, scriptFileName, noCalls, 0);
+         vmPtr->clearCurrentFiberError();
          dFree(blockBytes);
          ret = true;
       }
@@ -984,7 +988,9 @@ ConsoleFunction(exec, bool, 2, 4, "exec(fileName [, nocalls [,journalScript]])")
 ConsoleFunction(eval, const char *, 2, 2, "eval(consoleString)")
 {
    argc;
-   return Con::evaluate(argv[1], false, NULL);
+   const char* returnValue = Con::evaluate(argv[1], false, NULL);
+   vmPtr->clearCurrentFiberError();
+   return returnValue;
 }
 
 ConsoleFunction(getVariable, const char *, 2, 2, "(string varName)")

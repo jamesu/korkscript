@@ -1384,7 +1384,43 @@ void CodeBlock::dumpInstructions( U32 startIp, bool upToReturn, bool downcaseStr
             mVM->printf(0, "%i: OP_ITER_END", ip - 1 );
             break;
          }
+         
+         case OP_PUSH_TRY:
+         {
+            U32 jmpMask = code[ip];
+            U32 jmpIP = code[ip+1];
+            mVM->printf(0, "%i: OP_PUSH_TRY mask=%u jmpIP=%u", ip - 1,  jmpMask, jmpIP);
+            ip += 2;
+            break;
+         }
+         
+         case OP_PUSH_TRY_STACK:
+         {
+            U32 jmpIP = code[ip];
+            mVM->printf(0, "%i: OP_PUSH_TRY_STACK jmpIP=%u", ip - 1, jmpIP);
+            ++ip;
+            break;
+         }
+         
+         case OP_THROW:
+         {
+            U32 throwMask = code[ip];
+            mVM->printf(0, "%i: OP_THROW %u", ip - 1, throwMask);
+            ++ip;
+            break;
+         }
+         
+         case OP_POP_TRY:
+         {
+            mVM->printf(0, "%i: OP_POP_TRY", ip - 1);
+            break;
+         }
 
+         case OP_DUP_UINT:
+         {
+            mVM->printf(0, "%i: OP_DUP_UINT", ip - 1);
+            break;
+         }
          default:
             mVM->printf(0, "%i: !!INVALID!!", ip - 1 );
             break;
