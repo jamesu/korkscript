@@ -206,6 +206,7 @@ public:
       , _ITER(0)
       , _OBJ(0)
       , _STARTOBJ(0)
+      , _TRY(0)
       , currentNewObject(vm)
       , prevObject(vm)
       , curObject(vm)
