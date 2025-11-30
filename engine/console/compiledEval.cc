@@ -1827,6 +1827,9 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
                         {
                            mLastFiberValue = KorkApi::ConsoleValue::makeString(ret); // NOTE: none of these should yield
                         }
+                        
+                        frame.inNativeFunction = true;
+                        loopFrameSetup = true;
                         goto execFinished;
                      }
                      case Namespace::Entry::IntCallbackType:
@@ -2213,9 +2216,11 @@ execFinished:
          handleThrow(-1, NULL, startFrameSize-1);
          result.state = mState;
          result.value = KorkApi::ConsoleValue::makeNumber(lastThrow);
+         AssertFatal(vmFrames.size() == startFrameSize, "This is bad");
+         evalState.popFrame();
+         return result;
       }
       lastThrow = 0;
-      return result;
    }
    
    // Do we need to setup a new frame? if so skip back to start

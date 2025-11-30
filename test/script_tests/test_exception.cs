@@ -203,14 +203,14 @@ function test_nativeBound()
       $ehLog = $ehLog @ "RC1";
 
       // should exit to here
-      $fudge5 = "caramel";
+      $fudge21 = "caramel";
    }
    catch (4)
    {
       $ehLog = $ehLog @ "CATCH4";
    }
    $fudge22 = "lemon";
-   testString("exc.nestedThrow", $ehLog, "L2L2XRC1");
+   testString("exc.nativeBound", $ehLog, "L2L2XRC1");
 }
 
 
@@ -234,6 +234,7 @@ testString("exc.test7.2", $fudge8, "lemon");
 
 
 test_nativeBound();
+testString("exc.test8.1", $fudge21, "caramel");
 testString("exc.test8.1", $fudge22, "lemon");
 
 

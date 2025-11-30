@@ -995,6 +995,7 @@ void VmInternal::clearCurrentFiberError()
        mCurrentFiberState->vmFrames.size() > 0)
    {
       mCurrentFiberState->mState = FiberRunResult::RUNNING;
+      mCurrentFiberState->lastThrow = 0;
    }
 }
 
