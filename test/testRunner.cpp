@@ -76,6 +76,40 @@ ConsoleFunction(throwFiber, void, 3, 3, "value, soft")
    vmPtr->throwFiber(((U32)dAtoi(argv[1])) | (dAtob(argv[2]) ? BIT(31) : 0));
 }
 
+ConsoleFunction(createFiber, const char*, 1, 1, "")
+{
+   KorkApi::FiberId fiberId = vmPtr->createFiber();
+   KorkApi::ConsoleValue cv = KorkApi::ConsoleValue::makeUnsigned(fiberId);
+   return vmPtr->valueAsString(cv);
+}
+
+ConsoleFunction(evalInFiber, const char*, 3, 3, "fiberId, code")
+{
+   KorkApi::FiberId existingFiberId = vmPtr->getCurrentFiber();
+   
+   KorkApi::FiberId fiberId = (KorkApi::FiberId)std::atoll(argv[1]);
+   vmPtr->setCurrentFiber(fiberId);
+   
+   const char* returnValue = Con::evaluate(argv[2], false, NULL);
+   vmPtr->clearCurrentFiberError();
+   
+   vmPtr->setCurrentFiber(existingFiberId);
+   return returnValue;
+}
+
+ConsoleFunction(resumeFiber, const char*, 3, 3, "fiberId, value")
+{
+   KorkApi::FiberId existingFiberId = vmPtr->getCurrentFiber();
+   
+   KorkApi::FiberId fiberId = (KorkApi::FiberId)std::atoll(argv[1]);
+   vmPtr->setCurrentFiber(fiberId);
+   
+   KorkApi::FiberRunResult result = vmPtr->resumeCurrentFiber(KorkApi::ConsoleValue::makeString(argv[2]));
+   
+   vmPtr->setCurrentFiber(existingFiberId);
+   return vmPtr->valueAsString(result.value);
+}
+
 
 void MyLogger(U32 level, const char *consoleLine, void*)
 {

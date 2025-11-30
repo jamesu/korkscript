@@ -1093,7 +1093,7 @@ const char *evaluate(const char* string, bool echo, const char *fileName)
       fileName = StringTable->insert(fileName);
 
    KorkApi::ConsoleValue retValue = sVM->evalCode(string, fileName);
-   return (const char*)retValue.evaluatePtr(sVM->getAllocBase());
+   return sVM->valueAsString(retValue);
 }
 //------------------------------------------------------------------------------
 const char *evaluatef(const char* string, ...)
@@ -1108,7 +1108,7 @@ const char *evaluatef(const char* string, ...)
       va_end (args);
 
       KorkApi::ConsoleValue retValue = sVM->evalCode(buffer, NULL);
-      result = (const char*)retValue.evaluatePtr(sVM->getAllocBase());
+      result = sVM->valueAsString(retValue);
 
       delete [] buffer;
       buffer = NULL;
@@ -1132,7 +1132,7 @@ const char *execute(S32 argc, const char *argv[])
       sVM->callNamespaceFunction(sVM->getGlobalNamespace(), funcName, argc, localArgv, retValue);
       sVM->clearCurrentFiberError();
 
-      return (const char*)retValue.evaluatePtr(sVM->getAllocBase());
+      return sVM->valueAsString(retValue);
 
 #ifdef TORQUE_MULTITHREAD
    }
@@ -1166,7 +1166,7 @@ const char *execute(SimObject *object, S32 argc, const char *argv[],bool thisCal
       sVM->callObjectFunction(object->getVMObject(), funcName, argc, localArgv, retValue);
       object->popScriptCallbackGuard();
 
-      return (const char*)retValue.evaluatePtr(sVM->getAllocBase());
+      return sVM->valueAsString(retValue);
    }
    warnf(ConsoleLogEntry::Script, "Con::execute - %d has no namespace: %s", object->getId(), argv[0]);
    return "";

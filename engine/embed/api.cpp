@@ -925,9 +925,8 @@ FiberId VmInternal::createFiber(void* userPtr)
 {
    ExprEvalState* newState = new ExprEvalState(this);
    InternalFiberList::HandleType handle = mFiberStates.allocListHandle(newState);
-   newState->mSTR.mFuncId = handle.getIndex();
+   newState->mSTR.initForFiber(handle.getIndex());
    newState->mUserPtr = userPtr;
-   mAllocBase.func[handle.getIndex()] = newState->mSTR.mBuffer;
    return handle.getValue();
 }
 

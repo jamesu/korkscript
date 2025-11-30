@@ -62,7 +62,7 @@ struct StringStack
    U8 mType; // current type
    
    KorkApi::ConsoleValue::AllocBase* mAllocBase;
-   KorkApi::TypeInfo* mTypes;
+   KorkApi::TypeInfo** mTypes;
 
    U16 mFuncId;
    U32 mNumFrames;
@@ -85,7 +85,7 @@ struct StringStack
       }
    }
 
-   StringStack(KorkApi::ConsoleValue::AllocBase* allocBase = NULL, KorkApi::TypeInfo* typeInfos = NULL)
+   StringStack(KorkApi::ConsoleValue::AllocBase* allocBase = NULL, KorkApi::TypeInfo** typeInfos = NULL)
    {
       mBufferSize = 0;
       mBuffer = NULL;
@@ -96,9 +96,14 @@ struct StringStack
       mStartStackSize = 0;
       mFunctionOffset = 0;
       mAllocBase = allocBase;
-      validateBufferSize(8192);
       mType = KorkApi::ConsoleValue::TypeInternalString;
       mTypes = typeInfos;
+   }
+
+   void initForFiber(U32 fiberId)
+   {
+      mFuncId = fiberId;
+      validateBufferSize(8192);
    }
 
    /// Set the top of the stack to be an integer value.
@@ -187,7 +192,7 @@ struct StringStack
          }
          else
          {
-            mLen = mTypes[v.typeId].size;
+            mLen = (*mTypes)[v.typeId].size;
          }
       }
    }
@@ -239,12 +244,12 @@ struct StringStack
       if (mType == KorkApi::ConsoleValue::TypeInternalString || mType >= KorkApi::ConsoleValue::TypeBeginCustom)
       {
          // Strings and types are put on stack
-         return KorkApi::ConsoleValue::makeRaw(&mBuffer[mStart] - &mBuffer[0], mType, KorkApi::ConsoleValue::ZoneFunc);
+         return KorkApi::ConsoleValue::makeRaw(&mBuffer[mStart] - &mBuffer[0], mType, (KorkApi::ConsoleValue::Zone)(KorkApi::ConsoleValue::ZoneFunc + mFuncId));
       }
       else
       {
          // Raw values are just placed directly on the stack
-         return KorkApi::ConsoleValue::makeRaw(*((U64*)&mBuffer[mStart]), mType, KorkApi::ConsoleValue::ZoneFunc);
+         return KorkApi::ConsoleValue::makeRaw(*((U64*)&mBuffer[mStart]), mType, (KorkApi::ConsoleValue::Zone)(KorkApi::ConsoleValue::ZoneFunc + mFuncId));
       }
    }
 

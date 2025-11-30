@@ -594,7 +594,7 @@ void Dictionary::validate()
                "Dictionary::validate() - Dictionary not owner of own hashtable!" );
 }
 
-ExprEvalState::ExprEvalState(KorkApi::VmInternal* vm): mSTR(&vm->mAllocBase)
+ExprEvalState::ExprEvalState(KorkApi::VmInternal* vm): mSTR(&vm->mAllocBase, vm->mTypes.root())
 {
    mAllocNumber = 0;
    mGeneration = 0;

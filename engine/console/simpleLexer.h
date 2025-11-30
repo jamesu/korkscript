@@ -761,7 +761,7 @@ private:
       {
          // integer
          Token t = make(TokenType::INTCONST);
-         t.ivalue = std::stoi(s);
+         t.ivalue = std::stoll(s);
          return t;
       }
    }

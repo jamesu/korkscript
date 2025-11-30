@@ -152,6 +152,7 @@ class Vector
 
    U32  memSize() const;
    T*   address() const;
+   T**  root();
    U32  setSize(U32);
    void increment( U32 = 1);
    void increment(const T* array, U32 = 1);
@@ -292,6 +293,11 @@ template<class T> inline U32 Vector<T>::memSize() const
 template<class T> inline T* Vector<T>::address() const
 {
    return mArray;
+}
+
+template<class T> inline T** Vector<T>::root()
+{
+   return &mArray;
 }
 
 template<class T> inline U32 Vector<T>::setSize(U32 size)
