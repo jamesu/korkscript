@@ -72,6 +72,15 @@ struct StringStack
    U32 mStartStackSize;
    U32 mFunctionOffset;
 
+   void reset()
+   {
+      mStart = 0;
+      mLen = 0;
+      mNumFrames = 0;
+      mStartStackSize = 0;
+      mFunctionOffset = 0;
+   }
+
    void validateBufferSize(U32 size)
    {
       if(size > mBufferSize)
@@ -98,6 +107,14 @@ struct StringStack
       mAllocBase = allocBase;
       mType = KorkApi::ConsoleValue::TypeInternalString;
       mTypes = typeInfos;
+   }
+
+   ~StringStack()
+   {
+      if (mBuffer)
+      {
+         dFree(mBuffer);
+      }
    }
 
    void initForFiber(U32 fiberId)

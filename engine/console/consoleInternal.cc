@@ -602,7 +602,6 @@ ExprEvalState::ExprEvalState(KorkApi::VmInternal* vm): mSTR(&vm->mAllocBase, vm-
    VECTOR_SET_ASSOCIATION(stack);
    vmInternal = vm;
    globalVars = &vm->mGlobalVars;
-   mStackDepth = 0;
    traceOn = false;
    traceBuffer[0] = '\0';
    lastThrow = 0;
@@ -612,6 +611,9 @@ ExprEvalState::ExprEvalState(KorkApi::VmInternal* vm): mSTR(&vm->mAllocBase, vm-
    memset(intStack, 0, sizeof(intStack));
    memset(objectCreationStack, 0, sizeof(objectCreationStack));
    memset(tryStack, 0, sizeof(tryStack));
+   memset(vmStack, 0, sizeof(vmStack));
+
+   _VM = 0;
    
    mCurrentFile = NULL;
    mCurrentRoot = NULL;
@@ -629,6 +631,7 @@ void ExprEvalState::reset()
 {
    while(vmFrames.size())
       popFrame();
+   mSTR.reset();
 }
 
 // !!!!! FOLLOWING NOT CHECKED YET !!!!!

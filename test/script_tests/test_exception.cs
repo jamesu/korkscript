@@ -237,4 +237,4 @@ test_nativeBound();
 testString("exc.test8.1", $fudge21, "caramel");
 testString("exc.test8.1", $fudge22, "lemon");
 
-
+echo("Exception tests finished");

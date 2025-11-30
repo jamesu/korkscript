@@ -63,6 +63,7 @@ enum EvalConstants {
    MaxStackSize = 2 + (MaxExpectedFunctionDepth),
    MaxIterStackSize = 64,
    MaxTryStackSize = MaxStackSize * 2,
+   MaxVmStackSize = MaxStackSize,
    MethodOnComponent = -2
 };
 
@@ -260,6 +261,8 @@ public:
    S64 intStack[MaxStackSize];
    ObjectStackItem objectCreationStack[ObjectCreationStackSize];
    TryItem tryStack[MaxTryStackSize];
+   S32 vmStack[MaxVmStackSize];
+   U16 _VM;
    
    StringStack mSTR;
    
@@ -304,6 +307,8 @@ public:
    
    void pushFrame(StringTableEntry frameName, Namespace *ns, StringTableEntry packageName, CodeBlock* block, U32 ip);
    void popFrame();
+
+   bool clearStringStack(ConsoleFrame& frame, bool clearValue);
    
    /// Puts a reference to an existing stack frame
    /// on the top of the stack.
@@ -313,6 +318,29 @@ public:
    {
       return mStackDepth;
    }
+
+   void pushMinStackDepth()
+   {
+      vmStack[_VM++] = vmFrames.size()-1;
+   }
+
+   void popMinStackDepth()
+   {
+      _VM--;
+   }
+
+   S32 getMinStackDepth() const
+   {
+      return _VM == 0 ? -1 : vmStack[_VM-1];
+   }
+   
+   S32 getMinStackSize() const
+   {
+      return _VM == 0 ? 0 : vmStack[_VM-1]+1;
+   }
+
+   void pushVmStack(U16 size);
+   void popVmStack();
    
    // Fiber API
    KorkApi::FiberRunResult runVM(); // Runs VM

@@ -551,7 +551,7 @@ bool CodeBlock::compileToStream(Stream &st, StringTableEntry fileName, const cha
    return true;
 }
 
- KorkApi::ConsoleValue CodeBlock::compileExec(StringTableEntry fileName, const char *inString, bool noCalls, int setFrame)
+ KorkApi::ConsoleValue CodeBlock::compileExec(StringTableEntry fileName, const char *inString, bool noCalls, bool isNativeFrame, int setFrame)
 {
    // Check for a UTF8 script file
    char *string;
@@ -640,7 +640,7 @@ bool CodeBlock::compileToStream(Stream &st, StringTableEntry fileName, const cha
       mVM->printf(0, "precompile size mismatch");
    }
    
-   return exec(0, fileName, NULL, 0, 0, noCalls, NULL, setFrame);
+   return exec(0, fileName, NULL, 0, 0, noCalls, isNativeFrame, NULL, setFrame);
 }
 
 //-------------------------------------------------------------------------

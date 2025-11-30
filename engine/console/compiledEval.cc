@@ -122,10 +122,11 @@ struct ConsoleFrame
    F64*            curFloatTable;
    char*           curStringTable;
    //S32             curStringTableLen;
-   bool            popStringStack;
+   U8              pushStringStackCount;
    bool            noCalls;
    bool            isReference;
    bool            inNativeFunction;
+   bool            popMinDepth;
    U32             failJump;
    U32             stackStart; // string stack offset
    U32             callArgc;
@@ -190,10 +191,11 @@ public:
       , curStringTable(nullptr)
       //, curStringTableLen(0)
       , thisFunctionName(nullptr)
-      , popStringStack(false)
+      , pushStringStackCount(0)
       , noCalls(false)
       , isReference(false)
       , inNativeFunction(false)
+      , popMinDepth(false)
       , failJump(0)
       , scopeName( NULL )
       , scopePackage( NULL )
@@ -246,7 +248,7 @@ public:
 
 ConsoleFrame& ExprEvalState::getCurrentFrame()
 {
-   return *( vmFrames[ mStackDepth - 1 ] );
+   return *vmFrames.last();
 }
 
 
@@ -522,10 +524,15 @@ ConsoleFrame& CodeBlock::setupExecFrame(
    Namespace*       thisNamespace,
    KorkApi::ConsoleValue*    argv,
    S32              argc,
-   S32              setFrame)
+   S32              setFrame,
+   bool isNativeFrame)
 {
    ConsoleFrame* newFrame = NULL;
-
+   if (isNativeFrame)
+   {
+      eval.pushMinStackDepth();
+   }
+   
    // --- Function call case (argv != nullptr) ---
    if (argv)
    {
@@ -568,6 +575,10 @@ ConsoleFrame& CodeBlock::setupExecFrame(
                dStrcat(eval.traceBuffer, ", ");
          }
          dStrcat(eval.traceBuffer, ")");
+         dSprintf(
+            eval.traceBuffer + dStrlen(eval.traceBuffer),
+            ExprEvalState::TraceBufferSize - dStrlen(eval.traceBuffer),
+            " [f=%i,ss=%i,sf=%i]", eval.vmFrames.size(), eval.mSTR.mNumFrames, eval.mSTR.mStartStackSize);
          mVM->printf(0, "%s", eval.traceBuffer);
       }
 
@@ -613,12 +624,13 @@ ConsoleFrame& CodeBlock::setupExecFrame(
       //newFrame->curStringTableLen = globalStringsMaxLen;
    }
    
+   newFrame->popMinDepth = isNativeFrame;
    newFrame->ip = ip; // update ip
    return *newFrame;
 }
 
 U32 gExecCount = 0;
-KorkApi::ConsoleValue CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNamespace, U32 argc,  KorkApi::ConsoleValue* argv, bool noCalls, StringTableEntry packageName, S32 setFrame, bool startSuspended)
+KorkApi::ConsoleValue CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNamespace, U32 argc,  KorkApi::ConsoleValue* argv, bool noCalls, bool isNativeFrame, StringTableEntry packageName, S32 setFrame, bool startSuspended)
 {
    ExprEvalState& evalState = *mVM->mCurrentFiberState;
    evalState.mSTR.clearFunctionOffset();
@@ -637,6 +649,7 @@ KorkApi::ConsoleValue CodeBlock::exec(U32 ip, const char *functionName, Namespac
                                         argc,
                                         argv,
                                         noCalls,
+                                        isNativeFrame,
                                         packageName,
                                         setFrame);
    
@@ -649,7 +662,7 @@ KorkApi::ConsoleValue CodeBlock::exec(U32 ip, const char *functionName, Namespac
    return KorkApi::ConsoleValue();
 }
 
-ConsoleFrame* CodeBlock::beginExec(ExprEvalState& evalState, U32 ip, const char *functionName, Namespace *thisNamespace, U32 argc,  KorkApi::ConsoleValue* argv, bool noCalls, StringTableEntry packageName, S32 setFrame)
+ConsoleFrame* CodeBlock::beginExec(ExprEvalState& evalState, U32 ip, const char *functionName, Namespace *thisNamespace, U32 argc,  KorkApi::ConsoleValue* argv, bool noCalls,  bool isNativeFrame, StringTableEntry packageName, S32 setFrame)
 {
    evalState.mSTR.clearFunctionOffset();
    evalState.mState = KorkApi::FiberRunResult::RUNNING;
@@ -662,7 +675,8 @@ ConsoleFrame* CodeBlock::beginExec(ExprEvalState& evalState, U32 ip, const char 
                                         thisNamespace,
                                         argv,
                                         argc,
-                                        setFrame);
+                                        setFrame,
+                                        isNativeFrame);
    
    frame.stackStart = evalState.mSTR.mStartStackSize;
    frame.noCalls = noCalls;
@@ -698,7 +712,6 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
    }
    
    KorkApi::ConsoleValue val = KorkApi::ConsoleValue();
-   S32 startFrameSize = vmFrames.size();
    lastThrow = 0;
    
    KorkApi::FiberRunResult result;
@@ -713,6 +726,8 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
    StringTableEntry tmpFnName = NULL;
    StringTableEntry tmpFnNamespace = NULL;
    StringTableEntry tmpFnPackage = NULL;
+   
+   AssertFatal(!vmFrames.empty(), "no frames");
    
    ConsoleFrame& frame = *vmFrames.last();
    ExprEvalState& evalState = *this;
@@ -738,7 +753,11 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
       // NOTE: result of the function should be in ExprEvalState mLastFiberValue
       // This gets set either in the control functions OR if a suspend didn't occur this
       // will be set directly after the call.
-      evalState.mSTR.popFrame();
+      if (frame.pushStringStackCount > 0)
+      {
+         evalState.mSTR.popFrame();
+         frame.pushStringStackCount--;
+      }
       
       if ((frame.nsEntry->mType == Namespace::Entry::VoidCallbackType) && (code[ip] != OP_STR_TO_NONE))
       {
@@ -882,6 +901,7 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
                {
                   // Prevent stack value corruption
                   evalState.mSTR.pushFrame();
+                  frame.pushStringStackCount++;
                   // --
                   
                   oldObject->klass->iCreate.RemoveObjectFn(oldObject->klass->userPtr, vmPublic, oldObject);
@@ -891,10 +911,12 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
 
                   // Prevent stack value corruption
                   evalState.mSTR.popFrame();
+                  frame.pushStringStackCount--;
                }
             }
             
             evalState.mSTR.popFrame();
+            frame.pushStringStackCount--;
             
             if(!frame.currentNewObject.isValid())
             {
@@ -1661,6 +1683,7 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
                           frame.codeBlock->getFileLine(ip-4), tmpFnNamespace ? tmpFnNamespace : "",
                            tmpFnNamespace ? "::" : "", tmpFnName);
                evalState.mSTR.popFrame();
+               frame.pushStringStackCount--;
                break;
             }
             // Now, rewrite our code a bit (ie, avoid future lookups) and fall
@@ -1715,6 +1738,7 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
                   frame.thisObject = 0;
                   vmInternal->printf(0,"%s: Unable to find object: '%s' attempting to call function '%s'", frame.codeBlock->getFileLine(ip-6), objName, tmpFnName);
                   evalState.mSTR.popFrame();
+                  frame.pushStringStackCount--;
                   evalState.mSTR.setStringValue("");
                   break;
                }
@@ -1755,10 +1779,13 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
                   }
                }
                evalState.mSTR.popFrame();
+               frame.pushStringStackCount--;
                evalState.mSTR.setStringValue("");
                evalState.mSTR.setStringValue("");
                break;
             }
+            
+            AssertFatal(frame.pushStringStackCount != 0, "No PUSH_FRAME before function call");
             
             if(frame.nsEntry->mType == Namespace::Entry::ScriptFunctionType)
             {
@@ -1769,6 +1796,7 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
                
                if(frame.nsEntry->mFunctionOffset)
                {
+                  frame.pushStringStackCount--;
                   ConsoleFrame* newFrame = frame.nsEntry->mCode->beginExec(evalState,
                                                                            frame.nsEntry->mFunctionOffset,
                                                                            tmpFnName,
@@ -1776,12 +1804,14 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
                                                                            frame.callArgc,
                                                                            frame.callArgv,
                                                                            false,
+                                                                           false,
                                                                            frame.nsEntry->mPackage);
                   
                   // NOTE: "frame" is now invalidated
                   if (newFrame)
                   {
-                     newFrame->popStringStack = true; // i.e. we need to do this after frame pops
+                     // OK: what we want to do here is transfer the pushed script frame to the new frame
+                     newFrame->pushStringStackCount++;
                      loopFrameSetup = true;
                      goto execFinished;
                   }
@@ -1789,6 +1819,7 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
                
                // No body fallthrough case
                evalState.mSTR.popFrame();
+               frame.pushStringStackCount--;
                evalState.mSTR.setStringValue("");
             }
             else
@@ -1799,6 +1830,7 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
                   vmInternal->printf(0, "%s: %s::%s - wrong number of arguments.", frame.codeBlock->getFileLine(ip-4), nsName, tmpFnName);
                   vmInternal->printf(0, "%s: usage: %s", frame.codeBlock->getFileLine(ip-4), frame.nsEntry->mUsage);
                   evalState.mSTR.popFrame();
+                  frame.pushStringStackCount--;
                   evalState.mSTR.setStringValue("");
                }
                else
@@ -1818,6 +1850,7 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
                   {
                      case Namespace::Entry::StringCallbackType:
                      {
+                        frame.inNativeFunction = true;
                         const char *ret = frame.nsEntry->cb.mStringCallbackFunc(safeObjectUserPtr(frame.thisObject), frame.nsEntry->mUserPtr, frame.callArgc, frame.callArgvS);
                         if (mState != KorkApi::FiberRunResult::RUNNING)
                         {
@@ -1829,46 +1862,45 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
                            mLastFiberValue = KorkApi::ConsoleValue::makeString(ret); // NOTE: none of these should yield
                         }
                         
-                        frame.inNativeFunction = true;
                         loopFrameSetup = true;
                         goto execFinished;
                      }
                      case Namespace::Entry::IntCallbackType:
                      {
+                        frame.inNativeFunction = true;
                         S32 result = frame.nsEntry->cb.mIntCallbackFunc(safeObjectUserPtr(frame.thisObject), frame.nsEntry->mUserPtr, frame.callArgc, frame.callArgvS);
                         mLastFiberValue = KorkApi::ConsoleValue::makeNumber(result);
-                        frame.inNativeFunction = true;
                         loopFrameSetup = true;
                         goto execFinished;
                      }
                      case Namespace::Entry::FloatCallbackType:
                      {
+                        frame.inNativeFunction = true;
                         F64 result = frame.nsEntry->cb.mFloatCallbackFunc(safeObjectUserPtr(frame.thisObject), frame.nsEntry->mUserPtr, frame.callArgc, frame.callArgvS);
                         mLastFiberValue = KorkApi::ConsoleValue::makeNumber(result);
-                        frame.inNativeFunction = true;
                         loopFrameSetup = true;
                         goto execFinished;
                      }
                      case Namespace::Entry::VoidCallbackType:
                      {
+                        frame.inNativeFunction = true;
                         frame.nsEntry->cb.mVoidCallbackFunc(safeObjectUserPtr(frame.thisObject), frame.nsEntry->mUserPtr, frame.callArgc, frame.callArgvS);
                         mLastFiberValue = KorkApi::ConsoleValue();
-                        frame.inNativeFunction = true;
                         loopFrameSetup = true;
                         goto execFinished;
                      }
                      case Namespace::Entry::BoolCallbackType:
                      {
+                        frame.inNativeFunction = true;
                         bool result = frame.nsEntry->cb.mBoolCallbackFunc(safeObjectUserPtr(frame.thisObject), frame.nsEntry->mUserPtr, frame.callArgc, frame.callArgvS);
                         mLastFiberValue = KorkApi::ConsoleValue::makeUnsigned(result);
-                        frame.inNativeFunction = true;
                         loopFrameSetup = true;
                         goto execFinished;
                      }
                      case Namespace::Entry::ValueCallbackType:
                      {
-                        mLastFiberValue = frame.nsEntry->cb.mValueCallbackFunc(safeObjectUserPtr(frame.thisObject), frame.nsEntry->mUserPtr, frame.callArgc, frame.callArgv);
                         frame.inNativeFunction = true;
+                        mLastFiberValue = frame.nsEntry->cb.mValueCallbackFunc(safeObjectUserPtr(frame.thisObject), frame.nsEntry->mUserPtr, frame.callArgc, frame.callArgv);
                         loopFrameSetup = true;
                         goto execFinished;
                      }
@@ -1939,6 +1971,7 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
 
          case OP_PUSH_FRAME:
             evalState.mSTR.pushFrame();
+            frame.pushStringStackCount++;
             break;
 
          case OP_ASSERT:
@@ -2191,7 +2224,8 @@ execFinished:
          TryItem& item = evalState.tryStack[i];
          
          // If item is before the frame we started at, ignore it
-         if ((S32)item.frameDepth < startFrameSize-1)
+         // (i.e. if we go down to that depth, will we still be in a frame pushed by the current native exec?)
+         if ((S32)item.frameDepth <= getMinStackDepth())
          {
             break;
          }
@@ -2199,7 +2233,7 @@ execFinished:
          if ((lastThrow & item.mask) != 0)
          {
             // Acceptable handler
-            if (handleThrow(i, &item, startFrameSize-1))
+            if (handleThrow(i, &item, getMinStackDepth()))
             {
                lastThrow = 0;
                AssertFatal(vmFrames.size() > 0, "Too many frames popped!");
@@ -2214,11 +2248,10 @@ execFinished:
       if ((lastThrow & BIT(31)) == 0)
       {
          FIBER_STATE(KorkApi::FiberRunResult::ERROR);
-         handleThrow(-1, NULL, startFrameSize-1);
+         handleThrow(-1, NULL, getMinStackDepth());
          result.state = mState;
          result.value = KorkApi::ConsoleValue::makeNumber(lastThrow);
-         AssertFatal(vmFrames.size() == startFrameSize, "This is bad");
-         evalState.popFrame();
+         AssertFatal(vmFrames.size() == getStackMinDepth()+1, "This is bad");
          return result;
       }
       lastThrow = 0;
@@ -2244,23 +2277,29 @@ execFinished:
    evalState.clearCreatedObjects(frame._STARTOBJ, frame._OBJ);
    
    // NOTE: previously happened in the ScriptFunctionType conditional, now tied to frame lifetime
-   if (frame.popStringStack)
+   bool didClear = clearStringStack(frame, false);
+   if (didClear)
    {
-      evalState.mSTR.popFrame();
       // We assume here this is a function call; result should be moved to the new head stack pointer
       evalState.mSTR.setStringValue(vmInternal->valueAsString(result.value));
    }
+   else
+   {
+      AssertFatal(getMinStackSize() == 1, "Function call occured but no stack pop?");
+   }
+   
+   S32 oldMinSize = getMinStackDepth()+1;
    
    // ALWAYS pop the frame in this case we are done with it
    evalState.popFrame();
    
    // Basically: If we are still inside a script frame, keep looping
    
-   if (evalState.vmFrames.size() == startFrameSize-1) // we always start at +1 in this case so it needs to go below
+   if (evalState.vmFrames.size() == oldMinSize) // we always start at +1 in this case so it needs to go below
    {
       FIBER_STATE(KorkApi::FiberRunResult::FINISHED);
    }
-   else if (evalState.vmFrames.size() < startFrameSize)
+   else if (evalState.vmFrames.size() < oldMinSize)
    {
       AssertFatal(false, "Invalid case");
       FIBER_STATE(KorkApi::FiberRunResult::ERROR);
@@ -2280,14 +2319,9 @@ execCheck:
    
    // If we exited out with an error (say, from a native function),
    // make sure stack is cleared up
-   while ((S32)vmFrames.size() > startFrameSize-1)
+   while ((S32)vmFrames.size() > getMinStackSize())
    {
       ConsoleFrame* prevFrame = vmFrames.last();
-      if (prevFrame->popStringStack)
-      {
-         mSTR.setStringValue(""); // just in case trace is logging
-         mSTR.popFrame();
-      }
       popFrame();
    }
 
@@ -2307,7 +2341,7 @@ void ExprEvalState::setLocalFrameVariable(StringTableEntry name, KorkApi::Consol
 
 KorkApi::ConsoleValue ExprEvalState::getLocalFrameVariable(StringTableEntry name)
 {
-   Dictionary::Entry* e = vmFrames.last()->dictionary->getVariable(name);
+   Dictionary::Entry* e = vmFrames.empty() ? NULL : vmFrames.last()->dictionary->getVariable(name);
    
    if (!e)
    {
@@ -2335,14 +2369,33 @@ void ExprEvalState::pushFrame(StringTableEntry frameName, Namespace *ns, StringT
    block->incRefCount();
    newFrame->ip = ip;
    vmFrames.push_back(newFrame);
-   mStackDepth ++;
    //Con::printf("ExprEvalState::pushFrame");
+}
+
+bool ExprEvalState::clearStringStack(ConsoleFrame& frame, bool clearValue)
+{
+   bool ret = false;
+   for (U32 i=0; i<frame.pushStringStackCount; i++)
+   {
+      if (clearValue)
+      {
+         mSTR.setStringValue("");
+      }
+      mSTR.popFrame();
+      ret = true;
+   }
+   frame.pushStringStackCount = 0;
+   return ret;
 }
 
 void ExprEvalState::popFrame()
 {
    ConsoleFrame *last = vmFrames.last();
    vmFrames.pop_back();
+   
+   // Make sure string stack is in correct state
+   bool didClear = clearStringStack(*last, true); // just in case trace is logging
+   AssertFatal(didClear == false, "stack not cleaned up properly");
    
    // Handle trace log here
    if (last->callArgv)
@@ -2368,7 +2421,7 @@ void ExprEvalState::popFrame()
             dSprintf(traceBuffer + dStrlen(traceBuffer), ExprEvalState::TraceBufferSize - dStrlen(traceBuffer),
                      "%s() - return %s", last->thisFunctionName, mSTR.getStringValue());
          }
-         vmInternal->printf(0, "%s", traceBuffer);
+         vmInternal->printf(0, "%s [f=%i,ss=%i,sf=%i]", traceBuffer, vmFrames.size(), mSTR.mNumFrames, mSTR.mStartStackSize);
       }
    }
    
@@ -2381,14 +2434,19 @@ void ExprEvalState::popFrame()
       last->codeBlock->decRefCount();
    }
    
+   if (last->popMinDepth)
+   {
+      _VM--;
+   }
+   
    if (vmFrames.size() > 0)
    {
       ConsoleFrame* prevFrame = vmFrames.last();
       AssertFatal(prevFrame->_FLT == last->_FLT && prevFrame->_UINT == last->_UINT && prevFrame->_ITER == last->_ITER, "Stack mismatch");
    }
+   
    delete last->dictionary;
    delete last;
-   mStackDepth --;
    //Con::printf("ExprEvalState::popFrame");
 }
 
@@ -2405,7 +2463,11 @@ bool ExprEvalState::handleThrow(S32 throwIdx, TryItem* info, S32 minStackPos)
    // Exit native function state so we dont get weird errors in loop
    if (curFrame->inNativeFunction)
    {
-      mSTR.popFrame();
+      if (curFrame->pushStringStackCount > 0)
+      {
+         mSTR.popFrame();
+         curFrame->pushStringStackCount--;
+      }
       
       if(curFrame->lastCallType == FuncCallExprNode::MethodCall)
          curFrame->thisObject = curFrame->saveObject;
@@ -2423,11 +2485,7 @@ bool ExprEvalState::handleThrow(S32 throwIdx, TryItem* info, S32 minStackPos)
    for (U32 i=vmFrames.size()-1; i>minFrame; i--)
    {
       ConsoleFrame* prevFrame = vmFrames[i];
-      if (prevFrame->popStringStack)
-      {
-         mSTR.setStringValue(""); // just in case trace is logging
-         mSTR.popFrame();
-      }
+      clearStringStack(*prevFrame, true); // just in case trace is logging
       popFrame();
    }
    mSTR.setStringValue("");
@@ -2452,6 +2510,12 @@ bool ExprEvalState::handleThrow(S32 throwIdx, TryItem* info, S32 minStackPos)
 void ExprEvalState::throwMask(U32 mask)
 {
    lastThrow = mask; // should get caught by loop setup
+   
+   if (traceOn)
+   {
+      traceBuffer[0] = 0;
+      vmInternal->printf(0, "  Throwing exception %u in fiber %u [f=%i,ss=%i,sf=%i]", mask, mAllocNumber, vmFrames.size(), mSTR.mNumFrames, mSTR.mStartStackSize);
+   }
 }
 
 void ExprEvalState::pushFrameRef(S32 stackIndex, CodeBlock* codeBlock, U32 ip)
@@ -2467,15 +2531,11 @@ void ExprEvalState::pushFrameRef(S32 stackIndex, CodeBlock* codeBlock, U32 ip)
    newFrame->codeBlock = codeBlock;
    newFrame->codeBlock->incRefCount();
    newFrame->isReference = true;
-   mStackDepth ++;
    //Con::printf("ExprEvalState::pushFrameRef");
 }
 
 void ExprEvalState::validate()
 {
-   AssertFatal( mStackDepth <= vmFrames.size(),
-               "ExprEvalState::validate() - Stack depth pointing beyond last stack frame!" );
-   
    for( U32 i = 0; i < vmFrames.size(); ++ i )
       vmFrames[ i ]->dictionary->validate();
 }

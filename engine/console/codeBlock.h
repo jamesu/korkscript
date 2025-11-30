@@ -121,7 +121,7 @@ public:
    /// -1 a new frame is created. If the index is out of range the
    /// top stack frame is used.
     KorkApi::ConsoleValue compileExec(StringTableEntry fileName, const char *script,
-                           bool noCalls, int setFrame = -1 );
+                           bool noCalls, bool isNativeFrame=true, int setFrame = -1 );
    
    ConsoleFrame& setupExecFrame(ExprEvalState& eval,
                                 U32*        code,
@@ -130,7 +130,8 @@ public:
                                 Namespace*       thisNamespace,
                                 KorkApi::ConsoleValue*    argv,
                                 S32              argc,
-                                S32              setFrame);
+                                S32              setFrame,
+                                bool isNativeFrame);
    
    /// Executes the existing code in the CodeBlock. The return string is any
    /// result of the code executed, if any, or an empty string.
@@ -148,12 +149,12 @@ public:
    /// top stack frame is used.
    /// @param packageName The code package name or null.
     KorkApi::ConsoleValue exec(U32 offset, const char *fnName, Namespace *ns, U32 argc,
-                    KorkApi::ConsoleValue *argv, bool noCalls, StringTableEntry packageName,
+                    KorkApi::ConsoleValue *argv, bool noCalls, bool isNativeFrame, StringTableEntry packageName,
                     S32 setFrame = -1, bool startSuspended=false);
    
    /// Variant of exec which JUST sets up the frame (for script->script calls)
    ConsoleFrame* beginExec(ExprEvalState& state, U32 offset, const char *fnName, Namespace *ns, U32 argc,
-                   KorkApi::ConsoleValue *argv, bool noCalls, StringTableEntry packageName,
+                   KorkApi::ConsoleValue *argv, bool noCalls, bool isNativeFrame, StringTableEntry packageName,
                    S32 setFrame = -1);
 };
 

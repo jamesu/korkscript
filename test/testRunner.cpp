@@ -110,6 +110,18 @@ ConsoleFunction(resumeFiber, const char*, 3, 3, "fiberId, value")
    return vmPtr->valueAsString(result.value);
 }
 
+ConsoleFunction(readFiberLocalVariable, const char*, 3, 3, "fiberId, localVarName")
+{
+   KorkApi::FiberId existingFiberId = vmPtr->getCurrentFiber();
+   
+   KorkApi::FiberId fiberId = (KorkApi::FiberId)std::atoll(argv[1]);
+   vmPtr->setCurrentFiber(fiberId);
+   
+   KorkApi::ConsoleValue retValue = vmPtr->getLocalVariable(StringTable->insert(argv[2]));
+   
+   vmPtr->setCurrentFiber(existingFiberId);
+   return vmPtr->valueAsString(retValue);
+}
 
 void MyLogger(U32 level, const char *consoleLine, void*)
 {

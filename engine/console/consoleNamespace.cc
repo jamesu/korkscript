@@ -557,7 +557,7 @@ KorkApi::ConsoleValue Namespace::Entry::execute(S32 argc, KorkApi::ConsoleValue*
    if(mType == ScriptFunctionType)
    {
       if(mFunctionOffset)
-         return mCode->exec(mFunctionOffset, StringTable->insert(mNamespace->mVmInternal->valueAsString(argv[0])), mNamespace, argc, argv, false, mPackage, -1, startSuspended);
+         return mCode->exec(mFunctionOffset, StringTable->insert(mNamespace->mVmInternal->valueAsString(argv[0])), mNamespace, argc, argv, false, true, mPackage, -1, startSuspended);
       else
          return KorkApi::ConsoleValue();
    }

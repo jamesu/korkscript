@@ -526,13 +526,13 @@ ConsoleValue Vm::execCodeBlock(U32 codeSize, U8* code, const char* filename, boo
       return ConsoleValue();
    }
    
-   return block->exec(0, filename, NULL, 0, 0, noCalls, NULL, setFrame);
+   return block->exec(0, filename, NULL, 0, 0, noCalls, true, NULL, setFrame);
 }
 
 ConsoleValue Vm::evalCode(const char* code, const char* filename)
 {
     CodeBlock *newCodeBlock = new CodeBlock(mInternal);
-    return newCodeBlock->compileExec(filename, code, false, filename ? -1 : 0); // TODO: should this be 0 or -1?
+    return newCodeBlock->compileExec(filename, code, false, true, filename ? -1 : 0); // TODO: should this be 0 or -1?
 }
 
 ConsoleValue Vm::call(int argc, ConsoleValue* argv, bool startSuspended)
