@@ -151,7 +151,7 @@ int main(int argc, char **argv)
    fs.read(fs.getStreamSize(), data);
    data[fs.getStreamSize()] = '\0';
    
-   Con::evaluate(data);
+   const char* res = Con::evaluate(data);
 
    delete[] data;
 

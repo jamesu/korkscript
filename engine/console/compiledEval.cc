@@ -2285,7 +2285,7 @@ execFinished:
    }
    else
    {
-      AssertFatal(getMinStackSize() == 1, "Function call occured but no stack pop?");
+      AssertFatal(getMinStackSize() == 0, "Function call occured but no stack pop?");
    }
    
    S32 oldMinSize = getMinStackDepth()+1;
