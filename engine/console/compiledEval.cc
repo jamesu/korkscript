@@ -2276,6 +2276,19 @@ execFinished:
 execCheck:
    
    FIBERS_END
+   
+   // If we exited out with an error (say, from a native function),
+   // make sure stack is cleared up
+   while ((S32)vmFrames.size() > startFrameSize-1)
+   {
+      ConsoleFrame* prevFrame = vmFrames.last();
+      if (prevFrame->popStringStack)
+      {
+         mSTR.setStringValue(""); // just in case trace is logging
+         mSTR.popFrame();
+      }
+      popFrame();
+   }
 
 #ifdef TORQUE_DEBUG
    // TOFIX
