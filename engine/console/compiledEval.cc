@@ -629,7 +629,6 @@ ConsoleFrame& CodeBlock::setupExecFrame(
    return *newFrame;
 }
 
-U32 gExecCount = 0;
 KorkApi::ConsoleValue CodeBlock::exec(U32 ip, const char *functionName, Namespace *thisNamespace, U32 argc,  KorkApi::ConsoleValue* argv, bool noCalls, bool isNativeFrame, StringTableEntry packageName, S32 setFrame, bool startSuspended)
 {
    ExprEvalState& evalState = *mVM->mCurrentFiberState;
@@ -702,19 +701,15 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
 {
    //printf("Frame size=%u exprSize=%u dbSize=%u\n", sizeof(ConsoleFrame), sizeof(ExprEvalState), sizeof(CodeBlock));
    
-#ifdef TORQUE_DEBUG
-   gExecCount++;
-#endif
-   
    if (vmFrames.size() == 0)
    {
       return KorkApi::FiberRunResult();
    }
    
-   KorkApi::ConsoleValue val = KorkApi::ConsoleValue();
    lastThrow = 0;
+
    bool checkExtraStack = true;
-   
+   KorkApi::ConsoleValue tmpVal = KorkApi::ConsoleValue();
    KorkApi::FiberRunResult result;
    result.state = mState;
    result.value = KorkApi::ConsoleValue();
@@ -723,7 +718,6 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
    
    // NOTE: these are only used temporarily inside opcode cases
    StringTableEntry tmpVar = NULL;
-   StringTableEntry tmpObjParent = NULL;
    StringTableEntry tmpFnName = NULL;
    StringTableEntry tmpFnNamespace = NULL;
    StringTableEntry tmpFnPackage = NULL;
@@ -735,9 +729,6 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
    U32 ip = frame.ip;
    U32* code = frame.codeBlock->code;
    KorkApi::Vm* vmPublic = vmInternal->mVM;
-   const bool noCalls = frame.noCalls;
-   Namespace* thisNamespace = frame.scopeNamespace;
-   StringTableEntry packageName = frame.scopePackage;
    bool loopFrameSetup = false;
    
    // Ensure we are using correct codeblock (NOTE: refcount is handled by frame push)
@@ -803,7 +794,7 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
       switch(instruction)
       {
          case OP_FUNC_DECL:
-            if(!noCalls)
+            if(!frame.noCalls)
             {
                tmpFnName       = Compiler::CodeToSTE(NULL, code, ip);
                tmpFnNamespace  = Compiler::CodeToSTE(NULL, code, ip+2);
@@ -838,7 +829,7 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
          case OP_CREATE_OBJECT:
          {
             // Read some useful info.
-            tmpObjParent        = Compiler::CodeToSTE(NULL, code, ip);
+            tmpVar        = Compiler::CodeToSTE(NULL, code, ip); // objParent
             bool isDataBlock =          code[ip + 2];
             bool isInternal  =          code[ip + 3];
             bool isSingleton =          code[ip + 4];
@@ -849,7 +840,7 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
             // Moved this to after frame.failJump is set. Engine was crashing when
             // noCalls = true and an object was being created at the beginning of
             // a file. ADL.
-            if(noCalls)
+            if(frame.noCalls)
             {
                ip = frame.failJump;
                break;
@@ -963,10 +954,10 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
                   break;
                }
 
-               if (*tmpObjParent)
+               if (*tmpVar)
                {
                   // Find it!
-                  KorkApi::VMObject *parent = vmInternal->mConfig.iFind.FindObjectByNameFn(vmInternal->mConfig.findUser, tmpObjParent, NULL);
+                  KorkApi::VMObject *parent = vmInternal->mConfig.iFind.FindObjectByNameFn(vmInternal->mConfig.findUser, tmpVar, NULL);
                   if (parent)
                   {
                      // Con::printf(" - Parent object found: %s", parent->getClassName());
@@ -975,7 +966,7 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
                   }
                   else
                   {
-                     vmInternal->printf(0, "%s: Unable to find parent object %s for %s.", frame.codeBlock->getFileLine(ip-1), tmpObjParent, frame.callArgvS[1]);
+                     vmInternal->printf(0, "%s: Unable to find parent object %s for %s.", frame.codeBlock->getFileLine(ip-1), tmpVar, frame.callArgvS[1]);
                   }
                }
 
@@ -1110,8 +1101,6 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
             
          case OP_RETURN:
 
-            evalState.clearCreatedObjects(frame._STARTOBJ, frame._OBJ);
-
             if ( frame._ITER > 0 )
             {
                // Clear iterator state.
@@ -1134,8 +1123,6 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
             goto execFinished;
 
          case OP_RETURN_FLT:
-
-            evalState.clearCreatedObjects(frame._STARTOBJ, frame._OBJ);
          
             if( frame._ITER > 0 )
             {
@@ -1159,8 +1146,6 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
             goto execFinished;
 
          case OP_RETURN_UINT:
-
-            evalState.clearCreatedObjects(frame._STARTOBJ, frame._OBJ);
          
             if( frame._ITER > 0 )
             {
@@ -1374,8 +1359,8 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
             break;
             
          case OP_LOADVAR_STR:
-            val = frame.getConsoleVariable();
-            evalState.mSTR.setStringValue(vmInternal->valueAsString(val));
+            tmpVal = frame.getConsoleVariable();
+            evalState.mSTR.setStringValue(vmInternal->valueAsString(tmpVal));
             break;
             
          case OP_LOADVAR_VAR:
@@ -1403,14 +1388,14 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
          case OP_SETCUROBJECT:
             // Save the previous object for parsing vector fields.
             frame.prevObject = frame.curObject;
-            val = evalState.mSTR.getConsoleValue();
+            tmpVal = evalState.mSTR.getConsoleValue();
             {
-               const char* findPath = vmInternal->valueAsString(val);
+               const char* findPath = vmInternal->valueAsString(tmpVal);
 
                // Sim::findObject will sometimes find valid objects from
                // multi-component strings. This makes sure that doesn't
                // happen.
-               if (val.isString())
+               if (tmpVal.isString())
                {
                   const char* chkValue = findPath;
                   for( const char* check = chkValue; *check; check++ )
@@ -1752,9 +1737,9 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
             }
             else // it's a ParentCall
             {
-               if(thisNamespace)
+               if(frame.scopeNamespace)
                {
-                  frame.ns = thisNamespace->mParent;
+                  frame.ns = frame.scopeNamespace->mParent;
                   if(frame.ns)
                      frame.nsEntry = frame.ns->lookup(tmpFnName);
                   else
@@ -1767,9 +1752,9 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
                }
             }
             
-            if(!frame.nsEntry || noCalls)
+            if(!frame.nsEntry || frame.noCalls)
             {
-               if(!noCalls)
+               if(!frame.noCalls)
                {
                   vmInternal->printf(0,"%s: Unknown command %s.", frame.codeBlock->getFileLine(ip-4), tmpFnName);
                   if(frame.lastCallType == FuncCallExprNode::MethodCall)
@@ -1965,8 +1950,8 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
             break;
          case OP_PUSH_VAR:
             // OP_LOADVAR_STR, OP_PUSH
-            val = frame.getConsoleVariable();
-            evalState.mSTR.setConsoleValue(val);
+            tmpVal = frame.getConsoleVariable();
+            evalState.mSTR.setConsoleValue(tmpVal);
             evalState.mSTR.push();
             break;
 
@@ -2005,7 +1990,7 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
          case OP_BREAK:
          {
             //append the ip and codeptr before managing the breakpoint!
-            AssertFatal( !frame.stack.empty(), "Empty eval stack on break!");
+            AssertFatal( !evalState.vmFrames.empty(), "Empty eval stack on break!");
             evalState.vmFrames.last()->codeBlock = frame.codeBlock;
             evalState.vmFrames.last()->ip = ip - 1;
             
@@ -2216,6 +2201,7 @@ execFinished:
       return result;
    }
    
+   // Handle exceptions
    if (lastThrow != 0)
    {
       frame.ip = ip;
@@ -2275,8 +2261,6 @@ execFinished:
    
    // Stuff which follows is normally done when function exits...
    
-   evalState.clearCreatedObjects(frame._STARTOBJ, frame._OBJ);
-   
    // NOTE: previously happened in the ScriptFunctionType conditional, now tied to frame lifetime
    bool didClear = clearStringStack(frame, false);
    if (didClear)
@@ -2289,7 +2273,7 @@ execFinished:
       AssertFatal(getMinStackSize() == 0, "Function call occured but no stack pop?");
    }
    
-   S32 oldMinSize = getMinStackDepth()+1;
+   S32 oldMinSize = getMinStackSize();
    
    // ALWAYS pop the frame in this case we are done with it
    evalState.popFrame();
@@ -2339,12 +2323,6 @@ execCheck:
       }
    }
 
-#ifdef TORQUE_DEBUG
-   // TOFIX
-   //AssertFatal(!(evalState.mSTR.mStartStackSize > stackStart), "String stack not popped enough in script exec");
-   //AssertFatal(!(evalState.mSTR.mStartStackSize < stackStart), "String stack popped too much in script exec");
-#endif
-   
    return result;
 }
 
@@ -2383,7 +2361,6 @@ void ExprEvalState::pushFrame(StringTableEntry frameName, Namespace *ns, StringT
    block->incRefCount();
    newFrame->ip = ip;
    vmFrames.push_back(newFrame);
-   //Con::printf("ExprEvalState::pushFrame");
 }
 
 bool ExprEvalState::clearStringStack(ConsoleFrame& frame, bool clearValue)
@@ -2410,6 +2387,10 @@ void ExprEvalState::popFrame()
    // Make sure string stack is in correct state
    bool didClear = clearStringStack(*last, true); // just in case trace is logging
    AssertFatal(didClear == false, "stack not cleaned up properly");
+
+   // Clear any objects created in frame
+   clearCreatedObjects(last->_STARTOBJ, last->_OBJ);
+   last->_OBJ = last->_STARTOBJ;
    
    // Handle trace log here
    if (last->callArgv)
@@ -2461,7 +2442,6 @@ void ExprEvalState::popFrame()
    
    delete last->dictionary;
    delete last;
-   //Con::printf("ExprEvalState::popFrame");
 }
 
 bool ExprEvalState::handleThrow(S32 throwIdx, TryItem* info, S32 minStackPos)
@@ -2490,10 +2470,6 @@ bool ExprEvalState::handleThrow(S32 throwIdx, TryItem* info, S32 minStackPos)
    }
    
    ConsoleFrame* frame = minFrame < 0 ? NULL : vmFrames[minFrame];
-   U32 minObj = frame ? frame->_OBJ : 0;
-   
-   // Clear objects
-   clearCreatedObjects(minObj, curFrame->_OBJ);
    
    // Pop down to correct frame
    for (U32 i=vmFrames.size()-1; i>minFrame; i--)
@@ -2545,7 +2521,6 @@ void ExprEvalState::pushFrameRef(S32 stackIndex, CodeBlock* codeBlock, U32 ip)
    newFrame->codeBlock = codeBlock;
    newFrame->codeBlock->incRefCount();
    newFrame->isReference = true;
-   //Con::printf("ExprEvalState::pushFrameRef");
 }
 
 void ExprEvalState::validate()
