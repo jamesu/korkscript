@@ -594,6 +594,7 @@ KorkApi::ConsoleValue Namespace::Entry::execute(S32 argc, KorkApi::ConsoleValue*
          return KorkApi::ConsoleValue::makeString(returnBuffer);
       case VoidCallbackType:
          cb.mVoidCallbackFunc(safeObjectUserPtr(resolvedThis), mUserPtr, argc, localArgv);
+         break;
       case BoolCallbackType:
          dSprintf(returnBuffer, KorkApi::VmInternal::ExecReturnBufferSize, "%d",
             (U32)cb.mBoolCallbackFunc(safeObjectUserPtr(resolvedThis), mUserPtr, argc, localArgv));

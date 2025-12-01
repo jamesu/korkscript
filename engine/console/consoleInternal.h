@@ -255,6 +255,7 @@ public:
    ///
    KorkApi::VmInternal* vmInternal;
    Dictionary* globalVars;
+   void* mUserPtr;
    
    IterStackRecord iterStack[MaxIterStackSize];
    F64 floatStack[MaxStackSize];
@@ -263,11 +264,22 @@ public:
    TryItem tryStack[MaxTryStackSize];
    S32 vmStack[MaxVmStackSize];
    U16 _VM;
+   bool traceOn;
+   U32 lastThrow;
    
    StringStack mSTR;
    
    StringTableEntry mCurrentFile;
    StringTableEntry mCurrentRoot;
+
+   /// The stack of callframes.  The extra redirection is necessary since Dictionary holds
+   /// an interior pointer that will become invalid when the object changes address.
+   Vector< ConsoleFrame* > vmFrames;
+   
+   KorkApi::FiberRunResult::State mState;
+   KorkApi::ConsoleValue mLastFiberValue; ///< Value yielded from function or returned to fiber
+
+   char traceBuffer[TraceBufferSize];
    
    ExprEvalState(KorkApi::VmInternal* vm);
    ~ExprEvalState();
@@ -286,20 +298,6 @@ public:
    /// @name Stack Management
    /// @{
    
-   /// The stack of callframes.  The extra redirection is necessary since Dictionary holds
-   /// an interior pointer that will become invalid when the object changes address.
-   Vector< ConsoleFrame* > vmFrames;
-   
-   void* mUserPtr;
-   
-   KorkApi::FiberRunResult::State mState;
-   KorkApi::ConsoleValue mLastFiberValue; ///< Value yielded from function or returned to fiber
-   
-   bool traceOn;
-   U32 lastThrow;
-   char traceBuffer[TraceBufferSize];
-   
-   U32 mStackDepth;
 
    void setLocalFrameVariable(StringTableEntry name, KorkApi::ConsoleValue value);
    KorkApi::ConsoleValue getLocalFrameVariable(StringTableEntry name);
@@ -313,11 +311,6 @@ public:
    /// Puts a reference to an existing stack frame
    /// on the top of the stack.
    void pushFrameRef(S32 stackIndex, CodeBlock* codeBlock, U32 ip);
-   
-   U32 getStackDepth() const
-   {
-      return mStackDepth;
-   }
 
    void pushMinStackDepth()
    {

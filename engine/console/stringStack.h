@@ -61,9 +61,6 @@ struct StringStack
    U8 mStartTypes[MaxStackDepth]; // this is annotated type
    U8 mType; // current type
    
-   KorkApi::ConsoleValue::AllocBase* mAllocBase;
-   KorkApi::TypeInfo** mTypes;
-
    U16 mFuncId;
    U32 mNumFrames;
 
@@ -71,6 +68,10 @@ struct StringStack
    U32 mLen;
    U32 mStartStackSize;
    U32 mFunctionOffset;
+   
+   KorkApi::ConsoleValue::AllocBase* mAllocBase;
+   KorkApi::TypeInfo** mTypes;
+
 
    void reset()
    {

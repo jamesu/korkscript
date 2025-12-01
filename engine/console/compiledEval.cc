@@ -108,25 +108,23 @@ struct ConsoleFrame
 {
    enum
    {
-      NSDocLength = 128,
       FieldArraySize = 256,
    };
 
    
    // Context (16 bytes)
-   
    Dictionary* dictionary;
    ExprEvalState* evalState;
    
    // Frame state (24 bytes + 20 bytes)
    F64*            curFloatTable;
    char*           curStringTable;
-   //S32             curStringTableLen;
-   U8              pushStringStackCount;
    bool            noCalls;
    bool            isReference;
    bool            inNativeFunction;
+   bool            inFunctionCall;
    bool            popMinDepth;
+   U8              pushStringStackCount;
    U32             failJump;
    U32             stackStart; // string stack offset
    U32             callArgc;
@@ -149,8 +147,16 @@ struct ConsoleFrame
    U16 _ITER;
    U16 _OBJ;
    U16 _TRY;
-   
    U16 _STARTOBJ;
+
+   // Last call type for restore
+   U32 lastCallType;
+
+   // Docblock processing
+   U32 nsDocBlockClassOffset;
+   U32 nsDocBlockOffset;
+   U8 nsDocBlockClassNameLength;
+   U8 nsDocBlockClassLocation;
    
    // These were from Dictionary (24 bytes)
    StringTableEntry scopeName;
@@ -166,19 +172,8 @@ struct ConsoleFrame
    LocalRefTrack saveObject;
    StringTableEntry prevField;
    StringTableEntry curField;
-   
-   // These are used when calling functions but we might need them until exec ends (16 bytes)
-   Namespace::Entry* nsEntry;
-   Namespace*        ns;  // ACTIVE namespace (e.g. for parentcall)
-
-   // Args (16 bytes)
-   KorkApi::ConsoleValue* callArgv;
-   const char**           callArgvS;
-   
-   U32 lastCallType;
 
    // Buffers (640 bytes)
-   char nsDocBlockClass[NSDocLength];
    char curFieldArray[FieldArraySize];
    char prevFieldArray[FieldArraySize];
 
@@ -195,6 +190,7 @@ public:
       , noCalls(false)
       , isReference(false)
       , inNativeFunction(false)
+      , inFunctionCall(false)
       , popMinDepth(false)
       , failJump(0)
       , scopeName( NULL )
@@ -215,17 +211,16 @@ public:
       , saveObject(vm)
       , prevField(nullptr)
       , curField(nullptr)
-      , nsEntry(nullptr)
-      , ns(nullptr)
       , curFNDocBlock(nullptr)
       , curNSDocBlock(nullptr)
       , callArgc(0)
-      , callArgv(nullptr)
-      , callArgvS(nullptr)
       , lastCallType(0)
+      , nsDocBlockClassOffset(0)
+      , nsDocBlockClassNameLength(0)
+      , nsDocBlockOffset(0)
+      , nsDocBlockClassLocation(0)
    {
       evalState = fiber;
-      memset(nsDocBlockClass, 0, sizeof(nsDocBlockClass));
       memset(curFieldArray,   0, sizeof(curFieldArray));
       memset(prevFieldArray,  0, sizeof(prevFieldArray));
    }
@@ -586,6 +581,7 @@ ConsoleFrame& CodeBlock::setupExecFrame(
       eval.pushFrame(fnName, thisNamespace, packageName, this, ip);
       newFrame = eval.vmFrames.last();
       newFrame->thisFunctionName = fnName;
+      newFrame->inFunctionCall = true;
 
       // Bind arguments into the new frame's locals
       for (U32 i = 0; i < (U32)wantedArgc; i++)
@@ -600,7 +596,6 @@ ConsoleFrame& CodeBlock::setupExecFrame(
 
       newFrame->curFloatTable     = functionFloats;
       newFrame->curStringTable    = functionStrings;
-      //newFrame->curStringTableLen = functionStringsMaxLen;
    }
    else
    {
@@ -621,7 +616,6 @@ ConsoleFrame& CodeBlock::setupExecFrame(
       newFrame = eval.vmFrames.last();
       newFrame->curFloatTable     = globalFloats;
       newFrame->curStringTable    = globalStrings;
-      //newFrame->curStringTableLen = globalStringsMaxLen;
    }
    
    newFrame->popMinDepth = isNativeFrame;
@@ -721,6 +715,13 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
    StringTableEntry tmpFnName = NULL;
    StringTableEntry tmpFnNamespace = NULL;
    StringTableEntry tmpFnPackage = NULL;
+   // These used for lookup but this all happens within a single step
+   Namespace::Entry* tmpNsEntry = NULL;
+   Namespace*        tmpNs = NULL;  // ACTIVE namespace (e.g. for parentcall)
+   // Tmp args
+   U32 callArgc = 0;
+   KorkApi::ConsoleValue* callArgv = NULL;
+   const char**           callArgvS = NULL;
    
    AssertFatal(!vmFrames.empty(), "no frames");
    
@@ -751,7 +752,7 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
          frame.pushStringStackCount--;
       }
       
-      if ((frame.nsEntry->mType == Namespace::Entry::VoidCallbackType) && (code[ip] != OP_STR_TO_NONE))
+      if ((frame.lastCallType == Namespace::Entry::VoidCallbackType) && (code[ip] != OP_STR_TO_NONE))
       {
          vmInternal->printf(0, "%s: Call to %s in %s uses result of void function call.", frame.codeBlock->getFileLine(ip-4), tmpFnName, frame.scopeName);
       }
@@ -803,17 +804,20 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
                U32 lineNumber = code[ ip + 6 ] >> 1;
                
                vmInternal->mNSState.unlinkPackages();
-               frame.ns = vmInternal->mNSState.find(tmpFnNamespace, tmpFnPackage);
-               frame.ns->addFunction(tmpFnName, frame.codeBlock, hasBody ? ip : 0 );// if no body, set the IP to 0
-               if( frame.curNSDocBlock )
+               tmpNs = vmInternal->mNSState.find(tmpFnNamespace, tmpFnPackage);
+               tmpNs->addFunction(tmpFnName, frame.codeBlock, hasBody ? ip : 0 );// if no body, set the IP to 0
+               
+               if (frame.nsDocBlockClassLocation != 0 && frame.nsDocBlockClassNameLength > 0)
                {
-                  if( tmpFnNamespace == StringTable->lookup( frame.nsDocBlockClass ) )
+                  const char* baseDocStr = frame.nsDocBlockClassLocation == 1 ? frame.codeBlock->globalStrings : frame.codeBlock->functionStrings;
+                  const char* classText = baseDocStr + frame.nsDocBlockClassOffset;
+
+                  if (tmpFnNamespace == StringTable->lookupn(classText, frame.nsDocBlockClassNameLength))
                   {
-                     char *usageStr = dStrdup( frame.curNSDocBlock );
-                     usageStr[dStrlen(usageStr)] = '\0';
-                     frame.ns->mUsage = usageStr;
-                     frame.ns->mCleanUpUsage = true;
-                     frame.curNSDocBlock = NULL;
+                     char *usageStr = dStrdup(baseDocStr + frame.nsDocBlockOffset);
+                     tmpNs->mUsage = usageStr;
+                     tmpNs->mCleanUpUsage = true;
+                     frame.nsDocBlockClassLocation = 0;
                   }
                }
                vmInternal->mNSState.relinkPackages();
@@ -852,9 +856,9 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
             evalState.setCreatedObject(frame._OBJ++, frame.currentNewObject, frame.failJump);
             
             // Get the constructor information off the stack.
-            evalState.mSTR.getArgcArgv(NULL, &frame.callArgc, &frame.callArgv);
-            evalState.mSTR.convertArgv(vmInternal, frame.callArgc, &frame.callArgvS);
-            const char *objectName = frame.callArgvS[ 2 ];
+            evalState.mSTR.getArgcArgv(NULL, &callArgc, &callArgv);
+            evalState.mSTR.convertArgv(vmInternal, callArgc, &callArgvS);
+            const char *objectName = callArgvS[ 2 ];
             
             // Con::printf("Creating object...");
             
@@ -871,9 +875,9 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
                KorkApi::VMObject *db = vmInternal->mConfig.iFind.FindDatablockGroup(vmInternal->mConfig.findUser);
                
                // Make sure we're not changing types on ourselves...
-               if(db && dStricmp(db->klass->name, frame.callArgvS[1]))
+               if(db && dStricmp(db->klass->name, callArgvS[1]))
                {
-                  vmInternal->printf(0, "Cannot re-declare data block %s with a different class.", frame.callArgv[2]);
+                  vmInternal->printf(0, "Cannot re-declare data block %s with a different class.", callArgv[2]);
                   ip = frame.failJump;
                   break;
                }
@@ -913,7 +917,7 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
             if(!frame.currentNewObject.isValid())
             {
                // Well, looks like we have to create a new object.
-               KorkApi::ClassInfo* klassInfo = vmInternal->getClassInfoByName(StringTable->insert(frame.callArgvS[1]));
+               KorkApi::ClassInfo* klassInfo = vmInternal->getClassInfoByName(StringTable->insert(callArgvS[1]));
                KorkApi::VMObject *object = NULL;
 
                if (klassInfo)
@@ -937,7 +941,7 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
                // Deal with failure!
                if(!object)
                {
-                  vmInternal->printf(0, "%s: Unable to instantiate non-conobject class %s.", frame.codeBlock->getFileLine(ip-1), frame.callArgvS[1]);
+                  vmInternal->printf(0, "%s: Unable to instantiate non-conobject class %s.", frame.codeBlock->getFileLine(ip-1), callArgvS[1]);
                   ip = frame.failJump;
                   break;
                }
@@ -948,7 +952,7 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
                // Deal with the case of a non-SimObject.
                if(!frame.currentNewObject.isValid())
                {
-                  vmInternal->printf(0, "%s: Unable to instantiate non-SimObject class %s.", frame.codeBlock->getFileLine(ip-1), frame.callArgvS[1]);
+                  vmInternal->printf(0, "%s: Unable to instantiate non-SimObject class %s.", frame.codeBlock->getFileLine(ip-1), callArgvS[1]);
                   delete object;
                   ip = frame.failJump;
                   break;
@@ -966,11 +970,11 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
                   }
                   else
                   {
-                     vmInternal->printf(0, "%s: Unable to find parent object %s for %s.", frame.codeBlock->getFileLine(ip-1), tmpVar, frame.callArgvS[1]);
+                     vmInternal->printf(0, "%s: Unable to find parent object %s for %s.", frame.codeBlock->getFileLine(ip-1), tmpVar, callArgvS[1]);
                   }
                }
 
-               if (!klassInfo->iCreate.ProcessArgsFn(vmPublic, frame.currentNewObject->userPtr, objectName, isDataBlock, isInternal, frame.callArgc-3, frame.callArgvS+3))
+               if (!klassInfo->iCreate.ProcessArgsFn(vmPublic, frame.currentNewObject->userPtr, objectName, isDataBlock, isInternal, callArgc-3, callArgvS+3))
                {
                   frame.currentNewObject = NULL;
                   ip = frame.failJump;
@@ -986,8 +990,7 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
          case OP_ADD_OBJECT:
          {
             // See OP_SETCURVAR for why we do this.
-            frame.curFNDocBlock = NULL;
-            frame.curNSDocBlock = NULL;
+            frame.nsDocBlockClassLocation = 0;
             
             // Do we place this object at the root?
             bool placeAtRoot = code[ip++];
@@ -1298,8 +1301,7 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
             // In order to let docblocks work properly with variables, we have
             // clear the current docblock when we do an assign. This way it
             // won't inappropriately carry forward to following function decls.
-            frame.curFNDocBlock = NULL;
-            frame.curNSDocBlock = NULL;
+            frame.nsDocBlockClassLocation = 0;
             break;
             
          case OP_SETCURVAR_CREATE:
@@ -1314,8 +1316,7 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
             frame.setCurVarNameCreate(tmpVar);
             
             // See OP_SETCURVAR for why we do this.
-            frame.curFNDocBlock = NULL;
-            frame.curNSDocBlock = NULL;
+            frame.nsDocBlockClassLocation = 0;
             break;
             
          case OP_SETCURVAR_ARRAY:
@@ -1329,8 +1330,7 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
             frame.setCurVarName(tmpVar);
             
             // See OP_SETCURVAR for why we do this.
-            frame.curFNDocBlock = NULL;
-            frame.curNSDocBlock = NULL;
+            frame.nsDocBlockClassLocation = 0;
             break;
             
          case OP_SETCURVAR_ARRAY_CREATE:
@@ -1344,8 +1344,7 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
             frame.setCurVarNameCreate(tmpVar);
             
             // See OP_SETCURVAR for why we do this.
-            frame.curFNDocBlock = NULL;
-            frame.curNSDocBlock = NULL;
+            frame.nsDocBlockClassLocation = 0;
             break;
             
          case OP_LOADVAR_UINT:
@@ -1624,26 +1623,51 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
             const char* docblock = frame.curStringTable + code[ip++];
             
             const char* sansClass = dStrstr( docblock, "@class" );
-            if( !sansClass )
+            if (!sansClass)
                sansClass = dStrstr( docblock, "\\class" );
             
-            if( sansClass )
+            if (sansClass)
             {
                // Don't save the class declaration. Scan past the 'class'
                // keyword and up to the first whitespace.
                sansClass += 7;
-               S32 index = 0;
-               while( ( *sansClass != ' ' ) && ( *sansClass != '\n' ) && *sansClass && ( index < ( ConsoleFrame::NSDocLength - 1 ) ) )
+
+               // Mark start of class name.
+               const char* classStart = sansClass;
+               U32 classLen = 0;
+
+               // Read up to first space, newline, or string end.
+               while ((*sansClass != ' ') &&
+                      (*sansClass != '\n') &&
+                      *sansClass)
                {
-                  frame.nsDocBlockClass[index++] = *sansClass;
-                  sansClass++;
+                  ++classLen;
+                  ++sansClass;
                }
-               frame.nsDocBlockClass[index] = '\0';
+
+               // Store pointer and length instead of copying into a buffer.
+               frame.nsDocBlockClassOffset = (U32)(classStart - frame.curStringTable);
+               frame.nsDocBlockClassNameLength   = classLen;
+
+               ++sansClass;
                
-               frame.curNSDocBlock = sansClass + 1;
+               frame.nsDocBlockOffset = sansClass - frame.curStringTable;
             }
             else
-               frame.curFNDocBlock = docblock;
+            {
+               frame.nsDocBlockClassOffset = 0;
+               frame.nsDocBlockClassNameLength = 0;
+               frame.nsDocBlockOffset = docblock - frame.curStringTable;
+            }
+
+            if (frame.curStringTable == frame.codeBlock->functionStrings)
+            {
+               frame.nsDocBlockClassLocation = 2;
+            }
+            else
+            {
+               frame.nsDocBlockClassLocation = 1;
+            }
          }
             
             break;
@@ -1659,9 +1683,9 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
             tmpFnName      = Compiler::CodeToSTE(NULL, code, ip);
             
             // Try to look it up.
-            frame.ns = vmInternal->mNSState.find(tmpFnNamespace);
-            frame.nsEntry = frame.ns->lookup(tmpFnName);
-            if(!frame.nsEntry)
+            tmpNs = vmInternal->mNSState.find(tmpFnNamespace);
+            tmpNsEntry = tmpNs->lookup(tmpFnName);
+            if(!tmpNsEntry)
             {
                ip+= 5;
                vmInternal->printf(0,
@@ -1675,7 +1699,7 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
             // Now, rewrite our code a bit (ie, avoid future lookups) and fall
             // through to OP_CALLFUNC
 #ifdef TORQUE_64
-            *((U64*)(code+ip+2)) = ((U64)frame.nsEntry);
+            *((U64*)(code+ip+2)) = ((U64)tmpNsEntry);
 #else
             code[ip+2] = ((U32)nsEntry);
 #endif
@@ -1702,21 +1726,21 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
             
             ip += 5;
             frame.ip = ip; // sync ip with frame
-            evalState.mSTR.getArgcArgv(tmpFnName, &frame.callArgc, &frame.callArgv);
+            evalState.mSTR.getArgcArgv(tmpFnName, &callArgc, &callArgv);
             
             if(frame.lastCallType == FuncCallExprNode::FunctionCall)
             {
 #ifdef TORQUE_64
-               frame.nsEntry = ((Namespace::Entry *) *((U64*)(code+ip-3)));
+               tmpNsEntry = ((Namespace::Entry *) *((U64*)(code+ip-3)));
 #else
-               frame.nsEntry = ((Namespace::Entry *) *(code+ip-3));
+               tmpNsEntry = ((Namespace::Entry *) *(code+ip-3));
 #endif
-               frame.ns = NULL;
+               tmpNs = NULL;
             }
             else if(frame.lastCallType == FuncCallExprNode::MethodCall)
             {
                frame.saveObject = frame.thisObject;
-               const char* objName = vmInternal->valueAsString(frame.callArgv[1]);
+               const char* objName = vmInternal->valueAsString(callArgv[1]);
                frame.thisObject = vmInternal->mConfig.iFind.FindObjectByPathFn(vmInternal->mConfig.findUser, objName);
                
                if(!frame.thisObject)
@@ -1729,30 +1753,30 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
                   break;
                }
                
-               frame.ns = frame.thisObject->ns;
-               if(frame.ns)
-                  frame.nsEntry = frame.ns->lookup(tmpFnName);
+               tmpNs = frame.thisObject->ns;
+               if(tmpNs)
+                  tmpNsEntry = tmpNs->lookup(tmpFnName);
                else
-                  frame.nsEntry = NULL;
+                  tmpNsEntry = NULL;
             }
             else // it's a ParentCall
             {
                if(frame.scopeNamespace)
                {
-                  frame.ns = frame.scopeNamespace->mParent;
-                  if(frame.ns)
-                     frame.nsEntry = frame.ns->lookup(tmpFnName);
+                  tmpNs = frame.scopeNamespace->mParent;
+                  if(tmpNs)
+                     tmpNsEntry = tmpNs->lookup(tmpFnName);
                   else
-                     frame.nsEntry = NULL;
+                     tmpNsEntry = NULL;
                }
                else
                {
-                  frame.ns = NULL;
-                  frame.nsEntry = NULL;
+                  tmpNs = NULL;
+                  tmpNsEntry = NULL;
                }
             }
             
-            if(!frame.nsEntry || frame.noCalls)
+            if(!tmpNsEntry || frame.noCalls)
             {
                if(!frame.noCalls)
                {
@@ -1773,25 +1797,25 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
             
             AssertFatal(frame.pushStringStackCount != 0, "No PUSH_FRAME before function call");
             
-            if(frame.nsEntry->mType == Namespace::Entry::ScriptFunctionType)
+            if(tmpNsEntry->mType == Namespace::Entry::ScriptFunctionType)
             {
                KorkApi::ConsoleValue ret = KorkApi::ConsoleValue();
                
                // NOTE: script opcodes should have pushed a frame thus the need to pop it either
                // here or in execFinished
                
-               if(frame.nsEntry->mFunctionOffset)
+               if(tmpNsEntry->mFunctionOffset)
                {
                   frame.pushStringStackCount--;
-                  ConsoleFrame* newFrame = frame.nsEntry->mCode->beginExec(evalState,
-                                                                           frame.nsEntry->mFunctionOffset,
+                  ConsoleFrame* newFrame = tmpNsEntry->mCode->beginExec(evalState,
+                                                                           tmpNsEntry->mFunctionOffset,
                                                                            tmpFnName,
-                                                                           frame.nsEntry->mNamespace,
-                                                                           frame.callArgc,
-                                                                           frame.callArgv,
+                                                                           tmpNsEntry->mNamespace,
+                                                                           callArgc,
+                                                                           callArgv,
                                                                            false,
                                                                            false,
-                                                                           frame.nsEntry->mPackage);
+                                                                           tmpNsEntry->mPackage);
                   
                   // NOTE: "frame" is now invalidated
                   if (newFrame)
@@ -1810,34 +1834,34 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
             }
             else
             {
-               if((frame.nsEntry->mMinArgs && S32(frame.callArgc) < frame.nsEntry->mMinArgs) || (frame.nsEntry->mMaxArgs && S32(frame.callArgc) > frame.nsEntry->mMaxArgs))
+               if((tmpNsEntry->mMinArgs && S32(callArgc) < tmpNsEntry->mMinArgs) || (tmpNsEntry->mMaxArgs && S32(callArgc) > tmpNsEntry->mMaxArgs))
                {
-                  const char* nsName = frame.ns? frame.ns->mName: "";
+                  const char* nsName = tmpNs? tmpNs->mName: "";
                   vmInternal->printf(0, "%s: %s::%s - wrong number of arguments.", frame.codeBlock->getFileLine(ip-4), nsName, tmpFnName);
-                  vmInternal->printf(0, "%s: usage: %s", frame.codeBlock->getFileLine(ip-4), frame.nsEntry->mUsage);
+                  vmInternal->printf(0, "%s: usage: %s", frame.codeBlock->getFileLine(ip-4), tmpNsEntry->mUsage);
                   evalState.mSTR.popFrame();
                   frame.pushStringStackCount--;
                   evalState.mSTR.setStringValue("");
                }
                else
                {
-                  if (frame.nsEntry->mType != Namespace::Entry::ValueCallbackType)
+                  if (tmpNsEntry->mType != Namespace::Entry::ValueCallbackType)
                   {
                      // Need to convert to strings for old callbacks
                      //printf("Converting %i argv calling %s\n", callArgc, fnName);
-                     evalState.mSTR.convertArgv(vmInternal, frame.callArgc, &frame.callArgvS);
+                     evalState.mSTR.convertArgv(vmInternal, callArgc, &callArgvS);
                   }
                   
                   // Handle calling
                   // NOTE regarding yielding:
                   //   Yielded value should match the type of the function in this case. i.e. you
                   
-                  switch(frame.nsEntry->mType)
+                  switch(tmpNsEntry->mType)
                   {
                      case Namespace::Entry::StringCallbackType:
                      {
                         frame.inNativeFunction = true;
-                        const char *ret = frame.nsEntry->cb.mStringCallbackFunc(safeObjectUserPtr(frame.thisObject), frame.nsEntry->mUserPtr, frame.callArgc, frame.callArgvS);
+                        const char *ret = tmpNsEntry->cb.mStringCallbackFunc(safeObjectUserPtr(frame.thisObject), tmpNsEntry->mUserPtr, callArgc, callArgvS);
                         if (mState != KorkApi::FiberRunResult::RUNNING)
                         {
                            vmInternal->printf(0,"String function yielded, ignoring result");
@@ -1854,7 +1878,7 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
                      case Namespace::Entry::IntCallbackType:
                      {
                         frame.inNativeFunction = true;
-                        S32 result = frame.nsEntry->cb.mIntCallbackFunc(safeObjectUserPtr(frame.thisObject), frame.nsEntry->mUserPtr, frame.callArgc, frame.callArgvS);
+                        S32 result = tmpNsEntry->cb.mIntCallbackFunc(safeObjectUserPtr(frame.thisObject), tmpNsEntry->mUserPtr, callArgc, callArgvS);
                         mLastFiberValue = KorkApi::ConsoleValue::makeNumber(result);
                         loopFrameSetup = true;
                         goto execFinished;
@@ -1862,7 +1886,7 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
                      case Namespace::Entry::FloatCallbackType:
                      {
                         frame.inNativeFunction = true;
-                        F64 result = frame.nsEntry->cb.mFloatCallbackFunc(safeObjectUserPtr(frame.thisObject), frame.nsEntry->mUserPtr, frame.callArgc, frame.callArgvS);
+                        F64 result = tmpNsEntry->cb.mFloatCallbackFunc(safeObjectUserPtr(frame.thisObject), tmpNsEntry->mUserPtr, callArgc, callArgvS);
                         mLastFiberValue = KorkApi::ConsoleValue::makeNumber(result);
                         loopFrameSetup = true;
                         goto execFinished;
@@ -1870,7 +1894,7 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
                      case Namespace::Entry::VoidCallbackType:
                      {
                         frame.inNativeFunction = true;
-                        frame.nsEntry->cb.mVoidCallbackFunc(safeObjectUserPtr(frame.thisObject), frame.nsEntry->mUserPtr, frame.callArgc, frame.callArgvS);
+                        tmpNsEntry->cb.mVoidCallbackFunc(safeObjectUserPtr(frame.thisObject), tmpNsEntry->mUserPtr, callArgc, callArgvS);
                         mLastFiberValue = KorkApi::ConsoleValue();
                         loopFrameSetup = true;
                         goto execFinished;
@@ -1878,7 +1902,7 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
                      case Namespace::Entry::BoolCallbackType:
                      {
                         frame.inNativeFunction = true;
-                        bool result = frame.nsEntry->cb.mBoolCallbackFunc(safeObjectUserPtr(frame.thisObject), frame.nsEntry->mUserPtr, frame.callArgc, frame.callArgvS);
+                        bool result = tmpNsEntry->cb.mBoolCallbackFunc(safeObjectUserPtr(frame.thisObject), tmpNsEntry->mUserPtr, callArgc, callArgvS);
                         mLastFiberValue = KorkApi::ConsoleValue::makeUnsigned(result);
                         loopFrameSetup = true;
                         goto execFinished;
@@ -1886,7 +1910,7 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
                      case Namespace::Entry::ValueCallbackType:
                      {
                         frame.inNativeFunction = true;
-                        mLastFiberValue = frame.nsEntry->cb.mValueCallbackFunc(safeObjectUserPtr(frame.thisObject), frame.nsEntry->mUserPtr, frame.callArgc, frame.callArgv);
+                        mLastFiberValue = tmpNsEntry->cb.mValueCallbackFunc(safeObjectUserPtr(frame.thisObject), tmpNsEntry->mUserPtr, callArgc, callArgv);
                         loopFrameSetup = true;
                         goto execFinished;
                      }
@@ -2393,8 +2417,10 @@ void ExprEvalState::popFrame()
    last->_OBJ = last->_STARTOBJ;
    
    // Handle trace log here
-   if (last->callArgv)
+   if (last->inFunctionCall)
    {
+      last->inFunctionCall = false;
+      
       if(traceOn)
       {
          traceBuffer[0] = 0;
@@ -2540,7 +2566,7 @@ ConsoleBasicFrame ExprEvalState::getBasicFrameInfo(U32 idx)
    ConsoleFrame& frame = *vmFrames[idx];
    ConsoleBasicFrame outF;
    outF.code = frame.codeBlock;
-   outF.scopeNamespace = frame.ns;
+   outF.scopeNamespace = frame.scopeNamespace;
    outF.scopeName = frame.scopeName;
    outF.ip = frame.ip;
    return outF;
