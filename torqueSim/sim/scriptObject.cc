@@ -81,7 +81,7 @@ bool ScriptObject::onAdd()
       return false;
    
    // Call onAdd in script!
-   Con::executef(this, 2, "onAdd", Con::getIntArg(getId()));
+   //Con::executef(this, 2, "onAdd", Con::getIntArg(getId()));
    return true;
 }
 

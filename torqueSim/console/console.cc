@@ -1163,6 +1163,7 @@ const char *execute(SimObject *object, S32 argc, const char *argv[],bool thisCal
 
       object->pushScriptCallbackGuard();
       StringStack::convertArgsReverse(sVM->mInternal, argc, argv, localArgv);
+      localArgv[1] = KorkApi::ConsoleValue::makeUnsigned(object->getId());
       sVM->callObjectFunction(object->getVMObject(), funcName, argc, localArgv, retValue);
       object->popScriptCallbackGuard();
 

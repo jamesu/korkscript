@@ -713,6 +713,7 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
    
    KorkApi::ConsoleValue val = KorkApi::ConsoleValue();
    lastThrow = 0;
+   bool checkExtraStack = true;
    
    KorkApi::FiberRunResult result;
    result.state = mState;
@@ -2292,6 +2293,7 @@ execFinished:
    
    // ALWAYS pop the frame in this case we are done with it
    evalState.popFrame();
+   checkExtraStack = false;
    
    // Basically: If we are still inside a script frame, keep looping
    
@@ -2317,12 +2319,24 @@ execCheck:
    
    FIBERS_END
    
+   // If we still have frames left and didn't error, put back in the running state
+   if (mState == KorkApi::FiberRunResult::FINISHED)
+   {
+      if (vmFrames.size() > 0)
+      {
+         FIBER_STATE(KorkApi::FiberRunResult::RUNNING);
+      }
+   }
+   
    // If we exited out with an error (say, from a native function),
    // make sure stack is cleared up
-   while ((S32)vmFrames.size() > getMinStackSize())
+   if (checkExtraStack)
    {
-      ConsoleFrame* prevFrame = vmFrames.last();
-      popFrame();
+      while ((S32)vmFrames.size() > getMinStackSize())
+      {
+         ConsoleFrame* prevFrame = vmFrames.last();
+         popFrame();
+      }
    }
 
 #ifdef TORQUE_DEBUG
