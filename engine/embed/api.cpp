@@ -529,10 +529,10 @@ ConsoleValue Vm::execCodeBlock(U32 codeSize, U8* code, const char* filename, boo
    return block->exec(0, filename, NULL, 0, 0, noCalls, true, NULL, setFrame);
 }
 
-ConsoleValue Vm::evalCode(const char* code, const char* filename)
+ConsoleValue Vm::evalCode(const char* code, const char* filename, S32 setFrame)
 {
     CodeBlock *newCodeBlock = new CodeBlock(mInternal);
-    return newCodeBlock->compileExec(filename, code, false, true, filename ? -1 : 0); // TODO: should this be 0 or -1?
+    return newCodeBlock->compileExec(filename, code, false, true, (!filename || setFrame < 0) ? -1 : setFrame);
 }
 
 ConsoleValue Vm::call(int argc, ConsoleValue* argv, bool startSuspended)
@@ -867,6 +867,10 @@ VmInternal::VmInternal(Vm* vm, Config* cfg) : mGlobalVars(this)
    
    FiberId baseFiber = createFiber(NULL);
    mCurrentFiberState = mFiberStates.mItems[0];
+   if (mTelDebugger)
+   {
+      mTelDebugger->setWatchFiberFromVm();
+   }
 }
 
 VmInternal::~VmInternal()
@@ -1486,6 +1490,30 @@ void Vm::clearCurrentFiberError()
 void* Vm::getCurrentFiberUserPtr()
 {
    return mInternal->getCurrentFiberUserPtr();
+}
+
+const char* FiberRunResult::stateAsString(State inState)
+{
+   switch (inState)
+   {
+   case FiberRunResult::INACTIVE:
+      return "INACTIVE";
+      break;
+   case FiberRunResult::RUNNING:
+      return "RUNNING";
+      break;
+   case FiberRunResult::SUSPENDED:
+      return "SUSPENDED";
+      break;
+   case FiberRunResult::ERROR:
+      return "ERROR";
+      break;
+   case FiberRunResult::FINISHED:
+      return "FINISHED";
+      break;
+   default:
+      return "UNKNOWN";
+   }
 }
 
 

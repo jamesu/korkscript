@@ -110,6 +110,7 @@ TelnetDebugger::TelnetDebugger(KorkApi::VmInternal* vm)
    mVMInternal->mConfig.extraConsumers[1].cbFunc = debuggerConsumer;
    mVMInternal->mConfig.extraConsumers[1].cbUser = this;
    mVMInternal = vm;
+   mCurrentWatchFiber = NULL;
    
    mAcceptPort = -1;
    
@@ -118,7 +119,6 @@ TelnetDebugger::TelnetDebugger(KorkApi::VmInternal* vm)
    
    mBreakpoints = NULL;
    mBreakOnNextStatement = false;
-   mStackPopBreakIndex = -1;
    mProgramPaused = false;
    mWaitForClient = false;
 
@@ -325,10 +325,13 @@ void TelnetDebugger::checkDebugRecv()
 
 void TelnetDebugger::executionStopped(CodeBlock *code, U32 lineNumber)
 {
-   if(mProgramPaused)
+   if (mProgramPaused)
       return;
+
+   // Need to switch to whatever fiber we are on
+   setWatchFiberFromVm();
    
-   if(mBreakOnNextStatement)
+   if (mBreakOnNextStatement)
    {
       setBreakOnNextStatement( false );
       breakProcess();
@@ -362,23 +365,34 @@ void TelnetDebugger::executionStopped(CodeBlock *code, U32 lineNumber)
    mProgramPaused = false;
 }
 
+bool TelnetDebugger::isWatchedFiber()
+{
+   return mCurrentWatchFiber == mVMInternal->mCurrentFiberState;
+}
+
 void TelnetDebugger::pushStackFrame()
 {
-   if(mState == NotConnected)
+   if(mState == NotConnected || !isWatchedFiber())
       return;
    
-   if(mBreakOnNextStatement && mStackPopBreakIndex > -1 &&
-      mVMInternal->mCurrentFiberState->vmFrames.size() > mStackPopBreakIndex)
+   if(mBreakOnNextStatement && 
+      mCurrentWatchFiber->mStackPopBreakIndex > -1 &&
+      mCurrentWatchFiber->vmFrames.size() > mCurrentWatchFiber->mStackPopBreakIndex)
+   {
       setBreakOnNextStatement( false );
+   }
 }
 
 void TelnetDebugger::popStackFrame()
 {
-   if(mState == NotConnected)
+   if(mState == NotConnected || !isWatchedFiber())
       return;
    
-   if(mStackPopBreakIndex > -1 && mVMInternal->mCurrentFiberState->vmFrames.size()-1 <= mStackPopBreakIndex)
+   if(mCurrentWatchFiber->mStackPopBreakIndex > -1 && 
+      mCurrentWatchFiber->vmFrames.size()-1 <= mCurrentWatchFiber->mStackPopBreakIndex)
+   {
       setBreakOnNextStatement( true );
+   }
 }
 
 void TelnetDebugger::breakProcess()
@@ -415,39 +429,42 @@ void TelnetDebugger::sendBreak()
    
    S32 last = 0;
    
-   for(S32 i = (S32) mVMInternal->mCurrentFiberState->vmFrames.size() - 1; i >= last; i--)
+   if (mCurrentWatchFiber)
    {
-      ConsoleBasicFrame frameInfo = mVMInternal->mCurrentFiberState->getBasicFrameInfo(i);
-      CodeBlock *code = frameInfo.code;
-      const char *file = "<none>";
-      if (code && code->name && code->name[0])
-         file = code->name;
-      
-      Namespace *ns = frameInfo.scopeNamespace;
-      scope[0] = 0;
-      if ( ns ) {
+      for(S32 i = (S32) mCurrentWatchFiber->vmFrames.size() - 1; i >= last; i--)
+      {
+         ConsoleBasicFrame frameInfo = mCurrentWatchFiber->getBasicFrameInfo(i);
+         CodeBlock *code = frameInfo.code;
+         const char *file = "<none>";
+         if (code && code->name && code->name[0])
+            file = code->name;
          
-         if ( ns->mParent && ns->mParent->mPackage && ns->mParent->mPackage[0] ) {
-            dStrcat( scope, ns->mParent->mPackage );
-            dStrcat( scope, "::" );
+         Namespace *ns = frameInfo.scopeNamespace;
+         scope[0] = 0;
+         if ( ns ) {
+            
+            if ( ns->mParent && ns->mParent->mPackage && ns->mParent->mPackage[0] ) {
+               dStrcat( scope, ns->mParent->mPackage );
+               dStrcat( scope, "::" );
+            }
+            if ( ns->mName && ns->mName[0] ) {
+               dStrcat( scope, ns->mName );
+               dStrcat( scope, "::" );
+            }
          }
-         if ( ns->mName && ns->mName[0] ) {
-            dStrcat( scope, ns->mName );
-            dStrcat( scope, "::" );
-         }
+         
+         const char *function = frameInfo.scopeName;
+         if ((!function) || (!function[0]))
+            function = "<none>";
+         dStrcat( scope, function );
+         
+         U32 line=0, inst;
+         U32 ip = frameInfo.ip;
+         if (code)
+            code->findBreakLine(ip, line, inst);
+         dSprintf(buffer, MaxCommandSize, " %s %d %s", file, line, scope);
+         send(buffer);
       }
-      
-      const char *function = frameInfo.scopeName;
-      if ((!function) || (!function[0]))
-         function = "<none>";
-      dStrcat( scope, function );
-      
-      U32 line=0, inst;
-      U32 ip = frameInfo.ip;
-      if (code)
-         code->findBreakLine(ip, line, inst);
-      dSprintf(buffer, MaxCommandSize, " %s %d %s", file, line, scope);
-      send(buffer);
    }
    
    send("\r\n");
@@ -472,6 +489,8 @@ void TelnetDebugger::processLineBuffer(S32 cmdLen)
          mState = mWaitForClient ? Initialize : Connected;
       }
       
+      mCurrentWatchFiber = NULL;
+      setWatchFiberFromVm();
       return;
    }
    else
@@ -480,41 +499,88 @@ void TelnetDebugger::processLineBuffer(S32 cmdLen)
       char varBuffer[MaxCommandSize];
       char fileBuffer[MaxCommandSize];
       char clear[MaxCommandSize];
+      U32 setFiberId = 0;
       S32 passCount, line, frame;
+      ExprEvalState* existingEvalState = mVMInternal->mCurrentFiberState;
       
       if(dSscanf(mLineBuffer, "CEVAL %[^\n]", evalBuffer) == 1)
       {
+         mVMInternal->mCurrentFiberState = mCurrentWatchFiber;
          if (cfg.iTelnet.QueueEvaluateFn)
          {
             tel.QueueEvaluateFn(cfg.telnetUser, evalBuffer);
          }
       }
       else if(dSscanf(mLineBuffer, "BRKVARSET %s %d %[^\n]", varBuffer, &passCount, evalBuffer) == 3)
+      {
+         mVMInternal->mCurrentFiberState = mCurrentWatchFiber;
          addVariableBreakpoint(varBuffer, passCount, evalBuffer);
+      }
       else if(dSscanf(mLineBuffer, "BRKVARCLR %s", varBuffer) == 1)
+      {
+         mVMInternal->mCurrentFiberState = mCurrentWatchFiber;
          removeVariableBreakpoint(varBuffer);
+      }
       else if(dSscanf(mLineBuffer, "BRKSET %s %d %s %d %[^\n]", fileBuffer,&line,&clear,&passCount,evalBuffer) == 5)
+      {
+         mVMInternal->mCurrentFiberState = mCurrentWatchFiber;
          addBreakpoint(fileBuffer, line, dAtob(clear), passCount, evalBuffer);
+      }
       else if(dSscanf(mLineBuffer, "BRKCLR %s %d", fileBuffer, &line) == 2)
+      {
+         mVMInternal->mCurrentFiberState = mCurrentWatchFiber;
          removeBreakpoint(fileBuffer, line);
+      }
       else if(!dStrncmp(mLineBuffer, "BRKCLRALL\n", cmdLen))
+      {
+         mVMInternal->mCurrentFiberState = mCurrentWatchFiber;
          removeAllBreakpoints();
+      }
       else if(!dStrncmp(mLineBuffer, "BRKNEXT\n", cmdLen))
+      {
+         mVMInternal->mCurrentFiberState = mCurrentWatchFiber;
          debugBreakNext();
+      }
       else if(!dStrncmp(mLineBuffer, "CONTINUE\n", cmdLen))
+      {
+         mVMInternal->mCurrentFiberState = mCurrentWatchFiber;
          debugContinue();
+      }
       else if(!dStrncmp(mLineBuffer, "STEPIN\n", cmdLen))
+      {
+         mVMInternal->mCurrentFiberState = mCurrentWatchFiber;
          debugStepIn();
+      }
       else if(!dStrncmp(mLineBuffer, "STEPOVER\n", cmdLen))
+      {
+         mVMInternal->mCurrentFiberState = mCurrentWatchFiber;
          debugStepOver();
+      }
       else if(!dStrncmp(mLineBuffer, "STEPOUT\n", cmdLen))
+      {
+         mVMInternal->mCurrentFiberState = mCurrentWatchFiber;
          debugStepOut();
+      }
       else if(dSscanf(mLineBuffer, "EVAL %s %d %[^\n]", varBuffer, &frame, evalBuffer) == 3)
+      {
+         mVMInternal->mCurrentFiberState = mCurrentWatchFiber;
          evaluateExpression(varBuffer, frame, evalBuffer);
+      }
       else if(!dStrncmp(mLineBuffer, "FILELIST\n", cmdLen))
+      {
+         mVMInternal->mCurrentFiberState = mCurrentWatchFiber;
          dumpFileList();
+      }
       else if(dSscanf(mLineBuffer, "BREAKLIST %s", fileBuffer) == 1)
+      {
+         mVMInternal->mCurrentFiberState = mCurrentWatchFiber;
          dumpBreakableList(fileBuffer);
+      }
+      else if(dSscanf(mLineBuffer, "SETFIBER %u", setFiberId) == 1)
+      {
+         mVMInternal->setCurrentFiber(setFiberId);
+         setWatchFiberFromVm();
+      }
       else
       {
          S32 errorLen = dStrlen(mLineBuffer) + 32; // ~25 in error message, plus buffer
@@ -523,6 +589,11 @@ void TelnetDebugger::processLineBuffer(S32 cmdLen)
          dSprintf( errorBuffer, errorLen, "DBGERR Invalid command(%s)!\r\n", mLineBuffer );
          // invalid stuff.
          send( errorBuffer );
+      }
+
+      if (mVMInternal->mCurrentFiberState != existingEvalState)
+      {
+         mVMInternal->mCurrentFiberState = existingEvalState;
       }
    }
 }
@@ -732,7 +803,10 @@ void TelnetDebugger::debugContinue()
    }
    
    setBreakOnNextStatement( false );
-   mStackPopBreakIndex = -1;
+   if (mCurrentWatchFiber)
+   {
+      mCurrentWatchFiber->mStackPopBreakIndex = -1;
+   }
    mProgramPaused = false;
    send("RUNNING\r\n");
 }
@@ -777,7 +851,10 @@ void TelnetDebugger::debugStepIn()
    // break on the first script line executed.
    
    setBreakOnNextStatement( true );
-   mStackPopBreakIndex = -1;
+   if (mCurrentWatchFiber)
+   {
+      mCurrentWatchFiber->mStackPopBreakIndex = -1;
+   }
    mProgramPaused = false;
    
    // Don't bother sending this to the client
@@ -796,7 +873,10 @@ void TelnetDebugger::debugStepOver()
       return;
    
    setBreakOnNextStatement( true );
-   mStackPopBreakIndex = mVMInternal->mCurrentFiberState->vmFrames.size();
+   if (mCurrentWatchFiber)
+   {
+      mCurrentWatchFiber->mStackPopBreakIndex = mCurrentWatchFiber->vmFrames.size();
+   }
    mProgramPaused = false;
    send("RUNNING\r\n");
 }
@@ -807,18 +887,24 @@ void TelnetDebugger::debugStepOut()
       return;
    
    setBreakOnNextStatement( false );
-   mStackPopBreakIndex = mVMInternal->mCurrentFiberState->vmFrames.size() - 1;
-   if ( mStackPopBreakIndex == 0 )
-      mStackPopBreakIndex = -1;
+   if (mCurrentWatchFiber)
+   {
+      mCurrentWatchFiber->mStackPopBreakIndex = mCurrentWatchFiber->vmFrames.size() - 1;
+      if ( mCurrentWatchFiber->mStackPopBreakIndex == 0 )
+         mCurrentWatchFiber->mStackPopBreakIndex = -1;
+   }
    mProgramPaused = false;
    send("RUNNING\r\n");
 }
 
 void TelnetDebugger::evaluateExpression(const char *tag, S32 frame, const char *evalBuffer)
 {
+   if (!mCurrentWatchFiber)
+      return;
+
    // Make sure we're passing a valid frame to the eval.
-   if ( frame > mVMInternal->mCurrentFiberState->vmFrames.size() )
-      frame = mVMInternal->mCurrentFiberState->vmFrames.size() - 1;
+   if ( frame > mCurrentWatchFiber->vmFrames.size() )
+      frame = mCurrentWatchFiber->vmFrames.size() - 1;
    if ( frame < 0 )
       frame = 0;
    
@@ -829,8 +915,8 @@ void TelnetDebugger::evaluateExpression(const char *tag, S32 frame, const char *
    dSprintf( buffer, len, format, evalBuffer );
    
    // Execute the eval.
-   CodeBlock *newCodeBlock = new CodeBlock(mVMInternal);
-   const char* result = ""; // TOFIX newCodeBlock->compileExec( NULL, buffer, false, frame );
+   KorkApi::ConsoleValue res = mVMInternal->mVM->evalCode(evalBuffer, NULL, frame);
+   const char* result = mVMInternal->valueAsString(res);
    delete [] buffer;
    
    // Create a new buffer that fits the result.
@@ -841,6 +927,27 @@ void TelnetDebugger::evaluateExpression(const char *tag, S32 frame, const char *
    
    send( buffer );
    delete [] buffer;
+}
+
+void TelnetDebugger::setWatchFiberFromVm()
+{
+   if (mCurrentWatchFiber != mVMInternal->mCurrentFiberState)
+   {
+      mCurrentWatchFiber = mVMInternal->mCurrentFiberState;
+      onFiberChanged();
+   }
+}
+
+void TelnetDebugger::enumerateFibers()
+{
+   send("FIBERLIST ");
+   mVMInternal->mFiberStates.forEach([this](ExprEvalState* state){
+      char buffer[MaxCommandSize];
+      U32 fiberId = mVMInternal->mFiberStates.getHandleValue(state);
+      dSprintf(buffer, sizeof(buffer), "F %u %s", fiberId, KorkApi::FiberRunResult::stateAsString(state->mState));
+      send(buffer);
+   });
+   // TODO
 }
 
 void TelnetDebugger::dumpFileList()
@@ -886,5 +993,22 @@ void TelnetDebugger::clearCodeBlockPointers(CodeBlock *code)
          cur->code = NULL;
       
       walk = &cur->next;
+   }
+}
+
+void TelnetDebugger::onFiberChanged()
+{
+   if (!mCurrentWatchFiber)
+   {
+      send("FIBER 0");
+      return;
+   }
+   else
+   {
+      char buffer[MaxCommandSize];
+      mCurrentWatchFiber->mStackPopBreakIndex = -1; // reset this
+      U32 fiberId = mVMInternal->mFiberStates.getHandleValue(mCurrentWatchFiber);
+      dSprintf(buffer, MaxCommandSize, "FIBER %u", fiberId);
+      send(buffer);
    }
 }

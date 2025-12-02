@@ -337,6 +337,8 @@ struct FiberRunResult
    
    KorkApi::ConsoleValue value;
    State state;
+
+   static const char* stateAsString(State inState);
 };
 
 enum Constants 
@@ -416,7 +418,7 @@ public:
    bool compileCodeBlock(const char* code, const char* filename, U32* outCodeSize, U8** outCode);
    ConsoleValue execCodeBlock(U32 codeSize, U8* code, const char* filename, bool noCalls, int setFrame);
 
-   ConsoleValue evalCode(const char* code, const char* filename);
+   ConsoleValue evalCode(const char* code, const char* filename, S32 setFrame=-1);
    ConsoleValue call(int argc, ConsoleValue* argv, bool startSuspended=false);
    ConsoleValue callObject(VMObject* h, int argc, ConsoleValue* argv, bool startSuspended=false);
 

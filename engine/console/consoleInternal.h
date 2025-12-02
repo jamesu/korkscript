@@ -266,6 +266,8 @@ public:
    U16 _VM;
    bool traceOn;
    U32 lastThrow;
+
+   U32 mStackPopBreakIndex; // for telnet debugger
    
    StringStack mSTR;
    

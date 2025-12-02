@@ -91,7 +91,9 @@ public:
 
    bool mProgramPaused;
    bool mBreakOnNextStatement;
-   S32 mStackPopBreakIndex;
+   ExprEvalState* mCurrentWatchFiber;
+
+   bool isWatchedFiber();
 
    void addVariableBreakpoint(const char *varName, S32 passCount, const char *evalString);
    void removeVariableBreakpoint(const char *varName);
@@ -113,6 +115,10 @@ public:
    void processLineBuffer(S32);
    void sendBreak();
    void setBreakOnNextStatement( bool enabled );
+
+   void setWatchFiberFromVm();
+   void enumerateFibers();
+   void onFiberChanged();
 public:
 
    void disconnect();
