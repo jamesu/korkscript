@@ -188,12 +188,8 @@ struct IterStackRecord
    Dictionary::Entry* mVariable;
 
    U32 mIndex;
-   
-   union
-   {
-      KorkApi::VMObject* set;
-      const char* str;
-   } mData;
+
+   KorkApi::ConsoleValue mData;
 };
 
 struct ConsoleFrame;
@@ -239,6 +235,7 @@ public:
    KorkApi::VmInternal* vmInternal;
    Dictionary* globalVars;
    void* mUserPtr;
+   
    
    IterStackRecord iterStack[MaxIterStackSize];
    F64 floatStack[MaxStackSize];

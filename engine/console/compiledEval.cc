@@ -170,6 +170,7 @@ struct ConsoleFrame
    LocalRefTrack prevObject;
    LocalRefTrack curObject;
    LocalRefTrack saveObject;
+   LocalRefTrack curIterObject; // current object for _ITER
    StringTableEntry prevField;
    StringTableEntry curField;
 
@@ -209,6 +210,7 @@ public:
       , prevObject(vm)
       , curObject(vm)
       , saveObject(vm)
+      , curIterObject(vm)
       , prevField(nullptr)
       , curField(nullptr)
       , curFNDocBlock(nullptr)
@@ -699,6 +701,17 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
    {
       return KorkApi::FiberRunResult();
    }
+
+   auto cleanupIterator = [](ExprEvalState& evalState, ConsoleFrame& frame){
+      frame.curIterObject = NULL;
+
+      // Clear iterator state.
+      while ( frame._ITER > 0 )
+      {
+         IterStackRecord& iter = evalState.iterStack[ -- frame._ITER ];
+         iter.mIsStringIter = false;
+      }
+   };
    
    lastThrow = 0;
 
@@ -1103,44 +1116,28 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
             // We're falling thru here on purpose.
             
          case OP_RETURN:
-
+         {
+            
             if ( frame._ITER > 0 )
             {
                // Clear iterator state.
-               while ( frame._ITER > 0 )
-               {
-                  IterStackRecord& iter = evalState.iterStack[ -- frame._ITER ];
-                  if (iter.mData.set)
-                  {
-                     vmInternal->decVMRef(iter.mData.set);
-                     iter.mData.set = NULL;
-                  }
-                  iter.mIsStringIter = false;
-               }
-               
+               cleanupIterator(evalState, frame);
+
+               // TOFIX: this technically doesn't factor in nesting
                const char* returnValue = evalState.mSTR.getStringValue();
                evalState.mSTR.rewind();
                evalState.mSTR.setStringValue( returnValue ); // Not nice but works.
             }
-               
+            
             goto execFinished;
+         }
 
          case OP_RETURN_FLT:
          
             if( frame._ITER > 0 )
             {
                // Clear iterator state.
-               while( frame._ITER > 0 )
-               {
-                  IterStackRecord& iter = evalState.iterStack[ -- frame._ITER ];
-                  if (iter.mData.set)
-                  {
-                     vmInternal->decVMRef(iter.mData.set);
-                     iter.mData.set = NULL;
-                  }
-                  iter.mIsStringIter = false;
-               }
-               
+               cleanupIterator(evalState, frame);
             }
 
             evalState.mSTR.setNumberValue( evalState.floatStack[frame._FLT] );
@@ -1153,16 +1150,7 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
             if( frame._ITER > 0 )
             {
                // Clear iterator state.
-               while( frame._ITER > 0 )
-               {
-                  IterStackRecord& iter = evalState.iterStack[ -- frame._ITER ];
-                  if (iter.mData.set)
-                  {
-                     vmInternal->decVMRef(iter.mData.set);
-                     iter.mData.set = NULL;
-                  }
-                  iter.mIsStringIter = false;
-               }
+               cleanupIterator(evalState, frame);
             }
 
             evalState.mSTR.setUnsignedValue( evalState.intStack[frame._UINT] );
@@ -2043,18 +2031,21 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
             iter.mVariable = evalState.getCurrentFrame().dictionary->add( varName );
             iter.mDictionary = evalState.getCurrentFrame().dictionary;
             
-            if( iter.mIsStringIter )
+            if (iter.mIsStringIter)
             {
-               iter.mData.str = evalState.mSTR.getStringValue();
+               iter.mData = evalState.mSTR.getConsoleValue();
                iter.mIndex = 0;
+               frame.curIterObject = NULL;
             }
             else
             {
                // Look up the object.
-               KorkApi::VMObject* set = vmInternal->mConfig.iFind.FindObjectByPathFn(vmInternal->mConfig.findUser, evalState.mSTR.getStringValue());
+               iter.mData = evalState.mSTR.getConsoleValue();
+               frame.curIterObject = vmInternal->mConfig.iFind.FindObjectByPathFn(vmInternal->mConfig.findUser, vmInternal->valueAsString(iter.mData));
                
-               if( !set )
+               if (!frame.curIterObject.isValid())
                {
+                  iter.mData = KorkApi::ConsoleValue();
                   vmInternal->printf(0, "No SimSet object '%s'", evalState.mSTR.getStringValue());
                   vmInternal->printf(0, "Did you mean to use 'foreach$' instead of 'foreach'?");
                   ip = failIp;
@@ -2063,10 +2054,8 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
                
                // Set up.
 
-               AssertFatal(iter.mData.set == NULL, "Should be NULL");
+               AssertFatal(iter.mData.cvalue == 0, "Should be NULL");
 
-               vmInternal->incVMRef(set);
-               iter.mData.set = set;
                iter.mIndex = 0;
             }
             
@@ -2083,9 +2072,11 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
             U32 breakIp = code[ ip ];
             IterStackRecord& iter = evalState.iterStack[ frame._ITER - 1 ];
             
-            if( iter.mIsStringIter )
+            if (iter.mIsStringIter && 
+               iter.mData.isString() &&
+                iter.mData.cvalue)
             {
-               const char* str = iter.mData.str;
+               const char* str = (const char*)iter.mData.evaluatePtr(vmInternal->mAllocBase);
                               
                U32 startIndex = iter.mIndex;
                U32 endIndex = startIndex;
@@ -2114,25 +2105,27 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
                   const_cast< char* >( str )[ endIndex ] = savedChar;
                }
                else
+               {
                   iter.mDictionary->setEntryStringValue( iter.mVariable, "" );
-
+               }
+               
                // Skip separator.
                if( str[ endIndex ] != '\0' )
                   ++ endIndex;
                
                iter.mIndex = endIndex;
             }
-            else
+            else if (!iter.mIsStringIter && 
+               frame.curIterObject.isValid())
             {
                U32 index = iter.mIndex;
-               KorkApi::VMObject* set = iter.mData.set;
+               KorkApi::VMObject* set = frame.curIterObject;
                
                if( index >= set->klass->iEnum.GetSize(set) )
                {
                   if (set)
                   {
-                     vmInternal->decVMRef(set);
-                     iter.mData.set = NULL;
+                     frame.curIterObject = NULL;
                   }
                   ip = breakIp;
                   continue;
@@ -2142,6 +2135,13 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
                iter.mDictionary->setEntryUnsignedValue(iter.mVariable, atObject ? atObject->klass->iCreate.GetIdFn(atObject) : 0);
                iter.mIndex = index + 1;
             }
+            else
+            {
+               // Problem: break out
+               iter.mData = KorkApi::ConsoleValue();
+               frame.curIterObject = NULL;
+               ip = breakIp;
+            }
             
             ++ ip;
             break;
@@ -2150,18 +2150,25 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
          case OP_ITER_END:
          {
             -- frame._ITER;
-            IterStackRecord& iter = evalState.iterStack[frame._ITER];
+            IterStackRecord& iter = evalState.iterStack[frame._ITER]; // iter we are ending
+            frame.curIterObject = NULL;
 
-            if (iter.mData.set)
+            if (iter.mIsStringIter)
             {
-               vmInternal->decVMRef(iter.mData.set);
-               iter.mData.set = NULL;
+               evalState.mSTR.rewind();
+               iter.mIsStringIter = false;
             }
-            
 
-            evalState.mSTR.rewind();
-            
-            evalState.iterStack[ frame._ITER ].mIsStringIter = false;
+            // Restore prev iter if valid
+            if (frame._ITER > 0)
+            {
+               IterStackRecord& prevIter = evalState.iterStack[frame._ITER];
+               if (!prevIter.mIsStringIter)
+               {
+                  frame.curIterObject = vmInternal->mConfig.iFind.FindObjectByPathFn(vmInternal->mConfig.findUser, vmInternal->valueAsString(iter.mData));
+               }
+            }
+
             break;
          }
          
