@@ -1110,10 +1110,10 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
                while ( frame._ITER > 0 )
                {
                   IterStackRecord& iter = evalState.iterStack[ -- frame._ITER ];
-                  if (iter.mData.mObj.mSet)
+                  if (iter.mData.set)
                   {
-                     vmInternal->decVMRef(iter.mData.mObj.mSet);
-                     iter.mData.mObj.mSet = NULL;
+                     vmInternal->decVMRef(iter.mData.set);
+                     iter.mData.set = NULL;
                   }
                   iter.mIsStringIter = false;
                }
@@ -1133,10 +1133,10 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
                while( frame._ITER > 0 )
                {
                   IterStackRecord& iter = evalState.iterStack[ -- frame._ITER ];
-                  if (iter.mData.mObj.mSet)
+                  if (iter.mData.set)
                   {
-                     vmInternal->decVMRef(iter.mData.mObj.mSet);
-                     iter.mData.mObj.mSet = NULL;
+                     vmInternal->decVMRef(iter.mData.set);
+                     iter.mData.set = NULL;
                   }
                   iter.mIsStringIter = false;
                }
@@ -1156,10 +1156,10 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
                while( frame._ITER > 0 )
                {
                   IterStackRecord& iter = evalState.iterStack[ -- frame._ITER ];
-                  if (iter.mData.mObj.mSet)
+                  if (iter.mData.set)
                   {
-                     vmInternal->decVMRef(iter.mData.mObj.mSet);
-                     iter.mData.mObj.mSet = NULL;
+                     vmInternal->decVMRef(iter.mData.set);
+                     iter.mData.set = NULL;
                   }
                   iter.mIsStringIter = false;
                }
@@ -2045,8 +2045,8 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
             
             if( iter.mIsStringIter )
             {
-               iter.mData.mStr.mString = evalState.mSTR.getStringValue();
-               iter.mData.mStr.mIndex = 0;
+               iter.mData.str = evalState.mSTR.getStringValue();
+               iter.mIndex = 0;
             }
             else
             {
@@ -2063,11 +2063,11 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
                
                // Set up.
 
-               AssertFatal(iter.mData.mObj.mSet == NULL, "Should be NULL");
+               AssertFatal(iter.mData.set == NULL, "Should be NULL");
 
                vmInternal->incVMRef(set);
-               iter.mData.mObj.mSet = set;
-               iter.mData.mObj.mIndex = 0;
+               iter.mData.set = set;
+               iter.mIndex = 0;
             }
             
             frame._ITER ++;
@@ -2085,9 +2085,9 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
             
             if( iter.mIsStringIter )
             {
-               const char* str = iter.mData.mStr.mString;
+               const char* str = iter.mData.str;
                               
-               U32 startIndex = iter.mData.mStr.mIndex;
+               U32 startIndex = iter.mIndex;
                U32 endIndex = startIndex;
                
                // Break if at end.
@@ -2120,19 +2120,19 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
                if( str[ endIndex ] != '\0' )
                   ++ endIndex;
                
-               iter.mData.mStr.mIndex = endIndex;
+               iter.mIndex = endIndex;
             }
             else
             {
-               U32 index = iter.mData.mObj.mIndex;
-               KorkApi::VMObject* set = iter.mData.mObj.mSet;
+               U32 index = iter.mIndex;
+               KorkApi::VMObject* set = iter.mData.set;
                
                if( index >= set->klass->iEnum.GetSize(set) )
                {
                   if (set)
                   {
                      vmInternal->decVMRef(set);
-                     iter.mData.mObj.mSet = NULL;
+                     iter.mData.set = NULL;
                   }
                   ip = breakIp;
                   continue;
@@ -2140,7 +2140,7 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
                
                KorkApi::VMObject* atObject = set->klass->iEnum.GetObjectAtIndex(set, index);
                iter.mDictionary->setEntryUnsignedValue(iter.mVariable, atObject ? atObject->klass->iCreate.GetIdFn(atObject) : 0);
-               iter.mData.mObj.mIndex = index + 1;
+               iter.mIndex = index + 1;
             }
             
             ++ ip;
@@ -2152,10 +2152,10 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
             -- frame._ITER;
             IterStackRecord& iter = evalState.iterStack[frame._ITER];
 
-            if (iter.mData.mObj.mSet)
+            if (iter.mData.set)
             {
-               vmInternal->decVMRef(iter.mData.mObj.mSet);
-               iter.mData.mObj.mSet = NULL;
+               vmInternal->decVMRef(iter.mData.set);
+               iter.mData.set = NULL;
             }
             
 

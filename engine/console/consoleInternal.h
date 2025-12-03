@@ -186,30 +186,13 @@ struct IterStackRecord
    
    /// The iterator variable.
    Dictionary::Entry* mVariable;
-   
-   /// Information for an object iterator loop.
-   struct ObjectPos
-   {
-      /// The set being iterated over.
-      KorkApi::VMObject* mSet;
 
-      /// Current index in the set.
-      U32 mIndex;
-   };
+   U32 mIndex;
    
-   /// Information for a string iterator loop.
-   struct StringPos
-   {
-      /// The raw string data on the string stack.
-      const char* mString;
-      
-      /// Current parsing position.
-      U32 mIndex;
-   };
    union
    {
-      ObjectPos mObj;
-      StringPos mStr;
+      KorkApi::VMObject* set;
+      const char* str;
    } mData;
 };
 
