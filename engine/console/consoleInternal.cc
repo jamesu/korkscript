@@ -220,18 +220,20 @@ Dictionary::Dictionary()
 {
 }
 
-Dictionary::Dictionary(KorkApi::VmInternal *state, Dictionary* ref)
+Dictionary::Dictionary(KorkApi::VmInternal *state, Dictionary::HashTableData* ref)
 :  mHashTable( NULL )
 {
    setState(state,ref);
 }
 
-void Dictionary::setState(KorkApi::VmInternal *state, Dictionary* ref)
+void Dictionary::setState(KorkApi::VmInternal *state, Dictionary::HashTableData* ref)
 {
    mVm = state;
    
    if (ref)
-      mHashTable = ref->mHashTable;
+   {
+      mHashTable = ref;
+   }
    else
    {
       mHashTable = new HashTableData;

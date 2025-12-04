@@ -87,6 +87,7 @@ struct VmInternal
    void setCurrentFiberMain();
    void setCurrentFiber(FiberId fiber);
    FiberId createFiber(void* userPtr); // needs exec too
+   ExprEvalState* createFiberPtr(void* userPtr); // needs exec too
    FiberId getCurrentFiber();
    void cleanupFiber(FiberId fiber);
    void suspendCurrentFiber();

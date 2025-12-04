@@ -32,6 +32,9 @@
 #ifndef _DATACHUNKER_H_
 #include "core/dataChunker.h"
 #endif
+#ifndef _STREAM_H_
+#include "core/stream.h"
+#endif
 
 #include "console/consoleValue.h"
 
@@ -44,6 +47,78 @@ struct FunctionDecl;
 class CodeBlock;
 class AbstractClassRep;
 class EnumTable;
+
+class IFFBlock
+{
+public:
+
+   U32 ident;
+protected:
+   U32 size;
+   
+public:
+   IFFBlock() : ident(0), size(0) {;}
+   
+   inline U32 getSize() const
+   {
+      return (U32)dAlignSize(size, 2);
+   }
+   
+   inline U32 getRawSize() const { return size; }
+   
+   void setSize(U32 val) { size = val; }
+   
+   inline void seekToEnd(U32 startPos, Stream &stream)
+   {
+      stream.setPosition(startPos + getSize() + 8);
+   }
+
+   inline bool writePad(Stream& stream)
+   {
+      U32 alignSize = (U32)dAlignSize(size, 2);
+      if (alignSize != size)
+      {
+         return stream.write((U8)0);
+      }
+      return true;
+   }
+
+   inline bool readPad(Stream& stream)
+   {
+      U32 alignSize = (U32)dAlignSize(size, 2);
+      if (alignSize != size)
+      {
+         U8 padByte = 0;
+         return stream.read(&padByte);
+      }
+      return true;
+   }
+   
+   bool updateSize(Stream& stream, U32 offset)
+   {
+      U32 newPos = stream.getPosition();
+      S64 newSize = (S64)offset - (S64)newPos - 8;
+      if (newSize < 0)
+      {
+         return false; // ???
+      }
+      
+      stream.setPosition(offset + 4);
+      size = (U32)newSize;
+      stream.write(size);
+      stream.setPosition(newPos);
+   }
+   
+   U32 getNextBlockPosition(U32 bytesInBlock)
+   {
+      return (size - bytesInBlock);
+   }
+
+   inline bool seekNext(Stream& stream, U32 bytesInBlock)
+   {
+      return stream.setPosition(stream.getPosition() + (size - bytesInBlock));
+   }
+};
 
 //-----------------------------------------------------------------------------
 
@@ -68,6 +143,7 @@ enum EvalConstants {
 };
 
 struct ConsoleFrame;
+class ConsoleSerializer;
 
 class Dictionary
 {
@@ -78,6 +154,7 @@ public:
       friend class Dictionary;
       friend class ExprEvalState;
       friend struct ConsoleFrame;
+      friend class ConsoleSerializer;
       
       StringTableEntry name;
       Entry *nextEntry;
@@ -119,7 +196,7 @@ public:
    KorkApi::VmInternal* mVm;
    
    Dictionary();
-   Dictionary(KorkApi::VmInternal *state, Dictionary* ref=NULL);
+   Dictionary(KorkApi::VmInternal *state, Dictionary::HashTableData* ref=NULL);
    ~Dictionary();
    
    void clearEntry(Entry* e);
@@ -138,7 +215,7 @@ public:
    Entry *lookup(StringTableEntry name);
    Entry* getVariable(StringTableEntry name);
    Entry *add(StringTableEntry name);
-   void setState(KorkApi::VmInternal *state, Dictionary* ref=NULL);
+   void setState(KorkApi::VmInternal *state, Dictionary::HashTableData* ref=NULL);
    void remove(Entry *);
    void reset();
    
@@ -189,6 +266,7 @@ struct IterStackRecord
    U32 mIndex;
 
    KorkApi::ConsoleValue mData;
+   KorkApi::ConsoleHeapAllocRef mHeapData; // mainly for serialization
 };
 
 struct ConsoleFrame;
@@ -259,6 +337,7 @@ public:
    
    KorkApi::FiberRunResult::State mState;
    KorkApi::ConsoleValue mLastFiberValue; ///< Value yielded from function or returned to fiber
+   KorkApi::ConsoleHeapAllocRef mLastFiberHeapData; // mainly for serialization
 
    char traceBuffer[TraceBufferSize];
    

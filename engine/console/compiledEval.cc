@@ -179,9 +179,9 @@ struct ConsoleFrame
    char prevFieldArray[FieldArraySize];
 
 public:
-   ConsoleFrame(KorkApi::VmInternal* vm, ExprEvalState* fiber, ConsoleFrame* parentFrame = NULL)
+   ConsoleFrame(KorkApi::VmInternal* vm, ExprEvalState* fiber, Dictionary::HashTableData* parentVars = NULL)
       : stackStart(0)
-      , dictionary(vm, parentFrame ? &parentFrame->dictionary : NULL)
+      , dictionary(vm, parentVars)
       , evalState(nullptr)
       , curFloatTable(nullptr)
       , curStringTable(nullptr)
@@ -2536,7 +2536,7 @@ void ExprEvalState::throwMask(U32 mask)
 void ExprEvalState::pushFrameRef(S32 stackIndex, CodeBlock* codeBlock, U32 ip)
 {
    AssertFatal( stackIndex >= 0 && stackIndex < stack.size(), "You must be asking for a valid frame!" );
-   ConsoleFrame *newFrame = new ConsoleFrame(vmInternal, this, vmFrames[stackIndex]);
+   ConsoleFrame *newFrame = new ConsoleFrame(vmInternal, this, vmFrames[stackIndex]->dictionary.mHashTable);
    vmFrames.push_back(newFrame);
    
    ConsoleFrame* oldFrame = vmFrames[stackIndex];
@@ -2591,6 +2591,861 @@ KorkApi::FiberRunResult ExprEvalState::resume(KorkApi::ConsoleValue value)
    
    return KorkApi::FiberRunResult();
 }
+
+#if 0
+
+/// Class which serializes console execution state. Accepts a list of 
+/// fibers to serialize; any referenced values will get re-mapped.
+struct ConsoleSerializer
+{
+   struct Remap
+   {
+      U32 oldIndex;
+      U32 newIndex;
+   };
+
+   // Main block
+   static const U32 CSOB_VERSION = 1;
+   static const U32 CSOB_MAGIC = makeFourCCTag('C','S','O','B');
+   // Fiber
+   static const U32 CEOB_VERSION = 1;
+   static const U32 CEOB_MAGIC = makeFourCCTag('C','E','O','B');
+   // Dictionary
+   static const U32 DICT_VERSION = 1;
+   static const U32 DICT_MAGIC = makeFourCCTag('D','I','C','T');
+   // DSO copy
+   static const U32 DSOB_MAGIC = makeFourCCTag('D','S','O','B');
+   // End of list
+   static const U32 EOLB_MAGIC = makeFourCCTag('E','O','L','B');
+   
+   KorkApi::VmInternal* mTarget;
+   Stream* mStream;
+   void* mUserPtr;
+   Vector<CodeBlock*> mCodeBlocks;
+   Vector<Dictionary::HashTableData*> mDictionaryTables;
+   Vector<ExprEvalState*> mFibers;
+   Vector<Remap> mFiberRemap;
+   bool mAllowId;
+
+   ConsoleSerializer(KorkApi::VmInternal* target, void* userPtr, bool allowId, Stream* s);
+   ~ConsoleSerializer();
+
+   S32 addReferencedCodeblock(CodeBlock* block);
+   S32 addReferencedDictionary(Dictionary::HashTableData* dict);
+   S32 addReferencedFiber(ExprEvalState* state);
+   
+   CodeBlock* getReferencedCodeblock(S32 blockId);
+   Dictionary::HashTableData* getReferencedDictionary(S32 dictId);
+   ExprEvalState* getReferencedFiber(S32 fiberId);
+   
+   ExprEvalState* loadEvalState();
+   bool saveEvalState(ExprEvalState* evalState);
+
+   ConsoleFrame* loadFrame(ExprEvalState* state);
+   bool writeFrame(ConsoleFrame& frame);
+
+   KorkApi::VMObject* loadObject();
+   void writeObject(KorkApi::VMObject* obj);
+   
+   void readObjectRef(LocalRefTrack& track);
+   void writeObjectRef(LocalRefTrack& track);
+
+   void readVarRef(ConsoleVarRef& ref);
+   void writeVarRef(ConsoleVarRef& ref);
+   
+   void readConsoleValue(KorkApi::ConsoleValue& value, KorkApi::ConsoleHeapAllocRef ref);
+   void writeConsoleValue(KorkApi::ConsoleValue& value, KorkApi::ConsoleHeapAllocRef ref);
+   
+   void readHeapData(KorkApi::ConsoleHeapAllocRef& ref);
+   void writeHeapData(KorkApi::ConsoleHeapAllocRef ref);
+
+   void readIterStackRecord(IterStackRecord& ref);
+   void writeIterStackRecord(IterStackRecord& ref);
+
+   void readStringStack(StringStack& stack);
+   void writeStringStack(StringStack& stack);
+   
+   bool loadRelatedObjects();
+   bool saveRelatedObjects();
+   
+   bool loadFibers();
+   bool saveFibers();
+   
+   void fixupConsoleValues();
+
+   void reset();
+   
+   bool isOk();
+   
+   bool read(KorkApi::VmInternal* vm, Vector<ExprEvalState*> &fibers);
+   bool write(KorkApi::VmInternal* vm, Vector<ExprEvalState*> &fibers);
+};
+
+ConsoleSerializer::ConsoleSerializer(KorkApi::VmInternal* target, void* userPtr, bool allowId, Stream* s)
+{
+   mTarget = target;
+   mUserPtr = userPtr;
+   mAllowId = allowId;
+   mStream = s;
+}
+
+ConsoleSerializer::~ConsoleSerializer()
+{
+}
+
+bool ConsoleSerializer::isOk()
+{
+   return mStream && mStream->getStatus() == Stream::Ok;
+}
+
+S32 ConsoleSerializer::addReferencedCodeblock(CodeBlock* block)
+{
+   if (block == NULL)
+   {
+      return -1;
+   }
+
+   auto itr = std::find(mCodeBlocks.begin(), mCodeBlocks.end(), block);
+   if (itr != mCodeBlocks.end())
+   {
+      return (S32)(itr - mCodeBlocks.begin());
+   }
+   else
+   {
+      mCodeBlocks.push_back(block);
+      block->incRefCount();
+      return (S32)mCodeBlocks.size()-1;
+   }
+}
+
+S32 ConsoleSerializer::addReferencedDictionary(Dictionary::HashTableData* dict)
+{
+   if (dict == NULL)
+   {
+      return -1;
+   }
+
+   auto itr = std::find(mDictionaryTables.begin(), mDictionaryTables.end(), dict);
+   if (itr != mDictionaryTables.end())
+   {
+      return (S32)(itr - mDictionaryTables.begin());
+   }
+   else
+   {
+      mDictionaryTables.push_back(dict);
+      return (S32)mDictionaryTables.size()-1;
+   }
+}
+
+S32 ConsoleSerializer::addReferencedFiber(ExprEvalState* fiber)
+{
+   if (fiber == NULL)
+   {
+      return -1;
+   }
+
+   auto itr = std::find(mFibers.begin(), mFibers.end(), fiber);
+   if (itr != mFibers.end())
+   {
+      return (S32)(itr - mFibers.begin());
+   }
+   else
+   {
+      mFibers.push_back(fiber);
+      return (S32)mFibers.size()-1;
+   }
+}
+
+CodeBlock* ConsoleSerializer::getReferencedCodeblock(S32 blockId)
+{
+   return blockId < 0 ? NULL : mCodeBlocks[blockId];
+}
+
+Dictionary::HashTableData* ConsoleSerializer::getReferencedDictionary(S32 dictId)
+{
+   return dictId < 0 ? NULL : mDictionaryTables[dictId];
+}
+
+ExprEvalState* ConsoleSerializer::getReferencedFiber(S32 fiberId)
+{
+   return fiberId < 0 ? NULL : mFibers[fiberId];
+}
+
+ExprEvalState* ConsoleSerializer::loadEvalState()
+{
+   Remap theRemap;
+
+   if (!mStream->read(&theRemap.oldIndex))
+   {
+      return NULL;
+   }
+
+   ExprEvalState* state = mTarget->createFiberPtr(mUserPtr);
+   if (state == NULL)
+   {
+      return NULL;
+   }
+
+   theRemap.newIndex = state->mAllocNumber-1;
+   mFiberRemap.push_back(theRemap);
+
+   // Stacks
+   mStream->read(sizeof(state->iterStack),  state->iterStack);
+   mStream->read(sizeof(state->floatStack), state->floatStack);
+   mStream->read(sizeof(state->intStack),   state->intStack);
+   for (U32 i=0; i<ObjectCreationStackSize; i++)
+   {
+      auto& item = state->objectCreationStack[i];
+      writeObject(item.newObject);
+      mStream->read(&item.failJump);
+   }
+   mStream->read(sizeof(state->tryStack), state->tryStack);
+   mStream->read(sizeof(state->vmStack), state->vmStack);
+
+   // Offsets
+   mStream->read(&state->_VM);
+
+   // String stack
+   readStringStack(state->mSTR);
+   // Dictionary
+   S32 dictionaryId = addReferencedDictionary(state->globalVars ? state->globalVars->mHashTable : NULL);
+   mStream->read(&dictionaryId);
+
+   // Names
+   state->mCurrentFile = mStream->readSTString();
+   state->mCurrentRoot = mStream->readSTString();
+
+   // State
+   U8 val = 0;
+   mStream->read(&val);
+   state->mState = (KorkApi::FiberRunResult::State)val;
+   readHeapData(state->mLastFiberHeapData);
+   readConsoleValue(state->mLastFiberValue, state->mLastFiberHeapData);
+
+   // Frames
+   U32 numFrames = 0;
+   mStream->read(&numFrames);
+   for (U32 i=0; i<numFrames; i++)
+   {
+      ConsoleFrame* frame = loadFrame(state);
+      if (frame == NULL)
+      {
+         return NULL;
+      }
+      state->vmFrames.push_back(frame);
+   }
+}
+
+bool ConsoleSerializer::saveEvalState(ExprEvalState* state)
+{
+   U32 oldIndex = state->mAllocNumber-1;
+   mStream->write(oldIndex);
+
+   // Stacks
+   mStream->write(sizeof(state->iterStack), state->iterStack);
+   mStream->write(sizeof(state->floatStack), state->floatStack);
+   mStream->write(sizeof(state->intStack), state->intStack);
+   for (U32 i=0; i<ObjectCreationStackSize; i++)
+   {
+      auto& item = state->objectCreationStack[i];
+      writeObject(item.newObject);
+      mStream->write(item.failJump);
+   }
+   mStream->write(sizeof(state->tryStack), state->tryStack);
+   mStream->write(sizeof(state->vmStack), state->vmStack);
+
+   // Offsets
+   mStream->write(state->_VM);
+
+   // String stack
+   writeStringStack(state->mSTR);
+   // Dictionary
+   S32 dictionaryId = addReferencedDictionary(state->globalVars ? state->globalVars->mHashTable : NULL);
+   mStream->write(dictionaryId);
+
+   // Names
+   mStream->writeString(state->mCurrentFile);
+   mStream->writeString(state->mCurrentRoot);
+
+   // State
+   mStream->write((U8)state->mState);
+   writeHeapData(state->mLastFiberHeapData);
+   writeConsoleValue(state->mLastFiberValue, state->mLastFiberHeapData);
+
+   // Frames
+   mStream->write((U32)state->vmFrames.size());
+   for (ConsoleFrame* frame : state->vmFrames)
+   {
+      writeFrame(*frame);
+   }
+}
+
+void ConsoleSerializer::readConsoleValue(KorkApi::ConsoleValue& value, KorkApi::ConsoleHeapAllocRef dataRef)
+{
+   mStream->read(&value.cvalue);
+   mStream->read(&value.typeId);
+   mStream->read(&value.zoneId);
+   
+   // Load external data
+   if (dataRef && value.getZone() == KorkApi::ConsoleValue::ZoneExternal)
+   {
+      value.cvalue = (U64)dataRef->ptr();
+   }
+   
+   validateReturnBufferSize(size);
+}
+
+void ConsoleSerializer::writeConsoleValue(KorkApi::ConsoleValue& value, KorkApi::ConsoleHeapAllocRef dataRef)
+{
+   mStream->write(&value.cvalue);
+   mStream->write(&value.typeId);
+   mStream->write(&value.zoneId);
+}
+
+void ConsoleSerializer::readHeapData(KorkApi::ConsoleHeapAllocRef& ref)
+{
+   U32 size = 0;
+   mStream->read(&size);
+   
+   if (size > 0)
+   {
+      ref = mTarget->createHeapRef(size);
+      mStream->read(size, ref->ptr());
+   }
+   else
+   {
+      ref = NULL;
+   }
+}
+
+void ConsoleSerializer::writeHeapData(KorkApi::ConsoleHeapAllocRef ref)
+{
+   if (!ref)
+   {
+      mStream->write((U32)0);
+   }
+   else
+   {
+      mStream->write((U32)ref->size);
+      mStream->write((U32)ref->size, ref->ptr());
+   }
+}
+
+void ConsoleSerializer::readIterStackRecord(IterStackRecord& ref)
+{
+   mStream->read(&ref.mIsStringIter);
+   mStream->read(&ref.mIndex);
+   readHeapData(ref.mHeapData);
+   readConsoleValue(ref.mData, ref.mHeapData);
+}
+
+void ConsoleSerializer::writeIterStackRecord(IterStackRecord& ref)
+{
+   mStream->write(ref.mIsStringIter);
+   mStream->write(ref.mIndex);
+   writeHeapData(ref.mHeapData);
+   writeConsoleValue(ref.mData, ref.mHeapData);
+}
+
+void ConsoleSerializer::readVarRef(ConsoleVarRef& ref)
+{
+   S32 dictId = addReferencedDictionary(ref.dictionary ? ref.dictionary->mHashTable : NULL);
+   mStream->write(dictId);
+   mStream->writeString(ref.var ? ref.var->name : "");
+}
+
+void ConsoleSerializer::writeVarRef(ConsoleVarRef& ref)
+{
+   S32 dictId = -1;
+   mStream->read(&dictId);
+   StringTableEntry steName = mStream->readSTString();
+   // TOFIX
+}
+
+KorkApi::VMObject* ConsoleSerializer::loadObject()
+{
+   U8 refType = 0;
+   KorkApi::VMObject *foundObject = NULL;
+
+   // By name?
+   if ((refType & BIT(1)) != 0)
+   {
+      StringTableEntry steName = mStream->readSTString();
+      foundObject = mTarget->mVM->findObjectByName(steName);
+   }
+
+   // By id?
+   if (mAllowId && foundObject == NULL && (refType & BIT(0)) != 0)
+   {
+      char stringBuf[256];
+      stringBuf[0] = '\0';
+      mStream->readString(stringBuf);
+      KorkApi::SimObjectId value = (KorkApi::SimObjectId)std::stoull(stringBuf);
+      foundObject = mTarget->mVM->findObjectById(value);
+   }
+
+   return foundObject;
+}
+
+void ConsoleSerializer::writeObject(KorkApi::VMObject* obj)
+{
+   if (obj == NULL)
+   {
+      mStream->write((U8)0);
+   }
+   else
+   {
+      if (mAllowId)
+      {
+         
+      }
+   }
+}
+
+void ConsoleSerializer::readObjectRef(LocalRefTrack& track)
+{
+   KorkApi::VMObject *foundObject = loadObject();
+   track = foundObject;
+}
+
+void ConsoleSerializer::writeObjectRef(LocalRefTrack& track)
+{
+   writeObject(track.obj);
+}
+
+void ConsoleSerializer::readStringStack(StringStack& stack)
+{
+   bool r = true;
+   stack.reset();
+   mStream->read(&stack.mBufferSize);
+   mStream->read(stack.mBufferSize, stack.mBuffer);
+
+   mStream->read(sizeof(stack.mFrameOffsets), stack.mFrameOffsets);
+   mStream->read(sizeof(stack.mStartOffsets), stack.mStartOffsets);
+   mStream->read(sizeof(stack.mStartTypes), stack.mStartTypes);
+   mStream->read(&stack.mType);
+   mStream->read(&stack.mFuncId);
+   mStream->read(&stack.mNumFrames);
+   mStream->read(&stack.mStart);
+   mStream->read(&stack.mLen);
+   mStream->read(&stack.mStartStackSize);
+   mStream->read(&stack.mFunctionOffset);
+   return r;
+}
+
+void ConsoleSerializer::writeStringStack(StringStack& stack)
+{
+   mStream->write(stack.mBufferSize);
+   mStream->write(stack.mBufferSize, stack.mBuffer);
+
+   mStream->write(sizeof(stack.mFrameOffsets), stack.mFrameOffsets);
+   mStream->write(sizeof(stack.mStartOffsets), stack.mStartOffsets);
+   mStream->write(sizeof(stack.mStartTypes), stack.mStartTypes);
+   mStream->write(stack.mType);
+   mStream->write(stack.mFuncId);
+   mStream->write(stack.mNumFrames);
+   mStream->write(stack.mStart);
+   mStream->write(stack.mLen);
+   mStream->write(stack.mStartStackSize);
+   mStream->write(stack.mFunctionOffset);
+}
+
+ConsoleFrame* ConsoleSerializer::loadFrame(ExprEvalState* state)
+{
+   // Global refs
+   S32 blockId = -1;
+   S32 dictionaryId = -1;
+
+   mStream->read(&blockId);
+   mStream->read(&dictionaryId);
+
+   CodeBlock* block = getReferencedCodeblock(blockId);
+   Dictionary::HashTableData* dict = getReferencedDictionary(dictionaryId);
+   
+   if (block == NULL ||
+       dict == NULL)
+   {
+      return NULL;
+   }
+
+   ConsoleFrame* frame = new ConsoleFrame(mTarget, state, dict);
+
+   // Flags
+   bool inFunction = false;
+   mStream->read(&inFunction);
+   mStream->read(&frame->noCalls);
+   mStream->read(&frame->isReference);
+   mStream->read(&frame->inNativeFunction);
+   mStream->read(&frame->popMinDepth);
+   //
+   mStream->read(&frame->pushStringStackCount);
+
+   // Stack
+   mStream->read(&frame->_FLT);
+   mStream->read(&frame->_UINT);
+   mStream->read(&frame->_ITER);
+   mStream->read(&frame->_OBJ);
+   mStream->read(&frame->_TRY);
+   mStream->read(&frame->_STARTOBJ);
+
+   // Offsets
+   mStream->read(&frame->failJump);
+   mStream->read(&frame->stackStart);
+   mStream->read(&frame->callArgc);
+   mStream->read(&frame->ip);
+   mStream->read(&frame->lastCallType);
+
+   // Dictionary state
+   frame->scopeName = mStream->readSTString();
+   frame->scopePackage = mStream->readSTString();
+   StringTableEntry nsName = mStream->readSTString();
+   frame->scopeNamespace = mTarget->mNSState.find(nsName, frame->scopePackage); // TOFIX: is this correct?
+   
+   // References
+   readObjectRef(frame->currentNewObject);
+   readObjectRef(frame->thisObject);
+   readObjectRef(frame->prevObject);
+   readObjectRef(frame->curObject);
+   readObjectRef(frame->saveObject);
+   readObjectRef(frame->curIterObject);
+   
+   readVarRef(frame->currentVar);
+   readVarRef(frame->copyVar);
+   
+   // Docblock
+   mStream->read(&frame->nsDocBlockClassOffset);
+   mStream->read(&frame->nsDocBlockOffset);
+   mStream->read(&frame->nsDocBlockClassNameLength);
+   mStream->read(&frame->nsDocBlockClassLocation);
+
+   // Buffers
+   mStream->read(ConsoleFrame::FieldArraySize, frame->curFieldArray);
+   mStream->read(ConsoleFrame::FieldArraySize, frame->prevFieldArray);
+
+   // Restore everything remaining
+
+   if (inFunction)
+   {
+      frame->curFloatTable = block->functionFloats;
+      frame->curStringTable = block->functionStrings;
+   }
+   else
+   {
+      frame->curFloatTable = block->globalFloats;
+      frame->curStringTable = block->globalStrings;
+   }
+   
+   return frame;
+}
+
+bool ConsoleSerializer::writeFrame(ConsoleFrame& frame)
+{
+   // Global refs
+   S32 blockId = addReferencedCodeblock(frame.codeBlock);
+   S32 dictionaryId = addReferencedDictionary(frame.dictionary.mHashTable);
+   
+   if (blockId < 0 ||
+       dictionaryId < 0)
+   {
+      return false;
+   }
+   
+   mStream->write(blockId);
+   mStream->write(dictionaryId);
+
+   bool inFunction = frame.curFloatTable != frame.codeBlock->globalFloats;
+
+   // Flags
+   mStream->write(inFunction);
+   mStream->write(frame.noCalls);
+   mStream->write(frame.isReference);
+   mStream->write(frame.inNativeFunction);
+   mStream->write(frame.popMinDepth);
+   //
+   mStream->write(frame.pushStringStackCount);
+
+   // Stack
+   mStream->write(frame._FLT);
+   mStream->write(frame._UINT);
+   mStream->write(frame._ITER);
+   mStream->write(frame._OBJ);
+   mStream->write(frame._TRY);
+   mStream->write(frame._STARTOBJ);
+
+   // Offsets
+   mStream->write(frame.failJump);
+   mStream->write(frame.stackStart);
+   mStream->write(frame.callArgc);
+   mStream->write(frame.ip);
+   mStream->write(frame.lastCallType);
+
+   // Dictionary state
+   mStream->writeString(frame.scopeName);
+   mStream->writeString(frame.scopePackage);
+   mStream->writeString(frame.scopeNamespace ? frame.scopeNamespace->mName : "");
+
+   // References
+   writeObjectRef(frame.currentNewObject);
+   writeObjectRef(frame.thisObject);
+   writeObjectRef(frame.prevObject);
+   writeObjectRef(frame.curObject);
+   writeObjectRef(frame.saveObject);
+   writeObjectRef(frame.curIterObject);
+   
+   writeVarRef(frame.currentVar);
+   writeVarRef(frame.copyVar);
+
+   // Docblock
+   mStream->write(frame.nsDocBlockClassOffset);
+   mStream->write(frame.nsDocBlockOffset);
+   mStream->write(frame.nsDocBlockClassNameLength);
+   mStream->write(frame.nsDocBlockClassLocation);
+
+   // Buffers
+   mStream->write(ConsoleFrame::FieldArraySize, frame.curFieldArray);
+   mStream->write(ConsoleFrame::FieldArraySize, frame.prevFieldArray);
+   
+   return true;
+}
+
+void ConsoleSerializer::fixupConsoleValues()
+{
+   auto remapCV = [this](KorkApi::ConsoleValue& v){
+      U32 oldZone = v.getZone() - KorkApi::ConsoleValue::ZoneFiberStart;
+      
+      for (Remap& r : mFiberRemap)
+      {
+         if (r.oldIndex == oldZone)
+         {
+            v.setZone((KorkApi::ConsoleValue::Zone)(KorkApi::ConsoleValue::ZoneFiberStart + r.newIndex));
+            break;
+         }
+      }
+   };
+   
+   // Dictionary variables
+   for (Dictionary::HashTableData* ht : mDictionaryTables)
+   {
+      for (U32 i=0; i<ht->size; i++)
+      {
+         for (Dictionary::Entry* entry = ht->data[i]; entry; entry = entry->nextEntry)
+         {
+            KorkApi::ConsoleValue& v = entry->mConsoleValue;
+            if (v.getZone() >= KorkApi::ConsoleValue::ZoneFiberStart)
+            {
+               remapCV(v);
+            }
+         }
+      }
+   }
+   
+   // Fiber values
+   for (ExprEvalState* state : mFibers)
+   {
+      if (state->mLastFiberValue.getZone() >= KorkApi::ConsoleValue::ZoneFiberStart)
+      {
+         remapCV(state->mLastFiberValue);
+      }
+      
+      for (U32 i=0; i<MaxIterStackSize; i++)
+      {
+         if (state->iterStack[i].mData.getZone() >= KorkApi::ConsoleValue::ZoneFiberStart)
+         {
+            remapCV(state->iterStack[i].mData);
+         }
+      }
+   }
+}
+
+void ConsoleSerializer::reset()
+{
+   for (CodeBlock* block : mCodeBlocks)
+   {
+      block->decRefCount();
+   }
+   mCodeBlocks.clear();
+   mDictionaryTables.clear();
+   mFibers.clear();
+   mFiberRemap.clear();
+}
+
+bool ConsoleSerializer::read(KorkApi::VmInternal* vm, Vector<ExprEvalState*> &fibers)
+{
+   reset();
+   mTarget = vm;
+   
+   IFFBlock block;
+   if (!mStream->read(sizeof(IFFBlock), &block))
+   {
+      return false;
+   }
+   
+   if (block.ident != CSOB_MAGIC || block.getRawSize() < 12)
+   {
+      return false;
+   }
+   
+   U32 version = 0;
+   U32 objectOffset = 0;
+   U32 mainOffset = 0;
+   mStream->read(&version);
+   mStream->read(&objectOffset);
+   mStream->read(&mainOffset);
+   
+   if (version != CSOB_VERSION)
+   {
+      return false;
+   }
+   
+   mStream->setPosition(objectOffset);
+   
+   if (!loadRelatedObjects())
+   {
+      return false;
+   }
+   
+   mStream->setPosition(mainOffset);
+   
+   if (!loadFibers())
+   {
+      return false;
+   }
+   
+   return true;
+}
+
+bool ConsoleSerializer::write(KorkApi::VmInternal* vm, Vector<ExprEvalState*> &fibers)
+{
+   U32 startPos = mStream->getPosition();
+
+   reset();
+   mTarget = vm;
+
+   IFFBlock block;
+   block.ident = CSOB_MAGIC;
+   if (!mStream->write(sizeof(IFFBlock), &block))
+   {
+      return false;
+   }
+
+   mStream->write(CSOB_VERSION);
+
+   for (ExprEvalState* state : fibers)
+   {
+      if (!saveEvalState(state))
+      {
+         return false;
+      }
+   }
+
+   U32 endPos = mStream->getPosition();
+   block.setSize(endPos - startPos);
+   if (!block.writePad(*mStream))
+   {
+      return false;
+   }
+
+   mStream->setPosition(startPos);
+   mStream->write(sizeof(IFFBlock), &block);
+   return true;
+}
+
+bool ConsoleSerializer::loadRelatedObjects()
+{
+   IFFBlock scanBlock;
+   while (mStream->read(sizeof(IFFBlock), &scanBlock))
+   {
+      if (scanBlock.getRawSize() < 4)
+      {
+         scanBlock.seekNext(*mStream, 0);
+         continue;
+      }
+
+      switch (scanBlock.ident)
+      {
+      case DICT_MAGIC:
+         // Serialized dictionary
+         break;
+      case DSOB_MAGIC:
+         // Serialized codeblock
+         break;
+      case EOLB_MAGIC:
+         // End of list block
+         scanBlock.seekNext(*mStream, 0);
+         return true;
+      default:
+         break;
+      }
+   }
+}
+
+bool ConsoleSerializer::saveRelatedObjects()
+{
+   // TODO
+}
+
+bool ConsoleSerializer::loadFibers()
+{
+   IFFBlock scanBlock;
+   while (mStream->read(sizeof(IFFBlock), &scanBlock))
+   {
+      if (scanBlock.getRawSize() < 4)
+      {
+         scanBlock.seekNext(*mStream, 0);
+         continue;
+      }
+      
+      ExprEvalState* evalState = NULL;
+
+      switch (scanBlock.ident)
+      {
+      case CEOB_MAGIC:
+         // Serialized fiber
+         evalState = loadEvalState();
+         if (!evalState)
+         {
+            return false;
+         }
+         mFibers.push_back(evalState);
+         break;
+      case EOLB_MAGIC:
+         // End of list block
+         scanBlock.seekNext(*mStream, 0);
+         return true;
+      default:
+         break;
+      }
+   }
+   
+   return false; // invalid list
+}
+
+bool ConsoleSerializer::saveFibers()
+{
+   IFFBlock writeBlock;
+   writeBlock.ident = CEOB_MAGIC;
+   for (ExprEvalState* state : mFibers)
+   {
+      U32 startPos = mStream->getPosition();
+      if (!mStream->write(sizeof(IFFBlock), &writeBlock))
+      {
+         return false;
+      }
+      
+      if (!saveEvalState(state))
+      {
+         return false;
+      }
+      
+      writeBlock.updateSize(*mStream, startPos);
+   }
+   
+   writeBlock.ident = EOLB_MAGIC;
+   writeBlock.setSize(0);
+   return mStream->write(sizeof(IFFBlock), &writeBlock);
+}
+
+#endif
 
 //------------------------------------------------------------
 

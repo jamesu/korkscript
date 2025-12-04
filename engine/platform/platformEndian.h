@@ -40,6 +40,11 @@ inline F32 convertLEndianToHost(F32 i) { return i; }
 inline F64 convertHostToLEndian(F64 i) { return i; }
 inline F64 convertLEndianToHost(F64 i) { return i; }
 
+inline U64 convertHostToLEndian(U64 i) { return i; }
+inline U64 convertLEndianToHost(U64 i) { return i; }
+inline S64 convertHostToLEndian(S64 i) { return i; }
+inline S64 convertLEndianToHost(S64 i) { return i; }
+
 inline U16 convertHostToBEndian(U16 i)
 {
    return U16((i << 8) | (i >> 8));
