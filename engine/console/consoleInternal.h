@@ -183,8 +183,6 @@ struct IterStackRecord
    /// If true, this is a foreach$ loop; if not, it's a foreach loop.
    bool mIsStringIter;
    
-   Dictionary* mDictionary;
-   
    /// The iterator variable.
    Dictionary::Entry* mVariable;
 

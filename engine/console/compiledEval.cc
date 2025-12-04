@@ -2024,7 +2024,6 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
             IterStackRecord& iter = evalState.iterStack[ frame._ITER ];
             
             iter.mVariable = evalState.getCurrentFrame().dictionary.add( varName );
-            iter.mDictionary = &evalState.getCurrentFrame().dictionary;
             
             if (iter.mIsStringIter)
             {
@@ -2096,12 +2095,12 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
                {
                   char savedChar = str[ endIndex ];
                   const_cast< char* >( str )[ endIndex ] = '\0'; // We are on the string stack so this is okay.
-                  iter.mDictionary->setEntryStringValue(iter.mVariable, &str[ startIndex ] );
+                  frame.dictionary.setEntryStringValue(iter.mVariable, &str[ startIndex ] );
                   const_cast< char* >( str )[ endIndex ] = savedChar;
                }
                else
                {
-                  iter.mDictionary->setEntryStringValue( iter.mVariable, "" );
+                  frame.dictionary.setEntryStringValue( iter.mVariable, "" );
                }
                
                // Skip separator.
@@ -2127,7 +2126,7 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
                }
                
                KorkApi::VMObject* atObject = set->klass->iEnum.GetObjectAtIndex(set, index);
-               iter.mDictionary->setEntryUnsignedValue(iter.mVariable, atObject ? atObject->klass->iCreate.GetIdFn(atObject) : 0);
+               frame.dictionary.setEntryUnsignedValue(iter.mVariable, atObject ? atObject->klass->iCreate.GetIdFn(atObject) : 0);
                iter.mIndex = index + 1;
             }
             else
