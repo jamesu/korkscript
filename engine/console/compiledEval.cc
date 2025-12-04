@@ -113,7 +113,7 @@ struct ConsoleFrame
 
    
    // Context (16 bytes)
-   Dictionary* dictionary;
+   Dictionary dictionary;
    ExprEvalState* evalState;
    
    // Frame state (24 bytes + 20 bytes)
@@ -179,9 +179,9 @@ struct ConsoleFrame
    char prevFieldArray[FieldArraySize];
 
 public:
-   ConsoleFrame(KorkApi::VmInternal* vm, ExprEvalState* fiber)
+   ConsoleFrame(KorkApi::VmInternal* vm, ExprEvalState* fiber, ConsoleFrame* parentFrame = NULL)
       : stackStart(0)
-      , dictionary(nullptr)
+      , dictionary(vm, parentFrame ? &parentFrame->dictionary : NULL)
       , evalState(nullptr)
       , curFloatTable(nullptr)
       , curStringTable(nullptr)
@@ -312,10 +312,10 @@ inline void ConsoleFrame::setCurVarName(StringTableEntry name)
       currentVar.var = evalState->vmInternal->mGlobalVars.lookup(name);
       currentVar.dictionary = &evalState->vmInternal->mGlobalVars;
    }
-   else if (dictionary)
+   else
    {
-      currentVar.var = dictionary->lookup(name);
-      currentVar.dictionary = dictionary;
+      currentVar.var = dictionary.lookup(name);
+      currentVar.dictionary = &dictionary;
    }
    if(!currentVar.var && evalState->vmInternal->mConfig.warnUndefinedScriptVariables)
    {
@@ -330,15 +330,10 @@ inline void ConsoleFrame::setCurVarNameCreate(StringTableEntry name)
       currentVar.var = evalState->vmInternal->mGlobalVars.add(name);
       currentVar.dictionary = &evalState->vmInternal->mGlobalVars;
    }
-   else if(dictionary)
-   {
-      currentVar.var = dictionary->add(name);
-      currentVar.dictionary = dictionary;
-   }
    else
    {
-      currentVar.var = NULL;
-      evalState->vmInternal->printf(1, "Accessing local variable in global scope... failed: %s", name);
+      currentVar.var = dictionary.add(name);
+      currentVar.dictionary = &dictionary;
    }
 }
 
@@ -2028,8 +2023,8 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
             
             IterStackRecord& iter = evalState.iterStack[ frame._ITER ];
             
-            iter.mVariable = evalState.getCurrentFrame().dictionary->add( varName );
-            iter.mDictionary = evalState.getCurrentFrame().dictionary;
+            iter.mVariable = evalState.getCurrentFrame().dictionary.add( varName );
+            iter.mDictionary = &evalState.getCurrentFrame().dictionary;
             
             if (iter.mIsStringIter)
             {
@@ -2359,26 +2354,25 @@ execCheck:
 
 void ExprEvalState::setLocalFrameVariable(StringTableEntry name, KorkApi::ConsoleValue value)
 {
-   vmFrames.last()->dictionary->setVariableValue(name, value);
+   vmFrames.last()->dictionary.setVariableValue(name, value);
 }
 
 KorkApi::ConsoleValue ExprEvalState::getLocalFrameVariable(StringTableEntry name)
 {
-   Dictionary::Entry* e = vmFrames.empty() ? NULL : vmFrames.last()->dictionary->getVariable(name);
+   Dictionary::Entry* e = vmFrames.empty() ? NULL : vmFrames.last()->dictionary.getVariable(name);
    
    if (!e)
    {
       return KorkApi::ConsoleValue();
    }
    
-   return vmFrames.last()->dictionary->getEntryValue(e);
+   return vmFrames.last()->dictionary.getEntryValue(e);
 }
 
 
 void ExprEvalState::pushFrame(StringTableEntry frameName, Namespace *ns, StringTableEntry packageName, CodeBlock* block, U32 ip)
 {
    ConsoleFrame *newFrame = new ConsoleFrame(vmInternal, this);
-   newFrame->dictionary = new Dictionary(vmInternal);
    if (vmFrames.size() > 0)
    {
       newFrame->copyFrom(vmFrames.last(), false);
@@ -2473,7 +2467,6 @@ void ExprEvalState::popFrame()
       AssertFatal(prevFrame->_FLT == last->_FLT && prevFrame->_UINT == last->_UINT && prevFrame->_ITER == last->_ITER, "Stack mismatch");
    }
    
-   delete last->dictionary;
    delete last;
 }
 
@@ -2544,8 +2537,7 @@ void ExprEvalState::throwMask(U32 mask)
 void ExprEvalState::pushFrameRef(S32 stackIndex, CodeBlock* codeBlock, U32 ip)
 {
    AssertFatal( stackIndex >= 0 && stackIndex < stack.size(), "You must be asking for a valid frame!" );
-   ConsoleFrame *newFrame = new ConsoleFrame(vmInternal, this);
-   newFrame->dictionary = new Dictionary(vmInternal, vmFrames[stackIndex]->dictionary);
+   ConsoleFrame *newFrame = new ConsoleFrame(vmInternal, this, vmFrames[stackIndex]);
    vmFrames.push_back(newFrame);
    
    ConsoleFrame* oldFrame = vmFrames[stackIndex];
@@ -2559,7 +2551,7 @@ void ExprEvalState::pushFrameRef(S32 stackIndex, CodeBlock* codeBlock, U32 ip)
 void ExprEvalState::validate()
 {
    for( U32 i = 0; i < vmFrames.size(); ++ i )
-      vmFrames[ i ]->dictionary->validate();
+      vmFrames[ i ]->dictionary.validate();
 }
 
 ConsoleBasicFrame ExprEvalState::getBasicFrameInfo(U32 idx)

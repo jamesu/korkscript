@@ -55,9 +55,9 @@ void Dictionary::exportVariables(const char *varString, const char *fileName, bo
    const char *searchStr = varString;
    Vector<Entry *> sortList(__FILE__, __LINE__);
    
-   for(S32 i = 0; i < hashTable->size;i ++)
+   for(S32 i = 0; i < mHashTable->size; i++)
    {
-      Entry *walk = hashTable->data[i];
+      Entry *walk = mHashTable->data[i];
       while(walk)
       {
          if(FindMatch::isMatch((char *) searchStr, (char *) walk->name))
@@ -80,7 +80,7 @@ void Dictionary::exportVariables(const char *varString, const char *fileName, bo
    {
       if(!strm.open(fileName, append ? FileStream::ReadWrite : FileStream::Write))
       {
-         vm->printf(0, "Unable to open file '%s for writing.", fileName);
+         mVm->printf(0, "Unable to open file '%s for writing.", fileName);
          return;
       }
       if(append)
@@ -101,7 +101,7 @@ void Dictionary::exportVariables(const char *varString, const char *fileName, bo
             dSprintf(buffer, sizeof(buffer), "%s = %g;%s", (*s)->name, (*s)->mConsoleValue.getFloat(), cat);
             break;
          default:
-            expandEscape(expandBuffer, (const char*)(*s)->mConsoleValue.evaluatePtr(vm->mAllocBase));
+            expandEscape(expandBuffer, (const char*)(*s)->mConsoleValue.evaluatePtr(mVm->mAllocBase));
             dSprintf(buffer, sizeof(buffer), "%s = \"%s\";%s", (*s)->name, expandBuffer, cat);
             break;
       }
@@ -111,7 +111,7 @@ void Dictionary::exportVariables(const char *varString, const char *fileName, bo
       }
       else
       {
-         vm->printf(0, "%s", buffer);
+         mVm->printf(0, "%s", buffer);
       }
    }
    if(fileName)
@@ -122,9 +122,9 @@ void Dictionary::deleteVariables(const char *varString)
 {
    const char *searchStr = varString;
    
-   for(S32 i = 0; i < hashTable->size; i++)
+   for(S32 i = 0; i < mHashTable->size; i++)
    {
-      Entry *walk = hashTable->data[i];
+      Entry *walk = mHashTable->data[i];
       while(walk)
       {
          Entry *matchedEntry = (FindMatch::isMatch((char *) searchStr, (char *) walk->name)) ? walk : NULL;
@@ -142,7 +142,7 @@ U32 HashPointer(StringTableEntry ptr)
 
 Dictionary::Entry *Dictionary::lookup(StringTableEntry name)
 {
-   Entry *walk = hashTable->data[HashPointer(name) % hashTable->size];
+   Entry *walk = mHashTable->data[HashPointer(name) % mHashTable->size];
    while(walk)
    {
       if(walk->name == name)
@@ -156,7 +156,7 @@ Dictionary::Entry *Dictionary::lookup(StringTableEntry name)
 
 Dictionary::Entry *Dictionary::add(StringTableEntry name)
 {
-   Entry *walk = hashTable->data[HashPointer(name) % hashTable->size];
+   Entry *walk = mHashTable->data[HashPointer(name) % mHashTable->size];
    while(walk)
    {
       if(walk->name == name)
@@ -165,93 +165,93 @@ Dictionary::Entry *Dictionary::add(StringTableEntry name)
          walk = walk->nextEntry;
    }
    Entry *ret;
-   hashTable->count++;
+   mHashTable->count++;
    
-   if(hashTable->count > hashTable->size * 2)
+   if(mHashTable->count > mHashTable->size * 2)
    {
       Entry head(NULL), *walk;
       S32 i;
       walk = &head;
       walk->nextEntry = 0;
-      for(i = 0; i < hashTable->size; i++) {
+      for(i = 0; i < mHashTable->size; i++) {
          while(walk->nextEntry) {
             walk = walk->nextEntry;
          }
-         walk->nextEntry = hashTable->data[i];
+         walk->nextEntry = mHashTable->data[i];
       }
-      delete[] hashTable->data;
-      hashTable->size = hashTable->size * 4 - 1;
-      hashTable->data = new Entry *[hashTable->size];
-      for(i = 0; i < hashTable->size; i++)
-         hashTable->data[i] = NULL;
+      delete[] mHashTable->data;
+      mHashTable->size = mHashTable->size * 4 - 1;
+      mHashTable->data = new Entry *[mHashTable->size];
+      for(i = 0; i < mHashTable->size; i++)
+         mHashTable->data[i] = NULL;
       walk = head.nextEntry;
       while(walk)
       {
          Entry *temp = walk->nextEntry;
-         U32 idx = HashPointer(walk->name) % hashTable->size;
-         walk->nextEntry = hashTable->data[idx];
-         hashTable->data[idx] = walk;
+         U32 idx = HashPointer(walk->name) % mHashTable->size;
+         walk->nextEntry = mHashTable->data[idx];
+         mHashTable->data[idx] = walk;
          walk = temp;
       }
    }
    
    ret = new Entry(name);
-   U32 idx = HashPointer(name) % hashTable->size;
-   ret->nextEntry = hashTable->data[idx];
-   hashTable->data[idx] = ret;
+   U32 idx = HashPointer(name) % mHashTable->size;
+   ret->nextEntry = mHashTable->data[idx];
+   mHashTable->data[idx] = ret;
    return ret;
 }
 
 // deleteVariables() assumes remove() is a stable remove (will not reorder entries on remove)
 void Dictionary::remove(Dictionary::Entry *ent)
 {
-   Entry **walk = &hashTable->data[HashPointer(ent->name) % hashTable->size];
+   Entry **walk = &mHashTable->data[HashPointer(ent->name) % mHashTable->size];
    while(*walk != ent)
       walk = &((*walk)->nextEntry);
    
    *walk = (ent->nextEntry);
    clearEntry(ent);
    delete ent;
-   hashTable->count--;
+   mHashTable->count--;
 }
 
 Dictionary::Dictionary()
-:  hashTable( NULL )
+:  mHashTable( NULL )
 {
 }
 
 Dictionary::Dictionary(KorkApi::VmInternal *state, Dictionary* ref)
-:  hashTable( NULL )
+:  mHashTable( NULL )
 {
    setState(state,ref);
 }
 
 void Dictionary::setState(KorkApi::VmInternal *state, Dictionary* ref)
 {
-   vm = state;
+   mVm = state;
    
    if (ref)
-      hashTable = ref->hashTable;
+      mHashTable = ref->mHashTable;
    else
    {
-      hashTable = new HashTableData;
-      hashTable->owner = this;
-      hashTable->count = 0;
-      hashTable->size = ST_INIT_SIZE;
-      hashTable->data = new Entry *[hashTable->size];
+      mHashTable = new HashTableData;
+      mHashTable->owner = this;
+      mHashTable->count = 0;
+      mHashTable->size = ST_INIT_SIZE;
+      mHashTable->data = new Entry *[mHashTable->size];
       
-      for(S32 i = 0; i < hashTable->size; i++)
-         hashTable->data[i] = NULL;
+      for(S32 i = 0; i < mHashTable->size; i++)
+         mHashTable->data[i] = NULL;
    }
 }
 
 Dictionary::~Dictionary()
 {
-   if ( hashTable->owner == this )
+   if ( mHashTable->owner == this )
    {
       reset();
-      delete [] hashTable->data;
-      delete hashTable;
+      delete [] mHashTable->data;
+      delete mHashTable;
    }
 }
 
@@ -260,9 +260,9 @@ void Dictionary::reset()
    S32 i;
    Entry *walk, *temp;
    
-   for(i = 0; i < hashTable->size; i++)
+   for(i = 0; i < mHashTable->size; i++)
    {
-      walk = hashTable->data[i];
+      walk = mHashTable->data[i];
       while(walk)
       {
          temp = walk->nextEntry;
@@ -270,10 +270,10 @@ void Dictionary::reset()
          delete walk;
          walk = temp;
       }
-      hashTable->data[i] = NULL;
+      mHashTable->data[i] = NULL;
    }
-   hashTable->size = ST_INIT_SIZE;
-   hashTable->count = 0;
+   mHashTable->size = ST_INIT_SIZE;
+   mHashTable->count = 0;
 }
 
 
@@ -282,12 +282,12 @@ const char *Dictionary::tabComplete(const char *prevText, S32 baseLen, bool fFor
    S32 i;
    
    const char *bestMatch = NULL;
-   for(i = 0; i < hashTable->size; i++)
+   for(i = 0; i < mHashTable->size; i++)
    {
-      Entry *walk = hashTable->data[i];
+      Entry *walk = mHashTable->data[i];
       while(walk)
       {
-         if (vm->mNSState.canTabComplete(prevText, bestMatch, walk->name, baseLen, fForward))
+         if (mVm->mNSState.canTabComplete(prevText, bestMatch, walk->name, baseLen, fForward))
             bestMatch = walk->name;
          walk = walk->nextEntry;
       }
@@ -323,9 +323,9 @@ Dictionary::Entry* Dictionary::getVariable(StringTableEntry name)
    }
    
    // Warn users when they access a variable that isn't defined.
-   if(vm->mConfig.warnUndefinedScriptVariables)
+   if(mVm->mConfig.warnUndefinedScriptVariables)
    {
-      vm->printf(0, " *** Accessed undefined variable '%s'", name);
+      mVm->printf(0, " *** Accessed undefined variable '%s'", name);
    }
    return NULL;
 }
@@ -335,21 +335,21 @@ U32 Dictionary::getEntryUnsignedValue(Entry* e)
    switch (e->mConsoleValue.typeId)
    {
       case KorkApi::ConsoleValue::TypeInternalUnsigned:
-      return e->mConsoleValue.getInt();
+      return (U32)e->mConsoleValue.getInt();
       break;
       case KorkApi::ConsoleValue::TypeInternalNumber:
       return e->mConsoleValue.getFloat();
       break;
       case KorkApi::ConsoleValue::TypeInternalString:
-      return atoll((const char*)e->mConsoleValue.evaluatePtr(vm->mAllocBase));
+      return atoll((const char*)e->mConsoleValue.evaluatePtr(mVm->mAllocBase));
       break;
       default:
       {
-         KorkApi::TypeInfo& info = vm->mTypes[e->mConsoleValue.typeId];
-         void* typePtr = e->mConsoleValue.evaluatePtr(vm->mAllocBase);
+         KorkApi::TypeInfo& info = mVm->mTypes[e->mConsoleValue.typeId];
+         void* typePtr = e->mConsoleValue.evaluatePtr(mVm->mAllocBase);
 
          return info.iFuncs.CopyValue(info.userPtr,
-                                            vm->mVM,
+                                      mVm->mVM,
                       typePtr,
                       NULL,
                       0,
@@ -371,15 +371,15 @@ F32 Dictionary::getEntryNumberValue(Entry* e)
       return e->mConsoleValue.getFloat();
       break;
       case KorkApi::ConsoleValue::TypeInternalString:
-      return atof((const char*)e->mConsoleValue.evaluatePtr(vm->mAllocBase));
+      return atof((const char*)e->mConsoleValue.evaluatePtr(mVm->mAllocBase));
       break;
       default:
       {
-         KorkApi::TypeInfo& info = vm->mTypes[e->mConsoleValue.typeId];
-         void* typePtr = e->mConsoleValue.evaluatePtr(vm->mAllocBase);
+         KorkApi::TypeInfo& info = mVm->mTypes[e->mConsoleValue.typeId];
+         void* typePtr = e->mConsoleValue.evaluatePtr(mVm->mAllocBase);
 
          return info.iFuncs.CopyValue(info.userPtr,
-                                            vm->mVM,
+                                      mVm->mVM,
                       typePtr,
                       NULL,
                       0,
@@ -395,26 +395,26 @@ const char *Dictionary::getEntryStringValue(Entry* e)
    switch (e->mConsoleValue.typeId)
    {
       case KorkApi::ConsoleValue::TypeInternalUnsigned:
-      return vm->tempIntConv(e->mConsoleValue.getInt());
+      return mVm->tempIntConv(e->mConsoleValue.getInt());
       break;
       case KorkApi::ConsoleValue::TypeInternalNumber:
-      return vm->tempFloatConv(e->mConsoleValue.getFloat());
+      return mVm->tempFloatConv(e->mConsoleValue.getFloat());
       break;
       case KorkApi::ConsoleValue::TypeInternalString:
-      return (const char*)e->mConsoleValue.evaluatePtr(vm->mAllocBase);
+      return (const char*)e->mConsoleValue.evaluatePtr(mVm->mAllocBase);
       break;
    default:
       {
-         KorkApi::TypeInfo& info = vm->mTypes[e->mConsoleValue.typeId];
-         void* typePtr = e->mConsoleValue.evaluatePtr(vm->mAllocBase);
+         KorkApi::TypeInfo& info = mVm->mTypes[e->mConsoleValue.typeId];
+         void* typePtr = e->mConsoleValue.evaluatePtr(mVm->mAllocBase);
 
          return (const char*)info.iFuncs.CopyValue(info.userPtr,
-                                            vm->mVM,
+                                                   mVm->mVM,
                       typePtr,
                       NULL,
                       0,
                                             KorkApi::ConsoleValue::TypeInternalString,
-                                            KorkApi::ConsoleValue::ZoneReturn).evaluatePtr(vm->mAllocBase);
+                                            KorkApi::ConsoleValue::ZoneReturn).evaluatePtr(mVm->mAllocBase);
       }
       break;
    }
@@ -429,7 +429,7 @@ void Dictionary::setEntryUnsignedValue(Entry* e, U64 val)
 {
    if( e->mIsConstant )
    {
-      vm->printf(0, "Cannot assign value to constant '%s'.", e->name );
+      mVm->printf(0, "Cannot assign value to constant '%s'.", e->name );
       return;
    }
 
@@ -444,7 +444,7 @@ void Dictionary::setEntryNumberValue(Entry* e, F32 val)
 {
    if( e->mIsConstant )
    {
-      vm->printf(0, "Cannot assign value to constant '%s'.", e->name );
+      mVm->printf(0, "Cannot assign value to constant '%s'.", e->name );
       return;
    }
 
@@ -459,7 +459,7 @@ void Dictionary::clearEntry(Entry* e)
 {
    if (e->mHeapAlloc)
    {
-      vm->releaseHeapRef(e->mHeapAlloc);
+      mVm->releaseHeapRef(e->mHeapAlloc);
       e->mHeapAlloc = NULL;
    }
 }
@@ -468,7 +468,7 @@ void Dictionary::setEntryStringValue(Dictionary::Entry* e, const char * value)
 {
    if( e->mIsConstant )
    {
-      vm->printf(0, "Cannot assign value to constant '%s'.", e->name );
+      mVm->printf(0, "Cannot assign value to constant '%s'.", e->name );
       return;
    }
 
@@ -476,13 +476,13 @@ void Dictionary::setEntryStringValue(Dictionary::Entry* e, const char * value)
    
    if (e->mHeapAlloc && expectedSize > e->mHeapAlloc->size)
    {
-      vm->releaseHeapRef(e->mHeapAlloc);
+      mVm->releaseHeapRef(e->mHeapAlloc);
       e->mHeapAlloc = NULL;
    }
 
    if (!e->mHeapAlloc)
    {
-      e->mHeapAlloc = vm->createHeapRef(expectedSize);
+      e->mHeapAlloc = mVm->createHeapRef(expectedSize);
    }
 
    memcpy(e->mHeapAlloc->ptr(), value, expectedSize);
@@ -494,22 +494,22 @@ void Dictionary::setEntryTypeValue(Dictionary::Entry* e, U32 typeId, void * valu
 {
    if( e->mIsConstant )
    {
-      vm->printf(0, "Cannot assign value to constant '%s'.", e->name );
+      mVm->printf(0, "Cannot assign value to constant '%s'.", e->name );
       return;
    }
 
-   KorkApi::TypeInfo& info = vm->mTypes[e->mConsoleValue.typeId];
-   U32 expectedSize = info.size;
+   KorkApi::TypeInfo& info = mVm->mTypes[e->mConsoleValue.typeId];
+   U32 expectedSize = (U32)info.size;
    
    if (e->mHeapAlloc && e->mHeapAlloc->size < expectedSize)
    {
-      vm->releaseHeapRef(e->mHeapAlloc);
+      mVm->releaseHeapRef(e->mHeapAlloc);
       e->mHeapAlloc = NULL;
    }
 
    if (!e->mHeapAlloc)
    {
-      e->mHeapAlloc = vm->createHeapRef(expectedSize);
+      e->mHeapAlloc = mVm->createHeapRef(expectedSize);
    }
 
    memcpy(e->mHeapAlloc->ptr(), value, expectedSize);
@@ -521,11 +521,11 @@ void Dictionary::setEntryValue(Entry* e, KorkApi::ConsoleValue value)
 {
    if (value.typeId == KorkApi::ConsoleValue::TypeInternalString)
    {
-      setEntryStringValue(e, (const char*)value.evaluatePtr(vm->mAllocBase));
+      setEntryStringValue(e, (const char*)value.evaluatePtr(mVm->mAllocBase));
    }
    else if (value.typeId >= KorkApi::ConsoleValue::TypeBeginCustom)
    {
-      setEntryTypeValue(e, value.typeId, value.evaluatePtr(vm->mAllocBase));
+      setEntryTypeValue(e, value.typeId, value.evaluatePtr(mVm->mAllocBase));
    }
    else
    {
@@ -533,7 +533,7 @@ void Dictionary::setEntryValue(Entry* e, KorkApi::ConsoleValue value)
 
       if (e->mHeapAlloc)
       {
-         vm->releaseHeapRef(e->mHeapAlloc);
+         mVm->releaseHeapRef(e->mHeapAlloc);
          e->mHeapAlloc = NULL;
       }
    }
@@ -590,7 +590,7 @@ bool Dictionary::removeVariable(StringTableEntry name)
 
 void Dictionary::validate()
 {
-   AssertFatal( !hashTable || hashTable->owner == this,
+   AssertFatal( !mHashTable || mHashTable->owner == this,
                "Dictionary::validate() - Dictionary not owner of own hashtable!" );
 }
 

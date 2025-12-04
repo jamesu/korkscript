@@ -109,14 +109,14 @@ public:
    
    struct HashTableData
    {
-      Dictionary* owner;
       S32 size;
       S32 count;
       Entry **data;
+      Dictionary* owner;
    };
    
-   HashTableData *hashTable;
-   KorkApi::VmInternal* vm;
+   HashTableData* mHashTable;
+   KorkApi::VmInternal* mVm;
    
    Dictionary();
    Dictionary(KorkApi::VmInternal *state, Dictionary* ref=NULL);
@@ -148,14 +148,15 @@ public:
    void setVariable(StringTableEntry name, const char *value);
    void setVariableValue(StringTableEntry name, KorkApi::ConsoleValue value);
    
+   
    U32 getCount() const
    {
-      return hashTable->count;
+      return mHashTable->count;
    }
    
    bool isOwner() const
    {
-      return hashTable->owner == this;
+      return mHashTable->owner == this;
    }
    
    /// @see Con::addVariable
@@ -236,7 +237,7 @@ public:
    Dictionary* globalVars;
    void* mUserPtr;
    
-   
+
    IterStackRecord iterStack[MaxIterStackSize];
    F64 floatStack[MaxStackSize];
    S64 intStack[MaxStackSize];
