@@ -463,7 +463,7 @@ void dumpToInstructionsPrint(Compiler::Resources& res, StmtNode* rootNode)
    KorkApi::Vm* vm = KorkApi::createVM(&cfg);
 
    CodeBlock* cb = new CodeBlock(vm->mInternal);
-   res.STEtoCode = &Compiler::evalSTEtoCode;
+   res.STEtoCode = &Compiler::compileSTEtoCode;
    res.resetTables();
    
    U32 lastIP = Compiler::compileBlock(rootNode, codeStream, 0) + 1;
@@ -482,6 +482,8 @@ void dumpToInstructionsPrint(Compiler::Resources& res, StmtNode* rootNode)
    
    cb->globalFloats    = res.getGlobalFloatTable().build();
    cb->functionFloats  = res.getFunctionFloatTable().build();
+
+   res.getIdentTable().build(&cb->identStrings, &cb->identStringOffsets, &cb->numIdentStrings);
 
    cb->dumpInstructions(0, false, true);
 
