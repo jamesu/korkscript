@@ -2774,6 +2774,8 @@ ExprEvalState* ConsoleSerializer::loadEvalState()
       }
       state->vmFrames.push_back(frame);
    }
+   
+   return state;
 }
 
 bool ConsoleSerializer::saveEvalState(ExprEvalState* state)
@@ -2823,8 +2825,13 @@ bool ConsoleSerializer::saveEvalState(ExprEvalState* state)
    mStream->write((U32)state->vmFrames.size());
    for (ConsoleFrame* frame : state->vmFrames)
    {
-      writeFrame(*frame);
+      if (!writeFrame(*frame))
+      {
+         return false;
+      }
    }
+   
+   return true;
 }
 
 bool ConsoleSerializer::readConsoleValue(KorkApi::ConsoleValue& value, KorkApi::ConsoleHeapAllocRef dataRef)

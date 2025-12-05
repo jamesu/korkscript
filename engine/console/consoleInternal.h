@@ -107,6 +107,7 @@ public:
       size = (U32)newSize;
       stream.write(size);
       stream.setPosition(newPos);
+      return true;
    }
    
    U32 getNextBlockPosition(U32 bytesInBlock)

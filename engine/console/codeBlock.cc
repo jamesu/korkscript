@@ -56,7 +56,7 @@ CodeBlock::CodeBlock(KorkApi::VmInternal* vm)
    
    identStrings = NULL;
    identStringOffsets = NULL;
-   numIdentStrings = NULL;
+   numIdentStrings = 0;
    
    refCount = 0;
    code = NULL;
