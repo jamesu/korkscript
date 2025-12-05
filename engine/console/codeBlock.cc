@@ -52,6 +52,10 @@ CodeBlock::CodeBlock(KorkApi::VmInternal* vm)
    breakList = NULL;
    breakListSize = 0;
    
+   identStrings = NULL;
+   identStringOffsets = NULL;
+   numIdentStrings = NULL;
+   
    refCount = 0;
    code = NULL;
    name = NULL;
@@ -75,6 +79,11 @@ CodeBlock::~CodeBlock()
    delete[] functionFloats;
    delete[] code;
    delete[] breakList;
+   
+   if (identStrings)
+      delete[] identStrings;
+   if (identStringOffsets)
+      delete[] identStringOffsets;
 }
 
 //-------------------------------------------------------------------------
@@ -409,6 +418,11 @@ bool CodeBlock::read(StringTableEntry fileName, bool readVersion, Stream &st)
    // StringTable-ize our identifiers.
    U32 identCount;
    st.read(&identCount);
+   
+   identStringOffsets = new U32[identCount];
+   identStrings = new StringTableEntry[identCount];
+   
+   i = 0;
    while(identCount--)
    {
       U32 offset;
@@ -419,17 +433,18 @@ bool CodeBlock::read(StringTableEntry fileName, bool readVersion, Stream &st)
       else
          ste = StringTable->EmptyString;
       
+      identStrings[i] = ste;
+      identStringOffsets[i] = offset;
+      
       U32 count;
       st.read(&count);
       while(count--)
       {
          U32 ip;
          st.read(&ip);
-#ifdef TORQUE_64
-         *(U64*)(code+ip) = (U64)ste;
-#else
-         code[ip] = (U32)ste;
-#endif
+         // NOTE: this technically should no longer be needed
+         // for new codeblocks.
+         code[ip] = i++;
       }
    }
    
@@ -557,7 +572,7 @@ bool CodeBlock::compileToStream(Stream &st, StringTableEntry fileName, const cha
    char *string;
    chompUTF8BOM( inString, &string );
 
-   mVM->mCompilerResources->STEtoCode = &Compiler::evalSTEtoCode;
+   mVM->mCompilerResources->STEtoCode = &Compiler::compileSTEtoCode;
    mVM->mCompilerResources->consoleAllocReset();
    
    name = fileName;
@@ -626,6 +641,8 @@ bool CodeBlock::compileToStream(Stream &st, StringTableEntry fileName, const cha
    
    globalFloats    = mVM->mCompilerResources->getGlobalFloatTable().build();
    functionFloats  = mVM->mCompilerResources->getFunctionFloatTable().build();
+    
+    mVM->mCompilerResources->getIdentTable().build(&identStrings, &identStringOffsets, &numIdentStrings);
    
    codeStream.emit(OP_RETURN);
    codeStream.emitCodeStream(&codeSize, &code, &lineBreakPairs);
@@ -665,8 +682,8 @@ void CodeBlock::dumpInstructions( U32 startIp, bool upToReturn, bool downcaseStr
    U32 endFuncIp = 0;
    bool inFunction = false;
 
-   auto codeToSte = [downcaseStrings](Resources* res, U32 *code, U32 ip) {
-      StringTableEntry ste = Compiler::CodeToSTE(res, code, ip);
+   auto codeToSte = [downcaseStrings, this](Resources* res, U32 *code, U32 ip) {
+      StringTableEntry ste = Compiler::CodeToSTE(res, identStrings, code,  ip);
       if (!ste || !downcaseStrings)
          return ste;
 

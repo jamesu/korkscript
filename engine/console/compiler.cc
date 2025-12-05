@@ -39,18 +39,18 @@ namespace Compiler
 
    void evalSTEtoCode(Resources* res, StringTableEntry ste, U32 ip, U32 *ptr)
    {
-   #ifdef TORQUE_64
-      *(U64*)(ptr) = (U64)ste;
-   #else
-      *ptr = (U32)ste;
-   #endif
    }
 
    void compileSTEtoCode(Resources* res, StringTableEntry ste, U32 ip, U32 *ptr)
    {
+      U32 idx = 0;
+      
       if(ste)
-         res->getIdentTable().add(ste, ip);
-      *ptr = 0;
+      {
+         idx = res->getIdentTable().add(ste, ip)+1;
+      }
+      
+      *ptr = idx;
       *(ptr+1) = 0;
    }
 
@@ -211,45 +211,87 @@ void CompilerFloatTable::write(Stream &st)
 void CompilerIdentTable::reset()
 {
    list = NULL;
+   tail = NULL;
+   numIdentStrings = 0;
 }
 
-void CompilerIdentTable::add(StringTableEntry ste, U32 ip)
+U32 CompilerIdentTable::add(StringTableEntry ste, U32 ip)
 {
    U32 index = res->globalStringTable.add(ste, false);
-   Entry *newEntry = (Entry *) res->consoleAlloc(sizeof(Entry));
-   newEntry->offset = index;
-   newEntry->ip = ip;
-   for(Entry *walk = list; walk; walk = walk->next)
+   Patch* newPatch = (Patch*)res->consoleAlloc(sizeof(Patch));
+   newPatch->ip = ip;
+   
+   FullEntry* patchEntry = NULL;
+   
+   U32 elementIndex = 0;
+   for(FullEntry *walk = list; walk; walk = walk->next)
    {
       if(walk->offset == index)
       {
-         newEntry->nextIdent = walk->nextIdent;
-         walk->nextIdent = newEntry;
-         return;
+         patchEntry = walk;
+         break;
       }
+      elementIndex++;
    }
-   newEntry->next = list;
-   list = newEntry;
-   newEntry->nextIdent = NULL;
+   
+   if (patchEntry == NULL)
+   {
+      patchEntry = (FullEntry *) res->consoleAlloc(sizeof(FullEntry));
+      patchEntry->patch = NULL;
+      patchEntry->steName = ste;
+      patchEntry->offset = index;
+      patchEntry->next = NULL;
+      
+      if (tail == NULL)
+      {
+         list = patchEntry;
+         tail = patchEntry;
+      }
+      else
+      {
+         tail->next = patchEntry;
+         tail = patchEntry;
+      }
+      
+      elementIndex = numIdentStrings++;
+   }
+   
+   // Add to patch list
+   newPatch->next = patchEntry->patch;
+   patchEntry->patch = newPatch;
+   patchEntry->numInstances++;
+   
+   return elementIndex;
 }
 
 void CompilerIdentTable::write(Stream &st)
 {
-   U32 count = 0;
-   Entry * walk;
-   for(walk = list; walk; walk = walk->next)
-      count++;
-   st.write(count);
+   FullEntry * walk;
+   st.write(numIdentStrings);
+   
    for(walk = list; walk; walk = walk->next)
    {
-      U32 ec = 0;
-      Entry * el;
-      for(el = walk; el; el = el->nextIdent)
-         ec++;
       st.write(walk->offset);
-      st.write(ec);
-      for(el = walk; el; el = el->nextIdent)
+      st.write(walk->numInstances);
+      
+      for (Patch* el = walk->patch; el; el = el->next)
+      {
          st.write(el->ip);
+      }
+   }
+}
+
+void CompilerIdentTable::build(StringTableEntry** strings,  U32** stringOffsets, U32* numStrings)
+{
+   *numStrings = numIdentStrings;
+   *stringOffsets = new U32[numIdentStrings];
+   *strings = new StringTableEntry[numIdentStrings];
+   
+   U32 i = 0;
+   for(FullEntry* walk = list; walk; walk = walk->next)
+   {
+      (*stringOffsets)[i] = walk->offset;
+      (*strings)[i++] = walk->steName;
    }
 }
 

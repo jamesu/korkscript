@@ -74,6 +74,9 @@ public:
    CodeBlock *nextFile;
    StringTableEntry mRoot;
    
+   StringTableEntry* identStrings;
+   U32* identStringOffsets;
+   U32 numIdentStrings;
    
    void addToCodeList();
    void removeFromCodeList();

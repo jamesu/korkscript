@@ -225,6 +225,7 @@ public:
    void setVariable(StringTableEntry name, const char *value);
    void setVariableValue(StringTableEntry name, KorkApi::ConsoleValue value);
    
+   void remapVariables(U32 oldFiberIndex, U32 newFiberIndex);
    
    U32 getCount() const
    {
@@ -310,7 +311,7 @@ public:
    
    ///
    KorkApi::VmInternal* vmInternal;
-   Dictionary* globalVars;
+   Dictionary globalVars;
    void* mUserPtr;
    
 

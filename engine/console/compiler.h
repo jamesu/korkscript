@@ -192,18 +192,30 @@ namespace Compiler
 
    struct CompilerIdentTable
    {
-      struct Entry
+      struct Patch
       {
-         U32 offset;
+         Patch* next;
          U32 ip;
-         Entry *next;
-         Entry *nextIdent;
       };
+      
+      struct FullEntry
+      {
+         FullEntry *next;
+         Patch* patch;
+         StringTableEntry steName;
+         U32 offset;
+         U32 numInstances;
+      };
+      
       Resources* res;
-      Entry *list;
-      void add(StringTableEntry ste, U32 ip);
+      FullEntry *list;
+      FullEntry *tail; // so we have stable ids
+      U32 numIdentStrings;
+      
+      U32 add(StringTableEntry ste, U32 ip);
       void reset();
       void write(Stream &st);
+      void build(StringTableEntry** strings,  U32** stringOffsets, U32* numStrings);
 
       CompilerIdentTable(Resources* _res) : res(_res)
       {
@@ -276,13 +288,10 @@ namespace Compiler
    void evalSTEtoCode(Resources* res, StringTableEntry ste, U32 ip, U32 *ptr);
    void compileSTEtoCode(Resources* res, StringTableEntry ste, U32 ip, U32 *ptr);
 
-   static inline StringTableEntry CodeToSTE(Resources* res, U32 *code, U32 ip)
+   static inline StringTableEntry CodeToSTE(Resources* res, StringTableEntry* stringList, U32 *code, U32 ip)
    {
-#ifdef TORQUE_64
-      return (StringTableEntry)(*((U64*)(code+ip)));
-#else
-      return (StringTableEntry)(*(code+ip));
-#endif
+      U32 offset = *((U32*)(code+ip));
+      return offset == 0 ? NULL : stringList[offset-1];
    }
 
    struct Resources

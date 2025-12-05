@@ -596,14 +596,13 @@ void Dictionary::validate()
                "Dictionary::validate() - Dictionary not owner of own hashtable!" );
 }
 
-ExprEvalState::ExprEvalState(KorkApi::VmInternal* vm): mSTR(&vm->mAllocBase, vm->mTypes.root())
+ExprEvalState::ExprEvalState(KorkApi::VmInternal* vm): mSTR(&vm->mAllocBase, vm->mTypes.root()), globalVars(vm, vm->mGlobalVars.mHashTable)
 {
    mAllocNumber = 0;
    mGeneration = 0;
    
    VECTOR_SET_ASSOCIATION(stack);
    vmInternal = vm;
-   globalVars = &vm->mGlobalVars;
    traceOn = false;
    traceBuffer[0] = '\0';
    lastThrow = 0;
