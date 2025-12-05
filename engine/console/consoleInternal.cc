@@ -409,8 +409,8 @@ const char *Dictionary::getEntryStringValue(Entry* e)
       {
          KorkApi::TypeInfo& info = mVm->mTypes[e->mConsoleValue.typeId];
          void* typePtr = e->mConsoleValue.evaluatePtr(mVm->mAllocBase);
-         
-         KorkApi::ConsoleValue tmp = info.iFuncs.CopyValue(info.userPtr,
+
+         mVm->mTempValue = info.iFuncs.CopyValue(info.userPtr,
             mVm->mVM,
             typePtr,
             NULL,
@@ -418,7 +418,7 @@ const char *Dictionary::getEntryStringValue(Entry* e)
             KorkApi::ConsoleValue::TypeInternalString,
             KorkApi::ConsoleValue::ZoneReturn);
 
-         return (const char*)tmp.evaluatePtr(mVm->mAllocBase);
+         return (const char*)mVm->mTempValue.evaluatePtr(mVm->mAllocBase);
       }
       break;
    }

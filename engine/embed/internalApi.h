@@ -64,6 +64,8 @@ struct VmInternal
    char mExecReturnBuffer[ExecReturnBufferSize];
    char mFileLineBuffer[FileLineBufferSize];
 
+   ConsoleValue mTempValue;
+
    VmInternal(KorkApi::Vm* vm, Config* cfg);
    ~VmInternal();
 
