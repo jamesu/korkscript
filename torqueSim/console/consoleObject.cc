@@ -296,6 +296,12 @@ void AbstractClassRep::registerClassWithVm(KorkApi::Vm* vm)
          
          return (KorkApi::SimObjectId)object->getId();
       };
+      mClassInfo.iCreate.GetNameFn = [](KorkApi::VMObject* vmObject){
+         ConsoleObject* consoleObject = static_cast<ConsoleObject*>(vmObject->userPtr);
+         SimObject* object = dynamic_cast<SimObject*>(consoleObject);
+         
+         return (StringTableEntry)object->getName();
+      };
       // Custom fields
       mClassInfo.iCustomFields = {};
       mClassInfo.iCustomFields.IterateFields = [](KorkApi::Vm* vm, KorkApi::VMObject* vmObject, KorkApi::VMIterator& state, StringTableEntry* name){

@@ -196,6 +196,8 @@ struct CreateObjectInterface
     void (*RemoveObjectFn)(void* user, Vm* vm, VMObject* object);
     // Get identifier (used for return value)
     SimObjectId (*GetIdFn)(VMObject* object);
+    // Get Name
+    StringTableEntry (*GetNameFn)(VMObject* object);
 };
 
 // handles sub object enum

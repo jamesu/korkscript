@@ -411,4 +411,96 @@ public:
    void validate();
 };
 
+struct ConsoleVarRef;
+
+/// Class which serializes console execution state. Accepts a list of
+/// fibers to serialize; any referenced values will get re-mapped.
+struct ConsoleSerializer
+{
+   struct Remap
+   {
+      U32 oldIndex;
+      U32 newIndex;
+   };
+
+   // Main block
+   static const U32 CSOB_VERSION = 1;
+   static const U32 CSOB_MAGIC = makeFourCCTag('C','S','O','B');
+   // Fiber
+   static const U32 CEOB_VERSION = 1;
+   static const U32 CEOB_MAGIC = makeFourCCTag('C','E','O','B');
+   // Dictionary
+   static const U32 DICT_VERSION = 1;
+   static const U32 DICT_MAGIC = makeFourCCTag('D','I','C','T');
+   // DSO copy
+   static const U32 DSOB_MAGIC = makeFourCCTag('D','S','O','B');
+   // End of list
+   static const U32 EOLB_MAGIC = makeFourCCTag('E','O','L','B');
+   
+   KorkApi::VmInternal* mTarget;
+   Stream* mStream;
+   void* mUserPtr;
+   Vector<CodeBlock*> mCodeBlocks;
+   Vector<Dictionary::HashTableData*> mDictionaryTables;
+   Vector<ExprEvalState*> mFibers;
+   Vector<Remap> mFiberRemap;
+   bool mAllowId;
+
+   ConsoleSerializer(KorkApi::VmInternal* target, void* userPtr, bool allowId, Stream* s);
+   ~ConsoleSerializer();
+
+   S32 addReferencedCodeblock(CodeBlock* block);
+   S32 addReferencedDictionary(Dictionary::HashTableData* dict);
+   S32 addReferencedFiber(ExprEvalState* state);
+   
+   CodeBlock* getReferencedCodeblock(S32 blockId);
+   Dictionary::HashTableData* getReferencedDictionary(S32 dictId);
+   ExprEvalState* getReferencedFiber(S32 fiberId);
+   
+   ExprEvalState* loadEvalState();
+   bool saveEvalState(ExprEvalState* evalState);
+
+   ConsoleFrame* loadFrame(ExprEvalState* state);
+   bool writeFrame(ConsoleFrame& frame);
+
+   KorkApi::VMObject* loadObject();
+   void writeObject(KorkApi::VMObject* obj);
+   
+   void readObjectRef(LocalRefTrack& track);
+   void writeObjectRef(LocalRefTrack& track);
+
+   void readVarRef(ConsoleVarRef& ref);
+   void writeVarRef(ConsoleVarRef& ref);
+   
+   bool readConsoleValue(KorkApi::ConsoleValue& value, KorkApi::ConsoleHeapAllocRef ref);
+   bool writeConsoleValue(KorkApi::ConsoleValue& value, KorkApi::ConsoleHeapAllocRef ref);
+   
+   void readHeapData(KorkApi::ConsoleHeapAllocRef& ref);
+   void writeHeapData(KorkApi::ConsoleHeapAllocRef ref);
+
+   void readIterStackRecord(IterStackRecord& ref);
+   void writeIterStackRecord(IterStackRecord& ref);
+
+   void readStringStack(StringStack& stack);
+   void writeStringStack(StringStack& stack);
+   
+   bool loadRelatedObjects();
+   bool saveRelatedObjects();
+   
+   bool loadFibers();
+   bool saveFibers();
+   
+   void fixupConsoleValues();
+
+   void reset(bool ownObjects);
+   
+   bool isOk();
+   
+   bool readHashTable(Dictionary::HashTableData* ht);
+   bool writeHashTable(const Dictionary::HashTableData* ht);
+   
+   bool read(KorkApi::VmInternal* vm, Vector<ExprEvalState*> &fibers);
+   bool write(KorkApi::VmInternal* vm, Vector<ExprEvalState*> &fibers);
+};
+
 #endif

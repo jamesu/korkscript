@@ -176,6 +176,12 @@ ClassId Vm::registerClass(ClassInfo& info)
          return (SimObjectId)0;
       };
    }
+   if (chkFunc.iCreate.GetNameFn == NULL)
+   {
+      chkFunc.iCreate.GetNameFn = [](VMObject* object) {
+         return (StringTableEntry)NULL;
+      };
+   }
    
    // iEnum stubs
    

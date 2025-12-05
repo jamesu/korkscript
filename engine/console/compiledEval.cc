@@ -2593,98 +2593,6 @@ KorkApi::FiberRunResult ExprEvalState::resume(KorkApi::ConsoleValue value)
    return KorkApi::FiberRunResult();
 }
 
-#if 1
-
-/// Class which serializes console execution state. Accepts a list of 
-/// fibers to serialize; any referenced values will get re-mapped.
-struct ConsoleSerializer
-{
-   struct Remap
-   {
-      U32 oldIndex;
-      U32 newIndex;
-   };
-
-   // Main block
-   static const U32 CSOB_VERSION = 1;
-   static const U32 CSOB_MAGIC = makeFourCCTag('C','S','O','B');
-   // Fiber
-   static const U32 CEOB_VERSION = 1;
-   static const U32 CEOB_MAGIC = makeFourCCTag('C','E','O','B');
-   // Dictionary
-   static const U32 DICT_VERSION = 1;
-   static const U32 DICT_MAGIC = makeFourCCTag('D','I','C','T');
-   // DSO copy
-   static const U32 DSOB_MAGIC = makeFourCCTag('D','S','O','B');
-   // End of list
-   static const U32 EOLB_MAGIC = makeFourCCTag('E','O','L','B');
-   
-   KorkApi::VmInternal* mTarget;
-   Stream* mStream;
-   void* mUserPtr;
-   Vector<CodeBlock*> mCodeBlocks;
-   Vector<Dictionary::HashTableData*> mDictionaryTables;
-   Vector<ExprEvalState*> mFibers;
-   Vector<Remap> mFiberRemap;
-   bool mAllowId;
-
-   ConsoleSerializer(KorkApi::VmInternal* target, void* userPtr, bool allowId, Stream* s);
-   ~ConsoleSerializer();
-
-   S32 addReferencedCodeblock(CodeBlock* block);
-   S32 addReferencedDictionary(Dictionary::HashTableData* dict);
-   S32 addReferencedFiber(ExprEvalState* state);
-   
-   CodeBlock* getReferencedCodeblock(S32 blockId);
-   Dictionary::HashTableData* getReferencedDictionary(S32 dictId);
-   ExprEvalState* getReferencedFiber(S32 fiberId);
-   
-   ExprEvalState* loadEvalState();
-   bool saveEvalState(ExprEvalState* evalState);
-
-   ConsoleFrame* loadFrame(ExprEvalState* state);
-   bool writeFrame(ConsoleFrame& frame);
-
-   KorkApi::VMObject* loadObject();
-   void writeObject(KorkApi::VMObject* obj);
-   
-   void readObjectRef(LocalRefTrack& track);
-   void writeObjectRef(LocalRefTrack& track);
-
-   void readVarRef(ConsoleVarRef& ref);
-   void writeVarRef(ConsoleVarRef& ref);
-   
-   bool readConsoleValue(KorkApi::ConsoleValue& value, KorkApi::ConsoleHeapAllocRef ref);
-   bool writeConsoleValue(KorkApi::ConsoleValue& value, KorkApi::ConsoleHeapAllocRef ref);
-   
-   void readHeapData(KorkApi::ConsoleHeapAllocRef& ref);
-   void writeHeapData(KorkApi::ConsoleHeapAllocRef ref);
-
-   void readIterStackRecord(IterStackRecord& ref);
-   void writeIterStackRecord(IterStackRecord& ref);
-
-   void readStringStack(StringStack& stack);
-   void writeStringStack(StringStack& stack);
-   
-   bool loadRelatedObjects();
-   bool saveRelatedObjects();
-   
-   bool loadFibers();
-   bool saveFibers();
-   
-   void fixupConsoleValues();
-
-   void reset();
-   
-   bool isOk();
-   
-   bool readHashTable(Dictionary::HashTableData* ht);
-   bool writeHashTable(const Dictionary::HashTableData* ht);
-   
-   bool read(KorkApi::VmInternal* vm, Vector<ExprEvalState*> &fibers);
-   bool write(KorkApi::VmInternal* vm, Vector<ExprEvalState*> &fibers);
-};
-
 ConsoleSerializer::ConsoleSerializer(KorkApi::VmInternal* target, void* userPtr, bool allowId, Stream* s)
 {
    mTarget = target;
@@ -2937,9 +2845,9 @@ bool ConsoleSerializer::readConsoleValue(KorkApi::ConsoleValue& value, KorkApi::
 
 bool ConsoleSerializer::writeConsoleValue(KorkApi::ConsoleValue& value, KorkApi::ConsoleHeapAllocRef dataRef)
 {
-   return mStream->write(&value.cvalue) &&
-          mStream->write(&value.typeId) &&
-          mStream->write(&value.zoneId);
+   return mStream->write(value.cvalue) &&
+          mStream->write(value.typeId) &&
+          mStream->write(value.zoneId);
 }
 
 void ConsoleSerializer::readHeapData(KorkApi::ConsoleHeapAllocRef& ref)
@@ -2999,13 +2907,25 @@ void ConsoleSerializer::writeVarRef(ConsoleVarRef& ref)
    S32 dictId = -1;
    mStream->read(&dictId);
    StringTableEntry steName = mStream->readSTString();
-   // TOFIX
+   
+   Dictionary::HashTableData* data = getReferencedDictionary(dictId);
+   if (!data || data->owner == NULL)
+   {
+      ref.dictionary = NULL;
+      ref.var = NULL;
+   }
+   else
+   {
+      ref.dictionary = data->owner;
+      ref.var = ref.dictionary->lookup(steName);
+   }
 }
 
 KorkApi::VMObject* ConsoleSerializer::loadObject()
 {
    U8 refType = 0;
    KorkApi::VMObject *foundObject = NULL;
+   mStream->read(&refType);
 
    // By name?
    if ((refType & BIT(1)) != 0)
@@ -3017,10 +2937,8 @@ KorkApi::VMObject* ConsoleSerializer::loadObject()
    // By id?
    if (mAllowId && foundObject == NULL && (refType & BIT(0)) != 0)
    {
-      char stringBuf[256];
-      stringBuf[0] = '\0';
-      mStream->readString(stringBuf);
-      KorkApi::SimObjectId value = (KorkApi::SimObjectId)std::stoull(stringBuf);
+      KorkApi::SimObjectId value = 0;
+      mStream->read(&value);
       foundObject = mTarget->mVM->findObjectById(value);
    }
 
@@ -3029,17 +2947,29 @@ KorkApi::VMObject* ConsoleSerializer::loadObject()
 
 void ConsoleSerializer::writeObject(KorkApi::VMObject* obj)
 {
-   if (obj == NULL)
+   if (obj != NULL)
    {
-      mStream->write((U8)0);
-   }
-   else
-   {
-      if (mAllowId)
+      StringTableEntry objName = obj->klass->iCreate.GetNameFn(obj);
+      U8 objFlags = 0;
+      
+      if (objName)
       {
-         
+         objFlags |= BIT(1);
+         mStream->write(objFlags);
+         mStream->writeString(objName);
+         return;
+      }
+      else if (mAllowId)
+      {
+         KorkApi::SimObjectId objId = obj->klass->iCreate.GetIdFn(obj);
+         objFlags |= BIT(0);
+         mStream->write(objFlags);
+         mStream->write(objId);
+         return;
       }
    }
+   
+   mStream->write((U8)0);
 }
 
 void ConsoleSerializer::readObjectRef(LocalRefTrack& track)
@@ -3307,12 +3237,29 @@ void ConsoleSerializer::fixupConsoleValues()
    }
 }
 
-void ConsoleSerializer::reset()
+void ConsoleSerializer::reset(bool ownObjects)
 {
+   if (ownObjects && mTarget)
+   {
+      for (ExprEvalState* state : mFibers)
+      {
+         mTarget->cleanupFiber(mTarget->mFiberStates.getHandleValue(state));
+      }
+   }
+   
    for (CodeBlock* block : mCodeBlocks)
    {
       block->decRefCount();
    }
+   
+   for (Dictionary::HashTableData* ht : mDictionaryTables)
+   {
+      if (ht->owner == NULL)
+      {
+         delete ht;
+      }
+   }
+   
    mCodeBlocks.clear();
    mDictionaryTables.clear();
    mFibers.clear();
@@ -3321,17 +3268,18 @@ void ConsoleSerializer::reset()
 
 bool ConsoleSerializer::read(KorkApi::VmInternal* vm, Vector<ExprEvalState*> &fibers)
 {
-   reset();
    mTarget = vm;
    
    IFFBlock block;
    if (!mStream->read(sizeof(IFFBlock), &block))
    {
+      reset(true);
       return false;
    }
    
    if (block.ident != CSOB_MAGIC || block.getRawSize() < 12)
    {
+      reset(true);
       return false;
    }
    
@@ -3344,6 +3292,7 @@ bool ConsoleSerializer::read(KorkApi::VmInternal* vm, Vector<ExprEvalState*> &fi
    
    if (version != CSOB_VERSION)
    {
+      reset(true);
       return false;
    }
    
@@ -3351,6 +3300,7 @@ bool ConsoleSerializer::read(KorkApi::VmInternal* vm, Vector<ExprEvalState*> &fi
    
    if (!loadRelatedObjects())
    {
+      reset(true);
       return false;
    }
    
@@ -3358,6 +3308,7 @@ bool ConsoleSerializer::read(KorkApi::VmInternal* vm, Vector<ExprEvalState*> &fi
    
    if (!loadFibers())
    {
+      reset(true);
       return false;
    }
    
@@ -3368,13 +3319,13 @@ bool ConsoleSerializer::write(KorkApi::VmInternal* vm, Vector<ExprEvalState*> &f
 {
    U32 startPos = mStream->getPosition();
 
-   reset();
    mTarget = vm;
 
    IFFBlock block;
    block.ident = CSOB_MAGIC;
    if (!mStream->write(sizeof(IFFBlock), &block))
    {
+      reset(false);
       return false;
    }
 
@@ -3384,6 +3335,7 @@ bool ConsoleSerializer::write(KorkApi::VmInternal* vm, Vector<ExprEvalState*> &f
    {
       if (!saveEvalState(state))
       {
+         reset(false);
          return false;
       }
    }
@@ -3392,11 +3344,14 @@ bool ConsoleSerializer::write(KorkApi::VmInternal* vm, Vector<ExprEvalState*> &f
    block.setSize(endPos - startPos);
    if (!block.writePad(*mStream))
    {
+      reset(false);
       return false;
    }
 
    mStream->setPosition(startPos);
    mStream->write(sizeof(IFFBlock), &block);
+   
+   reset(false);
    return true;
 }
 
@@ -3568,7 +3523,10 @@ bool ConsoleSerializer::saveRelatedObjects()
          return false;
       }
       
-      // TODO
+      if (!block->write(*mStream))
+      {
+         return false;
+      }
       writeBlock.updateSize(*mStream, startPos);
    }
 }
@@ -3636,8 +3594,6 @@ bool ConsoleSerializer::saveFibers()
    writeBlock.setSize(0);
    return mStream->write(sizeof(IFFBlock), &writeBlock);
 }
-
-#endif
 
 //------------------------------------------------------------
 
