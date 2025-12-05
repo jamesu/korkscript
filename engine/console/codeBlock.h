@@ -60,6 +60,9 @@ public:
    U32 functionStringsMaxLen;
    U32 globalStringsMaxLen;
    
+   U32 numGlobalFloats;
+   U32 numFunctionFloats;
+   
    F64 *globalFloats;
    F64 *functionFloats;
    
@@ -102,6 +105,8 @@ public:
    const char *getFileLine(U32 ip);
    
    bool read(StringTableEntry fileName, bool readVersion, Stream &st);
+   bool write(Stream &st);
+   
    bool compile(const char *dsoName, StringTableEntry fileName, const char *script);
    bool compileToStream(Stream& s, StringTableEntry fileName, const char *script);
    

@@ -46,6 +46,8 @@ CodeBlock::CodeBlock(KorkApi::VmInternal* vm)
    functionStrings = NULL;
    functionStringsMaxLen = 0;
    globalStringsMaxLen = 0;
+   numGlobalFloats = 0;
+   numFunctionFloats = 0;
    globalFloats = NULL;
    functionFloats = NULL;
    lineBreakPairs = NULL;
@@ -363,7 +365,7 @@ bool CodeBlock::read(StringTableEntry fileName, bool readVersion, Stream &st)
    //
    addToCodeList();
    
-   U32 globalSize,size,i;
+   U32 size,i;
    st.read(&size);
    if(size)
    {
@@ -371,7 +373,6 @@ bool CodeBlock::read(StringTableEntry fileName, bool readVersion, Stream &st)
       globalStringsMaxLen = size;
       st.read(size, globalStrings);
    }
-   globalSize = size;
    st.read(&size);
    if(size)
    {
@@ -383,6 +384,7 @@ bool CodeBlock::read(StringTableEntry fileName, bool readVersion, Stream &st)
    if(size)
    {
       globalFloats = new F64[size];
+      numGlobalFloats = size;
       for(U32 i = 0; i < size; i++)
          st.read(&globalFloats[i]);
    }
@@ -390,6 +392,7 @@ bool CodeBlock::read(StringTableEntry fileName, bool readVersion, Stream &st)
    if(size)
    {
       functionFloats = new F64[size];
+      numFunctionFloats = size;
       for(U32 i = 0; i < size; i++)
          st.read(&functionFloats[i]);
    }
@@ -428,7 +431,7 @@ bool CodeBlock::read(StringTableEntry fileName, bool readVersion, Stream &st)
       U32 offset;
       st.read(&offset);
       StringTableEntry ste;
-      if(offset < globalSize)
+      if(offset < globalStringsMaxLen)
          ste = StringTable->insert(globalStrings + offset);
       else
          ste = StringTable->EmptyString;
@@ -453,6 +456,102 @@ bool CodeBlock::read(StringTableEntry fileName, bool readVersion, Stream &st)
    
    return true;
 }
+
+bool CodeBlock::write(Stream &st)
+{
+   U32 version = KorkApi::DSOVersion;
+   st.write(version);
+   
+   if (globalStrings &&
+       globalStringsMaxLen)
+   {
+      st.write(globalStringsMaxLen);
+      st.write(globalStringsMaxLen, globalStrings);
+   }
+   else
+   {
+      st.write((U32)0);
+   }
+   
+   if (functionStrings &&
+       functionStringsMaxLen)
+   {
+      st.write(functionStringsMaxLen);
+      st.write(functionStringsMaxLen, functionStrings);
+   }
+   else
+   {
+      st.write((U32)0);
+   }
+   
+   if (globalFloats &&
+       numGlobalFloats)
+   {
+      st.write(numGlobalFloats);
+      for (U32 i=0; i<numGlobalFloats; i++)
+      {
+         st.write(globalFloats[i]);
+      }
+   }
+   else
+   {
+      st.write((U32)0);
+   }
+   
+   if (functionFloats &&
+       numFunctionFloats)
+   {
+      st.write(numFunctionFloats);
+      for (U32 i=0; i<numFunctionFloats; i++)
+      {
+         st.write(functionFloats[i]);
+      }
+   }
+   else
+   {
+      U32 zero = 0;
+      st.write(zero);
+   }
+   
+   U32 codeSize = this->codeSize;
+   st.write(codeSize);
+   st.write(lineBreakPairCount);
+   
+   const U32 total = codeSize + lineBreakPairCount * 2;
+   
+   for (U32 i=0; i<codeSize; i++)
+   {
+      U32 v = code[i];
+      
+      if (v <= 0xFE)
+      {
+         U8 b = (U8)v;
+         st.write(b);
+      }
+      else
+      {
+         U8 ff = 0xFF;
+         st.write(ff);
+         st.write(v);
+      }
+   }
+   
+   for (U32 i=codeSize; i<total; i++)
+   {
+      st.write(code[i]);
+   }
+   
+   st.write(numIdentStrings);
+   
+   for (U32 i=0; i<numIdentStrings; i++)
+   {
+      st.write(identStringOffsets[i]);
+      st.write((U32)0);
+   }
+   
+   return true;
+}
+
 
 bool CodeBlock::compile(const char *codeFileName, StringTableEntry fileName, const char *inScript)
 {
