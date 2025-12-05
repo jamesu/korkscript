@@ -469,20 +469,20 @@ struct ConsoleSerializer
    void readObjectRef(LocalRefTrack& track);
    void writeObjectRef(LocalRefTrack& track);
 
-   void readVarRef(ConsoleVarRef& ref);
-   void writeVarRef(ConsoleVarRef& ref);
+   bool readVarRef(ConsoleVarRef& ref);
+   bool writeVarRef(ConsoleVarRef& ref);
    
    bool readConsoleValue(KorkApi::ConsoleValue& value, KorkApi::ConsoleHeapAllocRef ref);
    bool writeConsoleValue(KorkApi::ConsoleValue& value, KorkApi::ConsoleHeapAllocRef ref);
    
-   void readHeapData(KorkApi::ConsoleHeapAllocRef& ref);
-   void writeHeapData(KorkApi::ConsoleHeapAllocRef ref);
+   bool readHeapData(KorkApi::ConsoleHeapAllocRef& ref);
+   bool writeHeapData(KorkApi::ConsoleHeapAllocRef ref);
 
-   void readIterStackRecord(IterStackRecord& ref);
-   void writeIterStackRecord(IterStackRecord& ref);
+   bool readIterStackRecord(IterStackRecord& ref);
+   bool writeIterStackRecord(IterStackRecord& ref);
 
-   void readStringStack(StringStack& stack);
-   void writeStringStack(StringStack& stack);
+   bool readStringStack(StringStack& stack);
+   bool writeStringStack(StringStack& stack);
    
    bool loadRelatedObjects();
    bool saveRelatedObjects();

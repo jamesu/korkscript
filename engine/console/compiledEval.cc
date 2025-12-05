@@ -2710,6 +2710,10 @@ ExprEvalState* ConsoleSerializer::loadEvalState()
    mFiberRemap.push_back(theRemap);
 
    // Stacks
+   for (U32 i=0; i<MaxIterStackSize; i++)
+   {
+      readIterStackRecord(state->iterStack[i]);
+   }
    mStream->read(sizeof(state->iterStack),  state->iterStack);
    mStream->read(sizeof(state->floatStack), state->floatStack);
    mStream->read(sizeof(state->intStack),   state->intStack);
@@ -2777,7 +2781,10 @@ bool ConsoleSerializer::saveEvalState(ExprEvalState* state)
    mStream->write(oldIndex);
 
    // Stacks
-   mStream->write(sizeof(state->iterStack), state->iterStack);
+   for (U32 i=0; i<MaxIterStackSize; i++)
+   {
+      writeIterStackRecord(state->iterStack[i]);
+   }
    mStream->write(sizeof(state->floatStack), state->floatStack);
    mStream->write(sizeof(state->intStack), state->intStack);
    for (U32 i=0; i<ObjectCreationStackSize; i++)
@@ -2850,62 +2857,72 @@ bool ConsoleSerializer::writeConsoleValue(KorkApi::ConsoleValue& value, KorkApi:
           mStream->write(value.zoneId);
 }
 
-void ConsoleSerializer::readHeapData(KorkApi::ConsoleHeapAllocRef& ref)
+bool ConsoleSerializer::readHeapData(KorkApi::ConsoleHeapAllocRef& ref)
 {
    U32 size = 0;
-   mStream->read(&size);
+   if (!mStream->read(&size))
+   {
+      return false;
+   }
    
    if (size > 0)
    {
       ref = mTarget->createHeapRef(size);
-      mStream->read(size, ref->ptr());
+      return mStream->read(size, ref->ptr());
    }
    else
    {
       ref = NULL;
    }
+   
+   return true;
 }
 
-void ConsoleSerializer::writeHeapData(KorkApi::ConsoleHeapAllocRef ref)
+bool ConsoleSerializer::writeHeapData(KorkApi::ConsoleHeapAllocRef ref)
 {
    if (!ref)
    {
-      mStream->write((U32)0);
+      return mStream->write((U32)0);
    }
    else
    {
-      mStream->write((U32)ref->size);
-      mStream->write((U32)ref->size, ref->ptr());
+      return mStream->write((U32)ref->size) &&
+             mStream->write((U32)ref->size, ref->ptr());
    }
 }
 
-void ConsoleSerializer::readIterStackRecord(IterStackRecord& ref)
+bool ConsoleSerializer::readIterStackRecord(IterStackRecord& ref)
 {
-   mStream->read(&ref.mIsStringIter);
-   mStream->read(&ref.mIndex);
-   readHeapData(ref.mHeapData);
-   readConsoleValue(ref.mData, ref.mHeapData);
+   return mStream->read(&ref.mIsStringIter) &&
+          mStream->read(&ref.mIndex) &&
+          readHeapData(ref.mHeapData) &&
+          readConsoleValue(ref.mData, ref.mHeapData);
 }
 
-void ConsoleSerializer::writeIterStackRecord(IterStackRecord& ref)
+bool ConsoleSerializer::writeIterStackRecord(IterStackRecord& ref)
 {
-   mStream->write(ref.mIsStringIter);
-   mStream->write(ref.mIndex);
-   writeHeapData(ref.mHeapData);
-   writeConsoleValue(ref.mData, ref.mHeapData);
+   return mStream->write(ref.mIsStringIter) &&
+          mStream->write(ref.mIndex) &&
+          writeHeapData(ref.mHeapData) &&
+          writeConsoleValue(ref.mData, ref.mHeapData);
 }
 
-void ConsoleSerializer::readVarRef(ConsoleVarRef& ref)
+bool ConsoleSerializer::readVarRef(ConsoleVarRef& ref)
 {
    S32 dictId = addReferencedDictionary(ref.dictionary ? ref.dictionary->mHashTable : NULL);
    mStream->write(dictId);
    mStream->writeString(ref.var ? ref.var->name : "");
+   return mStream->getStatus() == Stream::Ok;
 }
 
-void ConsoleSerializer::writeVarRef(ConsoleVarRef& ref)
+bool ConsoleSerializer::writeVarRef(ConsoleVarRef& ref)
 {
    S32 dictId = -1;
-   mStream->read(&dictId);
+   if (!mStream->read(&dictId))
+   {
+      return false;
+   }
+   
    StringTableEntry steName = mStream->readSTString();
    
    Dictionary::HashTableData* data = getReferencedDictionary(dictId);
@@ -2919,6 +2936,8 @@ void ConsoleSerializer::writeVarRef(ConsoleVarRef& ref)
       ref.dictionary = data->owner;
       ref.var = ref.dictionary->lookup(steName);
    }
+   
+   return mStream->getStatus() == Stream::Ok;
 }
 
 KorkApi::VMObject* ConsoleSerializer::loadObject()
@@ -2983,41 +3002,37 @@ void ConsoleSerializer::writeObjectRef(LocalRefTrack& track)
    writeObject(track.obj);
 }
 
-void ConsoleSerializer::readStringStack(StringStack& stack)
+bool ConsoleSerializer::readStringStack(StringStack& stack)
 {
-   bool r = true;
    stack.reset();
-   mStream->read(&stack.mBufferSize);
-   mStream->read(stack.mBufferSize, stack.mBuffer);
-
-   mStream->read(sizeof(stack.mFrameOffsets), stack.mFrameOffsets);
-   mStream->read(sizeof(stack.mStartOffsets), stack.mStartOffsets);
-   mStream->read(sizeof(stack.mStartTypes), stack.mStartTypes);
-   mStream->read(&stack.mType);
-   mStream->read(&stack.mFuncId);
-   mStream->read(&stack.mNumFrames);
-   mStream->read(&stack.mStart);
-   mStream->read(&stack.mLen);
-   mStream->read(&stack.mStartStackSize);
-   mStream->read(&stack.mFunctionOffset);
-   return r;
+   return mStream->read(&stack.mBufferSize) &&
+     mStream->read(stack.mBufferSize, stack.mBuffer) &&
+     mStream->read(sizeof(stack.mFrameOffsets), stack.mFrameOffsets) &&
+     mStream->read(sizeof(stack.mStartOffsets), stack.mStartOffsets) &&
+     mStream->read(sizeof(stack.mStartTypes), stack.mStartTypes) &&
+     mStream->read(&stack.mType) &&
+     mStream->read(&stack.mFuncId) &&
+     mStream->read(&stack.mNumFrames) &&
+     mStream->read(&stack.mStart) &&
+     mStream->read(&stack.mLen) &&
+     mStream->read(&stack.mStartStackSize) &&
+     mStream->read(&stack.mFunctionOffset);
 }
 
-void ConsoleSerializer::writeStringStack(StringStack& stack)
+bool ConsoleSerializer::writeStringStack(StringStack& stack)
 {
-   mStream->write(stack.mBufferSize);
-   mStream->write(stack.mBufferSize, stack.mBuffer);
-
-   mStream->write(sizeof(stack.mFrameOffsets), stack.mFrameOffsets);
-   mStream->write(sizeof(stack.mStartOffsets), stack.mStartOffsets);
-   mStream->write(sizeof(stack.mStartTypes), stack.mStartTypes);
-   mStream->write(stack.mType);
-   mStream->write(stack.mFuncId);
-   mStream->write(stack.mNumFrames);
-   mStream->write(stack.mStart);
-   mStream->write(stack.mLen);
-   mStream->write(stack.mStartStackSize);
-   mStream->write(stack.mFunctionOffset);
+   return mStream->write(stack.mBufferSize) &&
+     mStream->write(stack.mBufferSize, stack.mBuffer) &&
+     mStream->write(sizeof(stack.mFrameOffsets), stack.mFrameOffsets) &&
+     mStream->write(sizeof(stack.mStartOffsets), stack.mStartOffsets) &&
+     mStream->write(sizeof(stack.mStartTypes), stack.mStartTypes) &&
+     mStream->write(stack.mType) &&
+     mStream->write(stack.mFuncId) &&
+     mStream->write(stack.mNumFrames) &&
+     mStream->write(stack.mStart) &&
+     mStream->write(stack.mLen) &&
+     mStream->write(stack.mStartStackSize) &&
+     mStream->write(stack.mFunctionOffset);
 }
 
 ConsoleFrame* ConsoleSerializer::loadFrame(ExprEvalState* state)
@@ -3495,6 +3510,8 @@ bool ConsoleSerializer::loadRelatedObjects()
          break;
       }
    }
+   
+   return false;
 }
 
 bool ConsoleSerializer::saveRelatedObjects()
@@ -3529,6 +3546,8 @@ bool ConsoleSerializer::saveRelatedObjects()
       }
       writeBlock.updateSize(*mStream, startPos);
    }
+   
+   return true;
 }
 
 bool ConsoleSerializer::loadFibers()
