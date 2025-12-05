@@ -210,7 +210,7 @@ struct StringStack
          }
          else
          {
-            mLen = (*mTypes)[v.typeId].size;
+            mLen = (U32)((*mTypes)[v.typeId].size);
          }
       }
    }

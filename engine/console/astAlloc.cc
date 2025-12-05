@@ -244,7 +244,7 @@ StrConstNode *StrConstNode::alloc( Compiler::Resources* res, S32 lineNumber, cha
    StrConstNode *ret = (StrConstNode *) res->consoleAlloc(sizeof(StrConstNode));
    constructInPlace(ret);
    ret->dbgLineNumber = lineNumber;
-   ret->str = (char *) res->consoleAlloc(dAlignSize(forceLen >= 0 ? forceLen+1 : dStrlen(str) + 1, 8));
+   ret->str = (char *) res->consoleAlloc((U32)dAlignSize(forceLen >= 0 ? forceLen+1 : dStrlen(str) + 1, 8));
    ret->tag = tag;
    ret->doc = doc;
    

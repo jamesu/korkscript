@@ -1635,13 +1635,13 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
 
                ++sansClass;
                
-               frame.nsDocBlockOffset = sansClass - frame.curStringTable;
+               frame.nsDocBlockOffset = (U32)(sansClass - frame.curStringTable);
             }
             else
             {
                frame.nsDocBlockClassOffset = 0;
                frame.nsDocBlockClassNameLength = 0;
-               frame.nsDocBlockOffset = docblock - frame.curStringTable;
+               frame.nsDocBlockOffset = (U32)(docblock - frame.curStringTable);
             }
 
             if (frame.curStringTable == frame.codeBlock->functionStrings)
@@ -2326,6 +2326,8 @@ execFinished:
    // NOTE: we rely on the inc count stuff to clear strings and such
    
 execCheck:
+   
+   continue;
    
    FIBERS_END
    

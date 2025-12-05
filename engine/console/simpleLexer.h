@@ -595,8 +595,8 @@ private:
       }
       
       // Build token as a slice into the (now compacted) buffer
-      t.stringValue.offset = sliceBegin;
-      t.stringValue.len = write - sliceBegin;
+      t.stringValue.offset = (U32)sliceBegin;
+      t.stringValue.len = (U32)(write - sliceBegin);
       return t;
    }
    
@@ -992,8 +992,8 @@ private:
       }
       
       // Set token value
-      t.stringValue.offset = start;
-      t.stringValue.len = write - start;
+      t.stringValue.offset = (U32)start;
+      t.stringValue.len = (U32)(write - start);
       return t;
    }
    
@@ -1009,7 +1009,7 @@ private:
    Token scanIdentOrKeyword()
    {
       Token t = make(TokenType::NONE);
-      t.stringValue.offset = mBytePos;
+      t.stringValue.offset = (U32)mBytePos;
       const char* startStr = &mSource[mBytePos];
       bool addedStar = false;
       SrcPos starPos;
@@ -1093,7 +1093,7 @@ private:
          
          // Default to IDENT
          t.kind = TokenType::IDENT;
-         t.stString = mStringTable->insertn(&mSource[t.stringValue.offset], mBytePos - t.stringValue.offset);
+         t.stString = mStringTable->insertn(&mSource[t.stringValue.offset], (U32)(mBytePos - t.stringValue.offset));
       }
       
       return t;
@@ -1104,7 +1104,7 @@ private:
    Token scanVar()
    {
       Token t = make(TokenType::VAR);
-      t.stringValue.offset = mBytePos;
+      t.stringValue.offset = (U32)mBytePos;
       
       // [$%]
       advance();
@@ -1138,7 +1138,7 @@ private:
       // TODO: TYPEID match
       
       // Build token as a view into the source
-      t.stString = mStringTable->insertn(&mSource[t.stringValue.offset], mBytePos - t.stringValue.offset);
+      t.stString = mStringTable->insertn(&mSource[t.stringValue.offset], (U32)(mBytePos - t.stringValue.offset));
       return t;
    }
 };
