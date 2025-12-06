@@ -483,6 +483,9 @@ public:
    void suspendCurrentFiber();
    void throwFiber(U32 mask);
    FiberRunResult resumeCurrentFiber(ConsoleValue value);
+   
+   bool dumpFiberStateToBlob(U32 numFibers, FiberId* fibers, U32* outBlobSize, U8** outBlob);
+   bool restoreFiberStateFromBlob(U32* outNumFibers, FiberId** outFibers, U32 blobSize, U8* blob);
 };
 
 Vm* createVM(Config* cfg);

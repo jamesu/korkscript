@@ -1487,6 +1487,16 @@ FiberRunResult Vm::resumeCurrentFiber(ConsoleValue value)
    return mInternal->resumeCurrentFiber(value);
 }
 
+bool Vm::dumpFiberStateToBlob(U32 numFibers, FiberId* fibers, U32* outBlobSize, U8** outBlob)
+{
+   return false;
+}
+
+bool Vm::restoreFiberStateFromBlob(U32* outNumFibers, FiberId** outFibers, U32 blobSize, U8* blob)
+{
+   return false;
+}
+
 void Vm::suspendCurrentFiber()
 {
    return mInternal->suspendCurrentFiber();

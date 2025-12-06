@@ -4,6 +4,7 @@
 #include "sim/simBase.h"
 #include "sim/dynamicTypes.h"
 #include "core/fileStream.h"
+#include "core/stringUnit.h"
 
 S32 gReturnCode = 0;
 U32 gNumPasses = 0;
@@ -76,6 +77,92 @@ ConsoleFunction(throwFiber, void, 3, 3, "value, soft")
    vmPtr->throwFiber(((U32)dAtoi(argv[1])) | (dAtob(argv[2]) ? BIT(31) : 0));
 }
 
+ConsoleFunction(saveFibers, bool, 3, 3, "fiberIdList, fileName")
+{
+   const char* list = argv[1];
+   
+   FileStream fs;
+   bool didWrite = false;
+   U32 blobSize = 0;
+   U8* blob = NULL;
+   
+   const S32 count = StringUnit::getUnitCount(list, " \t\n");
+   if (count <= 0)
+      return false;
+
+   KorkApi::FiberId* fibers = (KorkApi::FiberId*)dMalloc(sizeof(KorkApi::FiberId) * count);
+
+   for (S32 i = 0; i < count; ++i)
+   {
+      const char* unit = StringUnit::getUnit(list, i, " \t\n");
+      fibers[i] = (KorkApi::FiberId)dAtoi(unit);
+   }
+
+   bool ok = vmPtr->dumpFiberStateToBlob((U32)count, fibers, &blobSize, &blob);
+   dFree(fibers);
+
+   if (!ok)
+   {
+      return false;
+   }
+
+   if (fs.open(argv[2], FileStream::Write))
+   {
+      fs.write(blobSize, blob);
+      didWrite = true;
+   }
+
+   dFree(blob);
+   return didWrite;
+}
+
+ConsoleFunction(restoreFibers, const char*, 2, 2, "fileName")
+{
+   FileStream fs;
+   
+   if (fs.open(argv[1], FileStream::Read))
+   {
+      U32 blobSize = fs.getStreamSize();
+      U8* blob = (U8*)dMalloc(blobSize);
+      fs.read(blobSize, blob);
+      
+      KorkApi::FiberId* outFibers = NULL;
+      U32 outNumFibers = 0;
+      
+      const char* result = "";
+
+      if (vmPtr->restoreFiberStateFromBlob(&outNumFibers, &outFibers, blobSize, blob))
+      {
+         char* buf = (char*)dMalloc(outNumFibers * 32);
+         buf[0] = 0;
+
+         for (U32 i = 0; i < outNumFibers; i++)
+         {
+            char tmp[32];
+            dSprintf(tmp, sizeof(tmp), "%u", outFibers[i]);
+
+            if (i > 0)
+               dStrcat(buf, " ");
+
+            dStrcat(buf, tmp);
+         }
+         
+         KorkApi::ConsoleValue cv = KorkApi::ConsoleValue::makeString(buf);
+         result = vmPtr->valueAsString(cv);
+
+         dFree(buf);
+         dFree(outFibers);
+         dFree(blob);
+         return result;
+      }
+
+      dFree(blob);
+   }
+   
+   return "";
+}
+
+
 ConsoleFunction(createFiber, const char*, 1, 1, "")
 {
    KorkApi::FiberId fiberId = vmPtr->createFiber();
@@ -108,6 +195,12 @@ ConsoleFunction(resumeFiber, const char*, 3, 3, "fiberId, value")
    
    vmPtr->setCurrentFiber(existingFiberId);
    return vmPtr->valueAsString(result.value);
+}
+
+ConsoleFunction(stopFiber, void, 2, 2, "fiberId")
+{
+   KorkApi::FiberId fiberId = (KorkApi::FiberId)std::atoll(argv[1]);
+   vmPtr->cleanupFiber(fiberId);
 }
 
 ConsoleFunction(readFiberLocalVariable, const char*, 3, 3, "fiberId, localVarName")
