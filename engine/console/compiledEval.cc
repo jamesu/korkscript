@@ -3290,10 +3290,8 @@ void ConsoleSerializer::reset(bool ownObjects)
    mFiberRemap.clear();
 }
 
-bool ConsoleSerializer::read(KorkApi::VmInternal* vm, Vector<ExprEvalState*> &fibers)
+bool ConsoleSerializer::read(Vector<ExprEvalState*> &fibers)
 {
-   mTarget = vm;
-   
    IFFBlock block;
    if (!mStream->read(sizeof(IFFBlock), &block))
    {
@@ -3339,11 +3337,9 @@ bool ConsoleSerializer::read(KorkApi::VmInternal* vm, Vector<ExprEvalState*> &fi
    return true;
 }
 
-bool ConsoleSerializer::write(KorkApi::VmInternal* vm, Vector<ExprEvalState*> &fibers)
+bool ConsoleSerializer::write(Vector<ExprEvalState*> &fibers)
 {
    U32 startPos = mStream->getPosition();
-
-   mTarget = vm;
 
    IFFBlock block;
    block.ident = CSOB_MAGIC;

@@ -1487,13 +1487,69 @@ FiberRunResult Vm::resumeCurrentFiber(ConsoleValue value)
    return mInternal->resumeCurrentFiber(value);
 }
 
-bool Vm::dumpFiberStateToBlob(U32 numFibers, FiberId* fibers, U32* outBlobSize, U8** outBlob)
+bool Vm::dumpFiberStateToBlob(U32 numFibers, KorkApi::FiberId* fibers, U32* outBlobSize, U8** outBlob)
 {
+   const U32 maxBlobSize = 1024*1024*16;
+   U8* buffer = (U8*)dMalloc(maxBlobSize);
+   *outBlob = NULL;
+   *outBlobSize = 0;
+   
+   MemStream outS(maxBlobSize, buffer, true, true);
+   ConsoleSerializer serializer(mInternal, NULL, false, &outS);
+   
+   Vector<ExprEvalState*> fiberList;
+   for (U32 i=0; i<numFibers; i++)
+   {
+      ExprEvalState* state = mInternal->mFiberStates.getItem(fibers[i]);
+      if (state)
+      {
+         fiberList.push_back(state);
+      }
+   }
+   
+   if (fiberList.size() == 0)
+   {
+      dFree(buffer);
+      return false;
+   }
+   
+   if (serializer.write(fiberList))
+   {
+      *outBlob = buffer;
+      *outBlobSize = outS.getPosition();
+      return true;
+   }
+   else
+   {
+      dFree(buffer);
+   }
+   
+   serializer.reset(false);
    return false;
 }
 
-bool Vm::restoreFiberStateFromBlob(U32* outNumFibers, FiberId** outFibers, U32 blobSize, U8* blob)
+bool Vm::restoreFiberStateFromBlob(U32* outNumFibers, KorkApi::FiberId** outFibers, U32 blobSize, U8* blob)
 {
+   MemStream inS(blobSize, blob, true, false);
+   ConsoleSerializer serializer(mInternal, NULL, false, &inS);
+   
+   Vector<ExprEvalState*> fiberList;
+   
+   if (serializer.read(fiberList))
+   {
+      *outFibers = fiberList.size() > 0 ? (KorkApi::FiberId*)dMalloc(sizeof(KorkApi::FiberId) * fiberList.size()) : 0;
+      *outNumFibers = fiberList.size();
+      
+      for (U32 i=0; i<fiberList.size(); i++)
+      {
+         (*outFibers)[i] = mInternal->mFiberStates.getHandleValue(fiberList[i]);
+      }
+      
+      serializer.reset(false);
+      return true;
+   }
+   
+   serializer.reset(true);
    return false;
 }
 

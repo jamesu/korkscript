@@ -500,8 +500,8 @@ struct ConsoleSerializer
    bool readHashTable(Dictionary::HashTableData* ht);
    bool writeHashTable(const Dictionary::HashTableData* ht);
    
-   bool read(KorkApi::VmInternal* vm, Vector<ExprEvalState*> &fibers);
-   bool write(KorkApi::VmInternal* vm, Vector<ExprEvalState*> &fibers);
+   bool read(Vector<ExprEvalState*> &fibers);
+   bool write(Vector<ExprEvalState*> &fibers);
 };
 
 #endif
