@@ -501,7 +501,7 @@ bool Vm::isNamespaceFunction(NamespaceId nsId, StringTableEntry name)
 
 bool Vm::compileCodeBlock(const char* code, const char* filename, U32* outCodeSize, U8** outCode)
 {
-   CodeBlock* block = new CodeBlock(mInternal);
+   CodeBlock* block = new CodeBlock(mInternal, false);
    
    U8* buffer = (U8*)dMalloc(1024 * 1024);
    *outCode = NULL;
@@ -522,7 +522,7 @@ bool Vm::compileCodeBlock(const char* code, const char* filename, U32* outCodeSi
 
 ConsoleValue Vm::execCodeBlock(U32 codeSize, U8* code, const char* filename, bool noCalls, int setFrame)
 {
-   CodeBlock* block = new CodeBlock(mInternal);
+   CodeBlock* block = new CodeBlock(mInternal, (filename == NULL || *filename == '\0') ? true : false);
    
    MemStream stream(codeSize, code, true, false);
    
@@ -537,7 +537,7 @@ ConsoleValue Vm::execCodeBlock(U32 codeSize, U8* code, const char* filename, boo
 
 ConsoleValue Vm::evalCode(const char* code, const char* filename, S32 setFrame)
 {
-    CodeBlock *newCodeBlock = new CodeBlock(mInternal);
+    CodeBlock *newCodeBlock = new CodeBlock(mInternal, (filename == NULL || *filename == '\0') ? true : false);
     return newCodeBlock->compileExec(filename, code, false, true, (!filename || setFrame < 0) ? -1 : setFrame);
 }
 

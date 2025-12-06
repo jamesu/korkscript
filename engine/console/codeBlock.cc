@@ -40,7 +40,7 @@ using namespace Compiler;
 
 //-------------------------------------------------------------------------
 
-CodeBlock::CodeBlock(KorkApi::VmInternal* vm)
+CodeBlock::CodeBlock(KorkApi::VmInternal* vm, bool _isExecBlock)
 {
    globalStrings = NULL;
    functionStrings = NULL;
@@ -57,6 +57,8 @@ CodeBlock::CodeBlock(KorkApi::VmInternal* vm)
    identStrings = NULL;
    identStringOffsets = NULL;
    numIdentStrings = 0;
+   isExecBlock = _isExecBlock;
+   inList = false;
    
    refCount = 0;
    code = NULL;
@@ -72,9 +74,9 @@ CodeBlock::~CodeBlock()
 {
    // Make sure we aren't lingering in the current code block...
    AssertFatal(mVM && mVM->mCurrentCodeBlock != this, "CodeBlock::~CodeBlock - Caught lingering in smCurrentCodeBlock!")
-   
-   if(name)
-      removeFromCodeList();
+
+   removeFromCodeList();
+
    delete[] const_cast<char*>(globalStrings);
    delete[] const_cast<char*>(functionStrings);
    delete[] globalFloats;
@@ -92,17 +94,32 @@ CodeBlock::~CodeBlock()
 
 void CodeBlock::addToCodeList()
 {
-   // remove any code blocks with my name
-   for(CodeBlock **walk = &mVM->mCodeBlockList; *walk;walk = &((*walk)->nextFile))
+   if (inList)
    {
-      if((*walk)->name == name)
-      {
-         *walk = (*walk)->nextFile;
-         break;
-      }
+      return;
    }
-   nextFile = mVM->mCodeBlockList;
-   mVM->mCodeBlockList = this;
+
+   if (!isExecBlock)
+   {
+      // remove any code blocks with my name
+      for(CodeBlock **walk = &mVM->mCodeBlockList; *walk;walk = &((*walk)->nextFile))
+      {
+         if((*walk)->name == name)
+         {
+            *walk = (*walk)->nextFile;
+            break;
+         }
+      }
+      nextFile = mVM->mCodeBlockList;
+      mVM->mCodeBlockList = this;
+   }
+   else
+   {
+      nextFile = mVM->mExecCodeBlockList;
+      mVM->mExecCodeBlockList = this;
+   }
+
+   inList = true;
 }
 
 void CodeBlock::clearAllBreaks()
@@ -237,15 +254,36 @@ const char *CodeBlock::getFileLine(U32 ip)
 
 void CodeBlock::removeFromCodeList()
 {
-   for(CodeBlock **walk = &mVM->mCodeBlockList; *walk; walk = &((*walk)->nextFile))
+   if (!inList)
    {
-      if(*walk == this)
+      return;
+   }
+
+   inList = false;
+
+   if (!isExecBlock)
+   {
+      for(CodeBlock **walk = &mVM->mCodeBlockList; *walk; walk = &((*walk)->nextFile))
       {
-         *walk = nextFile;
-         
-         // clear out all breakpoints
-         clearAllBreaks();
-         return;
+         if(*walk == this)
+         {
+            *walk = nextFile;
+            
+            // clear out all breakpoints
+            clearAllBreaks();
+            return;
+         }
+      }
+   }
+   else
+   {
+      for(CodeBlock **walk = &mVM->mExecCodeBlockList; *walk; walk = &((*walk)->nextFile))
+      {
+         if(*walk == this)
+         {
+            *walk = nextFile;
+            return;
+         }
       }
    }
 }
@@ -329,7 +367,7 @@ bool CodeBlock::read(StringTableEntry fileName, bool readVersion, Stream &st)
    
    name = fileName;
    
-   if(fileName)
+   if(fileName && fileName[0])
    {
       fullPath = NULL;
       
@@ -363,7 +401,10 @@ bool CodeBlock::read(StringTableEntry fileName, bool readVersion, Stream &st)
    }
    
    //
-   addToCodeList();
+   if (isExecBlock || (name && name[0]))
+   {
+      addToCodeList();
+   }
    
    U32 size,i;
    st.read(&size);
@@ -396,7 +437,8 @@ bool CodeBlock::read(StringTableEntry fileName, bool readVersion, Stream &st)
       for(U32 i = 0; i < size; i++)
          st.read(&functionFloats[i]);
    }
-   U32 codeSize;
+   
+   codeSize = 0;
    st.read(&codeSize);
    st.read(&lineBreakPairCount);
    
@@ -419,8 +461,9 @@ bool CodeBlock::read(StringTableEntry fileName, bool readVersion, Stream &st)
    lineBreakPairs = code + codeSize;
    
    // StringTable-ize our identifiers.
-   U32 identCount;
+   U32 identCount = 0;
    st.read(&identCount);
+   numIdentStrings = identCount;
    
    identStringOffsets = new U32[identCount];
    identStrings = new StringTableEntry[identCount];
@@ -447,8 +490,10 @@ bool CodeBlock::read(StringTableEntry fileName, bool readVersion, Stream &st)
          st.read(&ip);
          // NOTE: this technically should no longer be needed
          // for new codeblocks.
-         code[ip] = i++;
+         code[ip] = i;
       }
+      
+      i++;
    }
    
    if(lineBreakPairCount)
@@ -509,8 +554,7 @@ bool CodeBlock::write(Stream &st)
    }
    else
    {
-      U32 zero = 0;
-      st.write(zero);
+      st.write((U32)0);
    }
    
    U32 codeSize = this->codeSize;
@@ -523,15 +567,14 @@ bool CodeBlock::write(Stream &st)
    {
       U32 v = code[i];
       
-      if (v <= 0xFE)
+      if (v < 0xFF)
       {
          U8 b = (U8)v;
          st.write(b);
       }
       else
       {
-         U8 ff = 0xFF;
-         st.write(ff);
+         st.write((U8)0xFF);
          st.write(v);
       }
    }
@@ -700,8 +743,10 @@ bool CodeBlock::compileToStream(Stream &st, StringTableEntry fileName, const cha
       modPath = ""; // TOFIX Con::getModNameFromPath(fileName);
    }
    
-   if(name)
+   if (isExecBlock || (name && name[0]))
+   {
       addToCodeList();
+   }
    
    StmtNode* rootNode = NULL;
    
@@ -740,6 +785,8 @@ bool CodeBlock::compileToStream(Stream &st, StringTableEntry fileName, const cha
    
    globalFloats    = mVM->mCompilerResources->getGlobalFloatTable().build();
    functionFloats  = mVM->mCompilerResources->getFunctionFloatTable().build();
+    numGlobalFloats = mVM->mCompilerResources->getGlobalFloatTable().count;
+    numFunctionFloats = mVM->mCompilerResources->getFunctionFloatTable().count;
     
     mVM->mCompilerResources->getIdentTable().build(&identStrings, &identStringOffsets, &numIdentStrings);
    
@@ -770,7 +817,9 @@ void CodeBlock::decRefCount()
 {
    refCount--;
    if(!refCount)
+   {
       delete this;
+   }
 }
 
 //-------------------------------------------------------------------------

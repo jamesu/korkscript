@@ -47,7 +47,7 @@ private:
    
 public:
    
-   CodeBlock(KorkApi::VmInternal* vm);
+   CodeBlock(KorkApi::VmInternal* vm, bool isExecBlock);
    ~CodeBlock();
    
    StringTableEntry name;
@@ -80,6 +80,9 @@ public:
    StringTableEntry* identStrings;
    U32* identStringOffsets;
    U32 numIdentStrings;
+
+   bool isExecBlock;
+   bool inList;
    
    void addToCodeList();
    void removeFromCodeList();

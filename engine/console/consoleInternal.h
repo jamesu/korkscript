@@ -97,7 +97,7 @@ public:
    bool updateSize(Stream& stream, U32 offset)
    {
       U32 newPos = stream.getPosition();
-      S64 newSize = (S64)offset - (S64)newPos - 8;
+      S64 newSize = (S64)newPos - (S64)offset - 8;
       if (newSize < 0)
       {
          return false; // ???
@@ -112,12 +112,13 @@ public:
    
    U32 getNextBlockPosition(U32 bytesInBlock)
    {
-      return (size - bytesInBlock);
+      return (U32)dAlignSize(size, 2) - bytesInBlock;
    }
 
    inline bool seekNext(Stream& stream, U32 bytesInBlock)
    {
-      return stream.setPosition(stream.getPosition() + (size - bytesInBlock));
+      U32 eobBytes = (U32)dAlignSize(size, 2) - bytesInBlock;
+      return stream.setPosition(stream.getPosition() + eobBytes);
    }
 };
 
@@ -430,6 +431,8 @@ struct ConsoleSerializer
    // Fiber
    static const U32 CEOB_VERSION = 1;
    static const U32 CEOB_MAGIC = makeFourCCTag('C','E','O','B');
+   // Frame
+   static const U32 CFFB_MAGIC = makeFourCCTag('C','F','F','B');
    // Dictionary
    static const U32 DICT_VERSION = 1;
    static const U32 DICT_MAGIC = makeFourCCTag('D','I','C','T');
@@ -497,7 +500,7 @@ struct ConsoleSerializer
    
    bool isOk();
    
-   bool readHashTable(Dictionary::HashTableData* ht);
+   Dictionary::HashTableData* loadHashTable();
    bool writeHashTable(const Dictionary::HashTableData* ht);
    
    bool read(Vector<ExprEvalState*> &fibers);

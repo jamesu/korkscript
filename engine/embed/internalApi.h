@@ -32,6 +32,7 @@ struct VmInternal
 
    KorkApi::Vm* mVM;
    CodeBlock*    mCodeBlockList;
+   CodeBlock*    mExecCodeBlockList; // temp blocks (or loaded from file)
    CodeBlock*    mCurrentCodeBlock;
    TelnetDebugger* mTelDebugger;
    TelnetConsole* mTelConsole;

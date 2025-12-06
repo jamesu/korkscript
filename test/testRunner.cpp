@@ -133,7 +133,8 @@ ConsoleFunction(restoreFibers, const char*, 2, 2, "fileName")
 
       if (vmPtr->restoreFiberStateFromBlob(&outNumFibers, &outFibers, blobSize, blob))
       {
-         char* buf = (char*)dMalloc(outNumFibers * 32);
+         KorkApi::ConsoleValue cbuf = Con::getReturnBuffer(outNumFibers * 32);
+         char* buf = (char*)cbuf.evaluatePtr(vmPtr->getAllocBase());
          buf[0] = 0;
 
          for (U32 i = 0; i < outNumFibers; i++)
@@ -150,7 +151,6 @@ ConsoleFunction(restoreFibers, const char*, 2, 2, "fileName")
          KorkApi::ConsoleValue cv = KorkApi::ConsoleValue::makeString(buf);
          result = vmPtr->valueAsString(cv);
 
-         dFree(buf);
          dFree(outFibers);
          dFree(blob);
          return result;

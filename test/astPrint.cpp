@@ -462,7 +462,7 @@ void dumpToInstructionsPrint(Compiler::Resources& res, StmtNode* rootNode)
 
    KorkApi::Vm* vm = KorkApi::createVM(&cfg);
 
-   CodeBlock* cb = new CodeBlock(vm->mInternal);
+   CodeBlock* cb = new CodeBlock(vm->mInternal, true);
    res.STEtoCode = &Compiler::compileSTEtoCode;
    res.resetTables();
    

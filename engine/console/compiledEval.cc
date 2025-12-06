@@ -2716,13 +2716,12 @@ ExprEvalState* ConsoleSerializer::loadEvalState()
    {
       readIterStackRecord(state->iterStack[i]);
    }
-   mStream->read(sizeof(state->iterStack),  state->iterStack);
    mStream->read(sizeof(state->floatStack), state->floatStack);
    mStream->read(sizeof(state->intStack),   state->intStack);
    for (U32 i=0; i<ObjectCreationStackSize; i++)
    {
       auto& item = state->objectCreationStack[i];
-      writeObject(item.newObject);
+      item.newObject = loadObject();
       mStream->read(&item.failJump);
    }
    mStream->read(sizeof(state->tryStack), state->tryStack);
@@ -2737,7 +2736,7 @@ ExprEvalState* ConsoleSerializer::loadEvalState()
    // Names
    state->mCurrentFile = mStream->readSTString();
    state->mCurrentRoot = mStream->readSTString();
-
+   
    // State
    U8 val = 0;
    mStream->read(&val);
@@ -2746,9 +2745,47 @@ ExprEvalState* ConsoleSerializer::loadEvalState()
    readHeapData(state->mLastFiberHeapData);
    readConsoleValue(state->mLastFiberValue, state->mLastFiberHeapData);
    
+   // Reset alignment
+   U8 padBytes = 0;
+   U8 pad = 0x0;
+   mStream->read(&padBytes);
+   for (U32 i=0; i<padBytes; i++)
+   {
+      mStream->read(&pad);
+   }
+   
    // Dictionary
    S32 dictionaryId = addReferencedDictionary(state->globalVars.mHashTable);
    mStream->read(&dictionaryId);
+
+   // Frames
+   U32 numFrames = 0;
+   mStream->read(&numFrames);
+   for (U32 i=0; i<numFrames; i++)
+   {
+      IFFBlock frameBlock;
+      
+      if (!mStream->read(sizeof(IFFBlock), &frameBlock) ||
+          frameBlock.ident != CFFB_MAGIC)
+      {
+         delete state;
+         return NULL;
+      }
+      
+      U32 startBlock = mStream->getPosition();
+      
+      ConsoleFrame* frame = loadFrame(state);
+      if (frame == NULL)
+      {
+         return NULL;
+      }
+      
+      state->vmFrames.push_back(frame);
+      
+      frameBlock.seekNext(*mStream, mStream->getPosition()-startBlock);
+   }
+   
+   // Set dictionary owner
    if (dictionaryId < 0)
    {
       state->globalVars.setState(mTarget, mTarget->mGlobalVars.mHashTable);
@@ -2761,25 +2798,13 @@ ExprEvalState* ConsoleSerializer::loadEvalState()
       }
       state->globalVars.setState(mTarget, mDictionaryTables[dictionaryId]);
    }
-
-   // Frames
-   U32 numFrames = 0;
-   mStream->read(&numFrames);
-   for (U32 i=0; i<numFrames; i++)
-   {
-      ConsoleFrame* frame = loadFrame(state);
-      if (frame == NULL)
-      {
-         return NULL;
-      }
-      state->vmFrames.push_back(frame);
-   }
    
    return state;
 }
 
 bool ConsoleSerializer::saveEvalState(ExprEvalState* state)
 {
+   U32 startWrite = mStream->getPosition();
    U32 oldIndex = state->mAllocNumber-1;
    mStream->write(CEOB_VERSION);
    mStream->write(oldIndex);
@@ -2817,15 +2842,44 @@ bool ConsoleSerializer::saveEvalState(ExprEvalState* state)
    writeHeapData(state->mLastFiberHeapData);
    writeConsoleValue(state->mLastFiberValue, state->mLastFiberHeapData);
    
+   // Reset alignment
+   U8 padBytes = 0;
+   U32 alignPos = mStream->getPosition() - startWrite;
+   if (((alignPos+1) & BIT(0)) != 0)
+   {
+      padBytes = 1;
+   }
+   
+   mStream->write(padBytes);
+   for (U32 i=0; i<padBytes; i++)
+   {
+      mStream->write((U8)0xFF);
+   }
+   
    // Dictionary
-   S32 dictionaryId = addReferencedDictionary(state->globalVars.mHashTable);
+   S32 dictionaryId = addReferencedDictionary(ownsDict ? state->globalVars.mHashTable : NULL); // fiber must own globals for them to be written
    mStream->write(dictionaryId);
 
    // Frames
    mStream->write((U32)state->vmFrames.size());
    for (ConsoleFrame* frame : state->vmFrames)
    {
+      IFFBlock frameBlock;
+      frameBlock.ident = CFFB_MAGIC;
+      U32 startBlock = mStream->getPosition();
+      
+      if (!mStream->write(sizeof(IFFBlock), &frameBlock))
+      {
+         return false;
+      }
+      
       if (!writeFrame(*frame))
+      {
+         return false;
+      }
+      
+      frameBlock.updateSize(*mStream, startBlock);
+      if (!frameBlock.writePad(*mStream))
       {
          return false;
       }
@@ -2836,9 +2890,9 @@ bool ConsoleSerializer::saveEvalState(ExprEvalState* state)
 
 bool ConsoleSerializer::readConsoleValue(KorkApi::ConsoleValue& value, KorkApi::ConsoleHeapAllocRef dataRef)
 {
-   if (!mStream->read(&value.cvalue) &&
+   if (!(mStream->read(&value.cvalue) &&
         mStream->read(&value.typeId) &&
-        mStream->read(&value.zoneId))
+        mStream->read(&value.zoneId)))
    {
       return false;
    }
@@ -2848,9 +2902,11 @@ bool ConsoleSerializer::readConsoleValue(KorkApi::ConsoleValue& value, KorkApi::
    {
       value.cvalue = (U64)dataRef->ptr();
    }
-   else if (value.getZone() == KorkApi::ConsoleValue::ZoneExternal ||
+   else if (!(value.isInt() || value.isFloat()) &&
+            (
+            value.getZone() == KorkApi::ConsoleValue::ZoneExternal ||
             value.getZone() == KorkApi::ConsoleValue::ZoneReturn ||
-            value.getZone() == KorkApi::ConsoleValue::ZoneVmHeap)
+            value.getZone() == KorkApi::ConsoleValue::ZoneVmHeap))
    {
       value.zoneId = KorkApi::ConsoleValue::ZoneExternal;
       value.cvalue = 0;
@@ -2918,14 +2974,6 @@ bool ConsoleSerializer::writeIterStackRecord(IterStackRecord& ref)
 
 bool ConsoleSerializer::readVarRef(ConsoleVarRef& ref)
 {
-   S32 dictId = addReferencedDictionary(ref.dictionary ? ref.dictionary->mHashTable : NULL);
-   mStream->write(dictId);
-   mStream->writeString(ref.var ? ref.var->name : "");
-   return mStream->getStatus() == Stream::Ok;
-}
-
-bool ConsoleSerializer::writeVarRef(ConsoleVarRef& ref)
-{
    S32 dictId = -1;
    if (!mStream->read(&dictId))
    {
@@ -2946,6 +2994,14 @@ bool ConsoleSerializer::writeVarRef(ConsoleVarRef& ref)
       ref.var = ref.dictionary->lookup(steName);
    }
    
+   return mStream->getStatus() == Stream::Ok;
+}
+
+bool ConsoleSerializer::writeVarRef(ConsoleVarRef& ref)
+{
+   S32 dictId = addReferencedDictionary(ref.dictionary ? ref.dictionary->mHashTable : NULL);
+   mStream->write(dictId);
+   mStream->writeString(ref.var ? ref.var->name : "");
    return mStream->getStatus() == Stream::Ok;
 }
 
@@ -3126,6 +3182,9 @@ ConsoleFrame* ConsoleSerializer::loadFrame(ExprEvalState* state)
 
    // Restore everything remaining
 
+   frame->codeBlock = block;
+   block->incRefCount();
+   
    if (inFunction)
    {
       frame->curFloatTable = block->functionFloats;
@@ -3334,11 +3393,20 @@ bool ConsoleSerializer::read(Vector<ExprEvalState*> &fibers)
       return false;
    }
    
+   fibers = mFibers;
+   
    return true;
 }
 
 bool ConsoleSerializer::write(Vector<ExprEvalState*> &fibers)
 {
+   // This is:
+   // CSOB
+   //   version
+   //   <offsets>
+   //   <fiber list>
+   //   <object list>
+   
    U32 startPos = mStream->getPosition();
 
    IFFBlock block;
@@ -3350,56 +3418,67 @@ bool ConsoleSerializer::write(Vector<ExprEvalState*> &fibers)
    }
 
    mStream->write(CSOB_VERSION);
+   U32 objectOffset = mStream->getPosition(); mStream->write((U32)0);
+   U32 mainOffset = mStream->getPosition(); mStream->write((mStream->getPosition() - startPos) + 4);
 
-   for (ExprEvalState* state : fibers)
-   {
-      if (!saveEvalState(state))
-      {
-         reset(false);
-         return false;
-      }
-   }
-
-   U32 endPos = mStream->getPosition();
-   block.setSize(endPos - startPos);
-   if (!block.writePad(*mStream))
+   mFibers = fibers;
+   if (!saveFibers())
    {
       reset(false);
       return false;
    }
 
-   mStream->setPosition(startPos);
-   mStream->write(sizeof(IFFBlock), &block);
+   U32 startObjects = mStream->getPosition() - startPos;
+   mStream->setPosition(objectOffset);
+   mStream->write(startObjects);
+   mStream->setPosition(startObjects);
+   
+   if (!saveRelatedObjects())
+   {
+      reset(false);
+      return false;
+   }
+   
+   block.updateSize(*mStream, startPos);
+   if (!block.writePad(*mStream))
+   {
+      reset(false);
+      return false;
+   }
    
    reset(false);
    return true;
 }
 
-bool ConsoleSerializer::readHashTable(Dictionary::HashTableData* ht)
+Dictionary::HashTableData* ConsoleSerializer::loadHashTable()
 {
-   Dictionary tempDict(mTarget, ht);
+   Dictionary tempDict(mTarget);
    tempDict.reset();
 
    U32 entryCount = 0;
    if (!mStream->read(&entryCount))
    {
-      return false;
+      return NULL;
    }
    
    for (U32 i = 0; i < entryCount; ++i)
    {
       bool isConst = false;
       if (!mStream->read(&isConst))
-         return false;
+      {
+         return NULL;
+      }
       
-      StringTableEntry name = NULL;
-      if (!mStream->readSTString(name))
-         return false;
-
+      StringTableEntry name = mStream->readSTString();
+      if (name == NULL)
+      {
+         return NULL;
+      }
+      
       Dictionary::Entry* entry = tempDict.add(name);
       if (!entry)
       {
-         return false;
+         return NULL;
       }
       
       U32 valueSize = 0;
@@ -3411,19 +3490,22 @@ bool ConsoleSerializer::readHashTable(Dictionary::HashTableData* ht)
          entry->mHeapAlloc = mTarget->createHeapRef(valueSize);
          if (!mStream->read(valueSize, entry->mHeapAlloc->ptr()))
          {
-            return false;
+            return NULL;
          }
       }
       
-      KorkApi::ConsoleValue value;
-      if (!readConsoleValue(value, entry->mHeapAlloc))
-         return false;
+      if (!readConsoleValue(entry->mConsoleValue, entry->mHeapAlloc))
+      {
+         return NULL;
+      }
       
       entry->mIsConstant = isConst;
    }
    
+   Dictionary::HashTableData* ht = tempDict.mHashTable;
+   ht->owner = NULL;
    tempDict.setState(mTarget, NULL);
-   return true;
+   return ht;
 }
 
 bool ConsoleSerializer::writeHashTable(const Dictionary::HashTableData* ht)
@@ -3443,15 +3525,17 @@ bool ConsoleSerializer::writeHashTable(const Dictionary::HashTableData* ht)
    {
       for (Dictionary::Entry* entry = ht->data[i]; entry; entry = entry->nextEntry)
       {
-         if (!(mStream->write(entry->mIsConstant) &&
-               mStream->write(entry->name)))
+         mStream->write((bool)entry->mIsConstant);
+         mStream->writeString(entry->name);
+         
+         if (mStream->getStatus() != Stream::Ok)
          {
             return false;
          }
          
          if (entry->mHeapAlloc)
          {
-            mStream->write(entry->mHeapAlloc->size);
+            mStream->write((U32)entry->mHeapAlloc->size);
             mStream->write(entry->mHeapAlloc->size, entry->mHeapAlloc->ptr());
          }
          else
@@ -3474,37 +3558,49 @@ bool ConsoleSerializer::loadRelatedObjects()
    IFFBlock scanBlock;
    while (mStream->read(sizeof(IFFBlock), &scanBlock))
    {
-      if (scanBlock.getRawSize() < 4)
-      {
-         scanBlock.seekNext(*mStream, 0);
-         continue;
-      }
+      U32 startBlockPos = mStream->getPosition();
 
       switch (scanBlock.ident)
       {
       case DICT_MAGIC:
          // Serialized dictionary
          {
-            Dictionary::HashTableData* ht = new Dictionary::HashTableData();
-            *ht = {};
-            
-            if (!readHashTable(ht))
+            if (scanBlock.getRawSize() < 4)
             {
-               delete ht;
+               scanBlock.seekNext(*mStream, 0);
+               continue;
+            }
+            
+            Dictionary::HashTableData* ht = loadHashTable();
+            
+            if (ht == NULL)
+            {
                return false;
             }
             
             mDictionaryTables.push_back(ht);
+            scanBlock.seekNext(*mStream, mStream->getPosition() - startBlockPos);
          }
          break;
       case DSOB_MAGIC:
          // Serialized codeblock
          {
+            if (scanBlock.getRawSize() < 4)
+            {
+               scanBlock.seekNext(*mStream, 0);
+               continue;
+            }
+            
             StringTableEntry steFilename = mStream->readSTString();
-            CodeBlock* block = new CodeBlock(mTarget);
-            block->read(steFilename, false, *mStream);
+            CodeBlock* block = new CodeBlock(mTarget, true);
+            if (!block->read(steFilename[0] == '\0' ? NULL : steFilename, true, *mStream))
+            {
+               delete block;
+               return false;
+            }
             block->incRefCount();
             mCodeBlocks.push_back(block);
+            scanBlock.seekNext(*mStream, mStream->getPosition() - startBlockPos);
          }
          break;
       case EOLB_MAGIC:
@@ -3512,6 +3608,8 @@ bool ConsoleSerializer::loadRelatedObjects()
          scanBlock.seekNext(*mStream, 0);
          return true;
       default:
+            AssertFatal(false, "Unknown block");
+            return false;
          break;
       }
    }
@@ -3534,6 +3632,7 @@ bool ConsoleSerializer::saveRelatedObjects()
       
       writeHashTable(data);
       writeBlock.updateSize(*mStream, startPos);
+      writeBlock.writePad(*mStream);
    }
    
    writeBlock.ident = DSOB_MAGIC;
@@ -3545,14 +3644,20 @@ bool ConsoleSerializer::saveRelatedObjects()
          return false;
       }
       
+      mStream->writeString(block->name);
       if (!block->write(*mStream))
       {
          return false;
       }
+      
       writeBlock.updateSize(*mStream, startPos);
+      writeBlock.writePad(*mStream);
    }
    
-   return true;
+   // End of list
+   writeBlock.ident = EOLB_MAGIC;
+   writeBlock.setSize(0);
+   return mStream->write(sizeof(IFFBlock), &writeBlock);
 }
 
 bool ConsoleSerializer::loadFibers()
@@ -3561,17 +3666,18 @@ bool ConsoleSerializer::loadFibers()
    while (mStream->read(sizeof(IFFBlock), &scanBlock))
    {
       U32 startInBlock = mStream->getPosition();
-      if (scanBlock.getRawSize() < 4)
-      {
-         scanBlock.seekNext(*mStream, 0);
-         continue;
-      }
       
       ExprEvalState* evalState = NULL;
 
       switch (scanBlock.ident)
       {
       case CEOB_MAGIC:
+         if (scanBlock.getRawSize() < 16)
+         {
+            scanBlock.seekNext(*mStream, 0);
+            continue;
+         }
+         
          // Serialized fiber
          evalState = loadEvalState();
          if (!evalState)
@@ -3584,6 +3690,8 @@ bool ConsoleSerializer::loadFibers()
          // End of list block
          return true;
       default:
+            AssertFatal(false, "Unknown block");
+            return false;
          break;
       }
       
