@@ -66,7 +66,21 @@ enum class TokenType : U32
    opPCHAR_EXCL,      // '!'
    opPCHAR_TILDE,     // '~'
    
-   opCONCAT // @
+   opCONCAT, // @
+   
+   // Interpolated string control codes
+   STRBEG,   // $"  (push)
+   STREND    // "   (pop)  (includes end bit)
+};
+
+struct InterpolationState
+{
+   S32 depth;
+   
+   bool inLiteral;
+   bool inBrace;
+   bool needStrConcat;
+   bool doInterp;
 };
 
 struct Token
@@ -147,7 +161,7 @@ struct Token
 class Tokenizer
 {
 public:
-   explicit Tokenizer(_StringTable* st, std::string_view src, std::string filename = {})
+   explicit Tokenizer(_StringTable* st, std::string_view src, std::string filename, bool enableInterpolation)
    : mStringTable(st), mFilename(std::move(filename))
    {
       mPos = {};
@@ -155,6 +169,8 @@ public:
       mSource.resize(src.size()+1);
       memcpy(&mSource[0], &src[0], src.size());
       mSource[src.size()] = '\0';
+      mInterpState = {};
+      mInterpState.doInterp = enableInterpolation;
    }
    
    inline const std::string& filename() const { return mFilename; }
@@ -259,10 +275,73 @@ public:
       return std::string(buf);
    }
    
+   Token scanInterpLiteralSegment()
+   {
+      char endQuote = 0;
+      
+      if (peek() == '"')
+      {
+         // blank string, so ignore
+         advance();
+         mInterpState.depth--;
+         mInterpState.inLiteral = false;
+         mInterpState.inBrace = mInterpState.depth > 0;
+         return make(TokenType::STREND);
+      }
+      
+      Token tok = decodeStringInPlace(&mSource[0],
+                                      mSource.size(),
+                                      mBytePos,
+                                      TokenType::STRATOM,
+                                      '"',
+                                      '{',
+                                      &endQuote);
+      
+      if (endQuote == '"')
+      {
+         // End of string
+         mInterpState.depth--;
+         mInterpState.inLiteral = false;
+         mInterpState.inBrace = mInterpState.depth > 0;
+         tok.kind = TokenType::STREND;
+         return tok;
+      }
+      else if (endQuote == '{')
+      {
+         mInterpState.inBrace = true;
+         mInterpState.inLiteral = false;
+         mInterpState.needStrConcat = true;
+      }
+      
+      return tok;
+   }
+   
+   
+   bool havePendingConcat() const { return mInterpState.needStrConcat; }
+   
+   Token emitPendingConcat()
+   {
+      mInterpState.needStrConcat = false;
+      return makeConcat('@');
+   }
+   
    Token next()
    {
       for (;;)
       {
+         // Interpolated strings - handle pending @
+         if (havePendingConcat())
+         {
+            if (peek() != '"')
+            {
+               return emitPendingConcat();
+            }
+            else
+            {
+               mInterpState.needStrConcat = false;
+            }
+         }
+         
          Token t;
          
          if (eof())
@@ -311,10 +390,60 @@ public:
             continue;
          }
          
+         // Handle being inside the string literal (NOT the expression)
+         if (mInterpState.depth > 0 &&
+             mInterpState.inLiteral &&
+             mInterpState.inBrace == false)
+         {
+            t = scanInterpLiteralSegment();
+            if (t.kind != TokenType::NONE)
+            {
+               return t;
+            }
+         }
+         
+         // Handle being inside the interpolation expression i.e. { ... } inside $""
+         if (mInterpState.inBrace)
+         {
+            char c = peek();
+            
+            if (c == ';')
+            {
+               advance();
+               return illegal("';' not allowed inside interpolated expression");
+            }
+            
+            if (c == '}')
+            {
+               advance();
+               mInterpState.inBrace = false;
+               
+               // Finished the { expr } for this interpolation.
+               // Next token should be a literal piece or closing quote.
+               mInterpState.inLiteral = true;
+               mInterpState.needStrConcat = true;
+               
+               continue;
+            }
+         }
+         
+         // Handle start of interpolated string (i.e. $")
+         if (bpeek2('$', '"') && mInterpState.doInterp)
+         {
+            advance(); // '$'
+            advance(); // '"'
+            
+            mInterpState.depth++;
+            mInterpState.inLiteral = true;
+            mInterpState.inBrace = false;
+            
+            return make(TokenType::STRBEG);
+         }
+         
          // Quoted strings
          if (beither2('"', '\''))
          {
-            return scanString(peek() == '\'');
+            return scanString(peek() == '\'' ? TokenType::TAGATOM : TokenType::STRATOM, peek());
          }
          
          // Multi-char operators (longest first)
@@ -388,6 +517,8 @@ private:
    std::string mFilename;
    S64 mBytePos;
    SrcPos mPos;
+   InterpolationState mInterpState;
+   
 public:
    _StringTable* mStringTable;
 private:
@@ -809,7 +940,7 @@ private:
       }
    }
    
-   Token decodeStringInPlace(char* buf, S64 bufEnd, S64& idx, TokenType tokenType)
+   Token decodeStringInPlace(char* buf, S64 bufEnd, S64& idx, TokenType tokenType, const char quote, const char altQuote, char* outQuote)
    {
       const S64 open = idx;
       if (open >= bufEnd || bufEnd <= 0 || idx < 0)
@@ -817,7 +948,6 @@ private:
          return illegal("end of input");
       }
       
-      const char quote = buf[open];
       bool firstOut = true;
       
       // Track boundaries:
@@ -850,11 +980,15 @@ private:
             buf[idx++] = '\0';
             continue;
          }
-         if (c == quote)
+         if (c == quote || c == altQuote)
          {
             // closing quote
             base_boundary = idx; // exclusive
             buf[idx++] = '\0';   // zap the closing quote
+            if (outQuote)
+            {
+               *outQuote = quote;
+            }
             break;
          }
          
@@ -998,12 +1132,15 @@ private:
       return t;
    }
    
-   Token scanString(bool isTag)
+   Token scanString(TokenType type, char quote)
    {
       return decodeStringInPlace(&mSource[0],
                                  mSource.size(),
                                  mBytePos,
-                                 isTag ? TokenType::TAGATOM : TokenType::STRATOM);
+                                 type,
+                                 quote,
+                                 quote,
+                                 NULL);
    }
    
    // --- identifiers / keywords

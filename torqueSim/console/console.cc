@@ -229,6 +229,7 @@ void init()
    config.enableExceptions = true;
    config.enableTuples = true;
    config.enableTypes = true;
+   config.enableStringInterpolation = true;
 
 
    config.mallocFn = [](size_t size, void*){

@@ -317,6 +317,7 @@ struct Config {
    bool enableExceptions;
    bool enableTuples;
    bool enableTypes;
+   bool enableStringInterpolation;
    bool initTelnet;
    
    U16 maxFibers;

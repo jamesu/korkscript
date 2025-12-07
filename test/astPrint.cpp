@@ -468,6 +468,7 @@ void dumpToInstructionsPrint(Compiler::Resources& res, StmtNode* rootNode)
    cfg.enableExceptions = gEnableExtensions;
    cfg.enableTuples = gEnableExtensions;
    cfg.enableTypes = gEnableExtensions;
+   cfg.enableStringInterpolation = gEnableExtensions;
 
    KorkApi::Vm* vm = KorkApi::createVM(&cfg);
 
@@ -503,12 +504,13 @@ bool printAST(const char* buf, const char* filename)
 {
    std::string theBuf(buf);
    Compiler::Resources res;
-   SimpleLexer::Tokenizer lex(StringTable, theBuf, filename);
+   SimpleLexer::Tokenizer lex(StringTable, theBuf, filename, gEnableExtensions);
    SimpleParser::ASTGen astGen(&lex, &res);
 
    res.allowExceptions = gEnableExtensions;
    res.allowTuples = gEnableExtensions;
    res.allowTypes = gEnableExtensions;
+   res.allowStringInterpolation = gEnableExtensions;
    
    StmtNode* rootNode = NULL;
    

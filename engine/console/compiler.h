@@ -396,6 +396,7 @@ namespace Compiler
       bool allowExceptions;
       bool allowTuples;
       bool allowTypes;
+      bool allowStringInterpolation;
 
       void (*STEtoCode)(Resources* res, StringTableEntry ste, U32 ip, U32 *ptr);
 
