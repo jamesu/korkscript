@@ -303,6 +303,7 @@ namespace Compiler
 
       bool syntaxError;
       bool allowExceptions;
+      bool allowStringInterpolation;
 
       void (*STEtoCode)(Resources* res, StringTableEntry ste, U32 ip, U32 *ptr);
 

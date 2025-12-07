@@ -619,7 +619,7 @@ bool CodeBlock::compileToStream(Stream &st, StringTableEntry fileName, const cha
    
    StmtNode* rootNode = NULL;
    
-   SimpleLexer::Tokenizer lex(StringTable, inScript, fileName);
+   SimpleLexer::Tokenizer lex(StringTable, inScript, fileName, mVM->mCompilerResources->allowStringInterpolation);
    SimpleParser::ASTGen astGen(&lex, mVM->mCompilerResources);
    
    try
@@ -750,7 +750,7 @@ bool CodeBlock::compileToStream(Stream &st, StringTableEntry fileName, const cha
    
    StmtNode* rootNode = NULL;
    
-   SimpleLexer::Tokenizer lex(StringTable, inString, fileName ? fileName : "");
+   SimpleLexer::Tokenizer lex(StringTable, inString, fileName ? fileName : "", mVM->mCompilerResources->allowStringInterpolation);
    SimpleParser::ASTGen astGen(&lex, mVM->mCompilerResources);
    
    try

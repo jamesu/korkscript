@@ -802,6 +802,7 @@ VmInternal::VmInternal(Vm* vm, Config* cfg) : mGlobalVars(this)
    }
 
    mCompilerResources->allowExceptions = cfg->enableExceptions;
+   mCompilerResources->allowStringInterpolation = cfg->enableStringInterpolation;
    mLastExceptionInfo = {};
    
    TypeInfo typeInfo = {};

@@ -227,6 +227,7 @@ void init()
 
    // Extra stuff
    config.enableExceptions = true;
+   config.enableStringInterpolation = true;
 
 
    config.mallocFn = [](size_t size, void*){
