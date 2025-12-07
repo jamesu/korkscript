@@ -17,8 +17,9 @@ function fiber_entry(%id)
    return %vc @ "RET";
 }
 
-function test_fiberBasic(%id, %s1, %s2, %s3)
+function test_fiberBasic()
 {
+   $FIBFIN = 0;
    %fiberId = createFiber();
    %code = "fiber_entry(" @ %fiberId @ "); $FIBFIN=1;";
    %yield1 = evalInFiber(%fiberId, %code);
@@ -41,7 +42,45 @@ function test_fiberBasic(%id, %s1, %s2, %s3)
    testString("fiberBasic.step3", %yield3, "TENRETR2");
 }
 
+function test_fiberSaveLoad()
+{
+   $FIBFIN = 0;
+   %fiberId = createFiber();
+   %code = "fiber_entry(" @ %fiberId @ "); $FIBFIN=1;";
+   %yield1 = evalInFiber(%fiberId, %code);
+
+   %didSave = saveFibers(%fiberId, "test.dat");
+   echo("STOPPING SERIALIZED FIBER Y1");
+   stopFiber(%fiberId);
+   %restoredId = restoreFibers("test.dat");
+
+   testInt("fiberSaveLoad.chk1", $FIBFIN, 0);
+   testString("fiberSaveLoad.chk1L", $fiberLog[%fiberId], "A");
+
+   %yield2 = resumeFiber(%restoredId, 26);
+
+   %didSave = saveFibers(%restoredId, "test.dat");
+   echo("STOPPING SERIALIZED FIBER Y2");
+   stopFiber(%restoredId);
+   %restoredId2 = restoreFibers("test.dat");
+
+   testInt("fiberSaveLoad.chk2", $FIBFIN, 0);
+   testString("fiberSaveLoad.chk2LocalVar", readFiberLocalVariable(%restoredId, "%vc"), "26");
+   testString("fiberSaveLoad.chk2L", $fiberLog[%fiberId], "AB");
+
+   %yield3 = resumeFiber(%restoredId2, "FUDGE");
+   testInt("fiberSaveLoad.chk3", $FIBFIN, 1);
+   testString("fiberSaveLoad.chk3LocalVar", readFiberLocalVariable(%restoredId, "%vc"), ""); // i.e. should have finished
+   testString("fiberSaveLoad.chk3L", $fiberLog[%fiberId], "ABC");
+
+   testInt("fiberSaveLoad.step1", %yield1, 123);
+   testString("fiberSaveLoad.step2", %yield2, 30); // 26+4
+   testString("fiberSaveLoad.step3", %yield3, "FUDGERET");
+}
+
 
 test_fiberBasic();
+echo("--");
+test_fiberSaveLoad();
 
 echo("Fiber tests finished");
