@@ -36,6 +36,7 @@ struct VmInternal
    CodeBlock*    mCurrentCodeBlock;
    TelnetDebugger* mTelDebugger;
    TelnetConsole* mTelConsole;
+   ExceptionInfo  mLastExceptionInfo;
 
    Dictionary mGlobalVars;
    
@@ -95,6 +96,7 @@ struct VmInternal
    void cleanupFiber(FiberId fiber);
    void suspendCurrentFiber();
    FiberRunResult resumeCurrentFiber(ConsoleValue value);
+   bool getCurrentFiberFileLine(StringTableEntry* outFile, U32* outLine);
    FiberRunResult::State getCurrentFiberState();
    void clearCurrentFiberError();
    void* getCurrentFiberUserPtr();

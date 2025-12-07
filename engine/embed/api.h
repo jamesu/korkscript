@@ -8,6 +8,7 @@
 class TypeValidator; // TODO: change to interface
 class Namespace;
 struct EnumTable;
+class CodeBlock;
 
 namespace Compiler
 {
@@ -326,6 +327,13 @@ typedef ConsoleHeapAlloc* ConsoleHeapAllocRef;
 
 struct VmInternal;
 
+struct ExceptionInfo
+{
+   U32 ip;
+   U32 code;
+   CodeBlock* cb;
+};
+
 struct FiberRunResult
 {
    enum State : U8
@@ -339,8 +347,11 @@ struct FiberRunResult
    
    KorkApi::ConsoleValue value;
    State state;
+   ExceptionInfo* exceptionInfo;
 
+   FiberRunResult() : value(), state(INACTIVE), exceptionInfo(NULL) {;}
    static const char* stateAsString(State inState);
+   static const char* getExceptionLineIp();
 };
 
 enum Constants 
@@ -482,7 +493,10 @@ public:
    void cleanupFiber(FiberId fiber);
    void suspendCurrentFiber();
    void throwFiber(U32 mask);
+   bool getCurrentFiberFileLine(StringTableEntry* outFile, U32* outLine);
    FiberRunResult resumeCurrentFiber(ConsoleValue value);
+
+   const char* getExceptionFileLine(ExceptionInfo* info);
    
    bool dumpFiberStateToBlob(U32 numFibers, FiberId* fibers, U32* outBlobSize, U8** outBlob);
    bool restoreFiberStateFromBlob(U32* outNumFibers, FiberId** outFibers, U32 blobSize, U8* blob);

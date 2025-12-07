@@ -802,6 +802,7 @@ VmInternal::VmInternal(Vm* vm, Config* cfg) : mGlobalVars(this)
    }
 
    mCompilerResources->allowExceptions = cfg->enableExceptions;
+   mLastExceptionInfo = {};
    
    TypeInfo typeInfo = {};
    
@@ -996,6 +997,11 @@ void VmInternal::throwFiber(U32 mask)
       return;
    
    mCurrentFiberState->throwMask(mask);
+}
+
+bool Vm::getCurrentFiberFileLine(StringTableEntry* outFile, U32* outLine)
+{
+   return mInternal->getCurrentFiberFileLine(outFile, outLine);
 }
 
 FiberRunResult::State VmInternal::getCurrentFiberState()
@@ -1571,6 +1577,16 @@ void Vm::clearCurrentFiberError()
 void* Vm::getCurrentFiberUserPtr()
 {
    return mInternal->getCurrentFiberUserPtr();
+}
+
+const char* Vm::getExceptionFileLine(ExceptionInfo* info)
+{
+   if (!info || !info->cb)
+   {
+      return "";
+   }
+
+   return info->cb->getFileLine(info->ip);
 }
 
 const char* FiberRunResult::stateAsString(State inState)

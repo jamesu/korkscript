@@ -2260,10 +2260,18 @@ execFinished:
       // UNLESS last bit 31 is set in which case continue execution.
       if ((lastThrow & BIT(31)) == 0)
       {
+         // Set error state
          FIBER_STATE(KorkApi::FiberRunResult::ERROR);
+         vmInternal->mLastExceptionInfo.ip = ip;
+         vmInternal->mLastExceptionInfo.code = lastThrow;
+         vmInternal->mLastExceptionInfo.cb = frame.codeBlock;
+
+         // Unwind stack as much as we can and return info
          handleThrow(-1, NULL, getMinStackDepth());
          result.state = mState;
          result.value = KorkApi::ConsoleValue::makeNumber(lastThrow);
+         result.exceptionInfo = &vmInternal->mLastExceptionInfo;
+         
          AssertFatal(vmFrames.size() == getStackMinDepth()+1, "This is bad");
          return result;
       }
@@ -3726,6 +3734,25 @@ bool ConsoleSerializer::saveFibers()
    writeBlock.setSize(0);
    return mStream->write(sizeof(IFFBlock), &writeBlock);
 }
+
+bool KorkApi::VmInternal::getCurrentFiberFileLine(StringTableEntry* outFile, U32* outLine)
+{
+   if (!mCurrentFiberState || mCurrentFiberState->vmFrames.size() == 0)
+   {
+      return false;
+   }
+   
+   ConsoleFrame* frame = mCurrentFiberState->vmFrames.last();
+   CodeBlock* block = frame->codeBlock;
+   
+   U32 line = 0;
+   U32 inst = 0;
+   block->findBreakLine(frame->ip, line, inst);
+   
+   *outFile = block->name;
+   *outLine = line;
+}
+
 
 //------------------------------------------------------------
 
