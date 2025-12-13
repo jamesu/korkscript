@@ -356,7 +356,9 @@ struct FiberRunResult
 
 enum Constants 
 {
-  DSOVersion = 77,
+  DSOVersion = 78,
+  MinDSOVersion = 77,
+  MaxDSOVersion = 78,
   MaxLineLength = 512,
   MaxDataTypes = 256
 };

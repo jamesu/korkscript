@@ -81,6 +81,10 @@ public:
    U32* identStringOffsets;
    U32 numIdentStrings;
 
+   U32 startTypeStrings;
+   U32 numTypeStrings;
+   S32* typeStringMap;
+
    bool isExecBlock;
    bool inList;
    
@@ -107,7 +111,8 @@ public:
    void getFunctionArgs(char buffer[1024], U32 offset);
    const char *getFileLine(U32 ip);
    
-   bool read(StringTableEntry fileName, bool readVersion, Stream &st);
+   bool read(StringTableEntry fileName, Stream &st, U32 readVersion);
+   void linkTypes();
    bool write(Stream &st);
    
    bool compile(const char *dsoName, StringTableEntry fileName, const char *script);

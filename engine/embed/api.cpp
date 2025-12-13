@@ -526,7 +526,7 @@ ConsoleValue Vm::execCodeBlock(U32 codeSize, U8* code, const char* filename, boo
    
    MemStream stream(codeSize, code, true, false);
    
-   if (!block->read(filename, true, stream))
+   if (!block->read(filename, stream, 0))
    {
       delete block;
       return ConsoleValue();

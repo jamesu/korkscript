@@ -57,6 +57,10 @@ CodeBlock::CodeBlock(KorkApi::VmInternal* vm, bool _isExecBlock)
    identStrings = NULL;
    identStringOffsets = NULL;
    numIdentStrings = 0;
+   startTypeStrings = 0;
+   numTypeStrings = 0;
+   typeStringMap = NULL;
+
    isExecBlock = _isExecBlock;
    inList = false;
    
@@ -350,19 +354,24 @@ void CodeBlock::calcBreakList()
       mVM->mTelDebugger->addAllBreakpoints( this );
 }
 
-bool CodeBlock::read(StringTableEntry fileName, bool readVersion, Stream &st)
+bool CodeBlock::read(StringTableEntry fileName, Stream &st, U32 readVersion)
 {
    const StringTableEntry exePath = Platform::getMainDotCsDir();
    const StringTableEntry cwd = Platform::getCurrentDirectory();
 
-   if (readVersion)
+   if (readVersion == 0)
    {
-      U32 version = 0;
-      st.read(&version);
-      if (version != KorkApi::DSOVersion)
+      st.read(&readVersion);
+
+      if (readVersion != KorkApi::DSOVersion)
       {
          return false;
       }
+   }
+
+   if (readVersion < KorkApi::MinDSOVersion || readVersion > KorkApi::MaxDSOVersion)
+   {
+      return false;
    }
    
    name = fileName;
@@ -467,7 +476,7 @@ bool CodeBlock::read(StringTableEntry fileName, bool readVersion, Stream &st)
    
    identStringOffsets = new U32[identCount];
    identStrings = new StringTableEntry[identCount];
-   
+
    i = 0;
    while(identCount--)
    {
@@ -495,11 +504,31 @@ bool CodeBlock::read(StringTableEntry fileName, bool readVersion, Stream &st)
       
       i++;
    }
+
+   startTypeStrings = 0;
+   numTypeStrings = 0;
+   typeStringMap = NULL;
+
+   if (readVersion > 77)
+   {
+      st.read(&startTypeStrings);
+      st.read(&numTypeStrings);
+   }
    
    if(lineBreakPairCount)
       calcBreakList();
    
+   linkTypes();
+   
    return true;
+}
+
+void CodeBlock::linkTypes()
+{
+   for (U32 i=0; i<numTypeStrings; i++)
+   {
+      typeStringMap[i] = -1; // TOFIX vm->lookupTypeId(identStrings[startTypeStrings + i]);
+   }
 }
 
 bool CodeBlock::write(Stream &st)

@@ -3601,7 +3601,7 @@ bool ConsoleSerializer::loadRelatedObjects()
             
             StringTableEntry steFilename = mStream->readSTString();
             CodeBlock* block = new CodeBlock(mTarget, true);
-            if (!block->read(steFilename[0] == '\0' ? NULL : steFilename, true, *mStream))
+            if (!block->read(steFilename[0] == '\0' ? NULL : steFilename, *mStream, 0))
             {
                delete block;
                return false;
