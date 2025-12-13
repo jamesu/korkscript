@@ -113,7 +113,7 @@ namespace Compiler
 
       OP_SETCURFIELD,
       OP_SETCURFIELD_ARRAY, // 50
-      OP_SETCURFIELD_TYPE,
+      OP_SETCURFIELD_TYPE,  // NOTE: this now uses the local type table
 
       OP_LOADFIELD_UINT,
       OP_LOADFIELD_FLT,
@@ -175,7 +175,24 @@ namespace Compiler
       OP_POP_TRY,
       OP_THROW,
       OP_DUP_UINT,
+
+      // Typed vars
+      OP_PUSH_TYPED,        // basically the same as OP_PUSH but checks typed vars
+      OP_LOADVAR_TYPED,     // same as OP_LOADVAR_STR except it checks typed vars
+      OP_LOADVAR_TYPED_REF, // same as OP_LOADVAR_TYPED except it references the var
+      OP_LOADFIELD_TYPED,   // loads object field into typed value
+      OP_SAVEVAR_TYPED,      // save value on stack to variable
+      OP_SAVEFIELD_TYPED,   // save value on stack to object field
+      OP_STR_TO_TYPED,      // perform conversion from value on stack to type
+      OP_FLT_TO_TYPED,      // perform conversion from value on float stack to type
+      OP_UINT_TO_TYPED,     // perform conversion from value on uint stack to type
+      OP_TYPED_OP,          // perform op on typed value (relative to OP_CMPEQ)
       
+      // Tuple type assignments
+      // (these basically act like function calls)
+      OP_SAVEVAR_MULTIPLE,         // i.e. %var = 1,2,3
+      OP_SAVEVAR_MULTIPLE_TYPED,   // i.e. %var : type = 1,2,3
+      OP_SAVEFIELD_MULTIPLE,       // i.e. obj.field = 1,2,3 OR field = 1,2,3; inside decl
       
       OP_INVALID   // 90
    };
@@ -354,6 +371,7 @@ public:
    enum Constants
    {
       BlockSize = 16384,
+      MaxVarStackDepth
    };
    
 protected:
@@ -374,6 +392,12 @@ protected:
       CodeData *next; ///< Next block
    } CodeData;
    
+   typedef struct VarInfo
+   {
+      StringTableEntry name;
+      S32 typeID;
+   } VarInfo;
+   
    /// @name Emitted code
    /// {
    CodeData *mCode;
@@ -390,6 +414,10 @@ protected:
    /// }
    
    Vector<U32> mBreakLines; ///< Line numbers
+   
+   Vector<VarInfo> mUsedVars;
+   U32 mUsedVarStack[MaxVarStackDepth];
+   U32 mUsedVarStackPos;
    
    const char* mFilename;
    
@@ -507,6 +535,11 @@ public:
    {
       return mBreakLines.size() / 2;
    }
+   
+   void addVarReference(StringTableEntry steName, U32 typeID);
+   S32 lookupVarType(StringTableEntry steName);
+   void pushVarStack();
+   void popVarStack();
    
    void emitCodeStream(U32 *size, U32 **stream, U32 **lineBreaks);
    

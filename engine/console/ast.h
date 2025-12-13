@@ -45,7 +45,8 @@ enum TypeReq
    TypeReqUInt,
    TypeReqFloat,
    TypeReqString,
-   TypeReqVar
+   TypeReqVar,
+   TypeReqTypedVar // typed var with overloads
 };
 
 /// Representation of a node for the scripting language parser.
@@ -299,12 +300,15 @@ struct FloatUnaryExprNode : ExprNode
 struct VarNode : ExprNode
 {
    StringTableEntry varName;
+   StringTableEntry varType;
    ExprNode *arrayIndex;
 
-   static VarNode *alloc( Compiler::Resources* res, S32 lineNumber, StringTableEntry varName, ExprNode *arrayIndex );
+   static VarNode *alloc( Compiler::Resources* res, S32 lineNumber, StringTableEntry varName, ExprNode *arrayIndex, StringTableEntry assignTypeName = NULL );
   
    U32 compile(CodeStream &codeStream, U32 ip, TypeReq type);
    TypeReq getPreferredType();
+   bool isTyped();
+
    DBG_STMT_TYPE(VarNode);
 };
 
@@ -363,11 +367,13 @@ struct ConstantNode : ExprNode
 struct AssignExprNode : ExprNode
 {
    StringTableEntry varName;
+   StringTableEntry assignTypeName;
+
    ExprNode *expr;
    ExprNode *arrayIndex;
    TypeReq subType;
 
-   static AssignExprNode *alloc( Compiler::Resources* res, S32 lineNumber, StringTableEntry varName, ExprNode *arrayIndex, ExprNode *expr );
+   static AssignExprNode *alloc( Compiler::Resources* res, S32 lineNumber, StringTableEntry varName, ExprNode *arrayIndex, ExprNode *expr, StringTableEntry assignTypeName = NULL);
   
    U32 compile(CodeStream &codeStream, U32 ip, TypeReq type);
    TypeReq getPreferredType();
@@ -508,10 +514,10 @@ struct SlotAssignNode : ExprNode
 {
    ExprNode *objectExpr, *arrayExpr;
    StringTableEntry slotName;
+   StringTableEntry varType;
    ExprNode *valueExpr;
-   U32 typeID;
 
-   static SlotAssignNode *alloc( Compiler::Resources* res, S32 lineNumber, ExprNode *objectExpr, ExprNode *arrayExpr, StringTableEntry slotName, ExprNode *valueExpr, U32 typeID = -1 );
+   static SlotAssignNode *alloc( Compiler::Resources* res, S32 lineNumber, ExprNode *objectExpr, ExprNode *arrayExpr, StringTableEntry slotName, ExprNode *valueExpr, StringTableEntry assignTypeName = NULL );
   
    U32 compile(CodeStream &codeStream, U32 ip, TypeReq type);
    TypeReq getPreferredType();
@@ -569,10 +575,11 @@ struct FunctionDeclStmtNode : StmtNode
    StmtNode *stmts;
    StringTableEntry nameSpace;
    StringTableEntry package;
+   StringTableEntry returnTypeName;
    U32 endOffset;
    U32 argc;
 
-   static FunctionDeclStmtNode *alloc( Compiler::Resources* res, S32 lineNumber, StringTableEntry fnName, StringTableEntry nameSpace, VarNode *args, StmtNode *stmts );
+   static FunctionDeclStmtNode *alloc( Compiler::Resources* res, S32 lineNumber, StringTableEntry fnName, StringTableEntry nameSpace, VarNode *args, StmtNode *stmts, StringTableEntry returnType = NULL );
    
    U32 compileStmt(CodeStream &codeStream, U32 ip);
    void setPackage(StringTableEntry packageName);

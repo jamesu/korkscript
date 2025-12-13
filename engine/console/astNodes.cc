@@ -1346,7 +1346,10 @@ U32 SlotAssignNode::compile(CodeStream &codeStream, U32 ip, TypeReq type)
       codeStream.emit(OP_SETCUROBJECT);
    }
    else
+   {
       codeStream.emit(OP_SETCUROBJECT_NEW);
+   }
+   
    codeStream.emit(OP_SETCURFIELD);
    codeStream.emitSTE(slotName);
 
@@ -1355,16 +1358,18 @@ U32 SlotAssignNode::compile(CodeStream &codeStream, U32 ip, TypeReq type)
       codeStream.emit(OP_TERMINATE_REWIND_STR);
       codeStream.emit(OP_SETCURFIELD_ARRAY);
    }
-
-   codeStream.emit(OP_TERMINATE_REWIND_STR);
-   codeStream.emit(OP_SAVEFIELD_STR);
-
+   
+   // Set type FIRST
+   S32 typeID = -1;// TOFIX codeStream.mResources->lookupTypeID(varType);
    if(typeID != -1)
    {
       codeStream.emit(OP_SETCURFIELD_TYPE);
       codeStream.emit(typeID);
    }
 
+   codeStream.emit(OP_TERMINATE_REWIND_STR);
+   codeStream.emit(OP_SAVEFIELD_STR);
+   
    if(type != TypeReqString)
       codeStream.emit(conversionOp(TypeReqString, type));
    return codeStream.tell();

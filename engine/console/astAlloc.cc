@@ -198,13 +198,14 @@ FloatUnaryExprNode *FloatUnaryExprNode::alloc( Compiler::Resources* res, S32 lin
    return ret;
 }
 
-VarNode *VarNode::alloc( Compiler::Resources* res, S32 lineNumber, StringTableEntry varName, ExprNode *arrayIndex )
+VarNode *VarNode::alloc( Compiler::Resources* res, S32 lineNumber, StringTableEntry varName, ExprNode *arrayIndex, StringTableEntry typeName )
 {
    VarNode *ret = (VarNode *) res->consoleAlloc(sizeof(VarNode));
    constructInPlace(ret);
    ret->dbgLineNumber = lineNumber;
    ret->varName = varName;
    ret->arrayIndex = arrayIndex;
+   ret->varType = typeName;
    return ret;
 }
 
@@ -270,7 +271,7 @@ ConstantNode *ConstantNode::alloc( Compiler::Resources* res, S32 lineNumber, Str
    return ret;
 }
 
-AssignExprNode *AssignExprNode::alloc( Compiler::Resources* res, S32 lineNumber, StringTableEntry varName, ExprNode *arrayIndex, ExprNode *expr )
+AssignExprNode *AssignExprNode::alloc( Compiler::Resources* res, S32 lineNumber, StringTableEntry varName, ExprNode *arrayIndex, ExprNode *expr, StringTableEntry typeName )
 {
    AssignExprNode *ret = (AssignExprNode *) res->consoleAlloc(sizeof(AssignExprNode));
    constructInPlace(ret);
@@ -279,6 +280,7 @@ AssignExprNode *AssignExprNode::alloc( Compiler::Resources* res, S32 lineNumber,
    ret->expr = expr;
    ret->arrayIndex = arrayIndex;
    ret->subType = TypeReqNone;
+   ret->assignTypeName = typeName;
    
    return ret;
 }
@@ -386,7 +388,7 @@ InternalSlotAccessNode *InternalSlotAccessNode::alloc( Compiler::Resources* res,
    return ret;
 }
 
-SlotAssignNode *SlotAssignNode::alloc( Compiler::Resources* res, S32 lineNumber, ExprNode *objectExpr, ExprNode *arrayExpr, StringTableEntry slotName, ExprNode *valueExpr, U32 typeID /* = -1 */ )
+SlotAssignNode *SlotAssignNode::alloc( Compiler::Resources* res, S32 lineNumber, ExprNode *objectExpr, ExprNode *arrayExpr, StringTableEntry slotName, ExprNode *valueExpr, StringTableEntry typeName )
 {
    SlotAssignNode *ret = (SlotAssignNode *) res->consoleAlloc(sizeof(SlotAssignNode));
    constructInPlace(ret);
@@ -395,7 +397,7 @@ SlotAssignNode *SlotAssignNode::alloc( Compiler::Resources* res, S32 lineNumber,
    ret->arrayExpr = arrayExpr;
    ret->slotName = slotName;
    ret->valueExpr = valueExpr;
-   ret->typeID = typeID;
+   ret->varType = typeName;
    return ret;
 }
 
@@ -435,7 +437,7 @@ ObjectDeclNode *ObjectDeclNode::alloc( Compiler::Resources* res, S32 lineNumber,
    return ret;
 }
 
-FunctionDeclStmtNode *FunctionDeclStmtNode::alloc( Compiler::Resources* res, S32 lineNumber, StringTableEntry fnName, StringTableEntry nameSpace, VarNode *args, StmtNode *stmts )
+FunctionDeclStmtNode *FunctionDeclStmtNode::alloc( Compiler::Resources* res, S32 lineNumber, StringTableEntry fnName, StringTableEntry nameSpace, VarNode *args, StmtNode *stmts, StringTableEntry retTypeName )
 {
    FunctionDeclStmtNode *ret = (FunctionDeclStmtNode *) res->consoleAlloc(sizeof(FunctionDeclStmtNode));
    constructInPlace(ret);
@@ -446,6 +448,7 @@ FunctionDeclStmtNode *FunctionDeclStmtNode::alloc( Compiler::Resources* res, S32
    ret->nameSpace = nameSpace;
    ret->package = NULL;
    ret->argc = 0;
+   ret->returnTypeName = retTypeName;
    return ret;
 }
 

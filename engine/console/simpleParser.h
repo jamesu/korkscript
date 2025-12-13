@@ -109,6 +109,12 @@ private:
       if (LA().kind == TT::opCHAR && LA().ivalue == c) { if (lineNo) *lineNo = LA().pos.line; ++mTokenPos; return true; }
       return false;
    }
+
+   U32 LAChar(size_t k = 0) const
+   {
+      TOK laTok = LA(k);
+      return (laTok.kind == TT::opCHAR) ? laTok.ivalue : 0;
+   }
    
    TOK expect(TT t, const char* what)
    {
@@ -231,6 +237,19 @@ private:
       }
       return listHead;
    }
+
+   VarNode* parseTypedVar(TOK v)
+   {
+      StringTableEntry assignTypeName = NULL;
+
+      if (matchChar(':')) // is typed var
+      {
+         TOK typeNameTok = expect(TT::IDENT, "expected type name");
+         assignTypeName = typeNameTok.stString;
+      }
+
+      return VarNode::alloc(mResources, v.pos.line, v.stString, NULL, assignTypeName);
+   }
    
    // Handles var lists
    // (basically a restricted form of parseExprListOptUntil)
@@ -245,14 +264,14 @@ private:
       
       // First var
       TOK v = expect(TT::VAR, "parameter name expected");
-      VarNode* head = VarNode::alloc(mResources, v.pos.line, v.stString, NULL);
+      VarNode* head = parseTypedVar(v);
       VarNode* tail = head;
       
       // Subsequent vars
       while (matchChar(','))
       {
          TOK t = expect(TT::VAR, "parameter name expected");
-         VarNode* nxt = VarNode::alloc(mResources, t.pos.line, t.stString, NULL);
+         VarNode* nxt = parseTypedVar(v);
          tail->append(nxt);
          tail = nxt;
       }
@@ -594,19 +613,21 @@ private:
       return false;
    }
    
-   // Handles obj.foo = expr;
-   //
+   // Handles 
+   //   foo = expr;
+   // Inside an object decl.
    //
    SlotAssignNode* parseSlotAssign(ExprNode* object)
    {
       using K = TT;
       
       S32 line = LA().pos.line;
-      U32 typeID = (U32)-1;
       StringTableEntry slotName = 0;
+      StringTableEntry typeName = NULL;
       ExprNode* aidx = NULL;
       
       // Special case: datablock is a keyword
+      // TOFIX: wrap this into the other matching
       if (LA().kind == K::rwDATABLOCK)
       {
          // rwDATABLOCK '=' expr ';'
@@ -616,7 +637,7 @@ private:
          expectChar(';', "; expected");
          
          slotName = mTokenizer->mStringTable->insert("datablock");
-         return SlotAssignNode::alloc(mResources, line, object, aidx, slotName, rhs, typeID);
+         return SlotAssignNode::alloc(mResources, line, object, aidx, slotName, rhs, typeName);
       }
       
       // IDENT ... (maybe typed)
@@ -632,13 +653,19 @@ private:
          aidx = parseAidxExprNode();  // you already have this
          expectChar(']', "] expected");
       }
+
+      if (matchChar(':'))
+      {
+         TOK typeNameTok = expect(TT::IDENT, "type name expected");
+         typeName = typeNameTok.stString;
+      }
       
       // '=' expr ';'
       expectChar('=', "= expected");
       ExprNode* rhs = parseExprNode();
       expectChar(';', "; expected");
       
-      return SlotAssignNode::alloc(mResources, line, object, aidx, slotName, rhs, typeID);
+      return SlotAssignNode::alloc(mResources, line, object, aidx, slotName, rhs, typeName);
    }
    
    // Handles list of slot_asign ending with '}'
@@ -866,11 +893,20 @@ private:
       expectChar('(', "'(' expected");
       VarNode* args = parseVarList();
       expectChar(')', "')' expected");
+
+      // Type decl (optional)
+      StringTableEntry retTypeName = nullptr;
+      if (matchChar(':'))
+      {
+         auto typeTok = expect(SimpleLexer::TokenType::IDENT, "return type expected");
+         retTypeName = typeTok.stString;
+      }
       
       // { ... }
       StmtNode* body = parseBlockStmt();
       
-      return FunctionDeclStmtNode::alloc(mResources, line ? line : a.pos.line, fn, ns, args, body);
+      FunctionDeclStmtNode* stmt = FunctionDeclStmtNode::alloc(mResources, line ? line : a.pos.line, fn, ns, args, body, retTypeName);
+      return stmt;
    }
    
    // Handles a list of function definitions
@@ -984,6 +1020,22 @@ private:
             TOK tok = mTokens[mTokenPos++];
             return StrConstNode::alloc(mResources, tok.pos.line, mTokenizer->bufferAtOffset(tok.stringValue.offset), false, true, tok.stringValue.len);
          }
+
+         case TT::VAR: {
+            StmtNode* node = parseTypedVarAssignment();
+            if (!node)
+            {
+               ExprNode*  e = parseStmtNodeExprNode();
+               expectChar(';', "; expected");
+               return e;
+            }
+            else
+            {
+               expectChar(';', "; expected");
+               return node;
+            }
+         }
+
          default: {
             // expression_stmt ';'
             ExprNode*  e = parseStmtNodeExprNode();
@@ -991,6 +1043,42 @@ private:
             return e;
          }
       }
+   }
+
+   // Handles typed var decl or assignment
+   //
+   // typed_var : VAR ':'' IDENT ';'
+   // typed_var : VAR ':'' IDENT '=' expr ';'
+   StmtNode* parseTypedVarAssignment()
+   {
+      // Look ahead in this case since we fall back to using parseStmtNodeExprNode
+      if (LA(0).kind == TT::VAR)
+      {
+         if (LAChar(1) == ':' &&
+             LA(2).kind != TT::IDENT)
+         {
+            errorHere(LA(2), "expected type name after ':'");
+            return NULL;
+         }
+         else
+         {
+            return NULL;
+         }
+      }
+
+      // Parse typed var
+
+      VarNode* var = parseTypedVar(expect(TT::VAR, "var expected"));
+      if (var)
+      {
+         // TYPED assignment
+         if (matchChar('='))
+         {
+            ExprNode* rh = parseExprNode();
+            return NULL; // TOFIX AssignExprNode(mResources, 0, );
+         }
+      }
+      return NULL;
    }
    
    // Handles assert expression
@@ -1139,6 +1227,9 @@ private:
    }
    
    // Compound assigns map to AssignOpExprNode; '=' to AssignExprNode.
+   // NOTE: to keep things simple, this DOES NOT factor in types; 
+   // they are not allowed within expressions 
+   // (besides the start which is handled in parseStmtNode).
    ExprNode* makeAssign(const TOK& tok, ExprNode* l, ExprNode* r)
    {
       if (VarNode* v = dynamic_cast<VarNode*>(l))
