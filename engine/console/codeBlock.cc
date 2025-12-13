@@ -531,6 +531,15 @@ void CodeBlock::linkTypes()
    }
 }
 
+StringTableEntry CodeBlock::getTypeName(U32 typeID)
+{
+   if (typeID < numTypeStrings)
+   {
+      return identStrings[startTypeStrings + typeID];
+   }
+   return NULL;
+}
+
 bool CodeBlock::write(Stream &st)
 {
    U32 version = KorkApi::DSOVersion;
@@ -1613,6 +1622,100 @@ void CodeBlock::dumpInstructions( U32 startIp, bool upToReturn, bool downcaseStr
          case OP_DUP_UINT:
          {
             mVM->printf(0, "%i: OP_DUP_UINT", ip - 1);
+            break;
+         }
+            
+         // Typed vars
+         
+         case OP_PUSH_TYPED:
+         {
+            mVM->printf(0, "%i: OP_PUSH_TYPED", ip - 1 );
+            break;
+         }
+         case OP_LOADVAR_TYPED:
+         {
+            // Takes from OP_SETCURVAR
+            mVM->printf(0, "%i: OP_LOADVAR_TYPED", ip - 1 );
+            break;
+         }
+         case OP_LOADVAR_TYPED_REF:
+         {
+            // Takes from OP_SETCURVAR
+            mVM->printf(0, "%i: OP_LOADVAR_TYPED_REF", ip - 1 );
+            break;
+         }
+         case OP_LOADFIELD_TYPED:
+         {
+            // Takes from OP_SETCURFIELD*
+            mVM->printf(0, "%i: OP_LOADFIELD_TYPED", ip - 1 );
+            break;
+         }
+         case OP_SAVEVAR_TYPED:
+         {
+            // Sets from OP_SETCURVAR
+            mVM->printf(0, "%i: OP_SAVEVAR_TYPED", ip - 1 );
+            break;
+         }
+         case OP_SAVEFIELD_TYPED:
+         {
+            // Sets from OP_SETCURFIELD*
+            mVM->printf(0, "%i: OP_SAVEFIELD_TYPED", ip - 1 );
+            break;
+         }
+         case OP_STR_TO_TYPED:
+         {
+            // Casts current StringStack head to input local type id
+            U32 typeID = code[ip];
+            mVM->printf(0, "%i: OP_STR_TO_TYPED typeID=%s(%i)", ip - 1, getTypeName(typeID), typeID);
+            ++ ip;
+            break;
+         }
+         case OP_FLT_TO_TYPED:
+         {
+            // Casts current float value to input local type id
+            U32 typeID = code[ip];
+            mVM->printf(0, "%i: OP_FLT_TO_TYPED typeID=%s(%i)", ip - 1, getTypeName(typeID), typeID);
+            ++ ip;
+            break;
+         }
+         case OP_UINT_TO_TYPED:
+         {
+            // Casts current uint value to input local type id
+            U32 typeID = code[ip];
+            mVM->printf(0, "%i: OP_FLT_TO_TYPED typeID=%s(%i)", ip - 1, getTypeName(typeID), typeID);
+            ++ ip;
+            break;
+         }
+         case OP_TYPED_OP:
+         {
+            // Performs op on current two items on StringStack
+            // i.e. stack-2 OP stack-1 / left OP right
+            U32 opID = code[ip];
+            mVM->printf(0, "%i: OP_TYPED_OP op=%i", ip - 1, opID);
+            ++ ip;
+            break;
+         }
+         case OP_SAVEVAR_MULTIPLE:
+         {
+            // Acts like a function call (i.e. relies on popping the frame)
+            // Uses the vars current type.
+            mVM->printf(0, "%i: OP_SAVEVAR_MULTIPLE", ip - 1);
+            break;
+         }
+         case OP_SAVEVAR_MULTIPLE_TYPED:
+         {
+            // Acts like a function call (i.e. relies on popping the frame)
+            // Actual type to assign is read from bytecode
+            U32 typeID = code[ip];
+            mVM->printf(0, "%i: OP_SAVEVAR_MULTIPLE_TYPED typeID=%s(%i)", ip - 1, getTypeName(typeID), typeID);
+            ++ ip;
+            break;
+         }
+         case OP_SAVEFIELD_MULTIPLE:
+         {
+            // Pops n values from the StringStack
+            // Uses the fields type.
+            mVM->printf(0, "%i: OP_SAVEFIELD_MULTIPLE", ip - 1);
             break;
          }
          default:
