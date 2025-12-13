@@ -277,7 +277,7 @@ AssignExprNode *AssignExprNode::alloc( Compiler::Resources* res, S32 lineNumber,
    constructInPlace(ret);
    ret->dbgLineNumber = lineNumber;
    ret->varName = varName;
-   ret->expr = expr;
+   ret->rhsExpr = expr;
    ret->arrayIndex = arrayIndex;
    ret->subType = TypeReqNone;
    ret->assignTypeName = typeName;
@@ -291,7 +291,7 @@ AssignOpExprNode *AssignOpExprNode::alloc( Compiler::Resources* res, S32 lineNum
    constructInPlace(ret);
    ret->dbgLineNumber = lineNumber;
    ret->varName = varName;
-   ret->expr = expr;
+   ret->rhsExpr = expr;
    ret->arrayIndex = arrayIndex;
    ret->subType = TypeReqNone;
    ret->op = op;
@@ -411,7 +411,7 @@ SlotAssignOpNode *SlotAssignOpNode::alloc( Compiler::Resources* res, S32 lineNum
    ret->slotName = slotName;
    ret->op = op;
    ret->operand = 0;
-   ret->valueExpr = valueExpr;
+   ret->rhsExpr = valueExpr;
    ret->subType = TypeReqNone;
    return ret;
 }

@@ -919,7 +919,7 @@ TypeReq ConstantNode::getPreferredType()
 
 U32 AssignExprNode::compile(CodeStream &codeStream, U32 ip, TypeReq type)
 {
-   subType = expr->getPreferredType();
+   subType = rhsExpr->getPreferredType();
    if(subType == TypeReqNone)
       subType = type;
    if(subType == TypeReqNone)
@@ -928,7 +928,7 @@ U32 AssignExprNode::compile(CodeStream &codeStream, U32 ip, TypeReq type)
       // Unfortunately other nodes such as field access (SlotAccessNode) 
       // cannot be optimized in the same manner as all fields are exposed 
       // and set as strings.
-      if (dynamic_cast<VarNode*>(expr) != NULL)
+      if (dynamic_cast<VarNode*>(rhsExpr) != NULL)
       {
          subType = TypeReqVar;
       }
@@ -957,7 +957,7 @@ U32 AssignExprNode::compile(CodeStream &codeStream, U32 ip, TypeReq type)
    
    codeStream.mResources->precompileIdent(varName);
    
-   ip = expr->compile(codeStream, ip, subType);
+   ip = rhsExpr->compile(codeStream, ip, subType);
 
    if(arrayIndex)
    {
@@ -1003,7 +1003,7 @@ U32 AssignExprNode::compile(CodeStream &codeStream, U32 ip, TypeReq type)
 
 TypeReq AssignExprNode::getPreferredType()
 {
-   return expr->getPreferredType();
+   return rhsExpr->getPreferredType();
 }
 
 //------------------------------------------------------------
@@ -1081,7 +1081,7 @@ U32 AssignOpExprNode::compile(CodeStream &codeStream, U32 ip, TypeReq type)
    getAssignOpTypeOp(op, subType, operand);
    codeStream.mResources->precompileIdent(varName);
    
-   ip = expr->compile(codeStream, ip, subType);
+   ip = rhsExpr->compile(codeStream, ip, subType);
    if(!arrayIndex)
    {
       codeStream.emit(OP_SETCURVAR_CREATE);
@@ -1410,7 +1410,7 @@ U32 SlotAssignOpNode::compile(CodeStream &codeStream, U32 ip, TypeReq type)
    getAssignOpTypeOp(op, subType, operand);
    codeStream.mResources->precompileIdent(slotName);
    
-   ip = valueExpr->compile(codeStream, ip, subType);
+   ip = rhsExpr->compile(codeStream, ip, subType);
    if(arrayExpr)
    {
       ip = arrayExpr->compile(codeStream, ip, TypeReqString);
@@ -1673,3 +1673,12 @@ U32 TryStmtNode::compileStmt(CodeStream &codeStream, U32 ip)
    return codeStream.tell();
 }
 
+BaseAssignExprNode* BaseAssignExprNode::findDeepestAssign()
+{
+   BaseAssignExprNode* lastAssign = this;
+   for (BaseAssignExprNode* sn = nextAssign(); sn; sn = sn->nextAssign())
+   {
+      lastAssign = sn;
+   }
+   return lastAssign;
+}
