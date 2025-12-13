@@ -49,6 +49,8 @@ enum TypeReq
    TypeReqTypedVar // typed var with overloads
 };
 
+struct BaseAssignExprNode;
+
 /// Representation of a node for the scripting language parser.
 ///
 /// When the scripting language is evaluated, it is turned from a string representation,
@@ -94,6 +96,11 @@ struct StmtNode
    virtual U32 compileStmt(CodeStream &codeStream, U32 ip) = 0;
    virtual void setPackage(StringTableEntry packageName);
    /// @}
+
+   virtual StmtNode* rhsAssign() { return NULL; }
+   virtual BaseAssignExprNode* asAssign() { return NULL; }
+
+   inline BaseAssignExprNode* nextAssign() { StmtNode* rh = rhsAssign(); return rh ? rh->asAssign() : NULL; }
 };
 
 /// Helper macro
@@ -364,12 +371,21 @@ struct ConstantNode : ExprNode
    DBG_STMT_TYPE(ConstantNode);
 };
 
-struct AssignExprNode : ExprNode
+struct BaseAssignExprNode : public ExprNode
+{
+   ExprNode *rhsExpr; // value we are assigning to left
+
+   BaseAssignExprNode* asAssign() override { return this; }
+   StmtNode* rhsAssign() override { return rhsExpr; }
+
+   BaseAssignExprNode* findDeepestAssign();
+};
+
+struct AssignExprNode : BaseAssignExprNode
 {
    StringTableEntry varName;
    StringTableEntry assignTypeName;
 
-   ExprNode *expr;
    ExprNode *arrayIndex;
    TypeReq subType;
 
@@ -388,10 +404,9 @@ struct AssignDecl
    bool integer;
 };
 
-struct AssignOpExprNode : ExprNode
+struct AssignOpExprNode : BaseAssignExprNode
 {
    StringTableEntry varName;
-   ExprNode *expr;
    ExprNode *arrayIndex;
    SimpleLexer::TokenType op;
    U32 operand;
@@ -524,12 +539,11 @@ struct SlotAssignNode : ExprNode
    DBG_STMT_TYPE(SlotAssignNode);
 };
 
-struct SlotAssignOpNode : ExprNode
+struct SlotAssignOpNode : BaseAssignExprNode
 {
    ExprNode *objectExpr, *arrayExpr;
    StringTableEntry slotName;
    SimpleLexer::TokenType op;
-   ExprNode *valueExpr;
    U32 operand;
    TypeReq subType;
 
