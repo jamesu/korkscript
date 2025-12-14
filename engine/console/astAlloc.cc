@@ -482,3 +482,12 @@ TryStmtNode* TryStmtNode::alloc(Compiler::Resources* res,
    return ret;
 }
 
+TupleExprNode *TupleExprNode::alloc( Compiler::Resources* res, S32 lineNumber, ExprNode* inItems )
+{
+   TupleExprNode* ret = (TupleExprNode *) res->consoleAlloc(sizeof(TupleExprNode));
+   constructInPlace(ret);
+   ret->dbgLineNumber = lineNumber;
+   ret->items         = inItems;
+   return ret;
+}
+

@@ -39,14 +39,16 @@ struct Resources;
 /// due to incorrect compiler optimization.
 //#define DEBUG_AST_NODES
 
+// NOTE: this controls where the value in the AST node SHOULD be
 enum TypeReq
 {
-   TypeReqNone,
-   TypeReqUInt,
-   TypeReqFloat,
-   TypeReqString,
-   TypeReqVar,
-   TypeReqTypedVar // typed var with overloads
+   TypeReqNone,     // load = unset; save = unset
+   TypeReqUInt,     // load = to uint stack; save = to uint stack
+   TypeReqFloat,    // load = to float stack; save = from float stack
+   TypeReqString,   // load = to stringstack; save = from stringstack
+   TypeReqVar,      // load = set copyvar; save = from copyvar
+   //TypeReqTypedVar, // load = set copyvar (typed); save = from copyvar (typed)
+   TypeReqField     // load = from field; save = to field
 };
 
 struct BaseAssignExprNode;
@@ -377,8 +379,12 @@ struct BaseAssignExprNode : public ExprNode
 
    BaseAssignExprNode* asAssign() override { return this; }
    StmtNode* rhsAssign() override { return rhsExpr; }
+   
+   virtual void setAssignType(StringTableEntry typeName) {;}
 
    BaseAssignExprNode* findDeepestAssign();
+
+   U32 emitCodeForTupleAssign();
 };
 
 struct AssignExprNode : BaseAssignExprNode
@@ -393,6 +399,8 @@ struct AssignExprNode : BaseAssignExprNode
   
    U32 compile(CodeStream &codeStream, U32 ip, TypeReq type);
    TypeReq getPreferredType();
+   virtual void setAssignType(StringTableEntry typeName);
+   
    DBG_STMT_TYPE(AssignExprNode);
 };
 
@@ -627,5 +635,15 @@ struct CatchStmtNode : StmtNode
    DBG_STMT_TYPE(CatchStmtNode);
 };
 
+// Untyped tuple expr; here to simplify compilation logic
+struct TupleExprNode : ExprNode
+{
+   ExprNode* items;
+
+   static TupleExprNode *alloc( Compiler::Resources* res, S32 lineNumber, ExprNode* items );
+   
+   virtual U32 compile(CodeStream &codeStream, U32 ip, TypeReq type);
+   virtual TypeReq getPreferredType();
+};
 
 #endif

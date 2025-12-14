@@ -739,7 +739,6 @@ U32 VarNode::compile(CodeStream &codeStream, U32 ip, TypeReq type)
       codeStream.emit(OP_LOADVAR_VAR);
       break;
    case TypeReqNone:
-      break;
    default:
       break;
    }
@@ -775,6 +774,7 @@ U32 IntNode::compile(CodeStream &codeStream, U32 ip, TypeReq type)
       codeStream.emit(index);
       break;
    case TypeReqNone:
+   default:
       break;
    }
    return codeStream.tell();
@@ -809,6 +809,7 @@ U32 FloatNode::compile(CodeStream &codeStream, U32 ip, TypeReq type)
       codeStream.emit(index);
       break;
    case TypeReqNone:
+   default:
       break;
    }
    return codeStream.tell();
@@ -865,6 +866,7 @@ U32 StrConstNode::compile(CodeStream &codeStream, U32 ip, TypeReq type)
       codeStream.emit(index);
       break;         
    case TypeReqNone:
+   default:
       break;
    }
    return codeStream.tell();
@@ -905,6 +907,7 @@ U32 ConstantNode::compile(CodeStream &codeStream, U32 ip, TypeReq type)
       codeStream.emit(index);
       break;
    case TypeReqNone:
+   default:
       break;
    }
    return ip;
@@ -994,6 +997,7 @@ U32 AssignExprNode::compile(CodeStream &codeStream, U32 ip, TypeReq type)
       codeStream.emit(OP_SAVEVAR_VAR);
       break;
    case TypeReqNone:
+   default:
       break;
    }
    if(type != subType)
@@ -1004,6 +1008,11 @@ U32 AssignExprNode::compile(CodeStream &codeStream, U32 ip, TypeReq type)
 TypeReq AssignExprNode::getPreferredType()
 {
    return rhsExpr->getPreferredType();
+}
+
+void AssignExprNode::setAssignType(StringTableEntry typeName)
+{
+   assignTypeName = typeName;
 }
 
 //------------------------------------------------------------
@@ -1265,6 +1274,7 @@ U32 SlotAccessNode::compile(CodeStream &codeStream, U32 ip, TypeReq type)
          codeStream.emit(OP_LOADFIELD_STR);
          break;
       case TypeReqNone:
+      default:
          break;
    }
    return codeStream.tell();
@@ -1682,3 +1692,53 @@ BaseAssignExprNode* BaseAssignExprNode::findDeepestAssign()
    }
    return lastAssign;
 }
+
+U32 TupleExprNode::compile(CodeStream &codeStream, U32 ip, TypeReq type)
+{
+   // if none: should be a list of statements
+   // if var goes straight to var
+   // all other cases should be invalid
+   if (type == TypeReqField || type == TypeReqVar)
+   {
+      codeStream.emit(OP_PUSH_FRAME);
+      for(ExprNode *walk = items; walk; walk = (ExprNode *) walk->getNext())
+      {
+         TypeReq walkType = walk->getPreferredType();
+         if (walkType == TypeReqNone) walkType = TypeReqString;
+         ip = walk->compile(codeStream, ip, walkType);
+         // TODO: could do with a VarNode short-circuit here
+
+         switch (walk->getPreferredType())
+         {
+            case TypeReqFloat:
+               codeStream.emit(OP_PUSH_FLT);
+               break;
+            case TypeReqUInt:
+               codeStream.emit(OP_PUSH_UINT);
+               break;
+            default:
+               codeStream.emit(OP_PUSH);
+               break;
+         }
+      }
+      codeStream.emit(type == TypeReqField ? OP_SAVEFIELD_MULTIPLE : OP_SAVEVAR_MULTIPLE);
+   }
+   else if (type == TypeReqNone)
+   {
+      for(StmtNode *walk = items; walk; walk = (ExprNode *) walk->getNext())
+      {
+         walk->compileStmt(codeStream, ip);
+      }
+   }
+   else
+   {
+      AssertFatal(false, "Invalid type req for tuple");
+   }
+   return ip;
+}
+
+TypeReq TupleExprNode::getPreferredType()
+{
+   return TypeReqNone;
+}
+
