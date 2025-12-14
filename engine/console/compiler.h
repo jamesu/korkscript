@@ -187,10 +187,11 @@ namespace Compiler
       OP_FLT_TO_TYPED,      // perform conversion from value on float stack to type
       OP_UINT_TO_TYPED,     // perform conversion from value on uint stack to type
       OP_TYPED_OP,          // perform op on typed value (relative to OP_CMPEQ)
-      
+      OP_SETCURFIELD_NONE,  // needed for field unset
+
       // Tuple type assignments
       // (these basically act like function calls)
-      OP_SAVEVAR_MULTIPLE,         // i.e. %var = 1,2,3
+      OP_SAVEVAR_MULTIPLE,         // i.e. %var = 1,2,3 (NOT ALLOWED YET)
       OP_SAVEVAR_MULTIPLE_TYPED,   // i.e. %var : type = 1,2,3
       OP_SAVEFIELD_MULTIPLE,       // i.e. obj.field = 1,2,3 OR field = 1,2,3; inside decl
       

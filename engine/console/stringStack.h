@@ -47,7 +47,14 @@ struct StringStack
 */
 
    enum {
-      MaxStackDepth = 16, // should be at least MaxStackSize
+      // NOTE: MaxStackDepth should be at least MaxStackSize; the other consideration 
+      // here is if you have a function call which calls functions for parameters, 
+      // it needs to factor in MaxArgs since for example if you have MaxArgs params and 
+      // the last parameter calls a function with more than one param, you need 
+      // at least MaxArgs space available on the stack.
+      // MaxFrameDepth also needs to be at least MaxStackSize
+      MaxStackDepth = 16,
+      MaxFrameDepth = 16,
       MaxArgs = 20,
       ReturnBufferSpace = 512
    };
@@ -56,7 +63,7 @@ struct StringStack
    U32   mBufferSize;
    const char *mArgVStr[MaxArgs];
    KorkApi::ConsoleValue mArgV[MaxArgs];
-   U32 mFrameOffsets[MaxStackDepth]; // this is FRAME offset
+   U32 mFrameOffsets[MaxFrameDepth]; // this is FRAME offset
    U32 mStartOffsets[MaxStackDepth]; // this is FUNCTION PARAM offset
    U8 mStartTypes[MaxStackDepth]; // this is annotated type
    U8 mType; // current type
@@ -355,7 +362,7 @@ struct StringStack
    
    void pushFrame()
    {
-      AssertFatal((mNumFrames < MaxStackDepth-1) && (mStartStackSize < MaxStackDepth-1), "Stack overflow!");
+      AssertFatal((mNumFrames < MaxFrameDepth-1) && (mStartStackSize < MaxStackDepth-1), "Stack overflow!");
       mFrameOffsets[mNumFrames++] = mStartStackSize;
       mStartOffsets[mStartStackSize++] = mStart;
       mStart += ReturnBufferSpace;

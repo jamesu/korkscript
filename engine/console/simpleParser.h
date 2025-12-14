@@ -125,6 +125,15 @@ private:
       return mTokens[mTokenPos++];
    }
    
+   TOK expectEither(TT a, TT b, const char* what)
+   {
+      if (!(LA().kind == a || LA().kind == b))
+      {
+         throw TokenError(LA(), a, what);
+      }
+      return mTokens[mTokenPos++];
+   }
+   
    TOK expectChar(char c, const char* what)
    {
       if (LA().kind != TT::opCHAR || LA().ivalue != (U64)c)
@@ -246,6 +255,10 @@ private:
       {
          TOK typeNameTok = expect(TT::IDENT, "expected type name");
          assignTypeName = typeNameTok.stString;
+      }
+      else if (LAChar() == '[') // array; types not allowed here
+      {
+         return NULL;
       }
 
       return VarNode::alloc(mResources, v.pos.line, v.stString, NULL, assignTypeName);
@@ -601,15 +614,29 @@ private:
       // or typed:              TYPEIDENT IDENT '=' expr ';'
       // or array variants:     IDENT '[' ... ']' '=' expr ';' (and typed variant)
       //
+      // NOTE: in KorkScript we instead use the following for types:
+      // IDENT : IDENT = expr;
+      // IDENT '[' ... ']' : IDENT = expr;
+      //
       // We conservatively say "yes" if after one (or two) idents we find '=' or '['.
       const TOK& n1 = LA(1);
-      if (n1.kind == K::opCHAR && (n1.asChar() == '=' || n1.asChar() == '[')) return true;
+      if (n1.kind == K::opCHAR && (n1.asChar() == '=' || n1.asChar() == '[' ||
+                                   n1.asChar() == ':')) // TYPED variable extension
+      {
+         return true;
+      }
       
       // typed form: IDENT IDENT <'='|'['> ...
-      if (n1.kind == K::IDENT) {
+      // KorkScript: this doesnt seem to be used in normal scripts, so we're ditching it to simplify
+      /*if (n1.kind == K::IDENT)
+      {
          const TOK& n2 = LA(2);
-         if (n2.kind == K::opCHAR && (n2.asChar() == '=' || n2.asChar() == '[')) return true;
-      }
+         if (n2.kind == K::opCHAR && (n2.asChar() == '=' || n2.asChar() == '[')) 
+         {
+            return true;
+         }
+      }*/
+      
       return false;
    }
    
@@ -626,27 +653,19 @@ private:
       StringTableEntry typeName = NULL;
       ExprNode* aidx = NULL;
       
-      // Special case: datablock is a keyword
-      // TOFIX: wrap this into the other matching
-      if (LA().kind == K::rwDATABLOCK)
-      {
-         // rwDATABLOCK '=' expr ';'
-         TOK kw = mTokens[mTokenPos++];  // 'datablock'
-         expectChar('=', "= expected");
-         ExprNode* rhs = parseExprNode();
-         expectChar(';', "; expected");
-         
-         slotName = mTokenizer->mStringTable->insert("datablock");
-         return SlotAssignNode::alloc(mResources, line, object, aidx, slotName, rhs, typeName);
-      }
-      
       // IDENT ... (maybe typed)
-      // First token could be either TYPEIDENT (treated as IDENT by our lexer) or the slot name.
-      TOK first = expect(K::IDENT, "identifier expected");
-      
-      // NOTE: for now ignoring typed fields
-      slotName = first.stString;
-      
+      // DATABLOCK ... (maybe typed)
+      TOK startToken = expectEither(K::rwDATABLOCK, K::IDENT, "ident or 'datablock' expected");
+      if (startToken.kind == K::rwDATABLOCK)
+      {
+         slotName = StringTable->insert("datablock");
+      }
+      else
+      {
+         // NOTE: for now ignoring typed fields
+         slotName = startToken.stString;
+      }
+
       // Optional '[' aidx_expr ']'
       if (matchChar('['))
       {
@@ -654,6 +673,7 @@ private:
          expectChar(']', "] expected");
       }
 
+      // Type name
       if (matchChar(':'))
       {
          TOK typeNameTok = expect(TT::IDENT, "type name expected");
@@ -663,6 +683,7 @@ private:
       // '=' expr ';'
       expectChar('=', "= expected");
       ExprNode* rhs = parseExprNode();
+      rhs = handleExpressionTuples(rhs, true); // handle tuple expr after
       expectChar(';', "; expected");
       
       return SlotAssignNode::alloc(mResources, line, object, aidx, slotName, rhs, typeName);
@@ -1021,21 +1042,30 @@ private:
             return StrConstNode::alloc(mResources, tok.pos.line, mTokenizer->bufferAtOffset(tok.stringValue.offset), false, true, tok.stringValue.len);
          }
 
+         // NOTE: in effect this allows:
+         //   %var : type = expr
+         //   %var[expr]
+         // If there is a typed expression without an assignment, this will only set the type hint 
+         // for the variable name. Typed array accessors are not permitted.
+         // ALSO: %var.slot : type is not allowed here; instead thats handled by parseSlotAssign.
          case TT::VAR: {
-            StmtNode* node = parseTypedVarAssignment();
-            if (!node)
+            mTokenPos++; // NEXT token
+            VarNode* node = parseTypedVar(t); // NOTE: parses the initial %var and optional type (IGNORES arrays)
+            if (node == NULL)
             {
-               ExprNode*  e = parseStmtNodeExprNode();
-               expectChar(';', "; expected");
-               return e;
+               mTokenPos--; // rewind; something went wrong
             }
-            else
-            {
-               expectChar(';', "; expected");
-               return node;
-            }
+            ExprNode* firstExpr = node ? parseExpressionFrom(node) : parseExpression(0); // should end up with an assignment
+            ExprNode* tailExpr = firstExpr;
+
+            firstExpr = handleExpressionTuples(firstExpr);
+            
+            // Finally ends with ;
+            expectChar(';', "; expected");
+            return firstExpr;
          }
 
+         // NOTE: handles expressions which dont start with VAR
          default: {
             // expression_stmt ';'
             ExprNode*  e = parseStmtNodeExprNode();
@@ -1043,6 +1073,59 @@ private:
             return e;
          }
       }
+   }
+
+   // Handles case where statement may be a tuple
+   ExprNode* handleExpressionTuples(ExprNode* firstExpr, bool isSlotAssign=false)
+   {
+      // Additional items get appended onto the root expr; if this needs  
+      // to be a list that will get handled there.
+      if (LAChar(0) == ',')
+      {
+         // NOTE: in this case we allow:
+         // %var : type, %var2 : type ...
+         // %var : type = 1, 2, 3;
+         // %var : type = %otherVar = 1,2,3;
+         //
+         // In the assign case, everything gets assigned to the
+         // ALSO: all dependent assigns will get assigned the type at the root.
+         BaseAssignExprNode* firstAssign = firstExpr->asAssign();
+         BaseAssignExprNode* lastAssign = firstAssign ? firstAssign->findDeepestAssign() : NULL;
+         TupleExprNode* tupleExpr = TupleExprNode::alloc(mResources, firstAssign ? firstAssign->dbgLineNumber : firstExpr->dbgLineNumber, firstExpr);
+
+         if (lastAssign)
+         {
+            // Replace RHS of last assignment with the tuple
+            tupleExpr->items = lastAssign->rhsExpr;
+            lastAssign->rhsExpr = tupleExpr;
+            
+            // %var = ... case
+            while (matchChar(','))
+            {
+               ExprNode* nextExpr = parseExpression(0);
+               if (nextExpr)
+               {
+                  tupleExpr->items->append(nextExpr);
+               }
+            }
+         }
+         else
+         {
+            // list of expressions; emit a distinct tuple
+            while (matchChar(','))
+            {
+               VarNode* nextVar = isSlotAssign ? NULL : parseTypedVar(LA());
+               ExprNode* nextExpr = nextVar ? parseExpressionFrom(nextVar) : parseExpression(0);
+               if (nextExpr)
+               {
+                  tupleExpr->items->append(nextExpr);
+               }
+            }
+            firstExpr = tupleExpr;
+         }
+      }
+
+      return firstExpr;
    }
 
    // Handles typed var decl or assignment
@@ -1067,17 +1150,9 @@ private:
       }
 
       // Parse typed var
+      // NOTE: var nodes get emitted regardless (even if not directly used) so this is valid.
 
       VarNode* var = parseTypedVar(expect(TT::VAR, "var expected"));
-      if (var)
-      {
-         // TYPED assignment
-         if (matchChar('='))
-         {
-            ExprNode* rh = parseExprNode();
-            return NULL; // TOFIX AssignExprNode(mResources, 0, );
-         }
-      }
       return NULL;
    }
    
@@ -1218,6 +1293,21 @@ private:
       }
       
       return left;
+   }
+
+   ExprNode* parseExpressionFrom(ExprNode* left, int rbp = 0)
+   {
+       for (;;)
+       {
+           const TOK& next = LA();
+           int bp = lbp(next);
+           if (bp <= rbp)
+               break;
+
+           TOK op = mTokens[mTokenPos++];
+           left = led(op, left, bp);
+       }
+       return left;
    }
    
    // Assignments (right-assoc). Only supported to VAR targets here.
