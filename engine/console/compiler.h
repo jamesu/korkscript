@@ -235,7 +235,7 @@ namespace Compiler
       void reset();
       void write(Stream &st);
       void build(StringTableEntry** strings,  U32** stringOffsets, U32* numStrings);
-      void append(CompilerIdentTable &other);
+      U32 append(CompilerIdentTable &other);
 
       CompilerIdentTable(Resources* _res) : res(_res)
       {
