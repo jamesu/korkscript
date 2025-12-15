@@ -156,6 +156,8 @@ static U32 conversionOp(TypeReq src, TypeReq dst)
          return OP_LOADVAR_STR;
       case TypeReqNone:
          return OP_COPYVAR_TO_NONE;
+      case TypeReqVar:
+         return OP_LOADVAR_VAR; // i.e. copy this var we just set
       default:
          break;
       }
@@ -1021,25 +1023,9 @@ U32 AssignExprNode::compile(CodeStream &codeStream, U32 ip, TypeReq type)
       }
    }
    
-   // Basically same as conversionOp
-   // TODO: add ReqVar to conversionOp so we dont have to split this out
-   switch(type)
+   if (type != subType)
    {
-   case TypeReqUInt:
-      codeStream.emit(OP_LOADVAR_UINT);
-      break;
-   case TypeReqFloat:
-      codeStream.emit(OP_LOADVAR_FLT);
-      break;
-   case TypeReqString:
-      codeStream.emit(OP_LOADVAR_STR);
-      break;
-   case TypeReqVar:
-      codeStream.emit(OP_LOADVAR_VAR);
-      break;
-   case TypeReqNone:
-   default:
-      break;
+      codeStream.emit(conversionOp(subType, type));
    }
    
    return ip;
