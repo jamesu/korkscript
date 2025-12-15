@@ -289,7 +289,7 @@ private:
       while (matchChar(','))
       {
          TOK t = expect(TT::VAR, "parameter name expected");
-         VarNode* nxt = parseTypedVar(v);
+         VarNode* nxt = parseTypedVar(t);
          tail->append(nxt);
          tail = nxt;
       }
