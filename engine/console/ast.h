@@ -533,12 +533,11 @@ struct InternalSlotAccessNode : ExprNode
    DBG_STMT_TYPE(InternalSlotAccessNode);
 };
 
-struct SlotAssignNode : ExprNode
+struct SlotAssignNode : BaseAssignExprNode
 {
    ExprNode *objectExpr, *arrayExpr;
    StringTableEntry slotName;
    StringTableEntry varType;
-   ExprNode *valueExpr;
 
    static SlotAssignNode *alloc( Compiler::Resources* res, S32 lineNumber, ExprNode *objectExpr, ExprNode *arrayExpr, StringTableEntry slotName, ExprNode *valueExpr, StringTableEntry assignTypeName = NULL );
   

@@ -253,6 +253,11 @@ private:
 
       if (matchChar(':')) // is typed var
       {
+         if (!mResources->allowTypes)
+         {
+            errorHere(LA(), "types not enabled");
+            return NULL;
+         }
          TOK typeNameTok = expect(TT::IDENT, "expected type name");
          assignTypeName = typeNameTok.stString;
       }
@@ -676,6 +681,12 @@ private:
       // Type name
       if (matchChar(':'))
       {
+         if (!mResources->allowTypes)
+         {
+            errorHere(LA(), "Types not enabled");
+            return NULL;
+         }
+
          TOK typeNameTok = expect(TT::IDENT, "type name expected");
          typeName = typeNameTok.stString;
       }
@@ -1049,16 +1060,26 @@ private:
          // for the variable name. Typed array accessors are not permitted.
          // ALSO: %var.slot : type is not allowed here; instead thats handled by parseSlotAssign.
          case TT::VAR: {
-            mTokenPos++; // NEXT token
-            VarNode* node = parseTypedVar(t); // NOTE: parses the initial %var and optional type (IGNORES arrays)
-            if (node == NULL)
-            {
-               mTokenPos--; // rewind; something went wrong
-            }
-            ExprNode* firstExpr = node ? parseExpressionFrom(node) : parseExpression(0); // should end up with an assignment
-            ExprNode* tailExpr = firstExpr;
 
-            firstExpr = handleExpressionTuples(firstExpr);
+            ExprNode* firstExpr = NULL;
+            
+            if (mResources->allowTypes)
+            {
+               mTokenPos++; // NEXT token
+               VarNode* node = parseTypedVar(t); // NOTE: parses the initial %var and optional type (IGNORES arrays)
+               if (node == NULL)
+               {
+                  mTokenPos--; // rewind; something went wrong
+               }
+               firstExpr = node ? parseExpressionFrom(node) : parseExpression(0); // should end up with an assignment
+               firstExpr = handleExpressionTuples(firstExpr);
+            }
+            else
+            {
+               firstExpr = parseStmtNodeExprNode();
+            }
+
+            // 
             
             // Finally ends with ;
             expectChar(';', "; expected");
@@ -1075,13 +1096,38 @@ private:
       }
    }
 
+   bool verifyTupleAssignment(TOK rootTok, BaseAssignExprNode* root)
+   {
+      for (BaseAssignExprNode* sn = root; sn; sn = sn->nextAssign())
+      {
+         SlotAssignNode* slotExpr = dynamic_cast<SlotAssignNode*>(sn);
+         AssignExprNode* assignExpr = dynamic_cast<AssignExprNode*>(sn);
+
+         if (slotExpr == NULL && assignExpr == NULL)
+         {
+            errorHere(rootTok, "tuples cannot use math operators");
+            return false;
+         }
+      }
+
+      return true;
+   }
+
    // Handles case where statement may be a tuple
    ExprNode* handleExpressionTuples(ExprNode* firstExpr, bool isSlotAssign=false)
    {
+      TOK firstToken = LA();
+
       // Additional items get appended onto the root expr; if this needs  
       // to be a list that will get handled there.
       if (LAChar(0) == ',')
       {
+         if (!mResources->allowTuples)
+         {
+            errorHere(LA(), "tuples not enabled");
+            return NULL;
+         }
+
          // NOTE: in this case we allow:
          // %var : type, %var2 : type ...
          // %var : type = 1, 2, 3;
@@ -1095,6 +1141,11 @@ private:
 
          if (lastAssign)
          {
+            if (!verifyTupleAssignment(firstToken, firstAssign))
+            {
+               return NULL;
+            }
+
             // Replace RHS of last assignment with the tuple
             tupleExpr->items = lastAssign->rhsExpr;
             lastAssign->rhsExpr = tupleExpr;
@@ -1103,6 +1154,7 @@ private:
             while (matchChar(','))
             {
                ExprNode* nextExpr = parseExpression(0);
+
                if (nextExpr)
                {
                   tupleExpr->items->append(nextExpr);
@@ -1126,34 +1178,6 @@ private:
       }
 
       return firstExpr;
-   }
-
-   // Handles typed var decl or assignment
-   //
-   // typed_var : VAR ':'' IDENT ';'
-   // typed_var : VAR ':'' IDENT '=' expr ';'
-   StmtNode* parseTypedVarAssignment()
-   {
-      // Look ahead in this case since we fall back to using parseStmtNodeExprNode
-      if (LA(0).kind == TT::VAR)
-      {
-         if (LAChar(1) == ':' &&
-             LA(2).kind != TT::IDENT)
-         {
-            errorHere(LA(2), "expected type name after ':'");
-            return NULL;
-         }
-         else
-         {
-            return NULL;
-         }
-      }
-
-      // Parse typed var
-      // NOTE: var nodes get emitted regardless (even if not directly used) so this is valid.
-
-      VarNode* var = parseTypedVar(expect(TT::VAR, "var expected"));
-      return NULL;
    }
    
    // Handles assert expression

@@ -325,7 +325,7 @@ static void printNode(const StmtNode* n, int pad) {
       indent(pad + 2); printf("varName = \"%s\"\n", show(x->varName));
       indent(pad + 2); printf("subType = %s\n",    typeReqName(x->subType));
       printChild("arrayIndex", x->arrayIndex, pad + 2);
-      printChild("expr",       x->expr,       pad + 2);
+      printChild("expr",       x->rhsExpr,       pad + 2);
       close(n, pad);
       return;
    }
@@ -336,7 +336,7 @@ static void printNode(const StmtNode* n, int pad) {
       indent(pad + 2); printf("operand = %s\n", opToStr((S32)x->operand));
       indent(pad + 2); printf("subType = %s\n",     typeReqName(x->subType));
       printChild("arrayIndex", x->arrayIndex, pad + 2);
-      printChild("expr",       x->expr,       pad + 2);
+      printChild("expr",       x->rhsExpr,       pad + 2);
       close(n, pad);
       return;
    }
@@ -380,10 +380,10 @@ static void printNode(const StmtNode* n, int pad) {
    if (auto x = dynamic_cast<const SlotAssignNode*>(n)) {
       open("SlotAssignNode", pad);
       indent(pad + 2); printf("slotName = \"%s\"\n", show(x->slotName));
-      indent(pad + 2); printf("typeID = %i\n", x->typeID);
+      indent(pad + 2); printf("typeID = %i\n", -1); // TOFIX
       printChild("objectExpr", x->objectExpr, pad + 2);
       printChild("arrayExpr",  x->arrayExpr,  pad + 2);
-      printChild("valueExpr",  x->valueExpr,  pad + 2);
+      printChild("valueExpr",  x->rhsExpr,  pad + 2);
       close(n, pad);
       return;
    }
@@ -395,7 +395,7 @@ static void printNode(const StmtNode* n, int pad) {
       indent(pad + 2); printf("subType = %s\n", typeReqName(x->subType));
       printChild("objectExpr", x->objectExpr, pad + 2);
       printChild("arrayExpr",  x->arrayExpr,  pad + 2);
-      printChild("valueExpr",  x->valueExpr,  pad + 2);
+      printChild("valueExpr",  x->rhsExpr,  pad + 2);
       close(n, pad);
       return;
    }
@@ -424,6 +424,12 @@ static void printNode(const StmtNode* n, int pad) {
       open("CatchStmtNode", pad);
       printChild("testExpr",    x->testExpr,    pad + 2);
       printList("catchBlock",  x->catchBlock,  pad + 2);
+      close(n, pad);
+      return;
+   }
+   if (auto x = dynamic_cast<const TupleExprNode*>(n)) {
+      open("TupleExprNode", pad);
+      printList("items",  x->items,  pad + 2);
       close(n, pad);
       return;
    }
@@ -459,6 +465,8 @@ void dumpToInstructionsPrint(Compiler::Resources& res, StmtNode* rootNode)
    cfg.logFn = MyLogger;
    cfg.userResources = &res;
    cfg.enableExceptions = gEnableExtensions;
+   cfg.enableTuples = gEnableExtensions;
+   cfg.enableTypes = gEnableExtensions;
 
    KorkApi::Vm* vm = KorkApi::createVM(&cfg);
 
@@ -498,6 +506,8 @@ bool printAST(const char* buf, const char* filename)
    SimpleParser::ASTGen astGen(&lex, &res);
 
    res.allowExceptions = gEnableExtensions;
+   res.allowTuples = gEnableExtensions;
+   res.allowTypes = gEnableExtensions;
    
    StmtNode* rootNode = NULL;
    

@@ -802,6 +802,8 @@ VmInternal::VmInternal(Vm* vm, Config* cfg) : mGlobalVars(this)
    }
 
    mCompilerResources->allowExceptions = cfg->enableExceptions;
+   mCompilerResources->allowTuples = cfg->enableTuples;
+   mCompilerResources->allowTypes = cfg->enableTypes;
    mLastExceptionInfo = {};
    
    TypeInfo typeInfo = {};
