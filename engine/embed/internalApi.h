@@ -127,6 +127,7 @@ struct VmInternal
    const char* tempIntConv(U64 val);
 
    bool setObjectField(VMObject* object, StringTableEntry name, const char* array, ConsoleValue value);
+   bool setObjectFieldTuple(VMObject* object, StringTableEntry fieldName, const char* arrayIndex, U32 argc, ConsoleValue* argv);
    ConsoleValue getObjectField(VMObject* object, StringTableEntry name, const char* array, U32 requestedType, U32 requestedZone);
 
    void printf(int level, const char* fmt, ...);
