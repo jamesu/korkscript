@@ -396,7 +396,7 @@ SlotAssignNode *SlotAssignNode::alloc( Compiler::Resources* res, S32 lineNumber,
    ret->objectExpr = objectExpr;
    ret->arrayExpr = arrayExpr;
    ret->slotName = slotName;
-   ret->valueExpr = valueExpr;
+   ret->rhsExpr = valueExpr;
    ret->varType = typeName;
    return ret;
 }

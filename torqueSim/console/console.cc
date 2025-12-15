@@ -227,6 +227,8 @@ void init()
 
    // Extra stuff
    config.enableExceptions = true;
+   config.enableTuples = true;
+   config.enableTypes = true;
 
 
    config.mallocFn = [](size_t size, void*){

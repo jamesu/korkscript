@@ -1695,6 +1695,12 @@ void CodeBlock::dumpInstructions( U32 startIp, bool upToReturn, bool downcaseStr
             ++ ip;
             break;
          }
+         case OP_SETCURFIELD_NONE:
+         {
+            // Unsets current field ref
+            mVM->printf(0, "%i: OP_SETCURFIELD_NONE", ip - 1);
+            break;
+         }
          case OP_SAVEVAR_MULTIPLE:
          {
             // Acts like a function call (i.e. relies on popping the frame)

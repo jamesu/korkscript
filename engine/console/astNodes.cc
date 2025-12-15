@@ -925,12 +925,11 @@ U32 AssignExprNode::compile(CodeStream &codeStream, U32 ip, TypeReq type)
    subType = rhsExpr->getPreferredType();
    if(subType == TypeReqNone)
       subType = type;
+
+   TupleExprNode* tupleExpr = dynamic_cast<TupleExprNode*>(rhsExpr);
    if(subType == TypeReqNone)
    {
       // What we need to do in this case is turn it into a VarNode reference. 
-      // Unfortunately other nodes such as field access (SlotAccessNode) 
-      // cannot be optimized in the same manner as all fields are exposed 
-      // and set as strings.
       if (dynamic_cast<VarNode*>(rhsExpr) != NULL)
       {
          subType = TypeReqVar;
@@ -959,8 +958,11 @@ U32 AssignExprNode::compile(CodeStream &codeStream, U32 ip, TypeReq type)
    // OP_SAVEVAR
    
    codeStream.mResources->precompileIdent(varName);
-   
-   ip = rhsExpr->compile(codeStream, ip, subType);
+
+   if (tupleExpr == NULL)
+   {
+      ip = rhsExpr->compile(codeStream, ip, subType);
+   }
 
    if(arrayIndex)
    {
@@ -982,26 +984,46 @@ U32 AssignExprNode::compile(CodeStream &codeStream, U32 ip, TypeReq type)
       codeStream.emit(OP_SETCURVAR_CREATE);
       codeStream.emitSTE(varName);
    }
-   switch(subType)
+
+   // Tuples need to be emitted here
+   if (tupleExpr)
    {
-   case TypeReqString:
-      codeStream.emit(OP_SAVEVAR_STR);
-      break;
-   case TypeReqUInt:
-      codeStream.emit(OP_SAVEVAR_UINT);
-      break;
-   case TypeReqFloat:
-      codeStream.emit(OP_SAVEVAR_FLT);
-      break;
-   case TypeReqVar:
-      codeStream.emit(OP_SAVEVAR_VAR);
-      break;
-   case TypeReqNone:
-   default:
-      break;
+      // This should compile ending in OP_SAVEVAR_MULTIPLE 
+      AssertFatal(subType == TypeReqVar, "something went wrong here");
+      ip = rhsExpr->compile(codeStream, ip, subType);
    }
+
+   if (tupleExpr == NULL)
+   {
+      // This bit is already emitted to in tuple
+      switch(subType)
+      {
+      case TypeReqString:
+         codeStream.emit(OP_SAVEVAR_STR);
+         break;
+      case TypeReqUInt:
+         codeStream.emit(OP_SAVEVAR_UINT);
+         break;
+      case TypeReqFloat:
+         codeStream.emit(OP_SAVEVAR_FLT);
+         break;
+      case TypeReqVar:
+         codeStream.emit(OP_SAVEVAR_VAR);
+         break;
+      case TypeReqNone:
+      default:
+         break;
+      }
+   }
+   else
+   {
+      AssertFatal(tupleExpr != NULL && subType != TypeReqVar, "subtype mismatch");
+   }
+
    if(type != subType)
-      codeStream.emit(conversionOp(subType, type));
+   {
+      codeStream.emit(conversionOp(subType, type)); // i.e. continue
+   }
    return ip;
 }
 
@@ -1087,8 +1109,14 @@ U32 AssignOpExprNode::compile(CodeStream &codeStream, U32 ip, TypeReq type)
    // OP_SAVEVAR_FLT or UINT
    
    // conversion OP if necessary.
-   getAssignOpTypeOp(op, subType, operand);
+   getAssignOpTypeOp(op, subType, operand); // op -> subType, operand
    codeStream.mResources->precompileIdent(varName);
+
+   if (dynamic_cast<TupleExprNode*>(rhsExpr))
+   {
+      AssertFatal(false, "Something went seriously wrong in handleExpressionTuples");
+      return ip;
+   }
    
    ip = rhsExpr->compile(codeStream, ip, subType);
    if(!arrayIndex)
@@ -1342,9 +1370,16 @@ U32 SlotAssignNode::compile(CodeStream &codeStream, U32 ip, TypeReq type)
    // convert to return type if necessary.
    
    codeStream.mResources->precompileIdent(slotName);
+
+
+   TupleExprNode* tupleExpr = dynamic_cast<TupleExprNode*>(rhsExpr);
    
-   ip = valueExpr->compile(codeStream, ip, TypeReqString);
-   codeStream.emit(OP_ADVANCE_STR);
+   if (tupleExpr == NULL)
+   {
+      ip = rhsExpr->compile(codeStream, ip, TypeReqString);
+      codeStream.emit(OP_ADVANCE_STR);
+   }
+
    if(arrayExpr)
    {
       ip = arrayExpr->compile(codeStream, ip, TypeReqString);
@@ -1377,8 +1412,17 @@ U32 SlotAssignNode::compile(CodeStream &codeStream, U32 ip, TypeReq type)
       codeStream.emit(typeID);
    }
 
-   codeStream.emit(OP_TERMINATE_REWIND_STR);
-   codeStream.emit(OP_SAVEFIELD_STR);
+   // NOTE: tuples evaluate the value here since we need a fresh stack
+   if (tupleExpr)
+   {
+      ip = tupleExpr->compile(codeStream, ip, TypeReqField); // stores into field
+   }
+   else
+   {
+      // Normal value assign
+      codeStream.emit(OP_TERMINATE_REWIND_STR);
+      codeStream.emit(OP_SAVEFIELD_STR);
+   }
    
    if(type != TypeReqString)
       codeStream.emit(conversionOp(TypeReqString, type));
@@ -1420,6 +1464,12 @@ U32 SlotAssignOpNode::compile(CodeStream &codeStream, U32 ip, TypeReq type)
    getAssignOpTypeOp(op, subType, operand);
    codeStream.mResources->precompileIdent(slotName);
    
+   if (dynamic_cast<TupleExprNode*>(rhsExpr))
+   {
+      AssertFatal(false, "Something went seriously wrong in handleExpressionTuples");
+      return ip;
+   }
+
    ip = rhsExpr->compile(codeStream, ip, subType);
    if(arrayExpr)
    {

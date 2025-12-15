@@ -302,6 +302,8 @@ struct Config {
 
    bool warnUndefinedScriptVariables;
    bool enableExceptions;
+   bool enableTuples;
+   bool enableTypes;
    bool initTelnet;
    
    U16 maxFibers;
