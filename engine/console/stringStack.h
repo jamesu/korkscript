@@ -366,7 +366,9 @@ struct StringStack
       mFrameOffsets[mNumFrames++] = mStartStackSize;
       mStartOffsets[mStartStackSize++] = mStart;
       mStart += ReturnBufferSpace;
-      validateBufferSize(0);
+      validateBufferSize(mStart+1);
+      // terminate start just in case we get an early exit
+      mBuffer[mStart] = '\0';
       //Con::printf("StringStack::pushFrame");
    }
 

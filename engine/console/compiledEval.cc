@@ -643,6 +643,8 @@ KorkApi::ConsoleValue CodeBlock::exec(U32 ip, const char *functionName, Namespac
                                         packageName,
                                         setFrame);
    
+   evalState.mSTR.setStringValue(""); // this should be cleared before exec (otherwise ops can get garbage values)
+   
    if (frame && !startSuspended)
    {
       KorkApi::FiberRunResult result = evalState.runVM();
