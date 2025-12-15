@@ -107,6 +107,8 @@ struct VmInternal
    ConsoleHeapAllocRef createHeapRef(U32 size);
    void releaseHeapRef(ConsoleHeapAllocRef value);
 
+   S32 lookupTypeId(StringTableEntry typeName);
+
    // Heap values (like strings)
    ConsoleValue getStringFuncBuffer(FiberId fiberId, U32 size);
    ConsoleValue getStringReturnBuffer(U32 size);

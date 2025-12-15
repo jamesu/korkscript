@@ -230,10 +230,12 @@ namespace Compiler
       FullEntry *tail; // so we have stable ids
       U32 numIdentStrings;
       
+      U32 addNoAddress(StringTableEntry ste);
       U32 add(StringTableEntry ste, U32 ip);
       void reset();
       void write(Stream &st);
       void build(StringTableEntry** strings,  U32** stringOffsets, U32* numStrings);
+      void append(CompilerIdentTable &other);
 
       CompilerIdentTable(Resources* _res) : res(_res)
       {
@@ -318,6 +320,7 @@ namespace Compiler
       CompilerFloatTable  *currentFloatTable,  globalFloatTable,  functionFloatTable;
       DataChunker          consoleAllocator;
       CompilerIdentTable   identTable;
+      CompilerIdentTable   typeTable;
 
       bool syntaxError;
       bool allowExceptions;
@@ -342,14 +345,16 @@ namespace Compiler
       void setCurrentFloatTable (CompilerFloatTable* cst) { currentFloatTable  = cst; }
 
       CompilerIdentTable &getIdentTable() { return identTable; }
+      CompilerIdentTable &getTypeTable() { return typeTable; }
 
       void precompileIdent(StringTableEntry ident);
+      S32 precompileType(StringTableEntry ident);
       void resetTables();
 
       void *consoleAlloc(U32 size) { return consoleAllocator.alloc(size);  }
       void consoleAllocReset()     { consoleAllocator.freeBlocks(); }
 
-      Resources() : globalStringTable(this), functionStringTable(this), globalFloatTable(this), functionFloatTable(this), identTable(this)
+      Resources() : globalStringTable(this), functionStringTable(this), globalFloatTable(this), functionFloatTable(this), identTable(this), typeTable(this)
       {
          STEtoCode = evalSTEtoCode;
          syntaxError = false;
