@@ -718,6 +718,8 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
    
    FIBERS_START
    
+   S32 lastTypeId = -1;
+   
    // NOTE: these are only used temporarily inside opcode cases
    StringTableEntry tmpVar = NULL;
    StringTableEntry tmpFnName = NULL;
@@ -2206,6 +2208,39 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
             frame._UINT++;
          }
          break;
+
+         case OP_SAVEVAR_MULTIPLE_TYPED:
+         {
+            lastTypeId = code[ip++]; // this is type to assign
+            // TODO lastTypeId = frame.code->resolveType(lastTypeId);
+            // frame.setStringType(lastTypeId);
+         }
+
+         case OP_SAVEVAR_MULTIPLE:
+         {
+            // This is like OP_CALLFUNC
+            evalState.mSTR.getArgcArgv(NULL, &callArgc, &callArgv);
+
+            // TODO: pass through tuple to type based on last CV type
+            frame.setStringVariable(vmInternal->valueAsString(callArgv[0]));
+            
+            evalState.mSTR.popFrame();
+            frame.pushStringStackCount--;
+
+            lastTypeId = -1;
+         }
+            break;
+         
+         case OP_SAVEFIELD_MULTIPLE:
+         {
+            // This is like OP_CALLFUNC
+            evalState.mSTR.getArgcArgv(NULL, &callArgc, &callArgv);
+            vmInternal->setObjectFieldTuple(frame.curObject, frame.curField, frame.curFieldArray, callArgc, callArgv);
+            
+            evalState.mSTR.popFrame();
+            frame.pushStringStackCount--;
+         }
+            break;
 
          case OP_INVALID:
             

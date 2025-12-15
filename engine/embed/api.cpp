@@ -660,6 +660,11 @@ bool Vm::setObjectField(VMObject* object, StringTableEntry fieldName, ConsoleVal
    return mInternal->setObjectField(object, fieldName, arrayIndex, nativeValue);
 }
 
+bool Vm::setObjectFieldTuple(VMObject* object, StringTableEntry fieldName, U32 argc, ConsoleValue* argv, const char* arrayIndex)
+{
+   return mInternal->setObjectFieldTuple(object, fieldName, arrayIndex, argc, argv);
+}
+
 bool Vm::setObjectFieldString(VMObject* object, StringTableEntry fieldName, const char* stringValue, const char* arrayIndex)
 {
    ConsoleValue val = ConsoleValue::makeString(stringValue);
@@ -1099,16 +1104,21 @@ const char* VmInternal::tempIntConv(U64 val)
 
 bool VmInternal::setObjectField(VMObject* obj, StringTableEntry name, const char* array, ConsoleValue value)
 {
+   return setObjectFieldTuple(obj, name, array, 1, &value);
+}
+
+bool VmInternal::setObjectFieldTuple(VMObject* obj, StringTableEntry fieldName, const char* arrayIndex, U32 argc, ConsoleValue* argv)
+{
    if ((obj->flags & KorkApi::ModStaticFields) != 0)
    {
       for (U32 i=0; i<obj->klass->numFields; i++)
       {
          FieldInfo& f = obj->klass->fields[i];
          
-         if (f.pFieldname != name)
+         if (f.pFieldname != fieldName)
             continue;
          
-         U32 idx = dAtoi(array);
+         U32 idx = dAtoi(arrayIndex);
          U32 elemCount = f.elementCount > 0 ? (U32)f.elementCount : 1;
          if (idx >= elemCount)
             break;
@@ -1129,8 +1139,8 @@ bool VmInternal::setObjectField(VMObject* obj, StringTableEntry name, const char
          setFn(f.ovrSetValue ? obj->userPtr : tinfo.userPtr,
                mVM,
                dptr,
-               1,
-               &value,
+               argc,
+               argv,
                f.table,
                f.flag,
                tid);
@@ -1140,7 +1150,7 @@ bool VmInternal::setObjectField(VMObject* obj, StringTableEntry name, const char
 
    if ((obj->flags & KorkApi::ModDynamicFields) != 0)
    {
-      obj->klass->iCustomFields.SetFieldByName(mVM, obj, name, value);
+      obj->klass->iCustomFields.SetFieldByName(mVM, obj, fieldName, argv[0]); // TOFIX: accept tuple
       return true;
    }
    
