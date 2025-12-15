@@ -344,7 +344,7 @@ void CompilerIdentTable::build(StringTableEntry** strings,  U32** stringOffsets,
    }
 }
 
-void CompilerIdentTable::append(CompilerIdentTable &other)
+U32 CompilerIdentTable::append(CompilerIdentTable &other)
 {
    U32 offset = numIdentStrings;
    
