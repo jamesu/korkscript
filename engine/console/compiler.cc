@@ -79,6 +79,11 @@ namespace Compiler
          globalStringTable.add(ident);
    }
 
+   S32 Resources::precompileType(StringTableEntry ident)
+   {
+      return ident ? getTypeTable().addNoAddress(ident) : -1;
+   }
+
    void Resources::resetTables()
    {
       setCurrentStringTable(&globalStringTable);
@@ -88,6 +93,7 @@ namespace Compiler
       getFunctionFloatTable().reset();
       getFunctionStringTable().reset();
       getIdentTable().reset();
+      getTypeTable().reset();
    }
 
 }
@@ -215,6 +221,49 @@ void CompilerIdentTable::reset()
    numIdentStrings = 0;
 }
 
+U32 CompilerIdentTable::addNoAddress(StringTableEntry ste)
+{
+   U32 index = res->globalStringTable.add(ste, false);
+   
+   FullEntry* patchEntry = NULL;
+   
+   U32 elementIndex = 0;
+   for(FullEntry *walk = list; walk; walk = walk->next)
+   {
+      if(walk->offset == index)
+      {
+         patchEntry = walk;
+         break;
+      }
+      elementIndex++;
+   }
+   
+   if (patchEntry == NULL)
+   {
+      patchEntry = (FullEntry *) res->consoleAlloc(sizeof(FullEntry));
+      patchEntry->patch = NULL;
+      patchEntry->steName = ste;
+      patchEntry->offset = index;
+      patchEntry->next = NULL;
+      
+      if (tail == NULL)
+      {
+         list = patchEntry;
+         tail = patchEntry;
+      }
+      else
+      {
+         tail->next = patchEntry;
+         tail = patchEntry;
+      }
+      
+      elementIndex = numIdentStrings++;
+   }
+   
+   return elementIndex;
+
+}
+
 U32 CompilerIdentTable::add(StringTableEntry ste, U32 ip)
 {
    U32 index = res->globalStringTable.add(ste, false);
@@ -293,6 +342,28 @@ void CompilerIdentTable::build(StringTableEntry** strings,  U32** stringOffsets,
       (*stringOffsets)[i] = walk->offset;
       (*strings)[i++] = walk->steName;
    }
+}
+
+void CompilerIdentTable::append(CompilerIdentTable &other)
+{
+   U32 offset = numIdentStrings;
+   
+   if (other.list == NULL)
+   {
+      return numIdentStrings;
+   }
+   
+   if (list == NULL)
+   {
+      list = other.list;
+      numIdentStrings = other.numIdentStrings;
+      return 0;
+   }
+   
+   tail->next = other.list;
+   tail = other.tail;
+   numIdentStrings += other.numIdentStrings;
+   return offset;
 }
 
 //-------------------------------------------------------------------------

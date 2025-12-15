@@ -246,6 +246,18 @@ void Vm::releaseHeapRef(ConsoleHeapAllocRef value)
    mInternal->releaseHeapRef(value);
 }
 
+S32 VmInternal::lookupTypeId(StringTableEntry typeName)
+{
+   for (Vector<TypeInfo>::iterator itr = mTypes.begin(), itrEnd = mTypes.end(); itr != itrEnd; itr++)
+   {
+      if (itr->name == typeName)
+      {
+         return (S32)(itr - mTypes.begin());
+      }
+   }
+   return -1;
+}
+
 ConsoleHeapAllocRef VmInternal::createHeapRef(U32 size)
 {
    ConsoleHeapAlloc* ref = (ConsoleHeapAlloc*)mConfig.mallocFn(sizeof(ConsoleHeapAlloc) + size, mConfig.allocUser);

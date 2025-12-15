@@ -710,6 +710,12 @@ U32 VarNode::compile(CodeStream &codeStream, U32 ip, TypeReq type)
    // OP_SETCURVAR
    // varName
    // OP_LOADVAR (type)
+
+   if (varType)
+   {
+      // TODO: set type id
+      codeStream.mResources->precompileType(varType);
+   }
    
    if(type == TypeReqNone)
       return codeStream.tell();
@@ -960,6 +966,12 @@ U32 AssignExprNode::compile(CodeStream &codeStream, U32 ip, TypeReq type)
    // OP_SETCURVAR_CREATE
    // varname
    // OP_SAVEVAR
+   
+   if (assignTypeName)
+   {
+      // TODO: set type id
+      codeStream.mResources->precompileType(assignTypeName);
+   }
    
    codeStream.mResources->precompileIdent(varName);
 
@@ -1372,6 +1384,12 @@ U32 SlotAssignNode::compile(CodeStream &codeStream, U32 ip, TypeReq type)
    
    // OP_SAVEFIELD
    // convert to return type if necessary.
+
+   if (varType)
+   {
+      // TODO: set type id
+      codeStream.mResources->precompileType(varType);
+   }
    
    codeStream.mResources->precompileIdent(slotName);
 

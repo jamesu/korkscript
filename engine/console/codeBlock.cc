@@ -92,6 +92,8 @@ CodeBlock::~CodeBlock()
       delete[] identStrings;
    if (identStringOffsets)
       delete[] identStringOffsets;
+   if (typeStringMap)
+      delete[] typeStringMap;
 }
 
 //-------------------------------------------------------------------------
@@ -513,6 +515,11 @@ bool CodeBlock::read(StringTableEntry fileName, Stream &st, U32 readVersion)
    {
       st.read(&startTypeStrings);
       st.read(&numTypeStrings);
+      typeStringMap = new S32[numTypeStrings];
+      for (U32 i=0; i<numTypeStrings; i++)
+      {
+         typeStringMap[i] = -1;
+      }
    }
    
    if(lineBreakPairCount)
@@ -527,7 +534,7 @@ void CodeBlock::linkTypes()
 {
    for (U32 i=0; i<numTypeStrings; i++)
    {
-      typeStringMap[i] = -1; // TOFIX vm->lookupTypeId(identStrings[startTypeStrings + i]);
+      typeStringMap[i] = mVM->lookupTypeId(identStrings[startTypeStrings + i]);
    }
 }
 
@@ -629,6 +636,9 @@ bool CodeBlock::write(Stream &st)
       st.write(identStringOffsets[i]);
       st.write((U32)0);
    }
+   
+   st.write(startTypeStrings);
+   st.write(numTypeStrings);
    
    return true;
 }
@@ -739,7 +749,25 @@ bool CodeBlock::compileToStream(Stream &st, StringTableEntry fileName, const cha
    for(i = codeSize; i < totSize; i++)
       st.write(code[i]);
    
-   mVM->mCompilerResources->getIdentTable().write(st);
+   Compiler::CompilerIdentTable& mainTable = mVM->mCompilerResources->getIdentTable();
+   Compiler::CompilerIdentTable& typeTable = mVM->mCompilerResources->getTypeTable();
+
+   startTypeStrings = mainTable.numIdentStrings;
+   numTypeStrings = typeTable.numIdentStrings;
+
+   mainTable.append(typeTable);
+   mainTable.write(st);
+   
+   typeStringMap = new S32[numTypeStrings];
+   for (U32 i=0; i<numTypeStrings; i++)
+   {
+      typeStringMap[i] = -1;
+   }
+
+   // Write offsets
+   
+   st.write(startTypeStrings);
+   st.write(numTypeStrings);
    
    mVM->mCompilerResources->consoleAllocReset();
    
@@ -826,20 +854,36 @@ bool CodeBlock::compileToStream(Stream &st, StringTableEntry fileName, const cha
     numGlobalFloats = mVM->mCompilerResources->getGlobalFloatTable().count;
     numFunctionFloats = mVM->mCompilerResources->getFunctionFloatTable().count;
     
-    mVM->mCompilerResources->getIdentTable().build(&identStrings, &identStringOffsets, &numIdentStrings);
+    // Combine ident with type table and set offsets
+   Compiler::CompilerIdentTable& mainTable = mVM->mCompilerResources->getIdentTable();
+   Compiler::CompilerIdentTable& typeTable = mVM->mCompilerResources->getTypeTable();
+
+   startTypeStrings = mainTable.numIdentStrings;
+   numTypeStrings = typeTable.numIdentStrings;
+    
+   typeStringMap = new S32[numTypeStrings];
+   for (U32 i=0; i<numTypeStrings; i++)
+   {
+      typeStringMap[i] = -1;
+   }
+
+   mainTable.append(typeTable);
+   mainTable.build(&identStrings, &identStringOffsets, &numIdentStrings);
    
    codeStream.emit(OP_RETURN);
    codeStream.emitCodeStream(&codeSize, &code, &lineBreakPairs);
    
    mVM->mCompilerResources->consoleAllocReset();
    
-   if(lineBreakPairCount && fileName)
+   if (lineBreakPairCount)
       calcBreakList();
    
    if(lastIp+1 != codeSize)
    {
       mVM->printf(0, "precompile size mismatch");
    }
+    
+   linkTypes();
    
    return exec(0, fileName, NULL, 0, 0, noCalls, isNativeFrame, NULL, setFrame);
 }
