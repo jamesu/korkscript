@@ -802,6 +802,10 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
    
    for(;;)
    {
+#ifdef LINE_DEBUG
+      printf("LINE %s\n", frame.codeBlock->getFileLine(ip));
+#endif
+      
       U32 instruction = code[ip++];
       
    breakContinue:
@@ -2224,7 +2228,7 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
             evalState.mSTR.getArgcArgv(NULL, &callArgc, &callArgv);
 
             // TODO: pass through tuple to type based on last CV type
-            frame.setStringVariable(vmInternal->valueAsString(callArgv[0]));
+            frame.setStringVariable(vmInternal->valueAsString(callArgv[1]));
             
             evalState.mSTR.popFrame();
             frame.pushStringStackCount--;
@@ -2233,13 +2237,21 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
          }
             break;
          
+         case OP_SETCURFIELD_NONE:
+            frame.prevField = frame.curField;
+            dStrcpy( frame.prevFieldArray, frame.curFieldArray );
+            frame.curField = StringTable->EmptyString;
+            frame.curFieldArray[0] = 0;
+            break;
+            
          case OP_SAVEFIELD_MULTIPLE:
          {
             // This is like OP_CALLFUNC
             evalState.mSTR.getArgcArgv(NULL, &callArgc, &callArgv);
-            vmInternal->setObjectFieldTuple(frame.curObject, frame.curField, frame.curFieldArray, callArgc, callArgv);
+            vmInternal->setObjectFieldTuple(frame.curObject, frame.curField, frame.curFieldArray, callArgc-1, callArgv+1);
             
             evalState.mSTR.popFrame();
+            evalState.mSTR.setStringValue(""); // clear stack in case original value is garbage
             frame.pushStringStackCount--;
          }
             break;
