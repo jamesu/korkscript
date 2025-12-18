@@ -108,6 +108,8 @@ static U32 conversionOp(TypeReq src, TypeReq dst)
          return OP_STR_TO_NONE;
       case TypeReqVar:
          return OP_SAVEVAR_STR;
+      case TypeReqTypedString:
+         return OP_STR_TO_TYPED;
       default:
          break;
       }
@@ -124,6 +126,8 @@ static U32 conversionOp(TypeReq src, TypeReq dst)
          return OP_FLT_TO_NONE;
       case TypeReqVar:
          return OP_SAVEVAR_FLT;
+      case TypeReqTypedString:
+         return OP_FLT_TO_TYPED;
       default:
          break;
       }
@@ -140,6 +144,8 @@ static U32 conversionOp(TypeReq src, TypeReq dst)
          return OP_UINT_TO_NONE;
       case TypeReqVar:
          return OP_SAVEVAR_UINT;
+      case TypeReqTypedString:
+         return OP_UINT_TO_TYPED;
       default:
          break;
       }
@@ -158,9 +164,31 @@ static U32 conversionOp(TypeReq src, TypeReq dst)
          return OP_COPYVAR_TO_NONE;
       case TypeReqVar:
          return OP_LOADVAR_VAR; // i.e. copy this var we just set
+      case TypeReqTypedString:
+         return OP_SAVEVAR_TYPED;
       default:
          break;
       }
+   }
+   else if (src == TypeReqTypedString)
+   {
+      switch(dst)
+      {
+      case TypeReqUInt:
+         return OP_TYPED_TO_UINT;
+      case TypeReqFloat:
+         return OP_TYPED_TO_FLT;
+      case TypeReqString:
+         return OP_TYPED_TO_STR;
+      case TypeReqNone:
+         return OP_TYPED_TO_NONE;
+      case TypeReqVar:
+         return OP_SAVEVAR_TYPED; // i.e. copy this var we just set
+      case TypeReqTypedString:
+      default:
+         break;
+      }
+      
    }
    return OP_INVALID;
 }
@@ -457,26 +485,62 @@ TypeReq ConditionalExprNode::getPreferredType()
 
 U32 FloatBinaryExprNode::compile(CodeStream &codeStream, U32 ip, TypeReq type)
 {
-   ip = right->compile(codeStream, ip, TypeReqFloat);
-   ip = left->compile(codeStream, ip, TypeReqFloat);
+   // Ok: if either side allows type, generate a typed op THEN do a conversion
+   
+   TypeReq nodeOpOutputType = TypeReqFloat;
+   
+   bool firstIsTyped = right->getPreferredType() == TypeReqTypedString;
+   bool secondIsTyped = left->getPreferredType() == TypeReqTypedString;
+   bool outputIsTyped = type == TypeReqTypedString;
+   
+   if (outputIsTyped)
+   {
+      if (firstIsTyped || secondIsTyped)
+      {
+         nodeOpOutputType = TypeReqTypedString;
+      }
+   }
+   
+   ip = right->compile(codeStream, ip, nodeOpOutputType);
+   ip = left->compile(codeStream, ip, nodeOpOutputType);
+   
    U32 operand = OP_INVALID;
    switch(op)
    {
-   case SimpleLexer::TokenType::opPCHAR_PLUS:
-      operand = OP_ADD;
-      break;
-   case SimpleLexer::TokenType::opPCHAR_MINUS:
-      operand = OP_SUB;
-      break;
-   case SimpleLexer::TokenType::opPCHAR_SLASH:
-      operand = OP_DIV;
-      break;
-   case SimpleLexer::TokenType::opPCHAR_ASTERISK:
-      operand = OP_MUL;
-      break;
+      case SimpleLexer::TokenType::opPCHAR_PLUS:
+         operand = OP_ADD;
+         break;
+      case SimpleLexer::TokenType::opPCHAR_MINUS:
+         operand = OP_SUB;
+         break;
+      case SimpleLexer::TokenType::opPCHAR_SLASH:
+         operand = OP_DIV;
+         break;
+      case SimpleLexer::TokenType::opPCHAR_ASTERISK:
+         operand = OP_MUL;
+         break;
+      default:
+         break;
    }
-   codeStream.emit(operand);
-   if(type != TypeReqFloat)
+
+   if (nodeOpOutputType != TypeReqTypedString)
+   {
+      codeStream.emit(operand);
+   }
+   else
+   {
+      if (!firstIsTyped)
+      {
+         codeStream.emit(OP_TYPED_OP_REVERSE);
+      }
+      else
+      {
+         codeStream.emit(OP_TYPED_OP);
+      }
+      codeStream.emit(operand);
+   }
+   
+   if(type != TypeReqFloat || nodeOpOutputType != TypeReqFloat)
       codeStream.emit(conversionOp(TypeReqFloat, type));
    return codeStream.tell();
 }
@@ -548,6 +612,8 @@ U32 IntBinaryExprNode::compile(CodeStream &codeStream, U32 ip, TypeReq type)
 {
    getSubTypeOperand();
    
+   TypeReq nodeOpOutputType = subType;
+   
    if(operand == OP_OR || operand == OP_AND)
    {
       ip = left->compile(codeStream, ip, subType);
@@ -558,12 +624,34 @@ U32 IntBinaryExprNode::compile(CodeStream &codeStream, U32 ip, TypeReq type)
    }
    else
    {
-      ip = right->compile(codeStream, ip, subType);
-      ip = left->compile(codeStream, ip, subType);
-      codeStream.emit(operand);
+      // Non-OR/AND: apply typed-op selection logic like FloatBinaryExprNode
+      bool firstIsTyped  = right->getPreferredType() == TypeReqTypedString; // compiled first
+      bool secondIsTyped = left->getPreferredType()  == TypeReqTypedString;
+      bool outputIsTyped = (type == TypeReqTypedString);
+
+      bool doTypedOp = (firstIsTyped || secondIsTyped);
+      nodeOpOutputType = doTypedOp ? TypeReqTypedString : subType;
+      
+      ip = right->compile(codeStream, ip, nodeOpOutputType);
+      ip = left->compile(codeStream, ip, nodeOpOutputType);
+      
+      if (!doTypedOp)
+      {
+         codeStream.emit(operand);
+      }
+      else
+      {
+         if(!firstIsTyped)
+            codeStream.emit(OP_TYPED_OP_REVERSE);
+         else
+            codeStream.emit(OP_TYPED_OP);
+
+         codeStream.emit(operand);
+      }
    }
-   if(type != TypeReqUInt)
-      codeStream.emit(conversionOp(TypeReqUInt, type));
+   
+   if(type != nodeOpOutputType)
+      codeStream.emit(conversionOp(nodeOpOutputType, type));
    return codeStream.tell();
 }
 
@@ -662,13 +750,36 @@ U32 IntUnaryExprNode::compile(CodeStream &codeStream, U32 ip, TypeReq type)
       (prefType == TypeReqFloat || prefType == TypeReqString))
       integer = false;
    
-   ip = expr->compile(codeStream, ip, integer ? TypeReqUInt : TypeReqFloat);
+   
+   bool operandTyped = expr->getPreferredType() == TypeReqTypedString;
+   bool outputTyped  = (type == TypeReqTypedString);
+   TypeReq nodeOpOutputType = operandTyped ? TypeReqTypedString : (integer ? TypeReqUInt : TypeReqFloat);
+   
+   ip = expr->compile(codeStream, ip, nodeOpOutputType);
+   
+   if (operandTyped)
+   {
+      codeStream.emit(OP_TYPED_UNARY_OP);
+   }
+   
+   // Actual op
    if(op == SimpleLexer::TokenType::opPCHAR_EXCL) // !
       codeStream.emit(integer ? OP_NOT : OP_NOTF);
    else if(op == SimpleLexer::TokenType::opPCHAR_TILDE) // ~
       codeStream.emit(OP_ONESCOMPLEMENT);
-   if(type != TypeReqUInt)
-      codeStream.emit(conversionOp(TypeReqUInt, type));
+   
+   if (type != TypeReqUInt)
+   {
+      if (!operandTyped)
+      {
+         codeStream.emit(conversionOp(TypeReqUInt, type));
+      }
+      else
+      {
+         codeStream.emit(conversionOp(nodeOpOutputType, type));
+      }
+   }
+   
    return codeStream.tell();
 }
 
@@ -681,10 +792,21 @@ TypeReq IntUnaryExprNode::getPreferredType()
 
 U32 FloatUnaryExprNode::compile(CodeStream &codeStream, U32 ip, TypeReq type)
 {
-   ip = expr->compile(codeStream, ip, TypeReqFloat);
+   bool operandTyped = expr->getPreferredType() == TypeReqTypedString;
+   bool outputTyped  = (type == TypeReqTypedString);
+   TypeReq nodeOpOutputType = operandTyped ? TypeReqTypedString : TypeReqFloat;
+   
+   ip = expr->compile(codeStream, ip, nodeOpOutputType);
+   
+   if (operandTyped)
+   {
+      codeStream.emit(OP_TYPED_UNARY_OP);
+   }
+   
    codeStream.emit(OP_NEG);
-   if(type != TypeReqFloat)
-      codeStream.emit(conversionOp(TypeReqFloat, type));
+   
+   if(type != nodeOpOutputType)
+      codeStream.emit(conversionOp(nodeOpOutputType, type));
    return codeStream.tell();
 }
 
@@ -745,6 +867,9 @@ U32 VarNode::compile(CodeStream &codeStream, U32 ip, TypeReq type)
       break;
    case TypeReqVar:
       codeStream.emit(OP_LOADVAR_VAR);
+      break;
+   case TypeReqTypedString:
+      codeStream.emit(OP_LOADVAR_TYPED);
       break;
    case TypeReqNone:
    default:
@@ -1010,7 +1135,7 @@ U32 AssignExprNode::compile(CodeStream &codeStream, U32 ip, TypeReq type)
    if (tupleExpr)
    {
       AssertFatal(subType == TypeReqVar, "something went wrong here");
-      codeStream.emit(OP_SAVEVAR_MULTIPLE);
+      codeStream.emit(assignTypeName ? OP_SAVEVAR_MULTIPLE_TYPED : OP_SAVEVAR_MULTIPLE);
    }
    else
    {
@@ -1029,6 +1154,9 @@ U32 AssignExprNode::compile(CodeStream &codeStream, U32 ip, TypeReq type)
          case TypeReqVar:
             codeStream.emit(OP_SAVEVAR_VAR);
             break;
+         case TypeReqTypedString:
+            codeStream.emit(OP_SAVEVAR_TYPED);
+            break;
          case TypeReqNone:
          default:
             break;
@@ -1045,7 +1173,7 @@ U32 AssignExprNode::compile(CodeStream &codeStream, U32 ip, TypeReq type)
 
 TypeReq AssignExprNode::getPreferredType()
 {
-   return rhsExpr->getPreferredType();
+   return assignTypeName != NULL && assignTypeName[0] != '\0' ? TypeReqTypedString : rhsExpr->getPreferredType();
 }
 
 void AssignExprNode::setAssignType(StringTableEntry typeName)
@@ -1161,7 +1289,7 @@ U32 AssignOpExprNode::compile(CodeStream &codeStream, U32 ip, TypeReq type)
 TypeReq AssignOpExprNode::getPreferredType()
 {
    getAssignOpTypeOp(op, subType, operand);
-   return subType;
+   return subType;// TOFIX assignTypeName != NULL && assignTypeName[0] != '\0' ? TypeReqTypedString : subType;
 }
 
 //------------------------------------------------------------
@@ -1224,6 +1352,9 @@ U32 FuncCallExprNode::compile(CodeStream &codeStream, U32 ip, TypeReq type)
             break;
          case TypeReqUInt:
             codeStream.emit(OP_PUSH_UINT);
+            break;
+         case TypeReqTypedString:
+            codeStream.emit(OP_PUSH_TYPED);
             break;
          default:
             codeStream.emit(OP_PUSH);
@@ -1465,6 +1596,9 @@ U32 SlotAssignNode::compile(CodeStream &codeStream, U32 ip, TypeReq type)
             // NOTE: this is currently never set since VarNode is the only one that gets this TypeReq
             AssertFatal(false, "wtf");
             break;
+         case TypeReqTypedString:
+            codeStream.emit(OP_LOADFIELD_TYPED);
+            break;
          default:
             codeStream.emit(OP_SETCURFIELD_NONE);
             break;
@@ -1606,6 +1740,9 @@ U32 ObjectDeclNode::compileSubObject(CodeStream &codeStream, U32 ip, bool root)
             break;
          case TypeReqUInt:
             codeStream.emit(OP_PUSH_UINT);
+            break;
+         case TypeReqTypedString:
+            codeStream.emit(OP_PUSH_TYPED);
             break;
          default:
             codeStream.emit(OP_PUSH);
@@ -1824,6 +1961,9 @@ U32 TupleExprNode::compile(CodeStream &codeStream, U32 ip, TypeReq type)
                break;
             case TypeReqUInt:
                codeStream.emit(OP_PUSH_UINT);
+               break;
+            case TypeReqTypedString:
+               codeStream.emit(OP_PUSH_TYPED);
                break;
             default:
                codeStream.emit(OP_PUSH);

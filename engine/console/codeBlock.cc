@@ -1730,12 +1730,49 @@ void CodeBlock::dumpInstructions( U32 startIp, bool upToReturn, bool downcaseStr
             ++ ip;
             break;
          }
+         case OP_TYPED_TO_STR:
+         {
+            mVM->printf(0, "%i: OP_TYPED_TO_STR", ip - 1);
+            break;
+         }
+         case OP_TYPED_TO_FLT:
+         {
+            mVM->printf(0, "%i: OP_TYPED_TO_FLT", ip - 1);
+            break;
+         }
+         case OP_TYPED_TO_UINT:
+         {
+            mVM->printf(0, "%i: OP_TYPED_TO_UINT", ip - 1);
+            break;
+         }
+         case OP_TYPED_TO_NONE:
+         {
+            mVM->printf(0, "%i: OP_TYPED_TO_NONE", ip - 1);
+            break;
+         }
          case OP_TYPED_OP:
          {
             // Performs op on current two items on StringStack
             // i.e. stack-2 OP stack-1 / left OP right
             U32 opID = code[ip];
             mVM->printf(0, "%i: OP_TYPED_OP op=%i", ip - 1, opID);
+            ++ ip;
+            break;
+         }
+         case OP_TYPED_UNARY_OP:
+         {
+            // Performs op on item on StringStack
+            U32 opID = code[ip];
+            mVM->printf(0, "%i: OP_TYPED_UNARY_OP op=%i", ip - 1, opID);
+            ++ ip;
+            break;
+         }
+         case OP_TYPED_OP_REVERSE:
+         {
+            // Performs op on current two items on StringStack
+            // i.e. stack-2 OP stack-1 / left OP right
+            U32 opID = code[ip];
+            mVM->printf(0, "%i: OP_TYPED_OP_REVERSE op=%i", ip - 1, opID);
             ++ ip;
             break;
          }

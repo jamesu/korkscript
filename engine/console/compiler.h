@@ -178,15 +178,33 @@ namespace Compiler
 
       // Typed vars
       OP_PUSH_TYPED,        // basically the same as OP_PUSH but checks typed vars
+      
+      // var / field -> typed
       OP_LOADVAR_TYPED,     // same as OP_LOADVAR_STR except it checks typed vars
       OP_LOADVAR_TYPED_REF, // same as OP_LOADVAR_TYPED except it references the var
       OP_LOADFIELD_TYPED,   // loads object field into typed value
+      
+      // typed -> var
       OP_SAVEVAR_TYPED,      // save value on stack to variable
-      OP_SAVEFIELD_TYPED,   // save value on stack to object field
+      OP_SAVEFIELD_TYPED,    // save value on stack to object field
+
+      // native -> typed
       OP_STR_TO_TYPED,      // perform conversion from value on stack to type
       OP_FLT_TO_TYPED,      // perform conversion from value on float stack to type
       OP_UINT_TO_TYPED,     // perform conversion from value on uint stack to type
+
+      // typed -> native
+      OP_TYPED_TO_STR,      // reverse of those...
+      OP_TYPED_TO_FLT,      // 
+      OP_TYPED_TO_UINT,     // 
+      OP_TYPED_TO_NONE,     // 
+      
+      // ops
       OP_TYPED_OP,          // perform op on typed value (relative to OP_CMPEQ)
+      OP_TYPED_OP_REVERSE,  // reverse of OP_TYPED_OP
+      OP_TYPED_UNARY_OP,    // handles -%val and such
+
+      // extra useful
       OP_SETCURFIELD_NONE,  // needed for field unset
 
       // Tuple type assignments
@@ -194,7 +212,7 @@ namespace Compiler
       OP_SAVEVAR_MULTIPLE,         // i.e. %var = 1,2,3 (NOT ALLOWED YET)
       OP_SAVEVAR_MULTIPLE_TYPED,   // i.e. %var : type = 1,2,3
       OP_SAVEFIELD_MULTIPLE,       // i.e. obj.field = 1,2,3 OR field = 1,2,3; inside decl
-      
+
       OP_INVALID   // 90
    };
 
