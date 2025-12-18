@@ -666,6 +666,7 @@ U32 IntBinaryExprNode::compile(CodeStream &codeStream, U32 ip, TypeReq type)
       if (!doTypedOp)
       {
          codeStream.emit(operand);
+         nodeOpOutputType = TypeReqUInt; // result is now UInt
       }
       else
       {
@@ -674,11 +675,11 @@ U32 IntBinaryExprNode::compile(CodeStream &codeStream, U32 ip, TypeReq type)
          else
             codeStream.emit(OP_TYPED_OP);
 
-         codeStream.emit(operand);
+         codeStream.emit(operand); // result is also typed value on stack
       }
    }
    
-   if(type != nodeOpOutputType)
+   if(type != nodeOpOutputType) // this gets set as UInt
       codeStream.emit(conversionOp(nodeOpOutputType, type));
    return codeStream.tell();
 }
