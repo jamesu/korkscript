@@ -1787,24 +1787,9 @@ void CodeBlock::dumpInstructions( U32 startIp, bool upToReturn, bool downcaseStr
             mVM->printf(0, "%i: OP_LOADFIELD_VAR", ip - 1);
             break;
          }
-         case OP_SAVEVAR_FIELD:
+         case OP_SAVEFIELD_VAR:
          {
-            mVM->printf(0, "%i: OP_SAVEVAR_FIELD", ip - 1);
-            break;
-         }
-         case OP_UINT_TO_FIELD:
-         {
-            mVM->printf(0, "%i: OP_UINT_TO_FIELD", ip - 1);
-            break;
-         }
-         case OP_FLT_TO_FIELD:
-         {
-            mVM->printf(0, "%i: OP_FLT_TO_FIELD", ip - 1);
-            break;
-         }
-         case OP_STR_TO_FIELD:
-         {
-            mVM->printf(0, "%i: OP_STR_TO_FIELD", ip - 1);
+            mVM->printf(0, "%i: OP_SAVEFIELD_VAR", ip - 1);
             break;
          }
          case OP_SAVEVAR_MULTIPLE:

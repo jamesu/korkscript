@@ -111,7 +111,7 @@ static U32 conversionOp(TypeReq src, TypeReq dst)
       case TypeReqTypedString:
          return OP_STR_TO_TYPED;
       case TypeReqField:
-         return OP_STR_TO_FIELD;
+         return OP_SAVEFIELD_STR;
       default:
          break;
       }
@@ -131,7 +131,7 @@ static U32 conversionOp(TypeReq src, TypeReq dst)
       case TypeReqTypedString:
          return OP_FLT_TO_TYPED;
       case TypeReqField:
-         return OP_FLT_TO_FIELD;
+         return OP_SAVEFIELD_FLT;
       default:
          break;
       }
@@ -151,7 +151,7 @@ static U32 conversionOp(TypeReq src, TypeReq dst)
       case TypeReqTypedString:
          return OP_UINT_TO_TYPED;
       case TypeReqField:
-         return OP_UINT_TO_FIELD;
+         return OP_SAVEFIELD_UINT;
       default:
          break;
       }
@@ -171,7 +171,7 @@ static U32 conversionOp(TypeReq src, TypeReq dst)
       case TypeReqVar:
          return OP_LOADVAR_VAR; // i.e. copy this var we just set
       case TypeReqField:
-         return OP_SAVEVAR_FIELD;
+         return OP_SAVEFIELD_VAR;
       case TypeReqTypedString:
          return OP_SAVEVAR_TYPED;
       default:
@@ -1718,13 +1718,13 @@ U32 SlotAssignOpNode::compile(CodeStream &codeStream, U32 ip, TypeReq type)
    
    
    
-   codeStream.emit(conversionOp(TypeReqVar, subType));
+   codeStream.emit(conversionOp(TypeReqField, subType));
    if (subType == TypeReqTypedString)
    {
       codeStream.emit(OP_TYPED_OP);
    }
    codeStream.emit(operand);
-   codeStream.emit(conversionOp(subType, TypeReqVar)); // usually goes for FLT or UINT here
+   codeStream.emit(conversionOp(subType, TypeReqField)); // usually goes for FLT or UINT here
    
    
    codeStream.emit((subType == TypeReqFloat) ? OP_LOADFIELD_FLT : OP_LOADFIELD_UINT);

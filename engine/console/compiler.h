@@ -209,10 +209,7 @@ namespace Compiler
 
       // Extra missing field related ops
       OP_LOADFIELD_VAR,
-      OP_SAVEVAR_FIELD,
-      OP_UINT_TO_FIELD,
-      OP_FLT_TO_FIELD,
-      OP_STR_TO_FIELD,
+      OP_SAVEFIELD_VAR,
 
       // Tuple type assignments
       // (these basically act like function calls)
