@@ -50,7 +50,8 @@ enum TypeReq
 
    // The following are used in special cases such as assignment
    TypeReqVar,      // load = set copyvar; save = from copyvar
-   TypeReqField     // load = from field; save = to field
+   TypeReqField,    // load = from field; save = to field
+   TypeReqTuple     // not used in bytecode; acts as function call params, special case.
 };
 
 struct BaseAssignExprNode;
