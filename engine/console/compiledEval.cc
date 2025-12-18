@@ -2243,7 +2243,7 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
             frame.curField = StringTable->EmptyString;
             frame.curFieldArray[0] = 0;
             break;
-            
+         
          case OP_SAVEFIELD_MULTIPLE:
          {
             // This is like OP_CALLFUNC

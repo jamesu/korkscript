@@ -46,8 +46,10 @@ enum TypeReq
    TypeReqUInt,     // load = to uint stack; save = to uint stack
    TypeReqFloat,    // load = to float stack; save = from float stack
    TypeReqString,   // load = to stringstack; save = from stringstack
+   TypeReqTypedString, // load = to stringstack; save = to stringstack (both typed)
+
+   // The following are used in special cases such as assignment
    TypeReqVar,      // load = set copyvar; save = from copyvar
-   //TypeReqTypedVar, // load = set copyvar (typed); save = from copyvar (typed)
    TypeReqField     // load = from field; save = to field
 };
 
