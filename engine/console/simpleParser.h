@@ -781,7 +781,6 @@ private:
       {
          if (matchChar('['))
          {
-            mTokenPos++;
             objectNameExpr = parseExprNode();
             expectChar(']', "need closing ] on object name");
             isInternal = true;
