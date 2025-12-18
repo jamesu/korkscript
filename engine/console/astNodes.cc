@@ -1726,10 +1726,6 @@ U32 SlotAssignOpNode::compile(CodeStream &codeStream, U32 ip, TypeReq type)
    codeStream.emit(operand);
    codeStream.emit(conversionOp(subType, TypeReqField)); // usually goes for FLT or UINT here
    
-   
-   codeStream.emit((subType == TypeReqFloat) ? OP_LOADFIELD_FLT : OP_LOADFIELD_UINT);
-   codeStream.emit(operand);
-   codeStream.emit((subType == TypeReqFloat) ? OP_SAVEFIELD_FLT : OP_SAVEFIELD_UINT);
    if(subType != type)
       codeStream.emit(conversionOp(subType, type));
    return codeStream.tell();
