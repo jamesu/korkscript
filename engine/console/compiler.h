@@ -207,6 +207,13 @@ namespace Compiler
       // extra useful
       OP_SETCURFIELD_NONE,  // needed for field unset
 
+      // Extra missing field related ops
+      OP_LOADFIELD_VAR,
+      OP_SAVEVAR_FIELD,
+      OP_UINT_TO_FIELD,
+      OP_FLT_TO_FIELD,
+      OP_STR_TO_FIELD,
+
       // Tuple type assignments
       // (these basically act like function calls)
       OP_SAVEVAR_MULTIPLE,         // i.e. %var = 1,2,3 (NOT ALLOWED YET)
