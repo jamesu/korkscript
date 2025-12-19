@@ -95,6 +95,7 @@ const char*(*PrepDataFn)(void* userPtr,
                                   char* buffer,
                                   U32 bufferLen);
 
+KorkApi::ConsoleValue (*PerformOp)(Vm* vm, U32 op, KorkApi::ConsoleValue lhs, KorkApi::ConsoleValue rhs); // result goes on STR
 };
 
 struct TypeInfo

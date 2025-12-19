@@ -37,21 +37,7 @@ void StringStack::getArgcArgv(StringTableEntry name, U32 *argc, KorkApi::Console
    
    for(U32 i = 0; i < argCount; i++)
    {
-      U16 typeId = mStartTypes[startStack + i];
-      UINTPTR startData = mStartOffsets[startStack + i];
-      if (typeId == KorkApi::ConsoleValue::TypeInternalUnsigned ||
-          typeId == KorkApi::ConsoleValue::TypeInternalNumber)
-      {
-         // Copy value straight from buffer
-         startData += (UINTPTR)mBuffer;
-         mArgV[i+1] = KorkApi::ConsoleValue::makeRaw(((U64*)startData)[0], typeId);
-      }
-      else
-      {
-         mArgV[i+1] = KorkApi::ConsoleValue::makeTyped((void*)startData,
-                                                       mStartTypes[startStack + i],
-                                                       (KorkApi::ConsoleValue::Zone)(KorkApi::ConsoleValue::ZoneFunc + mFuncId));
-      }
+      mArgV[i+1] = getStackConsoleValue(startStack + i);
    }
    argCount++;
    
@@ -100,4 +86,38 @@ void StringStack::convertArgsReverse(KorkApi::VmInternal* vm, U32 numArgs, const
    {
       outArgs[i] = KorkApi::ConsoleValue::makeString(args[i]);
    }
+}
+
+
+void StringStack::performOp(U32 op, KorkApi::Vm* vm, KorkApi::TypeInfo* typeInfo)
+{
+   KorkApi::ConsoleValue rhs = getStackConsoleValue(mStartStackSize-1);
+   KorkApi::ConsoleValue lhs = getConsoleValue();
+   
+   KorkApi::TypeInfo& info = typeInfo[lhs.typeId];
+   
+   rewind(); // only rhs is on other side
+   
+   info.iFuncs.PerformOp(vm, op, lhs, rhs);
+}
+
+void StringStack::performOpReverse(U32 op, KorkApi::Vm* vm, KorkApi::TypeInfo* typeInfo)
+{
+   KorkApi::ConsoleValue lhs = getStackConsoleValue(mStartStackSize-1);
+   KorkApi::ConsoleValue rhs = getConsoleValue();
+   
+   KorkApi::TypeInfo& info = typeInfo[lhs.typeId];
+   
+   rewind(); // only lhs is on other side
+   
+   KorkApi::ConsoleValue result = info.iFuncs.PerformOp(vm, op, lhs, rhs);
+   setConsoleValue(result);
+}
+
+void StringStack::performUnaryOp(U32 op, KorkApi::Vm* vm, KorkApi::TypeInfo* typeInfo)
+{
+   KorkApi::ConsoleValue lhs = getConsoleValue();
+   KorkApi::TypeInfo& info = typeInfo[lhs.typeId];
+   KorkApi::ConsoleValue result = info.iFuncs.PerformOp(vm, op, lhs, lhs);
+   setConsoleValue(result);
 }

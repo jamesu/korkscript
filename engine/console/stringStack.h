@@ -65,8 +65,8 @@ struct StringStack
    KorkApi::ConsoleValue mArgV[MaxArgs];
    U32 mFrameOffsets[MaxFrameDepth]; // this is FRAME offset
    U32 mStartOffsets[MaxStackDepth]; // this is FUNCTION PARAM offset
-   U8 mStartTypes[MaxStackDepth]; // this is annotated type
-   U8 mType; // current type
+   U16 mStartTypes[MaxStackDepth]; // this is annotated type
+   U16 mType; // current type
    
    U16 mFuncId;
    U32 mNumFrames;
@@ -189,20 +189,23 @@ struct StringStack
       }
       mLen = dStrlen(s);
       mType = KorkApi::ConsoleValue::TypeInternalString;
-
-      validateBufferSize(mStart + mLen + 2);
-      dStrcpy(mBuffer + mStart, s);
+      
+      if ((mBuffer + mStart) != s)
+      {
+         validateBufferSize(mStart + mLen + 2);
+         dStrcpy(mBuffer + mStart, s);
+      }
    }
 
    /// Set a string value on the top of the stack.
    void setConsoleValue(KorkApi::ConsoleValue v)
    {
-      mType = v.typeId;
       void* valueBase = NULL;
       
-      if (v.typeId == KorkApi::ConsoleValue::TypeInternalUnsigned ||
-          v.typeId == KorkApi::ConsoleValue::TypeInternalNumber)
+      if (v.typeId != KorkApi::ConsoleValue::TypeInternalString && 
+          v.typeId < KorkApi::ConsoleValue::TypeBeginCustom)
       {
+         mType = v.typeId;
          mLen = 8;
          validateBufferSize(mStart + mLen);
          *((U64*)&mBuffer[mStart]) = v.cvalue;
@@ -211,14 +214,19 @@ struct StringStack
       else
       {
          valueBase = v.evaluatePtr(*mAllocBase);
-         if (v.typeId == KorkApi::ConsoleValue::TypeInternalString)
+         if (valueBase != (mBuffer + mStart)) // account for setting same head
          {
-            mLen = dStrlen((const char*)valueBase);
+            if (v.typeId == KorkApi::ConsoleValue::TypeInternalString)
+            {
+               setStringValue((const char*)valueBase);
+            }
+            else
+            {
+               mLen = (U32)((*mTypes)[v.typeId].size);
+               memcpy(mBuffer + mStart, valueBase, mLen);
+            }
          }
-         else
-         {
-            mLen = (U32)((*mTypes)[v.typeId].size);
-         }
+         mType = v.typeId;
       }
    }
 
@@ -266,7 +274,8 @@ struct StringStack
 
    inline KorkApi::ConsoleValue getConsoleValue()
    {
-      if (mType == KorkApi::ConsoleValue::TypeInternalString || mType >= KorkApi::ConsoleValue::TypeBeginCustom)
+      if (mType == KorkApi::ConsoleValue::TypeInternalString || 
+         mType >= KorkApi::ConsoleValue::TypeBeginCustom)
       {
          // Strings and types are put on stack
          return KorkApi::ConsoleValue::makeRaw(&mBuffer[mStart] - &mBuffer[0], mType, (KorkApi::ConsoleValue::Zone)(KorkApi::ConsoleValue::ZoneFunc + mFuncId));
@@ -275,6 +284,26 @@ struct StringStack
       {
          // Raw values are just placed directly on the stack
          return KorkApi::ConsoleValue::makeRaw(*((U64*)&mBuffer[mStart]), mType, (KorkApi::ConsoleValue::Zone)(KorkApi::ConsoleValue::ZoneFunc + mFuncId));
+      }
+   }
+   
+   inline KorkApi::ConsoleValue getStackConsoleValue(U32 offset)
+   {
+      U16 typeId = mStartTypes[offset];
+      UINTPTR startData = mStartOffsets[offset];
+   
+      if (typeId == KorkApi::ConsoleValue::TypeInternalUnsigned ||
+          typeId == KorkApi::ConsoleValue::TypeInternalNumber)
+      {
+         // Copy value straight from buffer
+         startData += (UINTPTR)mBuffer;
+         return KorkApi::ConsoleValue::makeRaw(((U64*)startData)[0], typeId);
+      }
+      else
+      {
+         return KorkApi::ConsoleValue::makeTyped((void*)startData,
+                                                       mStartTypes[offset],
+                                                       (KorkApi::ConsoleValue::Zone)(KorkApi::ConsoleValue::ZoneFunc + mFuncId));
       }
    }
 
@@ -325,9 +354,14 @@ struct StringStack
    /// Pop the start stack.
    void rewind()
    {
+      if (mType != KorkApi::ConsoleValue::TypeInternalString) // termimate regardless if incorrect type
+      {
+         mBuffer[mStart] = 0;
+      }
+
       mStart = mStartOffsets[--mStartStackSize];
-      mLen = dStrlen(mBuffer + mStart);
       mType = mStartTypes[mStartStackSize];
+      mLen = getHeadLength();
    }
 
    // Terminate the current string, and pop the start stack.
@@ -335,8 +369,24 @@ struct StringStack
    {
       mBuffer[mStart] = 0;
       mStart = mStartOffsets[--mStartStackSize];
-      mLen   = dStrlen(mBuffer + mStart);
       mType = mStartTypes[mStartStackSize];
+      mLen = getHeadLength();
+   }
+
+   U32 getHeadLength() const
+   {
+      if (mType == KorkApi::ConsoleValue::TypeInternalString)
+      {
+         return dStrlen(mBuffer + mStart);
+      }
+      else if (mType < KorkApi::ConsoleValue::TypeBeginCustom)
+      {
+         return 8;
+      }
+      else
+      {
+         return (U32)((*mTypes)[mType].size);
+      }
    }
 
    /// Compare 1st and 2nd items on stack, consuming them in the process,
@@ -364,6 +414,7 @@ struct StringStack
    {
       AssertFatal((mNumFrames < MaxFrameDepth-1) && (mStartStackSize < MaxStackDepth-1), "Stack overflow!");
       mFrameOffsets[mNumFrames++] = mStartStackSize;
+      mStartTypes[mStartStackSize] = mType;
       mStartOffsets[mStartStackSize++] = mStart;
       mStart += ReturnBufferSpace;
       validateBufferSize(mStart+1);
@@ -378,13 +429,17 @@ struct StringStack
       mStartStackSize = mFrameOffsets[--mNumFrames];
       mStart = mStartOffsets[mStartStackSize];
       mLen = 0;
-      mType = KorkApi::ConsoleValue::TypeInternalString; // reset
+      mType = mStartTypes[mStartStackSize]; // reset
       //Con::printf("StringStack::popFrame");
    }
 
    /// Get the arguments for a function call from the stack.
    void getArgcArgv(StringTableEntry name, U32 *argc, KorkApi::ConsoleValue **in_argv, bool popStackFrame = false);
    void convertArgv(KorkApi::VmInternal* vm, U32 numArgs, const char ***in_argv);
+   
+   void performOp(U32 op, KorkApi::Vm* vm, KorkApi::TypeInfo* typeInfo);
+   void performOpReverse(U32 op, KorkApi::Vm* vm, KorkApi::TypeInfo* typeInfo);
+   void performUnaryOp(U32 op, KorkApi::Vm* vm, KorkApi::TypeInfo* typeInfo);
 
 
    static void convertArgs(KorkApi::VmInternal* vm, U32 numArgs, KorkApi::ConsoleValue* args, const char **outArgs);

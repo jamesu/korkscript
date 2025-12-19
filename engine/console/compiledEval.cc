@@ -2255,8 +2255,94 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
             frame.pushStringStackCount--;
          }
             break;
+            
+         case OP_PUSH_TYPED:
+            evalState.mSTR.push();
+            break;
+            
+         case OP_TYPED_TO_STR:
+            evalState.mSTR.setStringValue(vmInternal->valueAsString(evalState.mSTR.getConsoleValue()));
+            break;
+            
+         case OP_TYPED_TO_FLT:
+            evalState.intStack[++frame._UINT] = vmInternal->valueAsFloat(evalState.mSTR.getConsoleValue());
+            break;
+            
+         case OP_TYPED_TO_UINT:
+            evalState.intStack[++frame._UINT] = vmInternal->valueAsInt(evalState.mSTR.getConsoleValue());
+            break;
+         
+         case OP_TYPED_TO_NONE:
+            // This exists simply to deal with certain typecast situations.
+            break;
+         
+         case OP_TYPED_OP:
+            evalState.mSTR.performOp(code[ip++], vmPublic, vmInternal->mTypes.address());
+            break;
+            
+         case OP_TYPED_OP_REVERSE:
+            evalState.mSTR.performOpReverse(code[ip++], vmPublic, vmInternal->mTypes.address());
+            break;
+            
+         case OP_TYPED_UNARY_OP:
+            evalState.mSTR.performUnaryOp(code[ip++], vmPublic, vmInternal->mTypes.address());
+            break;
+            
+         case OP_LOADFIELD_VAR:
+            // TODO
+            break;
+         case OP_SAVEFIELD_VAR:
+            // TODO
+            break;
+         case OP_LOADVAR_TYPED:
+         {
+            // TODO
+            U32 typeID = code[ip++];
+            break;
+         }
+         case OP_LOADVAR_TYPED_REF:
+         {
+            // TODO
+            U32 typeID = code[ip++];
+            break;
+         }
+         case OP_LOADFIELD_TYPED:
+         {
+            // TODO
+            U32 typeID = code[ip++];
+            break;
+         }
+         case OP_SAVEVAR_TYPED:
+         {
+            // TODO
+            U32 typeID = code[ip++];
+            break;
+         }
+         case OP_SAVEFIELD_TYPED:
+         {
+            // TODO
+            U32 typeID = code[ip++];
+            break;
+         }
+         case OP_STR_TO_TYPED:
+         {
+            // TODO
+            U32 typeID = code[ip++];
+            break;
+         }
+         case OP_FLT_TO_TYPED:
+         {
+            // TODO
+            U32 typeID = code[ip++];
+            break;
+         }
+         case OP_UINT_TO_TYPED:
+         {
+            // TODO
+            U32 typeID = code[ip++];
+            break;
+         }
 
-         case OP_INVALID:
             
          default:
             // error!

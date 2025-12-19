@@ -127,6 +127,13 @@ TypeId Vm::registerType(TypeInfo& info)
       };
    }
    
+   if (chkFunc.iFuncs.PerformOp == NULL)
+   {
+      chkFunc.iFuncs.PerformOp = [](Vm* vm, U32 op, ConsoleValue lhs, ConsoleValue rhs){
+         return lhs;
+      };
+   }
+   
    return mInternal->mTypes.size()-1;
 }
 

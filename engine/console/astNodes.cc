@@ -96,6 +96,7 @@ void FunctionDeclStmtNode::setPackage(StringTableEntry packageName)
 
 static U32 conversionOp(TypeReq src, TypeReq dst)
 {
+   // TODO: we need to have an extra op here for typed
    if(src == TypeReqString)
    {
       switch(dst)
@@ -530,6 +531,7 @@ U32 FloatBinaryExprNode::compile(CodeStream &codeStream, U32 ip, TypeReq type)
    }
    
    ip = right->compile(codeStream, ip, nodeOpOutputType);
+   if (nodeOpOutputType == TypeReqTypedString) codeStream.emit(OP_PUSH_TYPED);
    ip = left->compile(codeStream, ip, nodeOpOutputType);
    
    U32 operand = OP_INVALID;
@@ -661,6 +663,7 @@ U32 IntBinaryExprNode::compile(CodeStream &codeStream, U32 ip, TypeReq type)
       nodeOpOutputType = doTypedOp ? TypeReqTypedString : subType;
       
       ip = right->compile(codeStream, ip, nodeOpOutputType);
+      if (nodeOpOutputType == TypeReqTypedString) codeStream.emit(OP_PUSH_TYPED);
       ip = left->compile(codeStream, ip, nodeOpOutputType);
       
       if (!doTypedOp)
@@ -1292,6 +1295,8 @@ U32 AssignOpExprNode::compile(CodeStream &codeStream, U32 ip, TypeReq type)
    }
    
    ip = rhsExpr->compile(codeStream, ip, subType);
+   if (subType == TypeReqTypedString) codeStream.emit(OP_PUSH_TYPED);
+   
    if(!arrayIndex)
    {
       codeStream.emit(OP_SETCURVAR_CREATE);
@@ -1700,6 +1705,8 @@ U32 SlotAssignOpNode::compile(CodeStream &codeStream, U32 ip, TypeReq type)
    }
 
    ip = rhsExpr->compile(codeStream, ip, subType);
+   if (subType == TypeReqTypedString) codeStream.emit(OP_PUSH_TYPED);
+   
    if(arrayExpr)
    {
       ip = arrayExpr->compile(codeStream, ip, TypeReqString);
@@ -1715,8 +1722,6 @@ U32 SlotAssignOpNode::compile(CodeStream &codeStream, U32 ip, TypeReq type)
       codeStream.emit(OP_TERMINATE_REWIND_STR);
       codeStream.emit(OP_SETCURFIELD_ARRAY);
    }
-   
-   
    
    codeStream.emit(conversionOp(TypeReqField, subType));
    if (subType == TypeReqTypedString)
