@@ -187,8 +187,8 @@ class AbstractClassRep
    friend class ConsoleObject;
 
 public:
-   using SetValue = KorkApi::SetValueFn;
-   using CopyValue = KorkApi::CopyValueFn;
+   using SetValue = KorkApi::SetStoredFn;
+   using CastValue = KorkApi::CastValueFn;
    using WriteDataNotify = KorkApi::WriteDataNotifyFn;
    
    static void registerWithVM(KorkApi::Vm* vm);
@@ -470,7 +470,6 @@ public:
    virtual AbstractClassRep* getClassRep() const;
 
    /// Set the value of a field.
-   bool setField(const char *fieldName, const char *value);
    virtual ~ConsoleObject();
 
 public:
@@ -586,7 +585,7 @@ protected:
       const U32     in_fieldType,
       const dsize_t in_fieldOffset,
       AbstractClassRep::SetValue in_setDataFn,
-      AbstractClassRep::CopyValue in_getDataFn = NULL,
+      AbstractClassRep::CastValue in_getDataFn = NULL,
       const U32     in_elementCount = 1,
       EnumTable *   in_table        = NULL,
       const char*   in_pFieldDocs   = NULL);
@@ -606,7 +605,7 @@ protected:
       const U32     in_fieldType,
       const dsize_t in_fieldOffset,
       AbstractClassRep::SetValue in_setDataFn,
-      AbstractClassRep::CopyValue in_getDataFn = NULL,
+      AbstractClassRep::CastValue in_getDataFn = NULL,
       AbstractClassRep::WriteDataNotify in_writeDataFn = &defaultProtectedWriteFn,
       const U32     in_elementCount = 1,
       EnumTable *   in_table        = NULL,
@@ -624,7 +623,7 @@ protected:
       const U32     in_fieldType,
       const dsize_t in_fieldOffset,
       AbstractClassRep::SetValue in_setDataFn,
-      AbstractClassRep::CopyValue in_getDataFn = NULL,
+      AbstractClassRep::CastValue in_getDataFn = NULL,
       const char*   in_pFieldDocs = NULL);
 
    /// Register a simple protected field.
@@ -640,7 +639,7 @@ protected:
       const U32     in_fieldType,
       const dsize_t in_fieldOffset,
       AbstractClassRep::SetValue in_setDataFn,
-      AbstractClassRep::CopyValue in_getDataFn = NULL,
+      AbstractClassRep::CastValue in_getDataFn = NULL,
       AbstractClassRep::WriteDataNotify in_writeDataFn = &defaultProtectedWriteFn,
       const char*   in_pFieldDocs = NULL);
 
@@ -744,34 +743,6 @@ inline const AbstractClassRep::Field * ConsoleObject::findField(StringTableEntry
    AssertFatal(getClassRep() != NULL,
       avar("Cannot get field '%s' from non-declared dynamic class.", name));
    return getClassRep()->findField(name);
-}
-
-//-----------------------------------------------------------------------------
-
-inline bool ConsoleObject::setField(const char *fieldName, const char *value)
-{
-   //sanity check
-   if ((! fieldName) || (! fieldName[0]) || (! value))
-      return false;
-
-   if (! getClassRep())
-      return false;
-
-   const AbstractClassRep::Field *myField = getClassRep()->findField(StringTable->insert(fieldName));
-
-   if (! myField)
-      return false;
-
-   Con::setData(
-      myField->type,
-      (void *) (((const char *)(this)) + myField->offset),
-      0,
-      1,
-      &value,
-      myField->table,
-      myField->flag);
-
-   return true;
 }
 
 //-----------------------------------------------------------------------------

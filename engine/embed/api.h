@@ -9,6 +9,7 @@ class TypeValidator; // TODO: change to interface
 class Namespace;
 struct EnumTable;
 class CodeBlock;
+struct ConsoleVarRef;
 
 namespace Compiler
 {
@@ -55,35 +56,57 @@ using VMNamespace = Namespace;
 
 typedef S32 TypeId;
 
-typedef void(*SetValueFn)(void* userPtr,
+
+struct BoxedTypeData
+{
+   U32 size;
+   KorkApi::ConsoleValue* storageRegister;   // Register for storage (not valid for fields)
+   KorkApi::ConsoleValue storageAddress;     // untyped real storage address (points to heap/stack storage allocated for this)
+};
+
+struct TypeStorageInterface
+{
+   // Callback to ensure underlying storage is at least newSize long
+   void (*ResizeStorage)(TypeStorageInterface* state, U32 newSize);
+   // Callback to set actual size of used storage (mainly for string stack)
+   void (*FinalizeStorage)(TypeStorageInterface* state, U32 actualSize);
+   
+   KorkApi::VmInternal* vmInternal;
+   BoxedTypeData data;
+   void* userPtr1; // user code
+   void* userPtr2; // user code
+   bool isField;
+};
+
+// Set native object type
+typedef bool(*SetStoredFn)(void* userPtr,
                   Vm* vm,
-                          void* dptr,
+                          TypeStorageInterface* storage,
                           S32 argc,
                           ConsoleValue* argv,
                           const EnumTable* tbl,
                           BitSet32 flag,
                           U32 typeId);
 
-// sptr -> [return]
-// destVal = srcVal
-typedef ConsoleValue(*CopyValueFn)(void* userPtr,
-                  Vm* vm,
-                         void* sptr,
-                         const EnumTable* tbl,
-                         BitSet32 flag,
-                         U32 requestedType,
-                         U32 requestedZone);
+typedef bool(*CastValueFn)(void* userPtr,
+                                   Vm* vm,
+                                   TypeStorageInterface* inputStorage,
+                                   TypeStorageInterface* outputStorage,
+                                   const EnumTable* tbl,
+                                   BitSet32 flag,
+                                   U32 requestedType); // requested cast type
+
 
 struct TypeInterface
 {
 // argv[] -> dptr
 // foo = bar
 // foo = b1, b2, b3
-SetValueFn SetValue;
+SetStoredFn SetValueFn;
 
 // sptr -> [return]
 // destVal = srcVal
-CopyValueFn CopyValue;
+CastValueFn CastValueFn;
 
 // TypeName
 const char*(*GetTypeClassNameFn)(void* userPtr);
@@ -103,7 +126,9 @@ struct TypeInfo
     StringTableEntry name;
     StringTableEntry inspectorFieldType;
     void* userPtr;
-    dsize_t size;
+    dsize_t fieldsize;
+    dsize_t valueSize;
+    bool valueIsString;
     TypeInterface iFuncs;
 };
 
@@ -120,8 +145,8 @@ struct FieldInfo {
    EnumTable *     table;
    const char*     pFieldDocs;
    TypeValidator*  validator;
-   SetValueFn        ovrSetValue;
-   CopyValueFn       ovrCopyValue;
+   SetStoredFn       ovrSetValue;
+   CastValueFn       ovrCastValue;
    WriteDataNotifyFn writeDataFn;
    S32             elementCount;
    U32             offset;
@@ -404,13 +429,13 @@ public:
    // Heap values (like strings)
    ConsoleValue getStringFuncBuffer(U32 size);
    ConsoleValue getStringReturnBuffer(U32 size);
-   ConsoleValue getTypeFunc(TypeId typeId);
-   ConsoleValue getTypeReturn(TypeId typeId);
+   ConsoleValue getTypeFunc(TypeId typeId, U32 heapSize=0);
+   ConsoleValue getTypeReturn(TypeId typeId, U32 heapSize=0);
    
    
    // Gets a string in a specific zone
    ConsoleValue getStringInZone(U16 zone, U32 size);
-   ConsoleValue getTypeInZone(U16 zone, TypeId typeId);
+   ConsoleValue getTypeInZone(U16 zone, TypeId typeId, U32 heapSize=0);
 
    void pushValueFrame();
    void popValueFrame();

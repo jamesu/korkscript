@@ -32,6 +32,7 @@ class CodeStream;
 namespace Compiler
 {
 struct Resources;
+struct VarTypeTableEntry;
 }
 
 /// Enable this #define if you are seeing the message "precompile size mismatch" in the console.
@@ -106,6 +107,8 @@ struct StmtNode
    virtual BaseAssignExprNode* asAssign() { return NULL; }
 
    inline BaseAssignExprNode* nextAssign() { StmtNode* rh = rhsAssign(); return rh ? rh->asAssign() : NULL; }
+   
+   void emitStackConversion(CodeStream& codeStream, TypeReq inputType, TypeReq outputType);
 };
 
 /// Helper macro
@@ -313,6 +316,7 @@ struct VarNode : ExprNode
 {
    StringTableEntry varName;
    StringTableEntry varType;
+   Compiler::VarTypeTableEntry* varInfo;
    ExprNode *arrayIndex;
 
    static VarNode *alloc( Compiler::Resources* res, S32 lineNumber, StringTableEntry varName, ExprNode *arrayIndex, StringTableEntry assignTypeName = NULL );
@@ -394,6 +398,7 @@ struct AssignExprNode : BaseAssignExprNode
 {
    StringTableEntry varName;
    StringTableEntry assignTypeName;
+   Compiler::VarTypeTableEntry* varInfo;
 
    ExprNode *arrayIndex;
    TypeReq subType;
@@ -419,6 +424,7 @@ struct AssignOpExprNode : BaseAssignExprNode
 {
    StringTableEntry varName;
    ExprNode *arrayIndex;
+   Compiler::VarTypeTableEntry* varInfo;
    SimpleLexer::TokenType op;
    U32 operand;
    TypeReq subType;

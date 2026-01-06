@@ -93,17 +93,6 @@ struct LocalRefTrack
    }
 };
 
-struct ConsoleVarRef
-{
-   Dictionary* dictionary;
-   Dictionary::Entry *var;
-   
-   ConsoleVarRef() : dictionary(NULL), var(NULL)
-   {
-      
-   }
-};
-
 struct ConsoleFrame
 {
    enum
@@ -148,6 +137,9 @@ struct ConsoleFrame
    U16 _OBJ;
    U16 _TRY;
    U16 _STARTOBJ;
+
+   // Dynamic type id (codeblock-local)
+   U16 dynTypeId;
 
    // Last call type for restore
    U32 lastCallType;
@@ -200,6 +192,7 @@ public:
       , codeBlock( NULL )
       , thisObject( NULL )
       , ip( 0 )
+      , dynTypeId( 0 )
       , _FLT(0)
       , _UINT(0)
       , _ITER(0)
@@ -240,6 +233,7 @@ public:
    inline void setNumberVariable(F64 val);
    inline void setStringVariable(const char *val);
    inline void setConsoleValue(KorkApi::ConsoleValue value);
+   inline void setConsoleValues(U32 argc, KorkApi::ConsoleValue* values);
    inline void setCopyVariable();
 };
 
@@ -384,6 +378,12 @@ inline void ConsoleFrame::setConsoleValue(KorkApi::ConsoleValue value)
 {
    AssertFatal(currentVar.var != NULL, "Invalid evaluator state - trying to set null variable!");
    currentVar.dictionary->setEntryValue(currentVar.var, value);
+}
+
+inline void ConsoleFrame::setConsoleValues(U32 argc, KorkApi::ConsoleValue* values)
+{
+   AssertFatal(currentVar.var != NULL, "Invalid evaluator state - trying to set null variable!");
+   currentVar.dictionary->setEntryValues(currentVar.var, argc, values);
 }
 
 inline void ConsoleFrame::setCopyVariable()
@@ -2215,20 +2215,12 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
          }
          break;
 
-         case OP_SAVEVAR_MULTIPLE_TYPED:
-         {
-            lastTypeId = code[ip++]; // this is type to assign
-            // TODO lastTypeId = frame.code->resolveType(lastTypeId);
-            // frame.setStringType(lastTypeId);
-         }
-
          case OP_SAVEVAR_MULTIPLE:
          {
             // This is like OP_CALLFUNC
             evalState.mSTR.getArgcArgv(NULL, &callArgc, &callArgv);
 
-            // TODO: pass through tuple to type based on last CV type
-            frame.setStringVariable(vmInternal->valueAsString(callArgv[1]));
+            frame.setConsoleValues(callArgc-1, callArgv+1);
             
             evalState.mSTR.popFrame();
             frame.pushStringStackCount--;
@@ -2289,60 +2281,128 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
             break;
             
          case OP_LOADFIELD_VAR:
-            // TODO
+            // field -> var
+            tmpVal = vmInternal->getObjectField(frame.curObject, frame.curField, frame.curFieldArray, KorkApi::ConsoleValue::TypeInternalUnsigned, KorkApi::ConsoleValue::ZoneFunc);
+            frame.setConsoleValue(tmpVal);
             break;
          case OP_SAVEFIELD_VAR:
-            // TODO
+            // var -> field
+            tmpVal = frame.getConsoleVariable();
+            vmInternal->setObjectField(frame.curObject, frame.curField, frame.curFieldArray, tmpVal);
             break;
          case OP_LOADVAR_TYPED:
-         {
-            // TODO
-            U32 typeID = code[ip++];
+            tmpVal = frame.getConsoleVariable();
+            evalState.mSTR.setConsoleValue(tmpVal);
             break;
-         }
          case OP_LOADVAR_TYPED_REF:
-         {
-            // TODO
-            U32 typeID = code[ip++];
+            // TODO: copy ref?
+            tmpVal = frame.getConsoleVariable();
+            evalState.mSTR.setConsoleValue(tmpVal);
             break;
-         }
          case OP_LOADFIELD_TYPED:
-         {
-            // TODO
-            U32 typeID = code[ip++];
+            // field -> typed
+            tmpVal = vmInternal->getObjectField(frame.curObject, frame.curField, frame.curFieldArray, KorkApi::ConsoleValue::TypeInternalUnsigned, KorkApi::ConsoleValue::ZoneFunc);
+            evalState.mSTR.setConsoleValue(tmpVal);
             break;
-         }
          case OP_SAVEVAR_TYPED:
-         {
-            // TODO
-            U32 typeID = code[ip++];
+            // typed -> var
+            // (use OP_SETCURVAR_TYPE to set the type here)
+            frame.setConsoleValue(evalState.mSTR.getConsoleValue());
             break;
-         }
          case OP_SAVEFIELD_TYPED:
-         {
-            // TODO
-            U32 typeID = code[ip++];
+            // typed -> field
+            // (use OP_SETCURFIELD_TYPE to set the field type if dynamic)
+            vmInternal->setObjectField(frame.curObject, frame.curField, frame.curFieldArray, evalState.mSTR.getConsoleValue());
             break;
-         }
          case OP_STR_TO_TYPED:
-         {
-            // TODO
-            U32 typeID = code[ip++];
+            if (frame.dynTypeId != 0)
+            {
+               KorkApi::ConsoleValue cv = evalState.mSTR.getConsoleValue();
+               // NOTE: types should set head of stack to value if data pointer is NULL in this case
+               vmInternal->mTypes[frame.dynTypeId].iFuncs.SetValueFn(vmInternal->mTypes[frame.dynTypeId].userPtr,
+                                                                   vmPublic,
+                                                                   NULL,
+                                                                   1,
+                                                                   &cv,
+                                                                   NULL,
+                                                                   0,
+                                                                   frame.dynTypeId);
+            }
+            else
+            {
+               evalState.mSTR.setStringValue("");
+            }
             break;
-         }
          case OP_FLT_TO_TYPED:
-         {
-            // TODO
-            U32 typeID = code[ip++];
+            if (frame.dynTypeId != 0)
+            {
+               KorkApi::ConsoleValue cv = KorkApi::ConsoleValue::makeNumber(evalState.floatStack[frame._FLT--]);
+               
+               // NOTE: types should set head of stack to value if data pointer is NULL in this case
+               vmInternal->mTypes[frame.dynTypeId].iFuncs.SetValueFn(vmInternal->mTypes[frame.dynTypeId].userPtr,
+                                                                   vmPublic,
+                                                                   NULL,
+                                                                   1,
+                                                                   &cv,
+                                                                   NULL,
+                                                                   0,
+                                                                   frame.dynTypeId);
+            }
+            else
+            {
+               evalState.mSTR.setStringValue("");
+            }
             break;
-         }
          case OP_UINT_TO_TYPED:
+            if (frame.dynTypeId != 0)
+            {
+               KorkApi::ConsoleValue cv = KorkApi::ConsoleValue::makeNumber(evalState.intStack[frame._UINT--]);
+               
+               // NOTE: types should set head of stack to value if data pointer is NULL in this case
+               vmInternal->mTypes[frame.dynTypeId].iFuncs.SetValueFn(vmInternal->mTypes[frame.dynTypeId].userPtr,
+                                                                   vmPublic,
+                                                                   NULL,
+                                                                   1,
+                                                                   &cv,
+                                                                   NULL,
+                                                                   0,
+                                                                   frame.dynTypeId);
+            }
+            else
+            {
+               evalState.mSTR.setStringValue("");
+            }
+            break;
+            
+         case OP_SET_DYNAMIC_TYPE_FROM_VAR:
          {
-            // TODO
-            U32 typeID = code[ip++];
+            frame.dynTypeId = frame.currentVar.var ? frame.currentVar.dictionary->getEntryValue(frame.currentVar.var).typeId : 0;
             break;
          }
 
+         case OP_SET_DYNAMIC_TYPE_FROM_FIELD:
+         {
+            frame.dynTypeId = frame.curObject ? vmInternal->getObjectFieldType(frame.curObject, frame.curField, frame.curFieldArray) : 0;
+            break;
+         }
+            
+         case OP_SET_DYNAMIC_TYPE_FROM_ID:
+         {
+            frame.dynTypeId = frame.codeBlock->getRealTypeID(code[ip++]);
+            break;
+         }
+            
+         case OP_SETCURVAR_TYPE:
+         {
+            U32 typeId = code[ip++];
+            
+            if (frame.currentVar.var)
+            {
+               frame.currentVar.dictionary->setEntryType(frame.currentVar.var, frame.codeBlock->getRealTypeID((U16)typeId));
+            }
+            
+            break;
+         }
             
          default:
             // error!
@@ -3045,7 +3105,7 @@ bool ConsoleSerializer::readConsoleValue(KorkApi::ConsoleValue& value, KorkApi::
    {
       value.cvalue = (U64)dataRef->ptr();
    }
-   else if (!(value.isInt() || value.isFloat()) &&
+   else if (!(value.isUnsigned() || value.isFloat()) &&
             (
             value.getZone() == KorkApi::ConsoleValue::ZoneExternal ||
             value.getZone() == KorkApi::ConsoleValue::ZoneReturn ||

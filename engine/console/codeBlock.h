@@ -112,8 +112,9 @@ public:
    const char *getFileLine(U32 ip);
    
    bool read(StringTableEntry fileName, Stream &st, U32 readVersion);
-   void linkTypes();
+   bool linkTypes();
    StringTableEntry getTypeName(U32 typeID);
+   U32 getRealTypeID(U32 typeID);
    bool write(Stream &st);
    
    bool compile(const char *dsoName, StringTableEntry fileName, const char *script);

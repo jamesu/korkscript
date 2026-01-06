@@ -65,8 +65,10 @@ struct StringStack
    KorkApi::ConsoleValue mArgV[MaxArgs];
    U32 mFrameOffsets[MaxFrameDepth]; // this is FRAME offset
    U32 mStartOffsets[MaxStackDepth]; // this is FUNCTION PARAM offset
-   U16 mStartTypes[MaxStackDepth]; // this is annotated type
-   U16 mType; // current type
+   U16 mStartTypes[MaxStackDepth];   // this is annotated type
+   U64 mStartValues[MaxStackDepth];  // this is the cv value
+   U64 mValue; // current cv value
+   U16 mType;  // current type
    
    U16 mFuncId;
    U32 mNumFrames;
@@ -136,7 +138,7 @@ struct StringStack
    {
       validateBufferSize(mStart + 16);
       mLen = 8;
-      *((U64*)&mBuffer[mStart]) = i;
+      *((U64*)&mValue) = i;
       mType = KorkApi::ConsoleValue::TypeInternalUnsigned;
    }
 
@@ -145,7 +147,7 @@ struct StringStack
    {
       validateBufferSize(mStart + 16);
       mLen = 8;
-      *((F64*)&mBuffer[mStart]) = v;
+      *((F64*)&mValue) = v;
       mType = KorkApi::ConsoleValue::TypeInternalNumber;
    }
 
@@ -206,13 +208,14 @@ struct StringStack
           v.typeId < KorkApi::ConsoleValue::TypeBeginCustom)
       {
          mType = v.typeId;
-         mLen = 8;
+         mLen = 0;
          validateBufferSize(mStart + mLen);
-         *((U64*)&mBuffer[mStart]) = v.cvalue;
+         *((U64*)&mValue) = v.cvalue;
          return;
       }
       else
       {
+         // TOFIX: needs to use storage api
          valueBase = v.evaluatePtr(*mAllocBase);
          if (valueBase != (mBuffer + mStart)) // account for setting same head
          {
@@ -222,12 +225,22 @@ struct StringStack
             }
             else
             {
-               mLen = (U32)((*mTypes)[v.typeId].size);
+               mLen = (U32)((*mTypes)[v.typeId].valueSize);
                memcpy(mBuffer + mStart, valueBase, mLen);
             }
          }
          mType = v.typeId;
       }
+   }
+   
+   void setConsoleValueSize(U32 size)
+   {
+      mLen = size;
+   }
+
+   void setConsoleValueValue(U64 value)
+   {
+      mValue = value;
    }
 
    void setStringIntValue(U32 value)
@@ -315,6 +328,7 @@ struct StringStack
    {
       AssertFatal(mStartStackSize < MaxStackDepth-1, "Stack overflow!");
       mStartTypes[mStartStackSize] = mType;
+      mStartValues[mStartStackSize] = mValue;
       mStartOffsets[mStartStackSize++] = mStart;
       mStart += mLen;
       mLen = 0;
@@ -330,6 +344,7 @@ struct StringStack
    {
       AssertFatal(mStartStackSize < MaxStackDepth-1, "Stack overflow!");
       mStartTypes[mStartStackSize] = mType;
+      mStartValues[mStartStackSize] = mValue;
       mStartOffsets[mStartStackSize++] = mStart;
       mStart += mLen;
       mBuffer[mStart] = c;
@@ -361,6 +376,7 @@ struct StringStack
 
       mStart = mStartOffsets[--mStartStackSize];
       mType = mStartTypes[mStartStackSize];
+      mValue = mStartValues[mStartStackSize];
       mLen = getHeadLength();
    }
 
@@ -370,6 +386,7 @@ struct StringStack
       mBuffer[mStart] = 0;
       mStart = mStartOffsets[--mStartStackSize];
       mType = mStartTypes[mStartStackSize];
+      mValue = mStartValues[mStartStackSize];
       mLen = getHeadLength();
    }
 
@@ -381,11 +398,11 @@ struct StringStack
       }
       else if (mType < KorkApi::ConsoleValue::TypeBeginCustom)
       {
-         return 8;
+         return 0;
       }
       else
       {
-         return (U32)((*mTypes)[mType].size);
+         return (U32)((*mTypes)[mType].valueSize);
       }
    }
 
@@ -398,6 +415,7 @@ struct StringStack
       U8 oldType = mType;
       mStart = mStartOffsets[--mStartStackSize];
       mType = mStartTypes[mStartStackSize];
+      mValue = mStartValues[mStartStackSize];
 
       // Compare current and previous strings.
       U32 ret = mType == oldType ? !dStricmp(mBuffer + mStart, mBuffer + oldStart) : 0;
@@ -415,6 +433,7 @@ struct StringStack
       AssertFatal((mNumFrames < MaxFrameDepth-1) && (mStartStackSize < MaxStackDepth-1), "Stack overflow!");
       mFrameOffsets[mNumFrames++] = mStartStackSize;
       mStartTypes[mStartStackSize] = mType;
+      mStartValues[mStartStackSize] = mValue;
       mStartOffsets[mStartStackSize++] = mStart;
       mStart += ReturnBufferSpace;
       validateBufferSize(mStart+1);
@@ -430,6 +449,7 @@ struct StringStack
       mStart = mStartOffsets[mStartStackSize];
       mLen = 0;
       mType = mStartTypes[mStartStackSize]; // reset
+      mValue = mStartValues[mStartStackSize];
       //Con::printf("StringStack::popFrame");
    }
 

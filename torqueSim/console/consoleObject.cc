@@ -524,7 +524,7 @@ void ConsoleObject::addGroup(const char* in_pGroupname, const char* in_pGroupDoc
    f.groupExpand  = false;
    f.validator    = NULL;
    f.ovrSetValue  = NULL;
-   f.ovrCopyValue = NULL;
+   f.ovrCastValue = NULL;
    f.writeDataFn  = &defaultProtectedWriteFn;
 
    // Add to field list.
@@ -548,7 +548,7 @@ void ConsoleObject::endGroup(const char*  in_pGroupname)
    f.groupExpand  = false;
    f.validator    = NULL;
    f.ovrSetValue  = NULL;
-   f.ovrCopyValue = NULL;
+   f.ovrCastValue = NULL;
    f.writeDataFn  = &defaultProtectedWriteFn;
    f.elementCount = 0;
 
@@ -629,7 +629,7 @@ void ConsoleObject::addField(const char*  in_pFieldname,
    f.validator    = NULL;
    
    f.ovrSetValue  = NULL;
-   f.ovrCopyValue = NULL;
+   f.ovrCastValue = NULL;
    f.writeDataFn  = in_writeDataFn;
 
    sg_tempFieldList.push_back(f);
@@ -639,7 +639,7 @@ void ConsoleObject::addProtectedField(const char*  in_pFieldname,
                        const U32 in_fieldType,
                        const dsize_t in_fieldOffset,
                        AbstractClassRep::SetValue in_setDataFn,
-                       AbstractClassRep::CopyValue in_getDataFn,
+                       AbstractClassRep::CastValue in_getDataFn,
                        const char* in_pFieldDocs)
 {
    addProtectedField(
@@ -658,7 +658,7 @@ void ConsoleObject::addProtectedField(const char*  in_pFieldname,
                        const U32 in_fieldType,
                        const dsize_t in_fieldOffset,
                                       AbstractClassRep::SetValue in_setDataFn,
-                                      AbstractClassRep::CopyValue in_getDataFn,
+                                      AbstractClassRep::CastValue in_getDataFn,
                        AbstractClassRep::WriteDataNotify in_writeDataFn,
                        const char* in_pFieldDocs)
 {
@@ -678,7 +678,7 @@ void ConsoleObject::addProtectedField(const char*  in_pFieldname,
                        const U32 in_fieldType,
                        const dsize_t in_fieldOffset,
                                       AbstractClassRep::SetValue in_setDataFn,
-                                      AbstractClassRep::CopyValue in_getDataFn,
+                                      AbstractClassRep::CastValue in_getDataFn,
                        const U32 in_elementCount,
                        EnumTable *in_table,
                        const char* in_pFieldDocs)
@@ -699,7 +699,7 @@ void ConsoleObject::addProtectedField(const char*  in_pFieldname,
                        const U32 in_fieldType,
                        const dsize_t in_fieldOffset,
                                       AbstractClassRep::SetValue in_setDataFn,
-                                      AbstractClassRep::CopyValue in_getDataFn,
+                                      AbstractClassRep::CastValue in_getDataFn,
                        AbstractClassRep::WriteDataNotify in_writeDataFn,
                        const U32 in_elementCount,
                        EnumTable *in_table,
@@ -721,7 +721,7 @@ void ConsoleObject::addProtectedField(const char*  in_pFieldname,
    f.validator    = NULL;
 
    f.ovrSetValue    = in_setDataFn;
-   f.ovrCopyValue    = in_getDataFn;
+   f.ovrCastValue    = in_getDataFn;
    f.writeDataFn  = in_writeDataFn;
 
    sg_tempFieldList.push_back(f);
@@ -745,7 +745,7 @@ void ConsoleObject::addFieldV(const char*  in_pFieldname,
    f.elementCount = 1;
    f.table        = NULL;
    f.ovrSetValue  = NULL;
-   f.ovrCopyValue = NULL;
+   f.ovrCastValue = NULL;
    f.writeDataFn  = &defaultProtectedWriteFn;
    f.validator    = v;
    v->fieldIndex  = sg_tempFieldList.size();
@@ -765,7 +765,7 @@ void ConsoleObject::addDepricatedField(const char *fieldName)
    f.table        = NULL;
    f.validator    = NULL;
    f.ovrSetValue  = NULL;
-   f.ovrCopyValue = NULL;
+   f.ovrCastValue = NULL;
    f.writeDataFn  = &defaultProtectedWriteFn;
 
    sg_tempFieldList.push_back(f);

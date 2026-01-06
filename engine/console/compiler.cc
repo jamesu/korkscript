@@ -94,6 +94,92 @@ namespace Compiler
       getFunctionStringTable().reset();
       getIdentTable().reset();
       getTypeTable().reset();
+
+      globalVarTypes.reset();
+
+      for (U32 i=0; i<VarTypeStackSize; i++)
+      {
+         localVarTypes[i].reset();
+      }
+
+      curLocalVarStackPos = 0;
+   }
+
+   void Resources::pushLocalVarContext()
+   {
+      if (curLocalVarStackPos == VarTypeStackSize-1)
+      {
+         return;
+      }
+      
+      curLocalVarStackPos++;
+   }
+
+   void Resources::popLocalVarContext()
+   {
+      if (curLocalVarStackPos > 0)
+      {
+         curLocalVarStackPos--;
+      }
+
+      localVarTypes[curLocalVarStackPos].reset();
+   }
+
+   VarTypeTableEntry* Resources::getVarInfo(StringTableEntry varName, StringTableEntry typeName)
+   {
+      VarTypeTableEntry* tt = NULL;
+
+      if (varName[0] == '$')
+      {
+         tt = globalVarTypes.lookupVar(varName);
+      }
+      else if (curLocalVarStackPos == 0)
+      {
+         //printf("Bad variable type stack\n");
+      }
+      else
+      {
+         tt = localVarTypes[curLocalVarStackPos-1].lookupVar(varName);
+      }
+
+      if (tt &&
+         typeName != NULL)
+      {
+         if (tt->typeName &&
+             tt->typeName != typeName)
+         {
+            //printf("Variable type redefined: %s vs %s\n");
+         }
+         
+         tt->typeName = typeName;
+         tt->typeId = precompileType(typeName);
+      }
+
+      return tt;
+   }
+
+   VarTypeTableEntry* VarTypeTable::lookupVar(StringTableEntry name)
+   {
+      for (VarTypeTableEntry* entry = table; table; table = table->next)
+      {
+         if (entry->name == name)
+         {
+            return entry;
+         }
+      }
+
+      VarTypeTableEntry* newEntry = (VarTypeTableEntry *) res->consoleAlloc(sizeof(VarTypeTableEntry));
+      newEntry->next = table;
+      table = newEntry;
+      newEntry->name = name;
+      newEntry->typeName = NULL;
+      newEntry->typeId = -1;
+      return newEntry;
+   }
+
+   void VarTypeTable::reset()
+   {
+      table = NULL;
    }
 
 }
@@ -492,3 +578,4 @@ void CodeStream::reset()
       mCodeHead = mCode;
    }
 }
+

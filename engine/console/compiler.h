@@ -42,6 +42,11 @@ class DataChunker;
 #include "core/tVector.h"
 #endif
 
+namespace SimpleParser
+{
+class ASTGen;
+}
+
 namespace Compiler
 {
    /// The opcodes for the TorqueScript VM.
@@ -208,8 +213,13 @@ namespace Compiler
       OP_SETCURFIELD_NONE,  // needed for field unset
 
       // Extra missing field related ops
-      OP_LOADFIELD_VAR,
-      OP_SAVEFIELD_VAR,
+      OP_LOADFIELD_VAR,     // loads object field into current var 
+      OP_SAVEFIELD_VAR,     // save current variable to object field
+      OP_SETCURVAR_TYPE,    // set type of current var
+
+      OP_SET_DYNAMIC_TYPE_FROM_VAR,   // sets dynamic type to type of var
+      OP_SET_DYNAMIC_TYPE_FROM_FIELD, // sets dynamic typeid to field type
+      OP_SET_DYNAMIC_TYPE_FROM_ID, // sets dynamic typeid to specific type (for casts)
 
       // Tuple type assignments
       // (these basically act like function calls)
@@ -262,6 +272,8 @@ namespace Compiler
       CompilerIdentTable(Resources* _res) : res(_res)
       {
          list = NULL;
+         tail = NULL;
+         numIdentStrings = 0;
       }
    };
 
@@ -336,13 +348,46 @@ namespace Compiler
       return offset == 0 ? NULL : stringList[offset-1];
    }
 
+   struct VarTypeTableEntry
+   {
+      VarTypeTableEntry *next;
+      StringTableEntry name;
+      StringTableEntry typeName;
+      S32 typeId;
+   };
+
+   struct VarTypeTable
+   {
+      VarTypeTableEntry* table;
+      Resources* res;
+
+      VarTypeTableEntry* lookupVar(StringTableEntry name);
+      void reset();
+
+      VarTypeTable()
+      {
+         table = NULL;
+      }
+   };
+
    struct Resources
    {
+      enum 
+      {
+         VarTypeStackSize = 2
+      };
+
       CompilerStringTable *currentStringTable, globalStringTable, functionStringTable;
       CompilerFloatTable  *currentFloatTable,  globalFloatTable,  functionFloatTable;
       DataChunker          consoleAllocator;
       CompilerIdentTable   identTable;
       CompilerIdentTable   typeTable;
+
+      VarTypeTable globalVarTypes;
+      VarTypeTable localVarTypes[VarTypeStackSize];
+      U32 curLocalVarStackPos;
+
+      SimpleParser::ASTGen* currentASTGen;
 
       bool syntaxError;
       bool allowExceptions;
@@ -376,13 +421,28 @@ namespace Compiler
       void *consoleAlloc(U32 size) { return consoleAllocator.alloc(size);  }
       void consoleAllocReset()     { consoleAllocator.freeBlocks(); }
 
+      void pushLocalVarContext(); 
+      void popLocalVarContext();
+      VarTypeTableEntry* getVarInfo(StringTableEntry varName, StringTableEntry typeName = NULL);
+
       Resources() : globalStringTable(this), functionStringTable(this), globalFloatTable(this), functionFloatTable(this), identTable(this), typeTable(this)
       {
          STEtoCode = evalSTEtoCode;
+         curLocalVarStackPos = 0;
          syntaxError = false;
          allowExceptions = false;
          allowTuples = false;
          allowTypes = false;
+         currentASTGen = NULL;
+         
+         globalVarTypes.res = this;
+         for (U32 i=0; i<VarTypeStackSize; i++)
+         {
+            localVarTypes[i].res = this;
+         }
+         
+         curLocalVarStackPos = 0;
+         currentASTGen = NULL;
       }
    };
 };
@@ -424,12 +484,6 @@ protected:
       CodeData *next; ///< Next block
    } CodeData;
    
-   typedef struct VarInfo
-   {
-      StringTableEntry name;
-      S32 typeID;
-   } VarInfo;
-   
    /// @name Emitted code
    /// {
    CodeData *mCode;
@@ -446,10 +500,6 @@ protected:
    /// }
    
    Vector<U32> mBreakLines; ///< Line numbers
-   
-   Vector<VarInfo> mUsedVars;
-   U32 mUsedVarStack[MaxVarStackDepth];
-   U32 mUsedVarStackPos;
    
    const char* mFilename;
    
@@ -567,11 +617,6 @@ public:
    {
       return mBreakLines.size() / 2;
    }
-   
-   void addVarReference(StringTableEntry steName, U32 typeID);
-   S32 lookupVarType(StringTableEntry steName);
-   void pushVarStack();
-   void popVarStack();
    
    void emitCodeStream(U32 *size, U32 **stream, U32 **lineBreaks);
    

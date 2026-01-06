@@ -40,6 +40,15 @@ public:
    ASTGen(SimpleLexer::Tokenizer* tok, Compiler::Resources* res)
    : mTokenizer(tok), mTokenPos(0), mResources(res)
    {
+      res->currentASTGen = this;
+   }
+
+   ~ASTGen()
+   {
+      if (mResources && mResources->currentASTGen == this)
+      {
+         mResources->currentASTGen = NULL;
+      }
    }
    
    bool processTokens()
@@ -934,7 +943,9 @@ private:
       }
       
       // { ... }
+      mResources->pushLocalVarContext();
       StmtNode* body = parseBlockStmt();
+      mResources->popLocalVarContext();
       
       FunctionDeclStmtNode* stmt = FunctionDeclStmtNode::alloc(mResources, line ? line : a.pos.line, fn, ns, args, body, retTypeName);
       return stmt;
@@ -1349,7 +1360,7 @@ private:
       {
          if (tok.kind == TT::opCHAR && tok.asChar() == '=')
          {
-            return AssignExprNode::alloc(mResources, tok.pos.line, v->varName, v->arrayIndex, r);            // =
+            return AssignExprNode::alloc(mResources, tok.pos.line, v->varName, v->arrayIndex, r, v->varType);            // =
          }
          // all op*ASN kinds go through AssignOpExprNode with tok.kind payload
          return AssignOpExprNode::alloc(mResources, tok.pos.line, v->varName, v->arrayIndex, r, processCharOp(TOK(tok)));

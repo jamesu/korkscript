@@ -21,6 +21,7 @@ struct ConsoleValue
       TypeBeginCustom    = 3    // void*
    };
    
+   // NOTE: zone only applies to String and Custom types
    enum Zone : U16
    {
       ZoneExternal = 0, // externally managed pointer
@@ -160,6 +161,27 @@ struct ConsoleValue
       }
    }
    
+   void* evaluateFixedPtr(AllocBase base = {}) const
+   {
+      if (!(typeId == TypeInternalString || typeId >= TypeBeginCustom))
+      {
+         return (void*)&cvalue;
+      }
+      
+      switch (getZone())
+      {
+         case ZoneExternal:
+         case ZoneVmHeap:
+            return (void*)(cvalue);
+         case ZonePacked:
+            return (void*)&cvalue;
+         case ZoneReturn:
+            return addOffset(base.arg, cvalue);
+         default:
+            return addOffset(base.func[zoneId - ZoneFiberStart], cvalue);
+      }
+   }
+   
    static inline void* addOffset(const void* base, U64 off)
    {
       return (!base) ? NULL : reinterpret_cast<void*>(reinterpret_cast<UINTPTR>(base) + static_cast<UINTPTR>(off));
@@ -169,7 +191,7 @@ struct ConsoleValue
    {
       return typeId == TypeInternalString;
    }
-   inline bool isInt()    const
+   inline bool isUnsigned()    const
    {
       return typeId == TypeInternalUnsigned;
    }
@@ -184,6 +206,26 @@ struct ConsoleValue
    inline bool isNull()
    {
       return typeId == TypeInternalString && cvalue == 0;
+   }
+
+   inline bool hasRelocatableStorage() const
+   {
+      switch (getZone())
+      {
+         case ZoneExternal:
+         case ZonePacked:
+            return false;
+         case ZoneVmHeap:
+         case ZoneReturn:
+         default:
+            return true;
+      }
+   }
+
+   inline bool canBePacked() const
+   {
+      return typeId == TypeInternalUnsigned || 
+             typeId == TypeInternalNumber;
    }
 };
 #pragma pack(pop)

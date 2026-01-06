@@ -18,6 +18,19 @@ namespace Compiler
 namespace KorkApi
 {
 
+// Create ref to fixed size block
+TypeStorageInterface CreateFixedTypeStorage(KorkApi::VmInternal* vmInternal, void* ptr, U16 typeId, bool isRelocatable);
+// Create storage ref to block backed by ConsoleVarRef
+TypeStorageInterface CreateConsoleVarTypeStorage(KorkApi::VmInternal* vmInternal, ConsoleVarRef ref, U16 typeId);
+// Create storage ref to block backed by Dictionary
+TypeStorageInterface CreateExprEvalTypeStorage(KorkApi::VmInternal* vmInternal, ExprEvalState& eval, U32 minSize, U16 typeId);
+// Create storage ref to return buffer
+TypeStorageInterface CreateExprEvalReturnTypeStorage(KorkApi::VmInternal* vmInternal, U32 minSize, U16 typeId);
+// No storage, just register
+TypeStorageInterface CreateRegisterStorage(KorkApi::VmInternal* vmInternal, U16 typeId);
+
+void CopyTypeStorageValueToOutput(TypeStorageInterface* storage, KorkApi::ConsoleValue& v);
+
 typedef FreeListPtr<ExprEvalState, FreeListHandle::Basic32> InternalFiberList;
 
 struct VmInternal
@@ -54,6 +67,8 @@ struct VmInternal
    Config mConfig;
    ConsoleValue::AllocBase mAllocBase;
 
+   KorkApi::ConsoleValue mTempConversionValue;
+   KorkApi::ConsoleValue mReturnBufferValue;
    Vector<U8> mReturnBuffer;
 
    U32 mConvIndex;
@@ -112,11 +127,11 @@ struct VmInternal
    // Heap values (like strings)
    ConsoleValue getStringFuncBuffer(FiberId fiberId, U32 size);
    ConsoleValue getStringReturnBuffer(U32 size);
-   ConsoleValue getTypeFunc(FiberId fiberId, TypeId typeId);
-   ConsoleValue getTypeReturn(TypeId typeId);
+   ConsoleValue getTypeFunc(FiberId fiberId, TypeId typeId, U32 heapSize);
+   ConsoleValue getTypeReturn(TypeId typeId, U32 heapSize);
 
    ConsoleValue getStringInZone(U16 zone, U32 size);
-   ConsoleValue getTypeInZone(U16 zone, TypeId typeId);
+   ConsoleValue getTypeInZone(U16 zone, TypeId typeId, U32 heapSize);
 
    StringTableEntry getCurrentCodeBlockName();
    StringTableEntry getCurrentCodeBlockFullPath();
@@ -131,6 +146,7 @@ struct VmInternal
    bool setObjectField(VMObject* object, StringTableEntry name, const char* array, ConsoleValue value);
    bool setObjectFieldTuple(VMObject* object, StringTableEntry fieldName, const char* arrayIndex, U32 argc, ConsoleValue* argv);
    ConsoleValue getObjectField(VMObject* object, StringTableEntry name, const char* array, U32 requestedType, U32 requestedZone);
+   U16 getObjectFieldType(VMObject* object, StringTableEntry name, const char* array);
 
    void printf(int level, const char* fmt, ...);
    void print(int level, const char* buf);

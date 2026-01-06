@@ -1267,26 +1267,6 @@ bool classLinkNamespaces(KorkApi::NamespaceId parent, KorkApi::NamespaceId child
    return sVM->linkNamespaceById(parent, child);
 }
 
-void setData(S32 type, void *dptr, S32 index, S32 argc, const char **argv, const EnumTable *tbl, BitSet32 flag)
-{
-#if TOFIX
-   ConsoleBaseType *cbt = ConsoleBaseType::getType(type);
-   AssertFatal(cbt, "Con::setData - could not resolve type ID!");
-   cbt->setData((void *) (((const char *)dptr) + index * cbt->getTypeSize()),argc, argv, tbl, flag);
-#endif
-}
-
-const char *getData(S32 type, void *dptr, S32 index, const EnumTable *tbl, BitSet32 flag)
-{
-#if TOFIX
-   ConsoleBaseType *cbt = ConsoleBaseType::getType(type);
-   AssertFatal(cbt, "Con::getData - could not resolve type ID!");
-   return cbt->getData((void *) (((const char *)dptr) + index * cbt->getTypeSize()), tbl, flag);
-#endif
-   return "";
-}
-
-
 KorkApi::Vm* getVM()
 {
    return sVM;

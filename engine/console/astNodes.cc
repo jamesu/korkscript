@@ -94,136 +94,6 @@ void FunctionDeclStmtNode::setPackage(StringTableEntry packageName)
 //
 //------------------------------------------------------------
 
-static U32 conversionOp(TypeReq src, TypeReq dst)
-{
-   // TODO: we need to have an extra op here for typed
-   if(src == TypeReqString)
-   {
-      switch(dst)
-      {
-      case TypeReqUInt:
-         return OP_STR_TO_UINT;
-      case TypeReqFloat:
-         return OP_STR_TO_FLT;
-      case TypeReqNone:
-         return OP_STR_TO_NONE;
-      case TypeReqVar:
-         return OP_SAVEVAR_STR;
-      case TypeReqTypedString:
-         return OP_STR_TO_TYPED;
-      case TypeReqField:
-         return OP_SAVEFIELD_STR;
-      default:
-         break;
-      }
-   }
-   else if(src == TypeReqFloat)
-   {
-      switch(dst)
-      {
-      case TypeReqUInt:
-         return OP_FLT_TO_UINT;
-      case TypeReqString:
-         return OP_FLT_TO_STR;
-      case TypeReqNone:
-         return OP_FLT_TO_NONE;
-      case TypeReqVar:
-         return OP_SAVEVAR_FLT;
-      case TypeReqTypedString:
-         return OP_FLT_TO_TYPED;
-      case TypeReqField:
-         return OP_SAVEFIELD_FLT;
-      default:
-         break;
-      }
-   }
-   else if(src == TypeReqUInt)
-   {
-      switch(dst)
-      {
-      case TypeReqFloat:
-         return OP_UINT_TO_FLT;
-      case TypeReqString:
-         return OP_UINT_TO_STR;
-      case TypeReqNone:
-         return OP_UINT_TO_NONE;
-      case TypeReqVar:
-         return OP_SAVEVAR_UINT;
-      case TypeReqTypedString:
-         return OP_UINT_TO_TYPED;
-      case TypeReqField:
-         return OP_SAVEFIELD_UINT;
-      default:
-         break;
-      }
-   }
-   else if(src == TypeReqVar)
-   {
-      switch(dst)
-      {
-      case TypeReqUInt:
-         return OP_LOADVAR_UINT;
-      case TypeReqFloat:
-         return OP_LOADVAR_FLT;
-      case TypeReqString:
-         return OP_LOADVAR_STR;
-      case TypeReqNone:
-         return OP_COPYVAR_TO_NONE;
-      case TypeReqVar:
-         return OP_LOADVAR_VAR; // i.e. copy this var we just set
-      case TypeReqField:
-         return OP_SAVEFIELD_VAR;
-      case TypeReqTypedString:
-         return OP_SAVEVAR_TYPED;
-      default:
-         break;
-      }
-   }
-   else if(src == TypeReqField)
-   {
-      switch(dst)
-      {
-      case TypeReqUInt:
-         return OP_LOADFIELD_UINT;
-      case TypeReqFloat:
-         return OP_LOADFIELD_FLT;
-      case TypeReqString:
-         return OP_LOADFIELD_STR;
-      case TypeReqNone:
-         return OP_SETCURFIELD_NONE;
-      case TypeReqVar:
-         return OP_LOADFIELD_VAR; // i.e. copy this var we just set
-      case TypeReqTypedString:
-         return OP_LOADFIELD_TYPED;
-      default:
-         break;
-      }
-   }
-   else if (src == TypeReqTypedString)
-   {
-      switch(dst)
-      {
-      case TypeReqUInt:
-         return OP_TYPED_TO_UINT;
-      case TypeReqFloat:
-         return OP_TYPED_TO_FLT;
-      case TypeReqString:
-         return OP_TYPED_TO_STR;
-      case TypeReqNone:
-         return OP_TYPED_TO_NONE;
-      case TypeReqVar:
-         return OP_SAVEVAR_TYPED; // i.e. copy this var we just set
-      case TypeReqTypedString:
-      default:
-         break;
-      }
-      
-   }
-   return OP_INVALID;
-}
-
-//------------------------------------------------------------
-
 U32 BreakStmtNode::compileStmt(CodeStream &codeStream, U32 ip)
 {
    if(codeStream.inLoop())
@@ -571,7 +441,10 @@ U32 FloatBinaryExprNode::compile(CodeStream &codeStream, U32 ip, TypeReq type)
    }
    
    if(type != TypeReqFloat || nodeOpOutputType != TypeReqFloat)
-      codeStream.emit(conversionOp(TypeReqFloat, type));
+   {
+      emitStackConversion(codeStream, nodeOpOutputType, type);
+   }
+   
    return codeStream.tell();
 }
 
@@ -683,7 +556,9 @@ U32 IntBinaryExprNode::compile(CodeStream &codeStream, U32 ip, TypeReq type)
    }
    
    if(type != nodeOpOutputType) // this gets set as UInt
-      codeStream.emit(conversionOp(nodeOpOutputType, type));
+   {
+      emitStackConversion(codeStream, nodeOpOutputType, type);
+   }
    return codeStream.tell();
 }
 
@@ -709,7 +584,7 @@ U32 StreqExprNode::compile(CodeStream &codeStream, U32 ip, TypeReq type)
    if(!eq)
       codeStream.emit(OP_NOT);
    if(type != TypeReqUInt)
-      codeStream.emit(conversionOp(TypeReqUInt, type));
+      emitStackConversion(codeStream, TypeReqUInt, type);
    return codeStream.tell();
 }
 
@@ -804,11 +679,11 @@ U32 IntUnaryExprNode::compile(CodeStream &codeStream, U32 ip, TypeReq type)
    {
       if (!operandTyped)
       {
-         codeStream.emit(conversionOp(TypeReqUInt, type));
+         emitStackConversion(codeStream, TypeReqUInt, type);
       }
       else
       {
-         codeStream.emit(conversionOp(nodeOpOutputType, type));
+         emitStackConversion(codeStream, nodeOpOutputType, type);
       }
    }
    
@@ -838,7 +713,7 @@ U32 FloatUnaryExprNode::compile(CodeStream &codeStream, U32 ip, TypeReq type)
    codeStream.emit(OP_NEG);
    
    if(type != nodeOpOutputType)
-      codeStream.emit(conversionOp(nodeOpOutputType, type));
+      emitStackConversion(codeStream, nodeOpOutputType, type);
    return codeStream.tell();
 }
 
@@ -864,12 +739,6 @@ U32 VarNode::compile(CodeStream &codeStream, U32 ip, TypeReq type)
    // OP_SETCURVAR
    // varName
    // OP_LOADVAR (type)
-
-   if (varType)
-   {
-      // TODO: set type id
-      codeStream.mResources->precompileType(varType);
-   }
    
    if(type == TypeReqNone)
       return codeStream.tell();
@@ -886,6 +755,16 @@ U32 VarNode::compile(CodeStream &codeStream, U32 ip, TypeReq type)
       codeStream.emit(OP_REWIND_STR);
       codeStream.emit(OP_SETCURVAR_ARRAY);
    }
+   
+   // Set type
+   S32 typeID = varType ? codeStream.mResources->precompileType(varType) : -1;
+   
+   if(typeID != -1)
+   {
+      codeStream.emit(OP_SETCURVAR_TYPE);
+      codeStream.emit(typeID);
+   }
+   
    switch(type)
    {
    case TypeReqUInt:
@@ -1124,12 +1003,6 @@ U32 AssignExprNode::compile(CodeStream &codeStream, U32 ip, TypeReq type)
    // varname
    // OP_SAVEVAR
    
-   if (assignTypeName)
-   {
-      // TODO: set type id
-      codeStream.mResources->precompileType(assignTypeName);
-   }
-   
    codeStream.mResources->precompileIdent(varName);
 
    bool usingStringStack = (tupleExpr == NULL) && (subType == TypeReqString);
@@ -1162,12 +1035,19 @@ U32 AssignExprNode::compile(CodeStream &codeStream, U32 ip, TypeReq type)
       codeStream.emit(OP_SETCURVAR_CREATE);
       codeStream.emitSTE(varName);
    }
+   
+   // Set type (NOTE: this should be optimized out at some point for duplicates)
+   if (varInfo->typeId != -1)
+   {
+      codeStream.emit(OP_SETCURVAR_TYPE);
+      codeStream.emit(varInfo->typeId);
+   }
 
    // Tuples need to be emitted here
    if (tupleExpr)
    {
       AssertFatal(subType == TypeReqVar, "something went wrong here");
-      codeStream.emit(assignTypeName ? OP_SAVEVAR_MULTIPLE_TYPED : OP_SAVEVAR_MULTIPLE);
+      codeStream.emit(OP_SAVEVAR_MULTIPLE);
    }
    else
    {
@@ -1197,7 +1077,7 @@ U32 AssignExprNode::compile(CodeStream &codeStream, U32 ip, TypeReq type)
    
    if (type != subType)
    {
-      codeStream.emit(conversionOp(subType, type));
+      emitStackConversion(codeStream, subType, type);
    }
    
    return ip;
@@ -1313,17 +1193,19 @@ U32 AssignOpExprNode::compile(CodeStream &codeStream, U32 ip, TypeReq type)
       codeStream.emit(OP_SETCURVAR_ARRAY_CREATE);
    }
    
-   codeStream.emit(conversionOp(TypeReqVar, subType));
+   // NOTE: no mechanism to set type here.
+   
+   emitStackConversion(codeStream, TypeReqVar, subType);
    if (subType == TypeReqTypedString)
    {
       codeStream.emit(OP_TYPED_OP);
    }
    codeStream.emit(operand);
-   codeStream.emit(conversionOp(subType, TypeReqVar)); // usually goes for FLT or UINT here
+   emitStackConversion(codeStream, subType, TypeReqVar); // usually goes for FLT or UINT here
    
    // -> output
    if(subType != type)
-      codeStream.emit(conversionOp(subType, type));
+      emitStackConversion(codeStream, subType, type);
    return codeStream.tell();
 }
 
@@ -1412,7 +1294,7 @@ U32 FuncCallExprNode::compile(CodeStream &codeStream, U32 ip, TypeReq type)
    
    codeStream.emit(callType);
    if(type != TypeReqString)
-      codeStream.emit(conversionOp(TypeReqString, type));
+      emitStackConversion(codeStream, TypeReqString, type);
    return codeStream.tell();
 }
 
@@ -1516,7 +1398,7 @@ U32 InternalSlotAccessNode::compile(CodeStream &codeStream, U32 ip, TypeReq type
    codeStream.emit(recurse);
 
    if(type != TypeReqUInt)
-      codeStream.emit(conversionOp(TypeReqUInt, type));
+      emitStackConversion(codeStream, TypeReqUInt, type);
    return codeStream.tell();
 }
 
@@ -1556,12 +1438,6 @@ U32 SlotAssignNode::compile(CodeStream &codeStream, U32 ip, TypeReq type)
    
    // OP_SAVEFIELD
    // convert to return type if necessary.
-
-   if (varType)
-   {
-      // TODO: set type id
-      codeStream.mResources->precompileType(varType);
-   }
    
    codeStream.mResources->precompileIdent(slotName);
 
@@ -1608,7 +1484,9 @@ U32 SlotAssignNode::compile(CodeStream &codeStream, U32 ip, TypeReq type)
    }
    
    // Set type FIRST
-   S32 typeID = -1;// TOFIX codeStream.mResources->lookupTypeID(varType);
+   S32 typeID = varType ? codeStream.mResources->precompileType(varType) : -1;
+
+   // Need to set this
    if(typeID != -1)
    {
       codeStream.emit(OP_SETCURFIELD_TYPE);
@@ -1656,7 +1534,7 @@ U32 SlotAssignNode::compile(CodeStream &codeStream, U32 ip, TypeReq type)
       
       if (type != TypeReqString)
       {
-         codeStream.emit(conversionOp(TypeReqString, type));
+         emitStackConversion(codeStream, TypeReqString, type);
       }
    }
    
@@ -1723,16 +1601,16 @@ U32 SlotAssignOpNode::compile(CodeStream &codeStream, U32 ip, TypeReq type)
       codeStream.emit(OP_SETCURFIELD_ARRAY);
    }
    
-   codeStream.emit(conversionOp(TypeReqField, subType));
+   emitStackConversion(codeStream, TypeReqField, subType);
    if (subType == TypeReqTypedString)
    {
       codeStream.emit(OP_TYPED_OP);
    }
    codeStream.emit(operand);
-   codeStream.emit(conversionOp(subType, TypeReqField)); // usually goes for FLT or UINT here
+   emitStackConversion(codeStream, subType, TypeReqField); // usually goes for FLT or UINT here
    
    if(subType != type)
-      codeStream.emit(conversionOp(subType, type));
+      emitStackConversion(codeStream, subType, type);
    return codeStream.tell();
 }
 
@@ -1835,7 +1713,7 @@ U32 ObjectDeclNode::compile(CodeStream &codeStream, U32 ip, TypeReq type)
    codeStream.emit(0);
    ip = compileSubObject(codeStream, ip, true);
    if(type != TypeReqUInt)
-      codeStream.emit(conversionOp(TypeReqUInt, type));
+      emitStackConversion(codeStream, TypeReqUInt, type);
    return codeStream.tell();
 }
 
@@ -2039,3 +1917,138 @@ TypeReq TupleExprNode::getPreferredType()
    return TypeReqNone;
 }
 
+
+static U32 conversionOp(TypeReq src, TypeReq dst)
+{
+   // NOTE: any _TYPED conversions require the type to be set via 
+   // OP_SET_DYNAMIC_TYPE_FROM_VAR or OP_SET_DYNAMIC_TYPE_FROM_FIELD
+   if(src == TypeReqString)
+   {
+      switch(dst)
+      {
+      case TypeReqUInt:
+         return OP_STR_TO_UINT;
+      case TypeReqFloat:
+         return OP_STR_TO_FLT;
+      case TypeReqNone:
+         return OP_STR_TO_NONE;
+      case TypeReqVar:
+         return OP_SAVEVAR_STR;
+      case TypeReqTypedString:
+         return OP_STR_TO_TYPED;
+      case TypeReqField:
+         return OP_SAVEFIELD_STR;
+      default:
+         break;
+      }
+   }
+   else if(src == TypeReqFloat)
+   {
+      switch(dst)
+      {
+      case TypeReqUInt:
+         return OP_FLT_TO_UINT;
+      case TypeReqString:
+         return OP_FLT_TO_STR;
+      case TypeReqNone:
+         return OP_FLT_TO_NONE;
+      case TypeReqVar:
+         return OP_SAVEVAR_FLT;
+      case TypeReqTypedString:
+         return OP_FLT_TO_TYPED;
+      case TypeReqField:
+         return OP_SAVEFIELD_FLT;
+      default:
+         break;
+      }
+   }
+   else if(src == TypeReqUInt)
+   {
+      switch(dst)
+      {
+      case TypeReqFloat:
+         return OP_UINT_TO_FLT;
+      case TypeReqString:
+         return OP_UINT_TO_STR;
+      case TypeReqNone:
+         return OP_UINT_TO_NONE;
+      case TypeReqVar:
+         return OP_SAVEVAR_UINT;
+      case TypeReqTypedString:
+         return OP_UINT_TO_TYPED;
+      case TypeReqField:
+         return OP_SAVEFIELD_UINT;
+      default:
+         break;
+      }
+   }
+   else if(src == TypeReqVar)
+   {
+      switch(dst)
+      {
+      case TypeReqUInt:
+         return OP_LOADVAR_UINT;
+      case TypeReqFloat:
+         return OP_LOADVAR_FLT;
+      case TypeReqString:
+         return OP_LOADVAR_STR;
+      case TypeReqNone:
+         return OP_COPYVAR_TO_NONE;
+      case TypeReqVar:
+         return OP_LOADVAR_VAR; // i.e. copy this var we just set
+      case TypeReqField:
+         return OP_SAVEFIELD_VAR;
+      case TypeReqTypedString:
+         return OP_SAVEFIELD_VAR;
+      default:
+         break;
+      }
+   }
+   else if(src == TypeReqField)
+   {
+      switch(dst)
+      {
+      case TypeReqUInt:
+         return OP_LOADFIELD_UINT;
+      case TypeReqFloat:
+         return OP_LOADFIELD_FLT;
+      case TypeReqString:
+         return OP_LOADFIELD_STR;
+      case TypeReqNone:
+         return OP_SETCURFIELD_NONE;
+      case TypeReqVar:
+         return OP_LOADFIELD_VAR; // i.e. copy this var we just set
+      case TypeReqTypedString:
+         return OP_LOADFIELD_TYPED;
+      default:
+         break;
+      }
+   }
+   else if (src == TypeReqTypedString)
+   {
+      switch(dst)
+      {
+      case TypeReqUInt:
+         return OP_TYPED_TO_UINT;
+      case TypeReqFloat:
+         return OP_TYPED_TO_FLT;
+      case TypeReqString:
+         return OP_TYPED_TO_STR;
+      case TypeReqNone:
+         return OP_TYPED_TO_NONE;
+      case TypeReqVar:
+         return OP_SAVEVAR_TYPED; // i.e. copy this var we just set
+      case TypeReqTypedString:
+      default:
+         break;
+      }
+      
+   }
+   return OP_INVALID;
+}
+
+void StmtNode::emitStackConversion(CodeStream& codeStream, TypeReq inputType, TypeReq outputType)
+{
+   U32 convOp = conversionOp(inputType, outputType);
+   codeStream.emit(convOp);
+}

@@ -69,31 +69,33 @@ void ConsoleBaseType::registerWithVM(KorkApi::Vm* vm)
 
 void ConsoleBaseType::registerTypeWithVm(KorkApi::Vm* vm)
 {
+   //
    KorkApi::TypeInfo info;
-   info.size = mTypeSize;
+   info.fieldsize = mTypeSize;
+   info.valueSize = mValueSize;
    info.name = StringTable->insert(mTypeName);
    info.inspectorFieldType = StringTable->insert(mInspectorFieldType);
    info.userPtr = this;
-   info.iFuncs.SetValue = [](void* userPtr,
+   info.iFuncs.SetValueFn = [](void* userPtr,
                              KorkApi::Vm* vm,
-                                     void* dptr,
+                             KorkApi::TypeStorageInterface* storage,
                                      S32 argc,
                              KorkApi::ConsoleValue* argv,
                                      const EnumTable* tbl,
                                      BitSet32 flag,
                              U32 typeId){
       ConsoleBaseType* typeInfo = (ConsoleBaseType*)userPtr;
-      return typeInfo->setData(vm, dptr, argc, argv, tbl, flag, typeId);
+      return typeInfo->setData(vm, storage, argc, argv, tbl, flag, typeId);
    };
-   info.iFuncs.CopyValue = [](void* userPtr,
+   info.iFuncs.CastValueFn = [](void* userPtr,
                               KorkApi::Vm* vm,
-                                     void* sptr,
+                                     KorkApi::TypeStorageInterface* inputStorage,
+                                KorkApi::TypeStorageInterface* outputStorage,
                                      const EnumTable* tbl,
                                      BitSet32 flag,
-                                     U32 requestedType,
-                              U32 requestedZone){
+                                     U32 requestedType){
       ConsoleBaseType* typeInfo = (ConsoleBaseType*)userPtr;
-      return typeInfo->getData(vm, sptr, tbl, flag, requestedType, requestedZone);
+      return typeInfo->getData(vm, inputStorage, outputStorage, tbl, flag, requestedType);
    };
    info.iFuncs.PrepDataFn = [](void* userPtr, KorkApi::Vm* vm,
                                const char* data,
@@ -117,13 +119,14 @@ ConsoleBaseType  *ConsoleBaseType::getType(const S32 typeID)
 }
 //-------------------------------------------------------------------------
 
-ConsoleBaseType::ConsoleBaseType(const S32 size, S32 *idPtr, const char *aTypeName)
+ConsoleBaseType::ConsoleBaseType(const U32 size, const U32 vsize, S32 *idPtr, const char *aTypeName)
 {
    // General initialization.
    mInspectorFieldType = NULL;
 
    // Store general info.
    mTypeSize = size;
+   mValueSize = vsize;
    mTypeName = aTypeName;
 
    // Get our type ID and store it.

@@ -48,6 +48,11 @@ class CodeBlock;
 class AbstractClassRep;
 class EnumTable;
 
+namespace KorkApi
+{
+   struct TypeStorageInterface;
+}
+
 class IFFBlock
 {
 public:
@@ -179,11 +184,18 @@ public:
       
       /// Whether this is a constant that cannot be assigned to.
       bool mIsConstant;
+      
+      // Whether this is a registered variable or not
+      bool mIsRegistered;
+      
+      U16 mEnforcedType;
 
    public:
       
       Entry(StringTableEntry name);
       ~Entry();
+      
+      inline KorkApi::ConsoleValue* getCVPtr() { return &mConsoleValue; }
    };
    
    struct HashTableData
@@ -207,12 +219,15 @@ public:
    F32 getEntryNumberValue(Entry* e);
    const char *getEntryStringValue(Entry* e);
    KorkApi::ConsoleValue getEntryValue(Entry* e);
+   U16 getEntryType(Entry* e);
 
    void setEntryUnsignedValue(Entry* e, U64 val);
    void setEntryNumberValue(Entry* e, F32 val);
    void setEntryStringValue(Entry* e, const char *value);
-   void setEntryTypeValue(Entry* e, U32 typeId, void * value);
+   void setEntryTypeValue(Entry* e, U32 typeId, KorkApi::TypeStorageInterface * storage);
    void setEntryValue(Entry* e, KorkApi::ConsoleValue value);
+   void setEntryValues(Entry* e, U32 argc, KorkApi::ConsoleValue* values);
+   void setEntryType(Entry* e, U16 typeId);
    
    Entry *lookup(StringTableEntry name);
    Entry* getVariable(StringTableEntry name);
@@ -228,6 +243,9 @@ public:
    void setVariableValue(StringTableEntry name, KorkApi::ConsoleValue value);
    
    void remapVariables(U32 oldFiberIndex, U32 newFiberIndex);
+   
+   void resizeHeap(Entry* e, U32 newSize, bool force);
+   void getHeapPtrSize(Entry* e, U32* size, void** ptr);
    
    U32 getCount() const
    {
@@ -505,6 +523,17 @@ struct ConsoleSerializer
    
    bool read(Vector<ExprEvalState*> &fibers);
    bool write(Vector<ExprEvalState*> &fibers);
+};
+
+struct ConsoleVarRef
+{
+   Dictionary* dictionary;
+   Dictionary::Entry *var;
+   
+   ConsoleVarRef() : dictionary(NULL), var(NULL)
+   {
+      
+   }
 };
 
 #endif

@@ -206,6 +206,7 @@ VarNode *VarNode::alloc( Compiler::Resources* res, S32 lineNumber, StringTableEn
    ret->varName = varName;
    ret->arrayIndex = arrayIndex;
    ret->varType = typeName;
+   ret->varInfo = res->getVarInfo(varName, ret->varType);
    return ret;
 }
 
@@ -275,12 +276,14 @@ AssignExprNode *AssignExprNode::alloc( Compiler::Resources* res, S32 lineNumber,
 {
    AssignExprNode *ret = (AssignExprNode *) res->consoleAlloc(sizeof(AssignExprNode));
    constructInPlace(ret);
+
    ret->dbgLineNumber = lineNumber;
    ret->varName = varName;
    ret->rhsExpr = expr;
    ret->arrayIndex = arrayIndex;
    ret->subType = TypeReqNone;
    ret->assignTypeName = typeName;
+   ret->varInfo = res->getVarInfo(varName, ret->assignTypeName);
    
    return ret;
 }
@@ -289,6 +292,7 @@ AssignOpExprNode *AssignOpExprNode::alloc( Compiler::Resources* res, S32 lineNum
 {
    AssignOpExprNode *ret = (AssignOpExprNode *) res->consoleAlloc(sizeof(AssignOpExprNode));
    constructInPlace(ret);
+
    ret->dbgLineNumber = lineNumber;
    ret->varName = varName;
    ret->rhsExpr = expr;
@@ -296,6 +300,8 @@ AssignOpExprNode *AssignOpExprNode::alloc( Compiler::Resources* res, S32 lineNum
    ret->subType = TypeReqNone;
    ret->op = op;
    ret->operand = 0;
+   ret->varInfo = res->getVarInfo(varName, ret->varName);
+
    return ret;
 }
 

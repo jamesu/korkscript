@@ -530,12 +530,18 @@ bool CodeBlock::read(StringTableEntry fileName, Stream &st, U32 readVersion)
    return true;
 }
 
-void CodeBlock::linkTypes()
+bool CodeBlock::linkTypes()
 {
    for (U32 i=0; i<numTypeStrings; i++)
    {
       typeStringMap[i] = mVM->lookupTypeId(identStrings[startTypeStrings + i]);
+      if (typeStringMap[i] == -1)
+      {
+         mVM->printf(0, "Type %s used in script is undefined", identStrings[startTypeStrings + i]);
+         return false;
+      }
    }
+   return true;
 }
 
 StringTableEntry CodeBlock::getTypeName(U32 typeID)
@@ -545,6 +551,11 @@ StringTableEntry CodeBlock::getTypeName(U32 typeID)
       return identStrings[startTypeStrings + typeID];
    }
    return NULL;
+}
+
+U32 CodeBlock::getRealTypeID(U32 typeID)
+{
+   return typeID < numTypeStrings ? typeStringMap[typeID] : 0;
 }
 
 bool CodeBlock::write(Stream &st)
@@ -883,7 +894,11 @@ bool CodeBlock::compileToStream(Stream &st, StringTableEntry fileName, const cha
       mVM->printf(0, "precompile size mismatch");
    }
     
-   linkTypes();
+   if (!linkTypes())
+   {
+      mVM->printf(0, "Invalid types in script");
+      return KorkApi::ConsoleValue();
+   }
    
    return exec(0, fileName, NULL, 0, 0, noCalls, isNativeFrame, NULL, setFrame);
 }
@@ -1680,54 +1695,55 @@ void CodeBlock::dumpInstructions( U32 startIp, bool upToReturn, bool downcaseStr
          {
             // Takes from OP_SETCURVAR
             mVM->printf(0, "%i: OP_LOADVAR_TYPED", ip - 1 );
+            //++ip;
             break;
          }
          case OP_LOADVAR_TYPED_REF:
          {
             // Takes from OP_SETCURVAR
             mVM->printf(0, "%i: OP_LOADVAR_TYPED_REF", ip - 1 );
+            //++ip;
             break;
          }
          case OP_LOADFIELD_TYPED:
          {
             // Takes from OP_SETCURFIELD*
             mVM->printf(0, "%i: OP_LOADFIELD_TYPED", ip - 1 );
+            //++ip;
             break;
          }
          case OP_SAVEVAR_TYPED:
          {
             // Sets from OP_SETCURVAR
             mVM->printf(0, "%i: OP_SAVEVAR_TYPED", ip - 1 );
+            //++ip;
             break;
          }
          case OP_SAVEFIELD_TYPED:
          {
             // Sets from OP_SETCURFIELD*
             mVM->printf(0, "%i: OP_SAVEFIELD_TYPED", ip - 1 );
+            //++ip;
             break;
          }
          case OP_STR_TO_TYPED:
          {
             // Casts current StringStack head to input local type id
-            U32 typeID = code[ip];
-            mVM->printf(0, "%i: OP_STR_TO_TYPED typeID=%s(%i)", ip - 1, getTypeName(typeID), typeID);
-            ++ ip;
+            mVM->printf(0, "%i: OP_STR_TO_TYPED", ip - 1);
+            //++ ip;
             break;
          }
          case OP_FLT_TO_TYPED:
          {
             // Casts current float value to input local type id
             U32 typeID = code[ip];
-            mVM->printf(0, "%i: OP_FLT_TO_TYPED typeID=%s(%i)", ip - 1, getTypeName(typeID), typeID);
-            ++ ip;
+            mVM->printf(0, "%i: OP_FLT_TO_TYPED", ip - 1);
             break;
          }
          case OP_UINT_TO_TYPED:
          {
             // Casts current uint value to input local type id
-            U32 typeID = code[ip];
-            mVM->printf(0, "%i: OP_FLT_TO_TYPED typeID=%s(%i)", ip - 1, getTypeName(typeID), typeID);
-            ++ ip;
+            mVM->printf(0, "%i: OP_UINT_TO_TYPED", ip - 1);
             break;
          }
          case OP_TYPED_TO_STR:
@@ -1799,15 +1815,6 @@ void CodeBlock::dumpInstructions( U32 startIp, bool upToReturn, bool downcaseStr
             mVM->printf(0, "%i: OP_SAVEVAR_MULTIPLE", ip - 1);
             break;
          }
-         case OP_SAVEVAR_MULTIPLE_TYPED:
-         {
-            // Acts like a function call (i.e. relies on popping the frame)
-            // Actual type to assign is read from bytecode
-            U32 typeID = code[ip];
-            mVM->printf(0, "%i: OP_SAVEVAR_MULTIPLE_TYPED typeID=%s(%i)", ip - 1, getTypeName(typeID), typeID);
-            ++ ip;
-            break;
-         }
          case OP_SAVEFIELD_MULTIPLE:
          {
             // Pops n values from the StringStack
@@ -1815,6 +1822,33 @@ void CodeBlock::dumpInstructions( U32 startIp, bool upToReturn, bool downcaseStr
             mVM->printf(0, "%i: OP_SAVEFIELD_MULTIPLE", ip - 1);
             break;
          }
+         case OP_SET_DYNAMIC_TYPE_FROM_VAR:
+         {
+            mVM->printf(0, "%i: OP_SET_DYNAMIC_TYPE_FROM_VAR", ip - 1);
+            break;
+         }
+
+         case OP_SET_DYNAMIC_TYPE_FROM_FIELD:
+         {
+            mVM->printf(0, "%i: OP_SET_DYNAMIC_TYPE_FROM_FIELD", ip - 1);
+            break;
+         }
+
+         case OP_SET_DYNAMIC_TYPE_FROM_ID:
+         {
+            U32 typeID = code[ip];
+            mVM->printf(0, "%i: OP_SET_DYNAMIC_TYPE_FROM_ID %i", ip - 1, typeID);
+            ip++;
+            break;
+         }
+         
+         case OP_SETCURVAR_TYPE:
+         {
+            U32 typeId = code[ip++];
+            mVM->printf(0, "%i: OP_SETCURVAR_TYPE (type=%s(%i)", ip - 1, getTypeName(typeId), typeId);
+            break;
+         }
+            
          default:
             mVM->printf(0, "%i: !!INVALID!!", ip - 1 );
             break;
