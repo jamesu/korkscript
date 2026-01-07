@@ -523,7 +523,6 @@ void ConsoleObject::addGroup(const char* in_pGroupname, const char* in_pGroupDoc
    f.elementCount = 0;
    f.groupExpand  = false;
    f.validator    = NULL;
-   f.ovrSetValue  = NULL;
    f.ovrCastValue = NULL;
    f.writeDataFn  = &defaultProtectedWriteFn;
 
@@ -547,7 +546,6 @@ void ConsoleObject::endGroup(const char*  in_pGroupname)
    f.type         = AbstractClassRep::EndGroupFieldType;
    f.groupExpand  = false;
    f.validator    = NULL;
-   f.ovrSetValue  = NULL;
    f.ovrCastValue = NULL;
    f.writeDataFn  = &defaultProtectedWriteFn;
    f.elementCount = 0;
@@ -628,7 +626,6 @@ void ConsoleObject::addField(const char*  in_pFieldname,
    f.table        = in_table;
    f.validator    = NULL;
    
-   f.ovrSetValue  = NULL;
    f.ovrCastValue = NULL;
    f.writeDataFn  = in_writeDataFn;
 
@@ -720,7 +717,6 @@ void ConsoleObject::addProtectedField(const char*  in_pFieldname,
    f.table        = in_table;
    f.validator    = NULL;
 
-   f.ovrSetValue    = in_setDataFn;
    f.ovrCastValue    = in_getDataFn;
    f.writeDataFn  = in_writeDataFn;
 
@@ -744,7 +740,6 @@ void ConsoleObject::addFieldV(const char*  in_pFieldname,
    f.offset       = in_fieldOffset;
    f.elementCount = 1;
    f.table        = NULL;
-   f.ovrSetValue  = NULL;
    f.ovrCastValue = NULL;
    f.writeDataFn  = &defaultProtectedWriteFn;
    f.validator    = v;
@@ -764,7 +759,6 @@ void ConsoleObject::addDepricatedField(const char *fieldName)
    f.elementCount = 0;
    f.table        = NULL;
    f.validator    = NULL;
-   f.ovrSetValue  = NULL;
    f.ovrCastValue = NULL;
    f.writeDataFn  = &defaultProtectedWriteFn;
 

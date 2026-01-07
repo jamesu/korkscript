@@ -28,6 +28,9 @@ TypeStorageInterface CreateExprEvalTypeStorage(KorkApi::VmInternal* vmInternal, 
 TypeStorageInterface CreateExprEvalReturnTypeStorage(KorkApi::VmInternal* vmInternal, U32 minSize, U16 typeId);
 // No storage, just register
 TypeStorageInterface CreateRegisterStorage(KorkApi::VmInternal* vmInternal, U16 typeId);
+// No storage, just registers
+TypeStorageInterface CreateRegisterStorageFromArgs(KorkApi::VmInternal* vmInternal, U32 argc, KorkApi::ConsoleValue* argv);
+
 
 void CopyTypeStorageValueToOutput(TypeStorageInterface* storage, KorkApi::ConsoleValue& v);
 

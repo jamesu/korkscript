@@ -2318,12 +2318,21 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
             if (frame.dynTypeId != 0)
             {
                KorkApi::ConsoleValue cv = evalState.mSTR.getConsoleValue();
+
+               KorkApi::TypeStorageInterface outputStorage = KorkApi::CreateExprEvalTypeStorage(vmInternal,
+                                                                                       *this,
+                                                                                       0,
+                                                                                       frame.dynTypeId);
+
+               KorkApi::TypeStorageInterface inputStorage = KorkApi::CreateRegisterStorageFromArgs(vmInternal,
+                                                                                       1,
+                                                                                       &cv);
+               
                // NOTE: types should set head of stack to value if data pointer is NULL in this case
-               vmInternal->mTypes[frame.dynTypeId].iFuncs.SetValueFn(vmInternal->mTypes[frame.dynTypeId].userPtr,
+               vmInternal->mTypes[frame.dynTypeId].iFuncs.CastValueFn(vmInternal->mTypes[frame.dynTypeId].userPtr,
                                                                    vmPublic,
-                                                                   NULL,
-                                                                   1,
-                                                                   &cv,
+                                                                   &inputStorage,
+                                                                   &outputStorage,
                                                                    NULL,
                                                                    0,
                                                                    frame.dynTypeId);
@@ -2337,13 +2346,21 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
             if (frame.dynTypeId != 0)
             {
                KorkApi::ConsoleValue cv = KorkApi::ConsoleValue::makeNumber(evalState.floatStack[frame._FLT--]);
+
+               KorkApi::TypeStorageInterface outputStorage = KorkApi::CreateExprEvalTypeStorage(vmInternal,
+                                                                                       *this,
+                                                                                       0,
+                                                                                       frame.dynTypeId);
+
+               KorkApi::TypeStorageInterface inputStorage = KorkApi::CreateRegisterStorageFromArgs(vmInternal,
+                                                                                       1,
+                                                                                       &cv);
                
                // NOTE: types should set head of stack to value if data pointer is NULL in this case
-               vmInternal->mTypes[frame.dynTypeId].iFuncs.SetValueFn(vmInternal->mTypes[frame.dynTypeId].userPtr,
+               vmInternal->mTypes[frame.dynTypeId].iFuncs.CastValueFn(vmInternal->mTypes[frame.dynTypeId].userPtr,
                                                                    vmPublic,
-                                                                   NULL,
-                                                                   1,
-                                                                   &cv,
+                                                                   &inputStorage,
+                                                                   &outputStorage,
                                                                    NULL,
                                                                    0,
                                                                    frame.dynTypeId);
@@ -2357,13 +2374,21 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
             if (frame.dynTypeId != 0)
             {
                KorkApi::ConsoleValue cv = KorkApi::ConsoleValue::makeNumber(evalState.intStack[frame._UINT--]);
+
+               KorkApi::TypeStorageInterface outputStorage = KorkApi::CreateExprEvalTypeStorage(vmInternal,
+                                                                                       *this,
+                                                                                       0,
+                                                                                       frame.dynTypeId);
+
+               KorkApi::TypeStorageInterface inputStorage = KorkApi::CreateRegisterStorageFromArgs(vmInternal,
+                                                                                       1,
+                                                                                       &cv);
                
                // NOTE: types should set head of stack to value if data pointer is NULL in this case
-               vmInternal->mTypes[frame.dynTypeId].iFuncs.SetValueFn(vmInternal->mTypes[frame.dynTypeId].userPtr,
+               vmInternal->mTypes[frame.dynTypeId].iFuncs.CastValueFn(vmInternal->mTypes[frame.dynTypeId].userPtr,
                                                                    vmPublic,
-                                                                   NULL,
-                                                                   1,
-                                                                   &cv,
+                                                                   &inputStorage,
+                                                                   &outputStorage,
                                                                    NULL,
                                                                    0,
                                                                    frame.dynTypeId);
@@ -3278,6 +3303,8 @@ bool ConsoleSerializer::readStringStack(StringStack& stack)
      mStream->read(sizeof(stack.mFrameOffsets), stack.mFrameOffsets) &&
      mStream->read(sizeof(stack.mStartOffsets), stack.mStartOffsets) &&
      mStream->read(sizeof(stack.mStartTypes), stack.mStartTypes) &&
+     mStream->read(sizeof(stack.mStartValues), stack.mStartValues) &&
+     mStream->read(&stack.mValue) &&
      mStream->read(&stack.mType) &&
      mStream->read(&stack.mFuncId) &&
      mStream->read(&stack.mNumFrames) &&
@@ -3294,13 +3321,16 @@ bool ConsoleSerializer::writeStringStack(StringStack& stack)
      mStream->write(sizeof(stack.mFrameOffsets), stack.mFrameOffsets) &&
      mStream->write(sizeof(stack.mStartOffsets), stack.mStartOffsets) &&
      mStream->write(sizeof(stack.mStartTypes), stack.mStartTypes) &&
+     mStream->write(sizeof(stack.mStartValues), stack.mStartValues) &&
+     mStream->write(stack.mValue) &&
      mStream->write(stack.mType) &&
      mStream->write(stack.mFuncId) &&
      mStream->write(stack.mNumFrames) &&
      mStream->write(stack.mStart) &&
      mStream->write(stack.mLen) &&
      mStream->write(stack.mStartStackSize) &&
-     mStream->write(stack.mFunctionOffset);
+     mStream->write(stack.mFunctionOffset)
+   ;
 }
 
 ConsoleFrame* ConsoleSerializer::loadFrame(ExprEvalState* state)

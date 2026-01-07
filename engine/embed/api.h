@@ -60,6 +60,7 @@ typedef S32 TypeId;
 struct BoxedTypeData
 {
    U32 size;
+   U32 argc; // for handling tuples
    KorkApi::ConsoleValue* storageRegister;   // Register for storage (not valid for fields)
    KorkApi::ConsoleValue storageAddress;     // untyped real storage address (points to heap/stack storage allocated for this)
 };
@@ -99,11 +100,6 @@ typedef bool(*CastValueFn)(void* userPtr,
 
 struct TypeInterface
 {
-// argv[] -> dptr
-// foo = bar
-// foo = b1, b2, b3
-SetStoredFn SetValueFn;
-
 // sptr -> [return]
 // destVal = srcVal
 CastValueFn CastValueFn;
@@ -145,7 +141,6 @@ struct FieldInfo {
    EnumTable *     table;
    const char*     pFieldDocs;
    TypeValidator*  validator;
-   SetStoredFn       ovrSetValue;
    CastValueFn       ovrCastValue;
    WriteDataNotifyFn writeDataFn;
    S32             elementCount;
@@ -421,6 +416,8 @@ public:
 	ClassId registerClass(ClassInfo& info);
     ClassId getClassId(const char* name);
     TypeInfo* getTypeInfo(TypeId ident);
+
+    bool castValue(TypeId inputType, TypeStorageInterface* inputStorage, TypeStorageInterface* outputStorage, EnumTable* et, BitSet32 flags);
 
 	// Hard refs to console values
 	ConsoleHeapAllocRef createHeapRef(U32 size);

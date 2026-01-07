@@ -113,20 +113,6 @@ TypeId Vm::registerType(TypeInfo& info)
       };
    }
    
-   if (chkFunc.iFuncs.SetValueFn == NULL)
-   {
-      chkFunc.iFuncs.SetValueFn = [](void* userPtr,
-                                   Vm* vm,
-                                           TypeStorageInterface* storage,
-                                           S32 argc,
-                                           ConsoleValue* argv,
-                                           const EnumTable* tbl,
-                                           BitSet32 flag,
-                                           U32 typeId){
-         return false;
-      };
-   }
-   
    if (chkFunc.iFuncs.PerformOp == NULL)
    {
       chkFunc.iFuncs.PerformOp = [](Vm* vm, U32 op, ConsoleValue lhs, ConsoleValue rhs){
@@ -140,6 +126,20 @@ TypeId Vm::registerType(TypeInfo& info)
 TypeInfo* Vm::getTypeInfo(TypeId ident)
 {
    return &mInternal->mTypes[ident];
+}
+
+bool Vm::castValue(TypeId inputType, TypeStorageInterface* inputStorage, TypeStorageInterface* outputStorage, EnumTable* et, BitSet32 flags)
+{
+   CastValueFn castFn = mInternal->mTypes[inputType].iFuncs.CastValueFn;
+   return castFn(
+      mInternal->mTypes[inputType].userPtr,
+      this,
+      inputStorage,
+      outputStorage,
+      et,
+      flags,
+      inputType
+   );
 }
 
 ClassId Vm::registerClass(ClassInfo& info)
@@ -874,61 +874,7 @@ VmInternal::VmInternal(Vm* vm, Config* cfg) : mGlobalVars(this)
       return true;
    };
    
-   // NOTE: If there is a register set, the will be set to the relevant value. Otherwise its assumed
-   // relevant representastion of value will be stored in storageRegister (in which case is the string or num/float).
-   auto genericSetValueFunc = [](void* userPtr,
-                                 Vm* vm,
-                                         TypeStorageInterface* storage,
-                                         S32 argc,
-                                         ConsoleValue* argv,
-                                         const EnumTable* tbl,
-                                         BitSet32 flag,
-                                         U32 typeId){
-       if (argc == 0)
-       {
-          return true;
-       }
-       else
-       {
-          // NOTE: for fixed size types, storage is already the correct size.
-#if 0
-          switch (typeId)
-          {
-             case KorkApi::ConsoleValue::TypeInternalString: {
-                const char* strValue = vm->valueAsString(argv[0]);
-                U32 strLen = dStrlen(strValue)+1;
-               
-                if (storage->data.storageRegister)
-                {
-                   
-                }
-                else
-                {
-                   
-                }
-                KorkApi::ConsoleValue rv = vm->getStringReturnBuffer(strLen);
-                memcpy(rv.evaluatePtr(vm->getAllocBase()), strValue, strLen);
-             }
-                break;
-             case KorkApi::ConsoleValue::TypeInternalNumber:
-                (F64*)storage->data.value.cvalue
-                return true;//return KorkApi::ConsoleValue::makeNumber(vm->valueAsFloat(argv[0]));
-                break;
-             case KorkApi::ConsoleValue::TypeInternalUnsigned:
-                return true;//return KorkApi::ConsoleValue::makeUnsigned((U64)vm->valueAsInt(argv[0]));
-                break;
-             default:
-                return false;
-          }
-#endif
-       }
-      
-      return true;
-   };
-   
    typeInfo.iFuncs.CastValueFn = genericCastFunc;
-
-   typeInfo.iFuncs.SetValueFn = genericSetValueFunc;
    
    typeInfo.iFuncs.PerformOp = noOpFunc;
    
@@ -1243,24 +1189,24 @@ bool VmInternal::setObjectFieldTuple(VMObject* obj, StringTableEntry fieldName, 
             break;
          
          TypeInfo& tinfo = mTypes[tid];
-         if (!tinfo.iFuncs.SetValueFn || tinfo.fieldsize == 0)
+         if (!tinfo.iFuncs.CastValueFn || tinfo.fieldsize == 0)
             break;
          
          U8* base = static_cast<U8*>(obj->userPtr);
          U8* dptr = base + f.offset + (idx * (U32)tinfo.fieldsize);
          
-         SetStoredFn setFn = f.ovrSetValue ? f.ovrSetValue : tinfo.iFuncs.SetValueFn;
-#if 0
-         TypeStorageInterface storage = KorkApi::CreateFixedTypeStorage(this, dptr, tid);
-         setFn(f.ovrSetValue ? obj->userPtr : tinfo.userPtr,
+         CastValueFn castFn = f.ovrCastValue ? f.ovrCastValue : tinfo.iFuncs.CastValueFn;
+
+         TypeStorageInterface inputStorage = KorkApi::CreateFixedTypeStorage(this, dptr, tid, true);
+         TypeStorageInterface outputStorage = KorkApi::CreateRegisterStorageFromArgs(this, argc, argv);
+         
+         castFn(f.ovrCastValue ? obj->userPtr : tinfo.userPtr,
                mVM,
-               &storage,
-               argc,
-               argv,
+               &inputStorage,
+               &outputStorage,
                f.table,
                f.flag,
                tid);
-#endif
       }
       return true;
    }
@@ -1411,23 +1357,23 @@ F64 VmInternal::valueAsFloat(ConsoleValue v)
       break;
       default:
          {
-#if 0
-            KorkApi::TypeInfo& info = mTypes[v.typeId];
-            void* typePtr = v.evaluatePtr(mAllocBase);
-            
-            TypeStorageInterface inputStorage = KorkApi::CreateFixedTypeStorage(this, typePtr, v.typeId, true);
-            TypeStorageInterface outputStorage = KorkApi::CreateRegisterStorage(this, v.typeId);
+               KorkApi::TypeStorageInterface inputStorage = KorkApi::CreateRegisterStorageFromArgs(this,
+                                                                                       1,
+                                                                                       &v);
 
-            info.iFuncs.CastValueFn(info.userPtr,
-                                               mVM,
-                         &storage,
-                         &outputStorage,
-                         NULL,
-                         0,
-                                    KorkApi::ConsoleValue::TypeInternalNumber);
+               KorkApi::TypeStorageInterface outputStorage = KorkApi::CreateRegisterStorage(this,
+                                                                                       KorkApi::ConsoleValue::TypeInternalNumber);
+               
+               // NOTE: types should set head of stack to value if data pointer is NULL in this case
+               mTypes[v.typeId].iFuncs.CastValueFn(mTypes[v.typeId].userPtr,
+                                                                   mVM,
+                                                                   &inputStorage,
+                                                                   &outputStorage,
+                                                                   NULL,
+                                                                   0,
+                                                                   KorkApi::ConsoleValue::TypeInternalNumber);
 
-            return outputStorage.data.storageRegister.getFloat();
-#endif
+               return outputStorage.data.storageRegister->getFloat();
          }
          break;
    }
@@ -1452,23 +1398,23 @@ S64 VmInternal::valueAsBool(ConsoleValue v)
       break;
       default:
          {
-#if 0
-            KorkApi::TypeInfo& info = mTypes[v.typeId];
-            void* typePtr = v.evaluatePtr(mAllocBase);
-            TypeStorageInterface storage = KorkApi::CreateFixedTypeStorage(this, typePtr, v.typeId, true);
-            TypeStorageInterface outputStorage = KorkApi::CreateRegisterStorage(this, v.typeId);
-            
-            info.iFuncs.CastValueFn(info.userPtr,
-                                               mVM,
-                                           &storage,
-                                           &outputStorage,
-                         NULL,
-                         0,
-                                           KorkApi::ConsoleValue::TypeInternalUnsigned);
-            
+               KorkApi::TypeStorageInterface inputStorage = KorkApi::CreateRegisterStorageFromArgs(this,
+                                                                                       1,
+                                                                                       &v);
 
-            return outputStorage.data.storageRegister.getInt();
-#endif
+               KorkApi::TypeStorageInterface outputStorage = KorkApi::CreateRegisterStorage(this,
+                                                                                    KorkApi::ConsoleValue::TypeInternalUnsigned);
+               
+               // NOTE: types should set head of stack to value if data pointer is NULL in this case
+               mTypes[v.typeId].iFuncs.CastValueFn(mTypes[v.typeId].userPtr,
+                                                                   mVM,
+                                                                   &inputStorage,
+                                                                   &outputStorage,
+                                                                   NULL,
+                                                                   0,
+                                                                   KorkApi::ConsoleValue::TypeInternalUnsigned);
+
+               return outputStorage.data.storageRegister->getInt();
          }
          break;
    }
@@ -1494,22 +1440,23 @@ S64 VmInternal::valueAsInt(ConsoleValue v)
       break;
       default:
          {
-#if 0
-            KorkApi::TypeInfo& info = mTypes[v.typeId];
-            void* typePtr = v.evaluatePtr(mAllocBase);
-            TypeStorageInterface storage = KorkApi::CreateFixedTypeStorage(this, typePtr, v.typeId, true);
-            TypeStorageInterface outputStorage = KorkApi::CreateRegisterStorage(this, v.typeId);
-            
-            info.iFuncs.CastValueFn(info.userPtr,
-                                               mVM,
-                                           &storage,
-                                           &outputStorage,
-                         NULL,
-                         0,
-                                    KorkApi::ConsoleValue::TypeInternalUnsigned);
-            
-            return outputStorage.data.storageRegister.getInt();
-#endif
+               KorkApi::TypeStorageInterface inputStorage = KorkApi::CreateRegisterStorageFromArgs(this,
+                                                                                       1,
+                                                                                       &v);
+
+               KorkApi::TypeStorageInterface outputStorage = KorkApi::CreateRegisterStorage(this,
+                                                                                       KorkApi::ConsoleValue::TypeInternalNumber);
+               
+               // NOTE: types should set head of stack to value if data pointer is NULL in this case
+               mTypes[v.typeId].iFuncs.CastValueFn(mTypes[v.typeId].userPtr,
+                                                                   mVM,
+                                                                   &inputStorage,
+                                                                   &outputStorage,
+                                                                   NULL,
+                                                                   0,
+                                                                   KorkApi::ConsoleValue::TypeInternalNumber);
+
+               return outputStorage.data.storageRegister->getInt();
          }
          break;
    }
@@ -1535,22 +1482,23 @@ const char* VmInternal::valueAsString(ConsoleValue v)
       break;
    default:
       {
-#if 0
-         KorkApi::TypeInfo& info = mTypes[v.typeId];
-         void* typePtr = v.evaluatePtr(mAllocBase);
-         TypeStorageInterface inputStorage = KorkApi::CreateFixedTypeStorage(this, typePtr, v.typeId, true);
-         TypeStorageInterface outputStorage = KorkApi::CreateExprEvalReturnTypeStorage(this, 0, KorkApi::ConsoleValue::TypeInternalString);
-         
-         info.iFuncs.CastValueFn(info.userPtr,
-                                            mVM,
-                      &inputStorage,
-                       &outputStorage,
-                      NULL,
-                      0,
-                                            KorkApi::ConsoleValue::TypeInternalString).evaluatePtr(mAllocBase);
-         
-         return outputStorage.data.storageRegister;
-#endif
+            KorkApi::TypeStorageInterface inputStorage = KorkApi::CreateRegisterStorageFromArgs(this,
+                                                                                    1,
+                                                                                    &v);
+
+            KorkApi::TypeStorageInterface outputStorage = KorkApi::CreateRegisterStorage(this,
+                                                                                    KorkApi::ConsoleValue::TypeInternalString);
+            
+            // NOTE: types should set head of stack to value if data pointer is NULL in this case
+            mTypes[v.typeId].iFuncs.CastValueFn(mTypes[v.typeId].userPtr,
+                                                                mVM,
+                                                                &inputStorage,
+                                                                &outputStorage,
+                                                                NULL,
+                                                                0,
+                                                                KorkApi::ConsoleValue::TypeInternalString);
+
+            return (const char*)outputStorage.data.storageRegister->evaluatePtr(mAllocBase);
       }
       break;
    }

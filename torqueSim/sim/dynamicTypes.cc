@@ -76,17 +76,6 @@ void ConsoleBaseType::registerTypeWithVm(KorkApi::Vm* vm)
    info.name = StringTable->insert(mTypeName);
    info.inspectorFieldType = StringTable->insert(mInspectorFieldType);
    info.userPtr = this;
-   info.iFuncs.SetValueFn = [](void* userPtr,
-                             KorkApi::Vm* vm,
-                             KorkApi::TypeStorageInterface* storage,
-                                     S32 argc,
-                             KorkApi::ConsoleValue* argv,
-                                     const EnumTable* tbl,
-                                     BitSet32 flag,
-                             U32 typeId){
-      ConsoleBaseType* typeInfo = (ConsoleBaseType*)userPtr;
-      return typeInfo->setData(vm, storage, argc, argv, tbl, flag, typeId);
-   };
    info.iFuncs.CastValueFn = [](void* userPtr,
                               KorkApi::Vm* vm,
                                      KorkApi::TypeStorageInterface* inputStorage,

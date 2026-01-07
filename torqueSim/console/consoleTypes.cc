@@ -33,186 +33,129 @@ ConsoleType( SimObjectId, TypeSimObjectId, sizeof(SimObject*), sizeof(SimObjectI
 ConsolePrepType( filename, TypeFilename, sizeof( const char* ), UINT_MAX, "" )
 #endif
 
+// TODO: should be part of API
+namespace KorkApi
+{
+   KorkApi::TypeStorageInterface CreateRegisterStorageFromArgs(KorkApi::VmInternal* vmInternal, U32 argc, KorkApi::ConsoleValue* argv);
+}
+
 // Impls
 
 ConsoleGetType( TypeString )
 {
-   const char* value = inputStorage->isField ? (const char *)(ConsoleGetInputStoragePtr()) : *((const char **)(ConsoleGetInputStoragePtr()));
-   U32 len = dStrlen(value)+1;
-   
-   if (requestedType == KorkApi::ConsoleValue::TypeInternalString ||
-       requestedType == TypeString)
-   {
-      outputStorage->FinalizeStorage(outputStorage, dStrlen(value)+1);
-      memcpy(ConsoleGetOutputStoragePtr(), value, len);
-      *outputStorage->data.storageRegister = outputStorage->data.storageAddress;
-      return true;
-   }
-   else if (requestedType == KorkApi::ConsoleValue::TypeInternalNumber)
-   {
-      *outputStorage->data.storageRegister = KorkApi::ConsoleValue::makeNumber(std::atof(value));
-   }
-   else if (requestedType == KorkApi::ConsoleValue::TypeInternalUnsigned)
-   {
-      *outputStorage->data.storageRegister = KorkApi::ConsoleValue::makeUnsigned(std::atoll(value));
-   }
-   
-   return false;
-}
+   const KorkApi::ConsoleValue* argv = nullptr;
+   U32 argc = inputStorage ? inputStorage->data.argc : 0;
+   bool isPTR = false;
 
-ConsoleSetType( TypeString )
-{
-   if (argc == 1)
+   if (argc > 0 && 
+      inputStorage->data.storageRegister)
    {
-      if (!outputStorage->isField)
-      {
-         // NOTE: Assuming output is the correct size already here which should be the case
-         // for non-relocatable values.
-         StringTableEntry* value = (StringTableEntry*)ConsoleGetOutputStoragePtr();
-         *value = StringTable->insert((const char*)argv[0].evaluatePtr(vmPtr->getAllocBase()));
-      }
-      else
-      {
-         // Variable size, uses storage API for resizing.
-         const char* value = (const char*)(argv[0].evaluatePtr(vmPtr->getAllocBase()));
-         U32 len = dStrlen(value)+1;
-         outputStorage->FinalizeStorage(outputStorage, len);
-         char* ptr = (char*)ConsoleGetOutputStoragePtr();
-         memcpy(ptr, value, len);
-         
-         if (outputStorage->data.storageRegister)
-         {
-            *outputStorage->data.storageRegister = outputStorage->data.storageAddress;
-         }
-      }
-      
-      return true;
+      argv = inputStorage->data.storageRegister;
    }
    else
+   {
+      argc = 1;
+      argv = &inputStorage->data.storageAddress;
+      isPTR = true;
+   }
+
+   // TypeString can't take tuples.
+   if (argc != 1)
    {
       Con::printf("(TypeString) Cannot set multiple args to a single string.");
       return false;
    }
+
+   // Evaluate input to C string
+   const char* value = isPTR ? *((const char**)ConsoleGetInputStoragePtr()) : (const char*)vmPtr->valueAsString(argv[0]);
+   if (!value)
+      value = "";
+
+    // Handle cast to specific output type (may require specialization)
+    if (requestedType != TypeString ||
+      requestedType != KorkApi::ConsoleValue::TypeInternalString)
+    {
+      KorkApi::ConsoleValue cv = KorkApi::ConsoleValue::makeString(value);
+      KorkApi::TypeStorageInterface castInput = KorkApi::CreateRegisterStorageFromArgs(vmPtr->mInternal, 1, &cv);
+      return vmPtr->castValue(requestedType, &castInput, outputStorage, NULL, 0);
+    }
+   
+   // Now all we need to do is deal with whether the output is a field or not
+
+   if (!outputStorage->isField)
+   {
+      StringTableEntry* dst = (StringTableEntry*)ConsoleGetOutputStoragePtr();
+      *dst = StringTable->insert(value);
+   }
+   else
+   {
+      // Field output: variable size string stored in relocatable backing store (heap/STR etc.)
+      U32 len = dStrlen(value) + 1;
+
+      outputStorage->FinalizeStorage(outputStorage, len);
+
+      char* dst = (char*)ConsoleGetOutputStoragePtr();
+      if (!dst)
+         return false;
+
+      memcpy(dst, StringTable->insert(value), len);
+
+      // If a storage register exists, mirror the storageAddress into it (as you did before).
+      if (outputStorage->data.storageRegister)
+      {
+         *outputStorage->data.storageRegister = outputStorage->data.storageAddress;
+      }
+   }
+
+   return true;
 }
 
 ConsoleGetType( TypeStringTableEntryVector )
 {
+   Vector<StringTableEntry> *vec = NULL;
+   static Vector<StringTableEntry> workVec;
+   
    if (!inputStorage->isField)
    {
-      // TODO
-      return false;
-   }
-   else
-   {
-      Vector<StringTableEntry> *vec = (Vector<StringTableEntry>*)ConsoleGetInputStoragePtr();
-      outputStorage->ResizeStorage(outputStorage, 1024);
-      char* returnBuffer = (char*)outputStorage->data.storageAddress.evaluatePtr(vmPtr->getAllocBase());
+      if (!outputStorage->isField &&
+          (requestedType == TypeStringTableEntryVector ||
+          requestedType == KorkApi::ConsoleValue::TypeInternalString))
+      {
+         // Just copy string
+         const char* ptr = (const char*)ConsoleGetInputStoragePtr();
+         U32 len = dStrlen(ptr)+1;
+         outputStorage->ResizeStorage(outputStorage, len);
+         char* returnBuffer = (char*)outputStorage->data.storageAddress.evaluatePtr(vmPtr->getAllocBase());
+         memcpy(returnBuffer, ptr, len);
+         
+         if (outputStorage->data.storageRegister)
+         {
+            *outputStorage->data.storageRegister = outputStorage->data.storageAddress;
+         }
       
-      if (requestedType == KorkApi::ConsoleValue::TypeInternalString)
-      {
-         S32 maxReturn = 1024;
-         returnBuffer[0] = '\0';
-         S32 returnLeng = 0;
-         for (Vector<StringTableEntry>::iterator itr = vec->begin(); itr < vec->end(); itr++)
-         {
-            // concatenate the next value onto the return string
-            if ( itr == vec->begin() )
-            {
-               dSprintf(returnBuffer + returnLeng, maxReturn - returnLeng, "%s", *itr);
-            }
-            else
-            {
-               dSprintf(returnBuffer + returnLeng, maxReturn - returnLeng, ",%s", *itr);
-            }
-            returnLeng = dStrlen(returnBuffer);
-         }
-         
-         outputStorage->FinalizeStorage(outputStorage, returnLeng+1);
-         
-         if (outputStorage->data.storageRegister)
-         {
-            *outputStorage->data.storageRegister = outputStorage->data.storageAddress;
-         }
-         
-         return true;
-      }
-      else if (requestedType == KorkApi::ConsoleValue::TypeInternalNumber)
-      {
-         *outputStorage->data.storageRegister = KorkApi::ConsoleValue::makeNumber(vec->empty() ? 0 : std::atof(vec->first()));
-      }
-      else if (requestedType == KorkApi::ConsoleValue::TypeInternalUnsigned)
-      {
-         *outputStorage->data.storageRegister = KorkApi::ConsoleValue::makeUnsigned(vec->empty() ? 0 : std::atoll(vec->first()));
-      }
-   }
-   
-   return false;
-}
-
-ConsoleSetType( TypeStringTableEntryVector )
-{
-   if (outputStorage->isField)
-   {
-      // TODO: make vector, serialize
-      return false;
-   }
-   else
-   {
-      Vector<StringTableEntry> *vec = (Vector<StringTableEntry>*)ConsoleGetOutputStoragePtr();
-      // we assume the vector should be cleared first (not just appending)
-      vec->clear();
-      if (argc == 1)
-      {
-         KorkApi::ConsoleValue argV = argv[0];
-         const char* arg = (const char*)argV.evaluatePtr(vmPtr->getAllocBase());
-         const U32 unitCount = StringUnit::getUnitCount(arg, ",");
-         for( U32 unitIndex = 0; unitIndex < unitCount; ++unitIndex )
-         {
-            vec->push_back( StringTable->insert( StringUnit::getUnit(arg, unitIndex, ",") ) );
-         }
-         
-         return true;
-      }
-      else if (argc > 1)
-      {
-         for (S32 i = 0; i < argc; i++)
-         {
-            KorkApi::ConsoleValue argV = argv[i];
-            vec->push_back( StringTable->insert( (const char*)argV.evaluatePtr(vmPtr->getAllocBase()) ) );
-         }
-         
          return true;
       }
       else
-         Con::printf("Vector<String> must be set as { a, b, c, ... } or \"a,b,c, ...\"");
-   }
-   
-   return false;
-}
-
-ConsoleSetType( TypeCaseString )
-{
-   if (argc == 1)
-   {
-      if (!outputStorage->isField)
       {
-         // NOTE: Assuming output is the correct size already here which should be the case
-         // for non-relocatable values.
-         StringTableEntry* value = (StringTableEntry*)ConsoleGetOutputStoragePtr();
-         *value = StringTable->insert((const char*)argv[0].evaluatePtr(vmPtr->getAllocBase()), true);
-      }
-      else
-      {
-         // Variable size, uses storage API for resizing.
-         const char* value = (const char*)(argv[0].evaluatePtr(vmPtr->getAllocBase()));
-         U32 len = dStrlen(value)+1;
-         outputStorage->FinalizeStorage(outputStorage, len);
-         char* ptr = (char*)ConsoleGetOutputStoragePtr();
-         memcpy(ptr, value, len);
+         // Need to take long path
+         vec = &workVec;
+         vec->clear();
          
-         if (outputStorage->data.storageRegister)
+         if (inputStorage->data.argc > 1)
          {
-            *outputStorage->data.storageRegister = outputStorage->data.storageAddress;
+            for (U32 i=0; i<inputStorage->data.argc; i++)
+            {
+               vec->push_back( StringTable->insert( vmPtr->valueAsString(inputStorage->data.storageRegister[i] ) ) );
+            }
+         }
+         else if (inputStorage->data.argc > 0)
+         {
+            const char* arg = vmPtr->valueAsString(inputStorage->data.storageRegister[0]);
+            const U32 unitCount = StringUnit::getUnitCount(arg, ",");
+            for( U32 unitIndex = 0; unitIndex < unitCount; ++unitIndex )
+            {
+               vec->push_back( StringTable->insert( StringUnit::getUnit(arg, unitIndex, ",") ) );
+            }
          }
       }
       
@@ -220,37 +163,140 @@ ConsoleSetType( TypeCaseString )
    }
    else
    {
-      Con::printf("(TypeCaseString) Cannot set multiple args to a single string.");
-      return false;
+      vec = (Vector<StringTableEntry>*)ConsoleGetInputStoragePtr();
    }
+   
+   // Set conservative output size
+   
+   // Input should now be a vector; we need to convert it to the output
+
+   if (outputStorage->isField &&
+       requestedType == TypeStringTableEntryVector)
+   {
+      // In this case we are setting output to this type so just copy the vector
+      // NOTE: we will NEVER get outputStorage->isField == true where the type isn't the native type
+      Vector<StringTableEntry> *outputVec = (Vector<StringTableEntry>*)ConsoleGetOutputStoragePtr();
+      *outputVec = *vec;
+   }
+   else if (requestedType == KorkApi::ConsoleValue::TypeInternalString ||
+       requestedType == TypeStringTableEntryVector)
+   {
+      S32 maxReturn = 1024;
+      outputStorage->ResizeStorage(outputStorage, maxReturn);
+      char* returnBuffer = (char*)outputStorage->data.storageAddress.evaluatePtr(vmPtr->getAllocBase());
+      returnBuffer[0] = '\0';
+      S32 returnLeng = 0;
+      
+      for (Vector<StringTableEntry>::iterator itr = vec->begin(); itr < vec->end(); itr++)
+      {
+         // concatenate the next value onto the return string
+         if ( itr == vec->begin() )
+         {
+            dSprintf(returnBuffer + returnLeng, maxReturn - returnLeng, "%s", *itr);
+         }
+         else
+         {
+            dSprintf(returnBuffer + returnLeng, maxReturn - returnLeng, ",%s", *itr);
+         }
+         returnLeng = dStrlen(returnBuffer);
+      }
+      
+      outputStorage->FinalizeStorage(outputStorage, returnLeng+1);
+      
+      if (outputStorage->data.storageRegister)
+      {
+         *outputStorage->data.storageRegister = outputStorage->data.storageAddress;
+      }
+      
+      return true;
+   }
+   else
+   {
+      static Vector<KorkApi::ConsoleValue> tmpArgv;
+      tmpArgv.setSize(inputStorage->data.argc);
+      
+      for (U32 i=0; i<inputStorage->data.argc; i++)
+      {
+         tmpArgv[i] = KorkApi::ConsoleValue::makeString(vec->operator[](i));
+      }
+      KorkApi::TypeStorageInterface castInput = KorkApi::CreateRegisterStorageFromArgs(vmPtr->mInternal, inputStorage->data.argc, tmpArgv.address());
+      return vmPtr->castValue(requestedType, &castInput, outputStorage, NULL, 0);
+   }
+   
+   return false;
 }
 
 ConsoleGetType( TypeCaseString )
 {
-   const char* value = inputStorage->isField ? (const char *)(ConsoleGetInputStoragePtr()) : *((const char **)(ConsoleGetInputStoragePtr()));
-   U32 len = dStrlen(value)+1;
+   const KorkApi::ConsoleValue* argv = nullptr;
+   U32 argc = inputStorage ? inputStorage->data.argc : 0;
+   bool isPTR = false;
+
+   if (argc > 0 &&
+      inputStorage->data.storageRegister)
+   {
+      argv = inputStorage->data.storageRegister;
+   }
+   else
+   {
+      argc = 1;
+      argv = &inputStorage->data.storageAddress;
+      isPTR = true;
+   }
+
+   // TypeString can't take tuples.
+   if (argc != 1)
+   {
+      Con::printf("(TypeCaseString) Cannot set multiple args to a single string.");
+      return false;
+   }
+
+   // Evaluate input to C string
+   const char* value = isPTR ? *((const char**)ConsoleGetInputStoragePtr()) : (const char*)vmPtr->valueAsString(argv[0]);
+   if (!value)
+      value = "";
+
+    // Handle cast to specific output type (may require specialization)
+    if (requestedType != TypeString ||
+      requestedType != KorkApi::ConsoleValue::TypeInternalString)
+    {
+      KorkApi::ConsoleValue cv = KorkApi::ConsoleValue::makeString(value);
+      KorkApi::TypeStorageInterface castInput = KorkApi::CreateRegisterStorageFromArgs(vmPtr->mInternal, 1, &cv);
+      return vmPtr->castValue(requestedType, &castInput, outputStorage, NULL, 0);
+    }
    
-   if (requestedType == KorkApi::ConsoleValue::TypeInternalString ||
-       requestedType == TypeString)
+   // Now all we need to do is deal with whether the output is a field or not
+
+   if (!outputStorage->isField)
    {
-      outputStorage->FinalizeStorage(outputStorage, dStrlen(value)+1);
-      memcpy(ConsoleGetOutputStoragePtr(), value, len);
-      *outputStorage->data.storageRegister = outputStorage->data.storageAddress;
-      return true;
+      StringTableEntry* dst = (StringTableEntry*)ConsoleGetOutputStoragePtr();
+      *dst = StringTable->insert(value, true);
    }
-   else if (requestedType == KorkApi::ConsoleValue::TypeInternalNumber)
+   else
    {
-      *outputStorage->data.storageRegister = KorkApi::ConsoleValue::makeNumber(std::atof(value));
+      // Field output: variable size string stored in relocatable backing store (heap/STR etc.)
+      U32 len = dStrlen(value) + 1;
+
+      outputStorage->FinalizeStorage(outputStorage, len);
+
+      char* dst = (char*)ConsoleGetOutputStoragePtr();
+      if (!dst)
+         return false;
+
+      memcpy(dst, value, len);
+
+      // If a storage register exists, mirror the storageAddress into it (as you did before).
+      if (outputStorage->data.storageRegister)
+      {
+         *outputStorage->data.storageRegister = outputStorage->data.storageAddress;
+      }
    }
-   else if (requestedType == KorkApi::ConsoleValue::TypeInternalUnsigned)
-   {
-      *outputStorage->data.storageRegister = KorkApi::ConsoleValue::makeUnsigned(std::atoll(value));
-   }
-   
-   return false;
+
+   return true;
 }
 
 #if 0
+
 ConsoleSetType( TypeFilename )
 {
    if (argc == 1)
@@ -287,514 +333,563 @@ ConsolePrepData( TypeFilename )
 
 ConsoleGetType( TypeS8 )
 {
-   S8 value = *((S8*)(ConsoleGetInputStoragePtr()));
+   S8 value = inputStorage->isField ? *((S32*)(ConsoleGetInputStoragePtr())) : vmPtr->valueAsInt(inputStorage->data.storageRegister[0]);
    
    if (requestedType == KorkApi::ConsoleValue::TypeInternalString)
    {
       outputStorage->FinalizeStorage(outputStorage, 6);
       dSprintf((char*)ConsoleGetOutputStoragePtr(), 6, "%i", value);
-      *outputStorage->data.storageRegister = outputStorage->data.storageAddress;
-      return true;
-   }
-   else if (requestedType == KorkApi::ConsoleValue::TypeInternalNumber)
-   {
-      *outputStorage->data.storageRegister = KorkApi::ConsoleValue::makeNumber(value);
-   }
-   else if (requestedType == KorkApi::ConsoleValue::TypeInternalUnsigned)
-   {
-      *outputStorage->data.storageRegister = KorkApi::ConsoleValue::makeUnsigned((U64)value);
-   }
-}
-
-ConsoleSetType( TypeS8 )
-{
-   if (argc == 1)
-   {
-      S8* value = (S8*)ConsoleGetOutputStoragePtr();
-      *value = vmPtr->valueAsInt(argv[0]);
       
       if (outputStorage->data.storageRegister)
       {
-         *outputStorage->data.storageRegister = KorkApi::ConsoleValue::makeNumber(*value);
+         *outputStorage->data.storageRegister = outputStorage->data.storageAddress;
       }
       
       return true;
    }
    else
    {
-      Con::printf("(TypeS8) Cannot set multiple args to a single S8.");
-      return false;
+      KorkApi::ConsoleValue cv = KorkApi::ConsoleValue::makeNumber(value);
+      KorkApi::TypeStorageInterface castInput =
+         KorkApi::CreateRegisterStorageFromArgs(vmPtr->mInternal, 1, &cv);
+
+      return vmPtr->castValue(requestedType, &castInput, outputStorage, nullptr, 0);
    }
 }
 
 ConsoleGetType( TypeS32 )
 {
-   S32 value = *((S32*)(ConsoleGetInputStoragePtr()));
-   
-   if (requestedType == KorkApi::ConsoleValue::TypeInternalString)
-   {
-      outputStorage->FinalizeStorage(outputStorage, 6);
-      dSprintf((char*)ConsoleGetOutputStoragePtr(), 12, "%i", value);
-      *outputStorage->data.storageRegister = outputStorage->data.storageAddress;
-      return true;
-   }
-   else if (requestedType == KorkApi::ConsoleValue::TypeInternalNumber)
-   {
-      *outputStorage->data.storageRegister = KorkApi::ConsoleValue::makeNumber(value);
-   }
-   else if (requestedType == KorkApi::ConsoleValue::TypeInternalUnsigned)
-   {
-      *outputStorage->data.storageRegister = KorkApi::ConsoleValue::makeUnsigned((U64)value);
-   }
-}
-
-ConsoleSetType( TypeS32 )
-{
-   if (argc == 1)
-   {
-      S32* value = (S32*)ConsoleGetOutputStoragePtr();
-      *value = (S32)vmPtr->valueAsInt(argv[0]);
-      
-      if (outputStorage->data.storageRegister)
-      {
-         *outputStorage->data.storageRegister = KorkApi::ConsoleValue::makeNumber(*value);
-      }
-      
-      return true;
-   }
-   else
-   {
-      Con::printf("(TypeS32) Cannot set multiple args to a single S32.");
-   }
-}
-
-ConsoleGetType( TypeF32 )
-{
-   F32 value = *((F32*)(ConsoleGetInputStoragePtr()));
-   
-   if (requestedType == KorkApi::ConsoleValue::TypeInternalString)
-   {
-      outputStorage->FinalizeStorage(outputStorage, 64);
-      dSprintf((char*)ConsoleGetOutputStoragePtr(), 64, "%.9g", value);
-      *outputStorage->data.storageRegister = outputStorage->data.storageAddress;
-      return true;
-   }
-   else if (requestedType == KorkApi::ConsoleValue::TypeInternalNumber)
-   {
-      *outputStorage->data.storageRegister = KorkApi::ConsoleValue::makeNumber(value);
-   }
-   else if (requestedType == KorkApi::ConsoleValue::TypeInternalUnsigned)
-   {
-      *outputStorage->data.storageRegister = KorkApi::ConsoleValue::makeUnsigned((U64)value);
-   }
-}
-ConsoleSetType( TypeF32 )
-{
-   if (argc == 1)
-      *((F32 *) ConsoleGetOutputStoragePtr()) = vmPtr->valueAsFloat(argv[0]);
-   else
-      Con::printf("(TypeF32) Cannot set multiple args to a single F32.");
-}
-
-ConsoleGetType( TypeBool )
-{
-   bool value = *((bool*)(ConsoleGetInputStoragePtr()));
+   S32 value = inputStorage->isField ? *((S32*)(ConsoleGetInputStoragePtr())) : vmPtr->valueAsInt(inputStorage->data.storageRegister[0]);
    
    if (requestedType == KorkApi::ConsoleValue::TypeInternalString)
    {
       outputStorage->FinalizeStorage(outputStorage, 6);
       dSprintf((char*)ConsoleGetOutputStoragePtr(), 6, "%i", value);
-      *outputStorage->data.storageRegister = outputStorage->data.storageAddress;
+      
+      if (outputStorage->data.storageRegister)
+      {
+         *outputStorage->data.storageRegister = outputStorage->data.storageAddress;
+      }
+      
       return true;
    }
-   else if (requestedType == KorkApi::ConsoleValue::TypeInternalNumber)
-   {
-      *outputStorage->data.storageRegister = KorkApi::ConsoleValue::makeNumber(value);
-   }
-   else if (requestedType == KorkApi::ConsoleValue::TypeInternalUnsigned)
-   {
-      *outputStorage->data.storageRegister = KorkApi::ConsoleValue::makeUnsigned((U64)value);
-   }
-}
-
-ConsoleSetType( TypeBool )
-{
-   if (argc == 1)
-      *((bool *) ConsoleGetOutputStoragePtr()) = vmPtr->valueAsBool(argv[0]);
    else
-      Con::printf("(TypeBool) Cannot set multiple args to a single bool.");
+   {
+      KorkApi::ConsoleValue cv = KorkApi::ConsoleValue::makeNumber(value);
+      KorkApi::TypeStorageInterface castInput =
+         KorkApi::CreateRegisterStorageFromArgs(vmPtr->mInternal, 1, &cv);
+
+      return vmPtr->castValue(requestedType, &castInput, outputStorage, nullptr, 0);
+   }
 }
 
+ConsoleGetType( TypeF32 )
+{
+   F32 value = inputStorage->isField ? *((F32*)(ConsoleGetInputStoragePtr())) : vmPtr->valueAsFloat(inputStorage->data.storageRegister[0]);
+   
+   if (requestedType == KorkApi::ConsoleValue::TypeInternalString)
+   {
+      outputStorage->FinalizeStorage(outputStorage, 6);
+      dSprintf((char*)ConsoleGetOutputStoragePtr(), 6, "%.9g", value);
+      
+      if (outputStorage->data.storageRegister)
+      {
+         *outputStorage->data.storageRegister = outputStorage->data.storageAddress;
+      }
+      
+      return true;
+   }
+   else
+   {
+      KorkApi::ConsoleValue cv = KorkApi::ConsoleValue::makeNumber(value);
+      KorkApi::TypeStorageInterface castInput =
+         KorkApi::CreateRegisterStorageFromArgs(vmPtr->mInternal, 1, &cv);
+
+      return vmPtr->castValue(requestedType, &castInput, outputStorage, nullptr, 0);
+   }
+}
+
+ConsoleGetType( TypeBool )
+{
+   bool value = inputStorage->isField ? *((bool*)(ConsoleGetInputStoragePtr())) : vmPtr->valueAsInt(inputStorage->data.storageRegister[0]);
+   
+   if (requestedType == KorkApi::ConsoleValue::TypeInternalString)
+   {
+      outputStorage->FinalizeStorage(outputStorage, 6);
+      dSprintf((char*)ConsoleGetOutputStoragePtr(), 6, "%.9g", value);
+      
+      if (outputStorage->data.storageRegister)
+      {
+         *outputStorage->data.storageRegister = outputStorage->data.storageAddress;
+      }
+      
+      return true;
+   }
+   else
+   {
+      KorkApi::ConsoleValue cv = KorkApi::ConsoleValue::makeNumber(value);
+      KorkApi::TypeStorageInterface castInput =
+         KorkApi::CreateRegisterStorageFromArgs(vmPtr->mInternal, 1, &cv);
+
+      return vmPtr->castValue(requestedType, &castInput, outputStorage, nullptr, 0);
+   }
+}
 
 ConsoleGetType( TypeS32Vector )
 {
-   if (inputStorage->isField)
+   Vector<S32> *vec = NULL;
+   static Vector<S32> workVec;
+   
+   if (!inputStorage->isField)
    {
-      Vector<S32>* vec = (Vector<S32>*)ConsoleGetInputStoragePtr();
-
-      if (requestedType == KorkApi::ConsoleValue::TypeInternalString)
+      if (!outputStorage->isField &&
+          (requestedType == TypeS32Vector))
       {
-         const U32 buffSize = (vec->size() * 15) + 16;
-         outputStorage->FinalizeStorage(outputStorage, buffSize);
-
-         char* out = (char*)ConsoleGetOutputStoragePtr();
-         out[0] = '\0';
-
-         S32 len = 0;
-         for (Vector<S32>::iterator itr = vec->begin(); itr != vec->end(); ++itr)
-         {
-            dSprintf(out + len, buffSize - len, "%d ", *itr);
-            len = dStrlen(out);
-         }
-
-         if (len > 0 && out[len - 1] == ' ')
-            out[len - 1] = '\0';
-
-         outputStorage->FinalizeStorage(outputStorage, dStrlen(out) + 1);
-
+         // Just copy data
+         outputStorage->FinalizeStorage(outputStorage, inputStorage->data.size);
+         void* ptr = ConsoleGetInputStoragePtr();
+         void* returnBuffer = ConsoleGetOutputStoragePtr();
+         memcpy(returnBuffer, ptr, inputStorage->data.size);
+         
          if (outputStorage->data.storageRegister)
+         {
             *outputStorage->data.storageRegister = outputStorage->data.storageAddress;
-
-         return true;
-      }
-      else if (requestedType == KorkApi::ConsoleValue::TypeInternalNumber)
-      {
-         if (outputStorage->data.storageRegister)
-            *outputStorage->data.storageRegister =
-               KorkApi::ConsoleValue::makeNumber(vec->empty() ? 0.0 : (F64)vec->first());
-         return true;
-      }
-      else if (requestedType == KorkApi::ConsoleValue::TypeInternalUnsigned)
-      {
-         if (outputStorage->data.storageRegister)
-            *outputStorage->data.storageRegister =
-               KorkApi::ConsoleValue::makeUnsigned(vec->empty() ? 0 : (U64)vec->first());
-         return true;
-      }
-
-      return false;
-   }
-   else
-   {
-      // TODO
-      return false;
-   }
-}
-
-ConsoleSetType( TypeS32Vector )
-{
-   if (outputStorage->isField)
-   {
-      Vector<S32>* vec = (Vector<S32>*)ConsoleGetOutputStoragePtr();
-      vec->clear();
-
-      if (argc == 1)
-      {
-         const char* values = vmPtr->valueAsString(argv[0]);
-         if (!values) values = "";
-         const char* p   = values;
-         const char* end = values + dStrlen(values);
-
-         while (p < end)
-         {
-            p = SkipSpaces(p);
-            if (p >= end) break;
-
-            S32 v = 0;
-            if (dSscanf(p, "%d", &v) == 0)
-               break;
-
-            vec->push_back(v);
-
-            // advance to next delimiter (space separated)
-            const char* next = dStrchr(p, ' ');
-            if (!next || next >= end) break;
-            p = next + 1;
          }
-
+      
          return true;
       }
-      else if (argc > 1)
+      else
       {
-         for (S32 i = 0; i < argc; ++i)
-            vec->push_back(vmPtr->valueAsInt(argv[i]));
-         return true;
-      }
+         // Need to take long path
+         vec = &workVec;
+         vec->clear();
+         
+         if (inputStorage->data.argc > 1)
+         {
+            for (U32 i=0; i<inputStorage->data.argc; i++)
+            {
+               vec->push_back( (S32)vmPtr->valueAsInt(inputStorage->data.storageRegister[i]) );
+            }
+         }
+         else if (inputStorage->data.argc > 0)
+         {
+            const char* values = vmPtr->valueAsString(inputStorage->data.storageRegister[0]);
+            if (!values) values = "";
+            const char* p   = values;
+            const char* end = values + dStrlen(values);
 
-      Con::printf("Vector<S32> must be set as { a, b, c } or \"a b c\"");
-      return false;
+            while (p < end)
+            {
+               p = SkipSpaces(p);
+               if (p >= end) break;
+
+               S32 v = 0;
+               if (dSscanf(p, "%d", &v) == 0)
+                  break;
+
+               vec->push_back(v);
+
+               // advance to next delimiter (space separated)
+               const char* next = dStrchr(p, ' ');
+               if (!next || next >= end) break;
+               p = next + 1;
+            }
+         }
+      }
+      
+      return true;
    }
    else
    {
-      // TODO
-      return false;
+      vec = (Vector<S32>*)ConsoleGetInputStoragePtr();
    }
-}
+   
+   // Set conservative output size
+   
+   // Input should now be a vector; we need to convert it to the output
 
+   if (outputStorage->isField &&
+       requestedType == TypeS32Vector)
+   {
+      // In this case we are setting output to this type so just copy the vector
+      // NOTE: we will NEVER get outputStorage->isField == true where the type isn't the native type
+      Vector<S32> *outputVec = (Vector<S32>*)ConsoleGetOutputStoragePtr();
+      *outputVec = *vec;
+   }
+   else if (requestedType == KorkApi::ConsoleValue::TypeInternalString)
+   {
+      S32 maxReturn = 1024;
+      outputStorage->ResizeStorage(outputStorage, maxReturn);
+      char* returnBuffer = (char*)outputStorage->data.storageAddress.evaluatePtr(vmPtr->getAllocBase());
+      returnBuffer[0] = '\0';
+      S32 returnLeng = 0;
+      
+      for (Vector<S32>::iterator itr = vec->begin(); itr < vec->end(); itr++)
+      {
+         // concatenate the next value onto the return string
+         if ( itr == vec->begin() )
+         {
+            dSprintf(returnBuffer + returnLeng, maxReturn - returnLeng, "%i", *itr);
+         }
+         else
+         {
+            dSprintf(returnBuffer + returnLeng, maxReturn - returnLeng, " %i", *itr);
+         }
+         returnLeng = dStrlen(returnBuffer);
+      }
+      
+      outputStorage->FinalizeStorage(outputStorage, returnLeng+1);
+      
+      if (outputStorage->data.storageRegister)
+      {
+         *outputStorage->data.storageRegister = outputStorage->data.storageAddress;
+      }
+      
+      return true;
+   }
+   else
+   {
+      static Vector<KorkApi::ConsoleValue> tmpArgv;
+      tmpArgv.setSize(inputStorage->data.argc);
+      
+      for (U32 i=0; i<inputStorage->data.argc; i++)
+      {
+         tmpArgv[i] = KorkApi::ConsoleValue::makeNumber(vec->operator[](i));
+      }
+      KorkApi::TypeStorageInterface castInput = KorkApi::CreateRegisterStorageFromArgs(vmPtr->mInternal, inputStorage->data.argc, tmpArgv.address());
+      return vmPtr->castValue(requestedType, &castInput, outputStorage, NULL, 0);
+   }
+   
+   return false;
+}
 
 ConsoleGetType( TypeF32Vector )
 {
-   if (inputStorage->isField)
+   Vector<F32> *vec = NULL;
+   static Vector<F32> workVec;
+   
+   if (!inputStorage->isField)
    {
-      Vector<F32>* vec = (Vector<F32>*)ConsoleGetInputStoragePtr();
-
-      if (requestedType == KorkApi::ConsoleValue::TypeInternalString)
+      if (!outputStorage->isField &&
+          (requestedType == TypeF32Vector))
       {
-         const U32 buffSize = (vec->size() * 15) + 16;
-         outputStorage->FinalizeStorage(outputStorage, buffSize);
-
-         char* out = (char*)ConsoleGetOutputStoragePtr();
-         out[0] = '\0';
-
-         S32 len = 0;
-         for (Vector<F32>::iterator itr = vec->begin(); itr != vec->end(); ++itr)
-         {
-            dSprintf(out + len, buffSize - len, "%g ", *itr);
-            len = dStrlen(out);
-         }
-
-         if (len > 0 && out[len - 1] == ' ')
-            out[len - 1] = '\0';
-
-         outputStorage->FinalizeStorage(outputStorage, dStrlen(out) + 1);
-
+         // Just copy data
+         outputStorage->FinalizeStorage(outputStorage, inputStorage->data.size);
+         void* ptr = ConsoleGetInputStoragePtr();
+         void* returnBuffer = ConsoleGetOutputStoragePtr();
+         memcpy(returnBuffer, ptr, inputStorage->data.size);
+         
          if (outputStorage->data.storageRegister)
+         {
             *outputStorage->data.storageRegister = outputStorage->data.storageAddress;
-
-         return true;
-      }
-      else if (requestedType == KorkApi::ConsoleValue::TypeInternalNumber)
-      {
-         if (outputStorage->data.storageRegister)
-            *outputStorage->data.storageRegister =
-               KorkApi::ConsoleValue::makeNumber(vec->empty() ? 0.0 : (F64)vec->first());
-         return true;
-      }
-
-      return false;
-   }
-   else
-   {
-      // TODO
-      return false;
-   }
-}
-
-ConsoleSetType( TypeF32Vector )
-{
-   if (outputStorage->isField)
-   {
-      Vector<F32>* vec = (Vector<F32>*)ConsoleGetOutputStoragePtr();
-      vec->clear();
-      
-      if (argc == 1)
-      {
-         const char* values = vmPtr->valueAsString(argv[0]);
-         if (!values) values = "";
-         const char* p   = values;
-         const char* end = values + dStrlen(values);
-         
-         while (p < end)
-         {
-            p = SkipSpaces(p);
-            if (p >= end) break;
-            
-            S32 v = 0;
-            if (dSscanf(p, "%g", &v) == 0)
-               break;
-            
-            vec->push_back(v);
-            
-            // advance to next delimiter (space separated)
-            const char* next = dStrchr(p, ' ');
-            if (!next || next >= end) break;
-            p = next + 1;
          }
-         
+      
          return true;
       }
-      else if (argc > 1)
+      else
       {
-         for (S32 i = 0; i < argc; ++i)
-            vec->push_back(vmPtr->valueAsInt(argv[i]));
-         return true;
+         // Need to take long path
+         vec = &workVec;
+         vec->clear();
+         
+         if (inputStorage->data.argc > 1)
+         {
+            for (U32 i=0; i<inputStorage->data.argc; i++)
+            {
+               vec->push_back( (F32)vmPtr->valueAsInt(inputStorage->data.storageRegister[i]) );
+            }
+         }
+         else if (inputStorage->data.argc > 0)
+         {
+            const char* values = vmPtr->valueAsString(inputStorage->data.storageRegister[0]);
+            if (!values) values = "";
+            const char* p   = values;
+            const char* end = values + dStrlen(values);
+
+            while (p < end)
+            {
+               p = SkipSpaces(p);
+               if (p >= end) break;
+
+               F32 v = 0;
+               if (dSscanf(p, "%f", &v) == 0)
+                  break;
+
+               vec->push_back(v);
+
+               // advance to next delimiter (space separated)
+               const char* next = dStrchr(p, ' ');
+               if (!next || next >= end) break;
+               p = next + 1;
+            }
+         }
       }
       
-      Con::printf("Vector<F32> must be set as { a, b, c } or \"a b c\"");
-      return false;
+      return true;
    }
    else
    {
-      // TODO
-      return false;
+      vec = (Vector<F32>*)ConsoleGetInputStoragePtr();
    }
+   
+   // Set conservative output size
+   
+   // Input should now be a vector; we need to convert it to the output
+
+   if (outputStorage->isField &&
+       requestedType == TypeF32Vector)
+   {
+      // In this case we are setting output to this type so just copy the vector
+      // NOTE: we will NEVER get outputStorage->isField == true where the type isn't the native type
+      Vector<F32> *outputVec = (Vector<F32>*)ConsoleGetOutputStoragePtr();
+      *outputVec = *vec;
+   }
+   else if (requestedType == KorkApi::ConsoleValue::TypeInternalString)
+   {
+      S32 maxReturn = 1024;
+      outputStorage->ResizeStorage(outputStorage, maxReturn);
+      char* returnBuffer = (char*)outputStorage->data.storageAddress.evaluatePtr(vmPtr->getAllocBase());
+      returnBuffer[0] = '\0';
+      S32 returnLeng = 0;
+      
+      for (Vector<F32>::iterator itr = vec->begin(); itr < vec->end(); itr++)
+      {
+         // concatenate the next value onto the return string
+         if ( itr == vec->begin() )
+         {
+            dSprintf(returnBuffer + returnLeng, maxReturn - returnLeng, "%.9g", *itr);
+         }
+         else
+         {
+            dSprintf(returnBuffer + returnLeng, maxReturn - returnLeng, " %.9g", *itr);
+         }
+         returnLeng = dStrlen(returnBuffer);
+      }
+      
+      outputStorage->FinalizeStorage(outputStorage, returnLeng+1);
+      
+      if (outputStorage->data.storageRegister)
+      {
+         *outputStorage->data.storageRegister = outputStorage->data.storageAddress;
+      }
+      
+      return true;
+   }
+   else
+   {
+      static Vector<KorkApi::ConsoleValue> tmpArgv;
+      tmpArgv.setSize(inputStorage->data.argc);
+      
+      for (U32 i=0; i<inputStorage->data.argc; i++)
+      {
+         tmpArgv[i] = KorkApi::ConsoleValue::makeNumber(vec->operator[](i));
+      }
+      KorkApi::TypeStorageInterface castInput = KorkApi::CreateRegisterStorageFromArgs(vmPtr->mInternal, inputStorage->data.argc, tmpArgv.address());
+      return vmPtr->castValue(requestedType, &castInput, outputStorage, NULL, 0);
+   }
+   
+   return false;
 }
 
 ConsoleGetType( TypeBoolVector )
 {
-   if (inputStorage->isField)
+   Vector<bool> *vec = NULL;
+   static Vector<bool> workVec;
+   
+   if (!inputStorage->isField)
    {
-      Vector<bool>* vec = (Vector<bool>*)ConsoleGetInputStoragePtr();
-
-      if (requestedType == KorkApi::ConsoleValue::TypeInternalString)
+      if (!outputStorage->isField &&
+          (requestedType == TypeBoolVector))
       {
-         const U32 buffSize = (vec->size() * 3) + 16;
-         outputStorage->FinalizeStorage(outputStorage, buffSize);
-
-         char* out = (char*)ConsoleGetOutputStoragePtr();
-         out[0] = '\0';
-
-         S32 len = 0;
-         for (Vector<bool>::iterator itr = vec->begin(); itr != vec->end(); ++itr)
-         {
-            dSprintf(out + len, buffSize - len, "%d ", (*itr ? 1 : 0));
-            len = dStrlen(out);
-         }
-
-         if (len > 0 && out[len - 1] == ' ')
-            out[len - 1] = '\0';
-
-         outputStorage->FinalizeStorage(outputStorage, dStrlen(out) + 1);
-
-         if (outputStorage->data.storageRegister)
-            *outputStorage->data.storageRegister = outputStorage->data.storageAddress;
-
-         return true;
-      }
-      else if (requestedType == KorkApi::ConsoleValue::TypeInternalUnsigned)
-      {
-         if (outputStorage->data.storageRegister)
-            *outputStorage->data.storageRegister =
-               KorkApi::ConsoleValue::makeUnsigned(vec->empty() ? 0 : (vec->first() ? 1 : 0));
-         return true;
-      }
-      else if (requestedType == KorkApi::ConsoleValue::TypeInternalNumber)
-      {
-         if (outputStorage->data.storageRegister)
-            *outputStorage->data.storageRegister =
-               KorkApi::ConsoleValue::makeNumber(vec->empty() ? 0.0 : (vec->first() ? 1.0 : 0.0));
-         return true;
-      }
-
-      return false;
-   }
-   else
-   {
-      // TODO
-      return false;
-   }
-}
-
-ConsoleSetType( TypeBoolVector )
-{
-   if (outputStorage->isField)
-   {
-      Vector<bool>* vec = (Vector<bool>*)ConsoleGetOutputStoragePtr();
-      vec->clear();
-      
-      if (argc == 1)
-      {
-         const char* values = vmPtr->valueAsString(argv[0]);
-         const char* end    = values + dStrlen(values);
+         // Just copy data
+         outputStorage->FinalizeStorage(outputStorage, inputStorage->data.size);
+         void* ptr = ConsoleGetInputStoragePtr();
+         void* returnBuffer = ConsoleGetOutputStoragePtr();
+         memcpy(returnBuffer, ptr, inputStorage->data.size);
          
-         S32 v;
-         while (values < end && dSscanf(values, "%d", &v) != 0)
+         if (outputStorage->data.storageRegister)
          {
-            vec->push_back(v != 0);
-            const char* next = dStrchr(values, ' ');
-            if (!next || next >= end)
-               break;
-            values = next + 1;
+            *outputStorage->data.storageRegister = outputStorage->data.storageAddress;
          }
+      
          return true;
       }
-      else if (argc > 1)
+      else
       {
-         for (S32 i = 0; i < argc; ++i)
-            vec->push_back(vmPtr->valueAsBool(argv[i]));
-         return true;
+         // Need to take long path
+         vec = &workVec;
+         vec->clear();
+         
+         if (inputStorage->data.argc > 1)
+         {
+            for (U32 i=0; i<inputStorage->data.argc; i++)
+            {
+               vec->push_back( (bool)vmPtr->valueAsBool(inputStorage->data.storageRegister[i]) );
+            }
+         }
+         else if (inputStorage->data.argc > 0)
+         {
+            const char* values = vmPtr->valueAsString(inputStorage->data.storageRegister[0]);
+            if (!values) values = "";
+            const char* p   = values;
+            const char* end = values + dStrlen(values);
+
+            while (p < end)
+            {
+               p = SkipSpaces(p);
+               if (p >= end) break;
+
+               S32 v = 0;
+               if (dSscanf(p, "%i", &v) == 0)
+                  break;
+
+               vec->push_back(v);
+
+               // advance to next delimiter (space separated)
+               const char* next = dStrchr(p, ' ');
+               if (!next || next >= end) break;
+               p = next + 1;
+            }
+         }
       }
       
-      Con::printf("Vector<bool> must be set as { a, b, c } or \"a b c\"");
-      return false;
+      return true;
    }
    else
    {
-      // TODO
-      return false;
+      vec = (Vector<bool>*)ConsoleGetInputStoragePtr();
    }
+   
+   // Set conservative output size
+   
+   // Input should now be a vector; we need to convert it to the output
+
+   if (outputStorage->isField &&
+       requestedType == TypeBoolVector)
+   {
+      // In this case we are setting output to this type so just copy the vector
+      // NOTE: we will NEVER get outputStorage->isField == true where the type isn't the native type
+      Vector<bool> *outputVec = (Vector<bool>*)ConsoleGetOutputStoragePtr();
+      *outputVec = *vec;
+   }
+   else if (requestedType == KorkApi::ConsoleValue::TypeInternalString)
+   {
+      S32 maxReturn = 1024;
+      outputStorage->ResizeStorage(outputStorage, maxReturn);
+      char* returnBuffer = (char*)outputStorage->data.storageAddress.evaluatePtr(vmPtr->getAllocBase());
+      returnBuffer[0] = '\0';
+      S32 returnLeng = 0;
+      
+      for (Vector<bool>::iterator itr = vec->begin(); itr < vec->end(); itr++)
+      {
+         // concatenate the next value onto the return string
+         if ( itr == vec->begin() )
+         {
+            dSprintf(returnBuffer + returnLeng, maxReturn - returnLeng, "%i", *itr);
+         }
+         else
+         {
+            dSprintf(returnBuffer + returnLeng, maxReturn - returnLeng, " %i", *itr);
+         }
+         returnLeng = dStrlen(returnBuffer);
+      }
+      
+      outputStorage->FinalizeStorage(outputStorage, returnLeng+1);
+      
+      if (outputStorage->data.storageRegister)
+      {
+         *outputStorage->data.storageRegister = outputStorage->data.storageAddress;
+      }
+      
+      return true;
+   }
+   else
+   {
+      static Vector<KorkApi::ConsoleValue> tmpArgv;
+      tmpArgv.setSize(inputStorage->data.argc);
+      
+      for (U32 i=0; i<inputStorage->data.argc; i++)
+      {
+         tmpArgv[i] = KorkApi::ConsoleValue::makeNumber(vec->operator[](i));
+      }
+      KorkApi::TypeStorageInterface castInput = KorkApi::CreateRegisterStorageFromArgs(vmPtr->mInternal, inputStorage->data.argc, tmpArgv.address());
+      return vmPtr->castValue(requestedType, &castInput, outputStorage, NULL, 0);
+   }
+   
+   return false;
 }
 
 ConsoleGetType( TypeEnum )
 {
    AssertFatal(tbl, "invalid table");
+   if (inputStorage->data.argc != 1) return false;
    
-   S32 value = *((S32*)(ConsoleGetInputStoragePtr()));
+   S32 value = inputStorage->isField ? *((S32*)(ConsoleGetInputStoragePtr())) : (S32)vmPtr->valueAsInt(inputStorage->data.storageRegister[0]);
    
-   if (requestedType == KorkApi::ConsoleValue::TypeInternalString)
+   if (requestedType == TypeEnum)
    {
-      for (S32 i = 0; i < tbl->size; i++)
+      // copy to output
+      
+      if (outputStorage->data.storageRegister)
       {
-         if (value == tbl->table[i].index)
-         {
-            U32 len = dStrlen(tbl->table[i].label)+1;
-            outputStorage->FinalizeStorage(outputStorage, len);
-            memcpy(ConsoleGetOutputStoragePtr(), tbl->table[i].label, len);
-            break;
-         }
+         *outputStorage->data.storageRegister = KorkApi::ConsoleValue::makeRaw((U32)value, TypeEnum, KorkApi::ConsoleValue::ZonePacked);
+      }
+      else
+      {
+         *((S32*)ConsoleGetOutputStoragePtr()) = value;
       }
       
-      *outputStorage->data.storageRegister = outputStorage->data.storageAddress;
+      return true;
+   }
+   else if (requestedType == KorkApi::ConsoleValue::TypeInternalString)
+   {
+      const char* label = tbl->table[value].label;
+      U32 len = dStrlen(label)+1;
+      outputStorage->FinalizeStorage(outputStorage, len);
+      memcpy(ConsoleGetOutputStoragePtr(), label, len);
+      
+      if (outputStorage->data.storageRegister)
+      {
+         *outputStorage->data.storageRegister = outputStorage->data.storageAddress;
+      }
+      
       return true;
    }
    else if (requestedType == KorkApi::ConsoleValue::TypeInternalNumber)
    {
-      *outputStorage->data.storageRegister = KorkApi::ConsoleValue::makeNumber(value);
+      if (outputStorage->data.storageRegister)
+      {
+         *outputStorage->data.storageRegister = KorkApi::ConsoleValue::makeNumber(value);
+      }
+      else
+      {
+         *((F64*)ConsoleGetOutputStoragePtr()) = value;
+      }
    }
    else if (requestedType == KorkApi::ConsoleValue::TypeInternalUnsigned)
    {
-      *outputStorage->data.storageRegister = KorkApi::ConsoleValue::makeUnsigned((U64)value);
+      if (outputStorage->data.storageRegister)
+      {
+         *outputStorage->data.storageRegister = KorkApi::ConsoleValue::makeUnsigned((U64)value);
+      }
+      else
+      {
+         *((U64*)ConsoleGetOutputStoragePtr()) = value;
+      }
+      
+      return true;
    }
    else
    {
-      return false;
+      // Cast to correct value based on label
+      KorkApi::ConsoleValue cv = KorkApi::ConsoleValue::makeString(tbl->table[value].label);
+      KorkApi::TypeStorageInterface castInput =
+         KorkApi::CreateRegisterStorageFromArgs(vmPtr->mInternal, 1, &cv);
+
+      return vmPtr->castValue(requestedType, &castInput, outputStorage, nullptr, 0);
    }
    
    return true;
-}
-
-ConsoleSetType( TypeEnum )
-{
-   AssertFatal(tbl, "invalid table");
-   if (argc != 1) return false;
-   
-   S32 val = 0;
-   
-   if (argv[0].isUnsigned() ||
-       argv[0].isFloat())
-   {
-      val = (S32)vmPtr->valueAsInt(argv[0]);
-   }
-   else
-   {
-      S32 val = 0;
-      const char* sval = (const char*)argv[0].evaluatePtr(vmPtr->getAllocBase());
-      for (S32 i = 0; i < tbl->size; i++)
-      {
-         if (! dStricmp(sval, tbl->table[i].label))
-         {
-            val = tbl->table[i].index;
-            break;
-         }
-      }
-   }
-   
-   *((S32 *) ConsoleGetOutputStoragePtr()) = val;
-   
-   if (outputStorage->data.storageRegister)
-   {
-      *outputStorage->data.storageRegister = KorkApi::ConsoleValue::makeNumber(val);
-   }
 }
 
 #if 0
