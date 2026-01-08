@@ -617,20 +617,7 @@ namespace Con
 
    /// @}
 
-   /// @name Dynamic Type System
-   /// @{
-
-   ///
-/*   void registerType( const char *typeName, S32 type, S32 size, GetDataFunction gdf, SetDataFunction sdf, bool isDatablockType = false );
-   void registerType( const char* typeName, S32 type, S32 size, bool isDatablockType = false );
-   void registerTypeGet( S32 type, GetDataFunction gdf );
-   void registerTypeSet( S32 type, SetDataFunction sdf );
-
-   const char *getTypeName(S32 type);
-   bool isDatablockType( S32 type ); */
-KorkApi::Vm* getVM();
-
-   /// @}
+   KorkApi::Vm* getVM();
 };
 
 extern void expandEscape(char *dest, const char *src);

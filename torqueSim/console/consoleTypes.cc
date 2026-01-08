@@ -347,6 +347,21 @@ ConsoleGetType( TypeS8 )
       
       return true;
    }
+   else if (requestedType == TypeS8)
+   {
+      if (outputStorage->isField)
+      {
+         S8* dst = (S8*)ConsoleGetOutputStoragePtr();
+         *dst = value;
+      }
+      
+      if (outputStorage->data.storageRegister)
+      {
+         *outputStorage->data.storageRegister = KorkApi::ConsoleValue::makeNumber(value);
+      }
+      
+      return true;
+   }
    else
    {
       KorkApi::ConsoleValue cv = KorkApi::ConsoleValue::makeNumber(value);
@@ -369,6 +384,21 @@ ConsoleGetType( TypeS32 )
       if (outputStorage->data.storageRegister)
       {
          *outputStorage->data.storageRegister = outputStorage->data.storageAddress;
+      }
+      
+      return true;
+   }
+   else if (requestedType == TypeS32)
+   {
+      if (outputStorage->isField)
+      {
+         S32* dst = (S32*)ConsoleGetOutputStoragePtr();
+         *dst = value;
+      }
+      
+      if (outputStorage->data.storageRegister)
+      {
+         *outputStorage->data.storageRegister = KorkApi::ConsoleValue::makeNumber(value);
       }
       
       return true;
@@ -399,6 +429,21 @@ ConsoleGetType( TypeF32 )
       
       return true;
    }
+   else if (requestedType == TypeF32)
+   {
+      if (outputStorage->isField)
+      {
+         F32* dst = (F32*)ConsoleGetOutputStoragePtr();
+         *dst = value;
+      }
+      
+      if (outputStorage->data.storageRegister)
+      {
+         *outputStorage->data.storageRegister = KorkApi::ConsoleValue::makeNumber(value);
+      }
+      
+      return true;
+   }
    else
    {
       KorkApi::ConsoleValue cv = KorkApi::ConsoleValue::makeNumber(value);
@@ -411,16 +456,31 @@ ConsoleGetType( TypeF32 )
 
 ConsoleGetType( TypeBool )
 {
-   bool value = inputStorage->isField ? *((bool*)(ConsoleGetInputStoragePtr())) : vmPtr->valueAsInt(inputStorage->data.storageRegister[0]);
+   bool value = inputStorage->isField ? *((bool*)(ConsoleGetInputStoragePtr())) : vmPtr->valueAsBool(inputStorage->data.storageRegister[0]);
    
    if (requestedType == KorkApi::ConsoleValue::TypeInternalString)
    {
       outputStorage->FinalizeStorage(outputStorage, 6);
-      dSprintf((char*)ConsoleGetOutputStoragePtr(), 6, "%.9g", value);
+      dSprintf((char*)ConsoleGetOutputStoragePtr(), 6, "%i", value);
       
       if (outputStorage->data.storageRegister)
       {
          *outputStorage->data.storageRegister = outputStorage->data.storageAddress;
+      }
+      
+      return true;
+   }
+   else if (requestedType == TypeBool)
+   {
+      if (outputStorage->isField)
+      {
+         bool* dst = (bool*)ConsoleGetOutputStoragePtr();
+         *dst = value;
+      }
+      
+      if (outputStorage->data.storageRegister)
+      {
+         *outputStorage->data.storageRegister = KorkApi::ConsoleValue::makeUnsigned(value);
       }
       
       return true;

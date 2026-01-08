@@ -400,9 +400,18 @@ void Dictionary::setEntryTypeValue(Dictionary::Entry* e, U32 inputTypeId, KorkAp
    
    // Setup storage for conversion
    U32 outputTypeId = e->mEnforcedType != 0 ? e->mEnforcedType : inputTypeId;
-   KorkApi::TypeStorageInterface outputStorage = KorkApi::CreateConsoleVarTypeStorage(mVm,
-                                                                                       cv,
-                                                                                       outputTypeId);
+   KorkApi::TypeStorageInterface outputStorage;
+   
+   if (!e->mIsRegistered)
+   {
+      outputStorage = KorkApi::CreateConsoleVarTypeStorage(mVm,
+                                             cv,
+                                             outputTypeId);
+   }
+   else
+   {
+      outputStorage = KorkApi::CreateFixedTypeStorage(mVm, (void*)e->mConsoleValue.cvalue, e->mEnforcedType, true);
+   }
    
    // Cast into value
    KorkApi::TypeInfo& info = mVm->mTypes[outputTypeId];
@@ -416,14 +425,17 @@ void Dictionary::setEntryTypeValue(Dictionary::Entry* e, U32 inputTypeId, KorkAp
    if (info.iFuncs.CastValueFn(info.userPtr, mVm->mVM, inputStorage, &outputStorage, NULL, 0, outputTypeId))
    {
       // Ensure correct type is assigned and set output
-      outputStorage.data.storageRegister->typeId = outputTypeId;
-      e->mConsoleValue = *outputStorage.data.storageRegister;
+      if (outputStorage.data.storageRegister)
+      {
+         outputStorage.data.storageRegister->typeId = outputTypeId;
+         e->mConsoleValue = *outputStorage.data.storageRegister;
+      }
    }
 }
 
 void Dictionary::setEntryValue(Entry* e, KorkApi::ConsoleValue value)
 {
-   KorkApi::TypeStorageInterface inputStorage = KorkApi::CreateFixedTypeStorage(mVm, value.evaluateFixedPtr(mVm->mAllocBase), value.typeId, value.hasRelocatableStorage());
+   KorkApi::TypeStorageInterface inputStorage = KorkApi::CreateRegisterStorageFromArgs(mVm, 1, &value);
    inputStorage.data.storageRegister = &value;
    setEntryTypeValue(e, value.typeId, &inputStorage);
 }
@@ -540,9 +552,10 @@ Dictionary::Entry* Dictionary::addVariable(  const char *name,
    
    Entry *ent = add(StringTable->insert(name));
    clearEntry(ent);
-   ent->mConsoleValue.makeTyped(dataPtr, type);
+   ent->mConsoleValue = KorkApi::ConsoleValue::makeTyped(dataPtr, type);
    ent->mUsage = usage;
    ent->mIsRegistered = true;
+   ent->mEnforcedType = type;
    
    return ent;
 }
@@ -749,7 +762,7 @@ TypeStorageInterface CreateFixedTypeStorage(KorkApi::VmInternal* vmInternal,
    {
       s.data.size = 0;
    }
-   s.data.argc = 1;
+   s.data.argc = 0;
    s.data.storageRegister = NULL;
    s.data.storageAddress = ConsoleValue::makeRaw((U64)ptr, KorkApi::ConsoleValue::TypeInternalString, KorkApi::ConsoleValue::ZoneExternal);
    s.userPtr1 = NULL;
@@ -834,7 +847,7 @@ TypeStorageInterface CreateExprEvalReturnTypeStorage(KorkApi::VmInternal* vmInte
    vmInternal->mTempConversionValue = KorkApi::ConsoleValue();
    
    s.data.argc = 1;
-   s.data.storageRegister = &vmInternal->mReturnBufferValue;
+   s.data.storageRegister = &vmInternal->mTempConversionValue;
    s.data.storageAddress = ConsoleValue::makeRaw(
       0,
       typeId,
@@ -864,7 +877,7 @@ TypeStorageInterface CreateRegisterStorage(KorkApi::VmInternal* vmInternal, U16 
    
    vmInternal->mTempConversionValue = KorkApi::ConsoleValue();
    s.data.argc = 1;
-   s.data.storageRegister = &vmInternal->mReturnBufferValue;
+   s.data.storageRegister = &vmInternal->mTempConversionValue;
    s.data.storageAddress = ConsoleValue::makeRaw(
       0,
       typeId,
@@ -888,7 +901,7 @@ TypeStorageInterface CreateRegisterStorageFromArgs(KorkApi::VmInternal* vmIntern
    
    vmInternal->mTempConversionValue = KorkApi::ConsoleValue();
    s.data.argc = argc;
-   s.data.storageRegister = &vmInternal->mReturnBufferValue;
+   s.data.storageRegister = &vmInternal->mTempConversionValue;
    s.data.storageAddress = KorkApi::ConsoleValue();
    
    return s;

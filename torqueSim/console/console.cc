@@ -293,11 +293,13 @@ void init()
 
    // Setup the console types.  (tgemit - needs to be here)
    ConsoleBaseType::initialize();
+   ConsoleBaseType::registerWithVM(sVM);
 
    // Variables
    setVariable("Con::prompt", "% ");
    addVariable("Con::logBufferEnabled", TypeBool, &logBufferEnabled);
    addVariable("Con::printLevel", TypeS32, &printLevel);
+   
    // TOFIX addVariable("Con::warnUndefinedVariables", TypeBool, &config.gWarnUndefinedScriptVariables);
 
    // Current script file name and root
@@ -306,14 +308,10 @@ void init()
    Con::addVariable( "Con::Root", TypeString, &gCurrentRoot );
 #endif
 
-   // Setup the console types.
-   ConsoleBaseType::initialize();
-
    // And finally, the ACR...
    AbstractClassRep::initialize();
 
    // Register types with
-   ConsoleBaseType::registerWithVM(sVM);
    AbstractClassRep::registerWithVM(sVM);
 }
 
