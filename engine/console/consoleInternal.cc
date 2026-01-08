@@ -700,7 +700,7 @@ static void Resize_ConsoleVar(TypeStorageInterface* state, U32 newSize)
    dict->getHeapPtrSize(entry, &size, &ptr);
    
    state->data.size = size;
-   state->data.storageRegister = &state->vmInternal->mTempConversionValue;
+   state->data.storageRegister = state->vmInternal->getTempValuePtr();
    state->data.storageAddress = ConsoleValue::makeRaw(
       (U64)ptr,
       state->data.storageAddress.typeId,
@@ -711,7 +711,24 @@ static void Resize_ConsoleVar(TypeStorageInterface* state, U32 newSize)
 
 static void Finalize_ConsoleVar(TypeStorageInterface* state, U32 newSize)
 {
-   Resize_ConsoleVar(state, newSize);
+   void* ptr = NULL;
+   U32 size = 0;
+   
+   Dictionary* dict = (Dictionary*)state->userPtr1;
+   Dictionary::Entry* entry = (Dictionary::Entry*)state->userPtr2;
+   if (!dict || !entry)
+      return;
+   
+   dict->resizeHeap(entry, newSize, true);
+   dict->getHeapPtrSize(entry, &size, &ptr);
+   
+   state->data.size = size;
+   state->data.storageRegister = state->vmInternal->getTempValuePtr();
+   state->data.storageAddress = ConsoleValue::makeRaw(
+      (U64)ptr,
+      state->data.storageAddress.typeId,
+      ConsoleValue::ZoneVmHeap
+   );
 }
 
 static void Resize_ExprEval(TypeStorageInterface* state, U32 newSize)
@@ -778,7 +795,7 @@ TypeStorageInterface CreateConsoleVarTypeStorage(KorkApi::VmInternal* vmInternal
    TypeStorageInterface s{};
    s.vmInternal = vmInternal;
    s.ResizeStorage = &Resize_ConsoleVar;
-   s.FinalizeStorage = &Finalize_Fixed;
+   s.FinalizeStorage = &Finalize_ConsoleVar;
    s.userPtr1 = ref.dictionary;
    s.userPtr2 = ref.var;
    s.isField = false;
@@ -791,11 +808,10 @@ TypeStorageInterface CreateConsoleVarTypeStorage(KorkApi::VmInternal* vmInternal
       ref.dictionary->getHeapPtrSize(ref.var, &size, &ptr);
 
       s.data.size  = size;
-      
-      vmInternal->mTempConversionValue = *ref.var->getCVPtr();
 
       s.data.argc = 1;
-      s.data.storageRegister = &vmInternal->mTempConversionValue;
+      s.data.storageRegister = vmInternal->getTempValuePtr();
+      *s.data.storageRegister = *ref.var->getCVPtr();
       s.data.storageAddress = ConsoleValue::makeRaw(
          (U64)ptr,
          typeId,
@@ -820,9 +836,8 @@ TypeStorageInterface CreateExprEvalTypeStorage(KorkApi::VmInternal* vmInternal,
    s.userPtr2 = NULL;
    s.isField = false;
    
-   vmInternal->mTempConversionValue = eval.mSTR.getConsoleValue();
-   
-   s.data.storageRegister = &vmInternal->mTempConversionValue;
+   s.data.storageRegister = vmInternal->getTempValuePtr();
+   *s.data.storageRegister = eval.mSTR.getConsoleValue();
    s.data.storageAddress  = ConsoleValue::makeRaw(eval.mSTR.mStart,
       typeId,
       (KorkApi::ConsoleValue::Zone)(KorkApi::ConsoleValue::ZoneFiberStart + eval.mSTR.mFuncId)
@@ -844,15 +859,14 @@ TypeStorageInterface CreateExprEvalReturnTypeStorage(KorkApi::VmInternal* vmInte
 
    s.data.size = minSize;
    
-   vmInternal->mTempConversionValue = KorkApi::ConsoleValue();
-   
    s.data.argc = 1;
-   s.data.storageRegister = &vmInternal->mTempConversionValue;
+   s.data.storageRegister = vmInternal->getTempValuePtr();
    s.data.storageAddress = ConsoleValue::makeRaw(
       0,
       typeId,
       KorkApi::ConsoleValue::ZoneReturn
    );
+   *s.data.storageRegister = s.data.storageAddress;
 
    return s;
 }
@@ -875,18 +889,31 @@ TypeStorageInterface CreateRegisterStorage(KorkApi::VmInternal* vmInternal, U16 
       s.data.size = 0;
    }
    
-   vmInternal->mTempConversionValue = KorkApi::ConsoleValue();
    s.data.argc = 1;
-   s.data.storageRegister = &vmInternal->mTempConversionValue;
-   s.data.storageAddress = ConsoleValue::makeRaw(
-      0,
-      typeId,
-      KorkApi::ConsoleValue::ZoneExternal
-   );
+   s.data.storageRegister = vmInternal->getTempValuePtr();
+   s.data.storageAddress = KorkApi::ConsoleValue();
    
    return s;
 }
 
+TypeStorageInterface CreateRegisterStorageFromArg(KorkApi::VmInternal* vmInternal, KorkApi::ConsoleValue arg)
+{
+   TypeStorageInterface s{};
+   s.vmInternal = vmInternal;
+   s.ResizeStorage = &Resize_Fixed;
+   s.FinalizeStorage = &Resize_Fixed;
+   s.userPtr1 = vmInternal;
+   s.userPtr2 = NULL;
+   s.isField = false;
+   s.data.size = 0;
+   
+   s.data.argc = 1;
+   s.data.storageRegister = vmInternal->getTempValuePtr();
+   *s.data.storageRegister = arg;
+   s.data.storageAddress = arg;
+   
+   return s;
+}
 
 TypeStorageInterface CreateRegisterStorageFromArgs(KorkApi::VmInternal* vmInternal, U32 argc, KorkApi::ConsoleValue* argv)
 {
@@ -899,9 +926,8 @@ TypeStorageInterface CreateRegisterStorageFromArgs(KorkApi::VmInternal* vmIntern
    s.isField = false;
    s.data.size = 0;
    
-   vmInternal->mTempConversionValue = KorkApi::ConsoleValue();
    s.data.argc = argc;
-   s.data.storageRegister = &vmInternal->mTempConversionValue;
+   s.data.storageRegister = argv;
    s.data.storageAddress = KorkApi::ConsoleValue();
    
    return s;

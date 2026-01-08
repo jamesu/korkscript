@@ -137,7 +137,7 @@ struct StringStack
    void setUnsignedValue(U32 i)
    {
       validateBufferSize(mStart + 16);
-      mLen = 8;
+      mLen = 0;
       *((U64*)&mValue) = i;
       mType = KorkApi::ConsoleValue::TypeInternalUnsigned;
    }
@@ -146,7 +146,7 @@ struct StringStack
    void setNumberValue(F64 v)
    {
       validateBufferSize(mStart + 16);
-      mLen = 8;
+      mLen = 0;
       *((F64*)&mValue) = v;
       mType = KorkApi::ConsoleValue::TypeInternalNumber;
    }
@@ -303,17 +303,17 @@ struct StringStack
    inline KorkApi::ConsoleValue getStackConsoleValue(U32 offset)
    {
       U16 typeId = mStartTypes[offset];
-      UINTPTR startData = mStartOffsets[offset];
+      U64 typeValue = mStartValues[offset];
    
       if (typeId == KorkApi::ConsoleValue::TypeInternalUnsigned ||
           typeId == KorkApi::ConsoleValue::TypeInternalNumber)
       {
-         // Copy value straight from buffer
-         startData += (UINTPTR)mBuffer;
-         return KorkApi::ConsoleValue::makeRaw(((U64*)startData)[0], typeId);
+         // Copy value straight from stack
+         return KorkApi::ConsoleValue::makeRaw(typeValue, typeId, KorkApi::ConsoleValue::ZonePacked);
       }
       else
       {
+         UINTPTR startData = mStartOffsets[offset];
          return KorkApi::ConsoleValue::makeTyped((void*)startData,
                                                        mStartTypes[offset],
                                                        (KorkApi::ConsoleValue::Zone)(KorkApi::ConsoleValue::ZoneFunc + mFuncId));

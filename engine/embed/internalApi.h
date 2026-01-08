@@ -30,6 +30,8 @@ TypeStorageInterface CreateExprEvalReturnTypeStorage(KorkApi::VmInternal* vmInte
 TypeStorageInterface CreateRegisterStorage(KorkApi::VmInternal* vmInternal, U16 typeId);
 // No storage, just registers
 TypeStorageInterface CreateRegisterStorageFromArgs(KorkApi::VmInternal* vmInternal, U32 argc, KorkApi::ConsoleValue* argv);
+// No storage, just registers (arg pointing to storage edition)
+TypeStorageInterface CreateRegisterStorageFromArg(KorkApi::VmInternal* vmInternal, KorkApi::ConsoleValue arg);
 
 
 void CopyTypeStorageValueToOutput(TypeStorageInterface* storage, KorkApi::ConsoleValue& v);
@@ -70,11 +72,12 @@ struct VmInternal
    Config mConfig;
    ConsoleValue::AllocBase mAllocBase;
 
-   KorkApi::ConsoleValue mTempConversionValue;
+   KorkApi::ConsoleValue mTempConversionValue[MaxTempStringSize];
    KorkApi::ConsoleValue mReturnBufferValue;
    Vector<U8> mReturnBuffer;
 
    U32 mConvIndex;
+   U32 mCVConvIndex;
    char mTempStringConversions[MaxStringConvs][MaxTempStringSize];
 
    Compiler::Resources* mCompilerResources;
@@ -103,6 +106,8 @@ struct VmInternal
          delete object;
       }
    }
+
+   ConsoleValue* getTempValuePtr();
 
    
    // Fiber API

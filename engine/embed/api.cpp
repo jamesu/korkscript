@@ -812,6 +812,7 @@ VmInternal::VmInternal(Vm* vm, Config* cfg) : mGlobalVars(this)
    
    mHeapAllocs = NULL;
    mConvIndex = 0;
+   mCVConvIndex = 0;
    mNSCounter = 0;
 
    if (cfg->userResources)
@@ -1163,6 +1164,14 @@ const char* VmInternal::tempIntConv(U64 val)
    return mTempStringConversions[mConvIndex++];
 }
 
+KorkApi::ConsoleValue* VmInternal::getTempValuePtr()
+{
+   if (mCVConvIndex == MaxStringConvs)
+      mCVConvIndex = 0;
+
+   return &mTempConversionValue[mCVConvIndex++];
+}
+
 bool VmInternal::setObjectField(VMObject* obj, StringTableEntry name, const char* array, ConsoleValue value)
 {
    return setObjectFieldTuple(obj, name, array, 1, &value);
@@ -1357,9 +1366,7 @@ F64 VmInternal::valueAsFloat(ConsoleValue v)
       break;
       default:
          {
-               KorkApi::TypeStorageInterface inputStorage = KorkApi::CreateRegisterStorageFromArgs(this,
-                                                                                       1,
-                                                                                       &v);
+               KorkApi::TypeStorageInterface inputStorage = KorkApi::CreateRegisterStorageFromArg(this, v);
 
                KorkApi::TypeStorageInterface outputStorage = KorkApi::CreateRegisterStorage(this,
                                                                                        KorkApi::ConsoleValue::TypeInternalNumber);
@@ -1398,9 +1405,7 @@ S64 VmInternal::valueAsBool(ConsoleValue v)
       break;
       default:
          {
-               KorkApi::TypeStorageInterface inputStorage = KorkApi::CreateRegisterStorageFromArgs(this,
-                                                                                       1,
-                                                                                       &v);
+               KorkApi::TypeStorageInterface inputStorage = KorkApi::CreateRegisterStorageFromArg(this, v);
 
                KorkApi::TypeStorageInterface outputStorage = KorkApi::CreateRegisterStorage(this,
                                                                                     KorkApi::ConsoleValue::TypeInternalUnsigned);
@@ -1440,9 +1445,7 @@ S64 VmInternal::valueAsInt(ConsoleValue v)
       break;
       default:
          {
-               KorkApi::TypeStorageInterface inputStorage = KorkApi::CreateRegisterStorageFromArgs(this,
-                                                                                       1,
-                                                                                       &v);
+               KorkApi::TypeStorageInterface inputStorage = KorkApi::CreateRegisterStorageFromArg(this, v);
 
                KorkApi::TypeStorageInterface outputStorage = KorkApi::CreateRegisterStorage(this,
                                                                                        KorkApi::ConsoleValue::TypeInternalNumber);
@@ -1482,11 +1485,10 @@ const char* VmInternal::valueAsString(ConsoleValue v)
       break;
    default:
       {
-            KorkApi::TypeStorageInterface inputStorage = KorkApi::CreateRegisterStorageFromArgs(this,
-                                                                                    1,
-                                                                                    &v);
+            KorkApi::TypeStorageInterface inputStorage = KorkApi::CreateRegisterStorageFromArg(this, v);
 
-            KorkApi::TypeStorageInterface outputStorage = KorkApi::CreateRegisterStorage(this,
+            KorkApi::TypeStorageInterface outputStorage = KorkApi::CreateExprEvalReturnTypeStorage(this,
+                                                                                                   1024,
                                                                                     KorkApi::ConsoleValue::TypeInternalString);
             
             // NOTE: types should set head of stack to value if data pointer is NULL in this case

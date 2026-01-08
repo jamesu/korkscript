@@ -2324,9 +2324,7 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
                                                                                        0,
                                                                                        frame.dynTypeId);
 
-               KorkApi::TypeStorageInterface inputStorage = KorkApi::CreateRegisterStorageFromArgs(vmInternal,
-                                                                                       1,
-                                                                                       &cv);
+               KorkApi::TypeStorageInterface inputStorage = KorkApi::CreateRegisterStorageFromArg(vmInternal, cv);
                
                // NOTE: types should set head of stack to value if data pointer is NULL in this case
                vmInternal->mTypes[frame.dynTypeId].iFuncs.CastValueFn(vmInternal->mTypes[frame.dynTypeId].userPtr,
@@ -2352,9 +2350,7 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
                                                                                        0,
                                                                                        frame.dynTypeId);
 
-               KorkApi::TypeStorageInterface inputStorage = KorkApi::CreateRegisterStorageFromArgs(vmInternal,
-                                                                                       1,
-                                                                                       &cv);
+               KorkApi::TypeStorageInterface inputStorage = KorkApi::CreateRegisterStorageFromArg(vmInternal, cv);
                
                // NOTE: types should set head of stack to value if data pointer is NULL in this case
                vmInternal->mTypes[frame.dynTypeId].iFuncs.CastValueFn(vmInternal->mTypes[frame.dynTypeId].userPtr,
@@ -2380,9 +2376,7 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
                                                                                        0,
                                                                                        frame.dynTypeId);
 
-               KorkApi::TypeStorageInterface inputStorage = KorkApi::CreateRegisterStorageFromArgs(vmInternal,
-                                                                                       1,
-                                                                                       &cv);
+               KorkApi::TypeStorageInterface inputStorage = KorkApi::CreateRegisterStorageFromArg(vmInternal, cv);
                
                // NOTE: types should set head of stack to value if data pointer is NULL in this case
                vmInternal->mTypes[frame.dynTypeId].iFuncs.CastValueFn(vmInternal->mTypes[frame.dynTypeId].userPtr,
