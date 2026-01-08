@@ -1007,9 +1007,10 @@ U32 AssignExprNode::compile(CodeStream &codeStream, U32 ip, TypeReq type)
 
    bool usingStringStack = (tupleExpr == NULL) && (subType == TypeReqString);
 
+   TypeReq rhsType = tupleExpr ? TypeReqTuple : subType;
    // NOTE: compiling rhs first is compulsory in this case
-   ip = rhsExpr->compile(codeStream, ip, tupleExpr ? TypeReqTuple : subType);
-
+   ip = rhsExpr->compile(codeStream, ip, rhsType);
+   
    if(arrayIndex)
    {
       if (usingStringStack)
@@ -1048,6 +1049,11 @@ U32 AssignExprNode::compile(CodeStream &codeStream, U32 ip, TypeReq type)
    {
       AssertFatal(subType == TypeReqVar, "something went wrong here");
       codeStream.emit(OP_SAVEVAR_MULTIPLE);
+      
+      if (type == TypeReqVar)
+      {
+         subType = TypeReqVar;
+      }
    }
    else
    {
@@ -1075,7 +1081,8 @@ U32 AssignExprNode::compile(CodeStream &codeStream, U32 ip, TypeReq type)
       }
    }
    
-   if (type != subType)
+   if (type != subType ||
+       type == TypeReqVar) // need this as we need to copy the var to the output
    {
       emitStackConversion(codeStream, subType, type);
    }
@@ -1085,7 +1092,8 @@ U32 AssignExprNode::compile(CodeStream &codeStream, U32 ip, TypeReq type)
 
 TypeReq AssignExprNode::getPreferredType()
 {
-   return assignTypeName != NULL && assignTypeName[0] != '\0' ? TypeReqTypedString : rhsExpr->getPreferredType();
+   // This SHOULD be TypeReqVar since usually we end up doing %a = <expr>;
+   return TypeReqVar; //assignTypeName != NULL && assignTypeName[0] != '\0' ? TypeReqTypedString : rhsExpr->getPreferredType();
 }
 
 void AssignExprNode::setAssignType(StringTableEntry typeName)

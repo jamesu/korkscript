@@ -382,7 +382,7 @@ void Dictionary::clearEntry(Entry* e)
 
 void Dictionary::setEntryStringValue(Dictionary::Entry* e, const char * value)
 {
-   KorkApi::TypeStorageInterface inputStorage = KorkApi::CreateFixedTypeStorage(mVm, (void*)value, KorkApi::ConsoleValue::TypeInternalString, false);
+   KorkApi::TypeStorageInterface inputStorage = KorkApi::CreateRegisterStorageFromArg(mVm, KorkApi::ConsoleValue::makeString(value));
    return setEntryTypeValue(e, KorkApi::ConsoleValue::TypeInternalString, &inputStorage);
 }
 
