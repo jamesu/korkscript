@@ -117,9 +117,10 @@ ConsoleGetType( TypeStringTableEntryVector )
    
    if (!inputStorage->isField)
    {
-      if (!outputStorage->isField &&
+      if ((!outputStorage->isField &&
           (requestedType == TypeStringTableEntryVector ||
-          requestedType == KorkApi::ConsoleValue::TypeInternalString))
+          requestedType == KorkApi::ConsoleValue::TypeInternalString)) &&
+          inputStorage->data.argc == 1)
       {
          // Just copy string
          const char* ptr = (const char*)ConsoleGetInputStoragePtr();
@@ -158,8 +159,6 @@ ConsoleGetType( TypeStringTableEntryVector )
             }
          }
       }
-      
-      return true;
    }
    else
    {
@@ -503,7 +502,9 @@ ConsoleGetType( TypeS32Vector )
    if (!inputStorage->isField)
    {
       if (!outputStorage->isField &&
-          (requestedType == TypeS32Vector))
+          (requestedType == TypeS32Vector) &&
+          inputStorage->data.argc == 1 &&
+          inputStorage->data.storageRegister->typeId == TypeS32Vector)
       {
          // Just copy data
          outputStorage->FinalizeStorage(outputStorage, inputStorage->data.size);
@@ -528,36 +529,48 @@ ConsoleGetType( TypeS32Vector )
          {
             for (U32 i=0; i<inputStorage->data.argc; i++)
             {
-               vec->push_back( (S32)vmPtr->valueAsInt(inputStorage->data.storageRegister[i]) );
+               vec->push_back( (S32)vmPtr->valueAsFloat(inputStorage->data.storageRegister[i]) );
             }
          }
          else if (inputStorage->data.argc > 0)
          {
-            const char* values = vmPtr->valueAsString(inputStorage->data.storageRegister[0]);
-            if (!values) values = "";
-            const char* p   = values;
-            const char* end = values + dStrlen(values);
-
-            while (p < end)
+            if (inputStorage->data.storageRegister->typeId == TypeS32Vector)
             {
-               p = SkipSpaces(p);
-               if (p >= end) break;
-
-               S32 v = 0;
-               if (dSscanf(p, "%d", &v) == 0)
-                  break;
-
-               vec->push_back(v);
-
-               // advance to next delimiter (space separated)
-               const char* next = dStrchr(p, ' ');
-               if (!next || next >= end) break;
-               p = next + 1;
+               U32 numElems = ((U32*)ConsoleGetInputStoragePtr())[0];
+               S32* data = ((S32*)ConsoleGetInputStoragePtr())+1;
+               
+               for (S32 i=0; i<numElems; i++)
+               {
+                  vec->push_back(data[i]);
+               }
+            }
+            else
+            {
+               const char* values = vmPtr->valueAsString(inputStorage->data.storageRegister[0]);
+               if (!values) values = "";
+               const char* p   = values;
+               const char* end = values + dStrlen(values);
+               
+               while (p < end)
+               {
+                  p = SkipSpaces(p);
+                  if (p >= end) break;
+                  
+                  S32 v = 0;
+                  if (dSscanf(p, "%i", &v) == 0)
+                     break;
+                  
+                  vec->push_back(v);
+                  
+                  // advance to next delimiter (space separated)
+                  const char* next = dStrchr(p, ' ');
+                  if (!next || next >= end) break;
+                  p = next + 1;
+               }
             }
          }
       }
       
-      return true;
    }
    else
    {
@@ -575,6 +588,21 @@ ConsoleGetType( TypeS32Vector )
       // NOTE: we will NEVER get outputStorage->isField == true where the type isn't the native type
       Vector<S32> *outputVec = (Vector<S32>*)ConsoleGetOutputStoragePtr();
       *outputVec = *vec;
+   }
+   else if (!outputStorage->isField &&
+            requestedType == TypeS32Vector)
+   {
+      outputStorage->FinalizeStorage(outputStorage, (vec->size() * sizeof(S32)) + sizeof(U32));
+      U32* vecCount = (U32*)ConsoleGetOutputStoragePtr();
+      *vecCount++ = vec->size();
+      memcpy(vecCount, vec->address(), vec->size() * sizeof(S32));
+      
+      if (outputStorage->data.storageRegister)
+      {
+         *outputStorage->data.storageRegister = outputStorage->data.storageAddress;
+      }
+      
+      return true;
    }
    else if (requestedType == KorkApi::ConsoleValue::TypeInternalString)
    {
@@ -631,7 +659,9 @@ ConsoleGetType( TypeF32Vector )
    if (!inputStorage->isField)
    {
       if (!outputStorage->isField &&
-          (requestedType == TypeF32Vector))
+          (requestedType == TypeF32Vector) &&
+          inputStorage->data.argc == 1 &&
+          inputStorage->data.storageRegister->typeId == TypeF32Vector)
       {
          // Just copy data
          outputStorage->FinalizeStorage(outputStorage, inputStorage->data.size);
@@ -656,36 +686,48 @@ ConsoleGetType( TypeF32Vector )
          {
             for (U32 i=0; i<inputStorage->data.argc; i++)
             {
-               vec->push_back( (F32)vmPtr->valueAsInt(inputStorage->data.storageRegister[i]) );
+               vec->push_back( (F32)vmPtr->valueAsFloat(inputStorage->data.storageRegister[i]) );
             }
          }
          else if (inputStorage->data.argc > 0)
          {
-            const char* values = vmPtr->valueAsString(inputStorage->data.storageRegister[0]);
-            if (!values) values = "";
-            const char* p   = values;
-            const char* end = values + dStrlen(values);
-
-            while (p < end)
+            if (inputStorage->data.storageRegister->typeId == TypeF32Vector)
             {
-               p = SkipSpaces(p);
-               if (p >= end) break;
-
-               F32 v = 0;
-               if (dSscanf(p, "%f", &v) == 0)
-                  break;
-
-               vec->push_back(v);
-
-               // advance to next delimiter (space separated)
-               const char* next = dStrchr(p, ' ');
-               if (!next || next >= end) break;
-               p = next + 1;
+               U32 numElems = ((U32*)ConsoleGetInputStoragePtr())[0];
+               F32* data = ((F32*)ConsoleGetInputStoragePtr())+1;
+               
+               for (S32 i=0; i<numElems; i++)
+               {
+                  vec->push_back(data[i]);
+               }
+            }
+            else
+            {
+               const char* values = vmPtr->valueAsString(inputStorage->data.storageRegister[0]);
+               if (!values) values = "";
+               const char* p   = values;
+               const char* end = values + dStrlen(values);
+               
+               while (p < end)
+               {
+                  p = SkipSpaces(p);
+                  if (p >= end) break;
+                  
+                  F32 v = 0;
+                  if (dSscanf(p, "%f", &v) == 0)
+                     break;
+                  
+                  vec->push_back(v);
+                  
+                  // advance to next delimiter (space separated)
+                  const char* next = dStrchr(p, ' ');
+                  if (!next || next >= end) break;
+                  p = next + 1;
+               }
             }
          }
       }
       
-      return true;
    }
    else
    {
@@ -703,6 +745,21 @@ ConsoleGetType( TypeF32Vector )
       // NOTE: we will NEVER get outputStorage->isField == true where the type isn't the native type
       Vector<F32> *outputVec = (Vector<F32>*)ConsoleGetOutputStoragePtr();
       *outputVec = *vec;
+   }
+   else if (!outputStorage->isField &&
+            requestedType == TypeF32Vector)
+   {
+      outputStorage->FinalizeStorage(outputStorage, (vec->size() * sizeof(F32)) + sizeof(U32));
+      U32* vecCount = (U32*)ConsoleGetOutputStoragePtr();
+      *vecCount++ = vec->size();
+      memcpy(vecCount, vec->address(), vec->size() * sizeof(F32));
+      
+      if (outputStorage->data.storageRegister)
+      {
+         *outputStorage->data.storageRegister = outputStorage->data.storageAddress;
+      }
+      
+      return true;
    }
    else if (requestedType == KorkApi::ConsoleValue::TypeInternalString)
    {
@@ -759,7 +816,9 @@ ConsoleGetType( TypeBoolVector )
    if (!inputStorage->isField)
    {
       if (!outputStorage->isField &&
-          (requestedType == TypeBoolVector))
+          (requestedType == TypeBoolVector) &&
+          inputStorage->data.argc == 1 &&
+          inputStorage->data.storageRegister->typeId == TypeBoolVector)
       {
          // Just copy data
          outputStorage->FinalizeStorage(outputStorage, inputStorage->data.size);
@@ -784,36 +843,48 @@ ConsoleGetType( TypeBoolVector )
          {
             for (U32 i=0; i<inputStorage->data.argc; i++)
             {
-               vec->push_back( (bool)vmPtr->valueAsBool(inputStorage->data.storageRegister[i]) );
+               vec->push_back( vmPtr->valueAsBool(inputStorage->data.storageRegister[i]) );
             }
          }
          else if (inputStorage->data.argc > 0)
          {
-            const char* values = vmPtr->valueAsString(inputStorage->data.storageRegister[0]);
-            if (!values) values = "";
-            const char* p   = values;
-            const char* end = values + dStrlen(values);
-
-            while (p < end)
+            if (inputStorage->data.storageRegister->typeId == TypeBoolVector)
             {
-               p = SkipSpaces(p);
-               if (p >= end) break;
-
-               S32 v = 0;
-               if (dSscanf(p, "%i", &v) == 0)
-                  break;
-
-               vec->push_back(v);
-
-               // advance to next delimiter (space separated)
-               const char* next = dStrchr(p, ' ');
-               if (!next || next >= end) break;
-               p = next + 1;
+               U32 numElems = ((U32*)ConsoleGetInputStoragePtr())[0];
+               bool* data = ((bool*)ConsoleGetInputStoragePtr())+1;
+               
+               for (S32 i=0; i<numElems; i++)
+               {
+                  vec->push_back(data[i]);
+               }
+            }
+            else
+            {
+               const char* values = vmPtr->valueAsString(inputStorage->data.storageRegister[0]);
+               if (!values) values = "";
+               const char* p   = values;
+               const char* end = values + dStrlen(values);
+               
+               while (p < end)
+               {
+                  p = SkipSpaces(p);
+                  if (p >= end) break;
+                  
+                  U32 v = 0;
+                  if (dSscanf(p, "%i", &v) == 0)
+                     break;
+                  
+                  vec->push_back(v);
+                  
+                  // advance to next delimiter (space separated)
+                  const char* next = dStrchr(p, ' ');
+                  if (!next || next >= end) break;
+                  p = next + 1;
+               }
             }
          }
       }
       
-      return true;
    }
    else
    {
@@ -831,6 +902,21 @@ ConsoleGetType( TypeBoolVector )
       // NOTE: we will NEVER get outputStorage->isField == true where the type isn't the native type
       Vector<bool> *outputVec = (Vector<bool>*)ConsoleGetOutputStoragePtr();
       *outputVec = *vec;
+   }
+   else if (!outputStorage->isField &&
+            requestedType == TypeBoolVector)
+   {
+      outputStorage->FinalizeStorage(outputStorage, (vec->size() * sizeof(S32)) + sizeof(U32));
+      U32* vecCount = (U32*)ConsoleGetOutputStoragePtr();
+      *vecCount++ = vec->size();
+      memcpy(vecCount, vec->address(), vec->size() * sizeof(S32));
+      
+      if (outputStorage->data.storageRegister)
+      {
+         *outputStorage->data.storageRegister = outputStorage->data.storageAddress;
+      }
+      
+      return true;
    }
    else if (requestedType == KorkApi::ConsoleValue::TypeInternalString)
    {
