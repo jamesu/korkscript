@@ -10,73 +10,107 @@ struct MyPoint3F
    F32 x,y,z;
 };
 
+// Hack until we define these properly in the API
+namespace KorkApi
+{
+TypeStorageInterface CreateRegisterStorageFromArgs(KorkApi::VmInternal* vmInternal, U32 argc, KorkApi::ConsoleValue* argv);
+}
+
 DECLARE_CONSOLETYPE(TypeMyPoint3F);
 
-ConsoleType( MyPoint3F, TypeMyPoint3F, sizeof(MyPoint3F), "" )
+ConsoleType( MyPoint3F, TypeMyPoint3F, sizeof(MyPoint3F), sizeof(MyPoint3F), "" )
 
 ConsoleGetType( TypeMyPoint3F )
 {
-   static char buf[96];
-   MyPoint3F* pt = reinterpret_cast<MyPoint3F*>(dptr);
-   KorkApi::ConsoleValue cv;
-   U32 realRequestedType = requestedZone & KorkApi::TypeDirectCopyMask;
+   const KorkApi::ConsoleValue* argv = nullptr;
+   U32 argc = inputStorage ? inputStorage->data.argc : 0;
+   bool directLoad = false;
 
-   if (realRequestedType == KorkApi::ConsoleValue::TypeInternalString)
+   if (argc > 0 && inputStorage->data.storageRegister)
    {
-      char* destPtr = buf;
-      
-      if (requestedZone != KorkApi::ConsoleValue::ZoneExternal)
+      argv = inputStorage->data.storageRegister;
+   }
+   else
+   {
+      argc = 1;
+      argv = &inputStorage->data.storageAddress;
+      directLoad = true;
+   }
+
+   MyPoint3F v = {0, 0, 0};
+
+   if (inputStorage->isField && directLoad)
+   {
+      const MyPoint3F* src = (const MyPoint3F*)inputStorage->data.storageAddress.evaluatePtr(vmPtr->getAllocBase());
+      if (!src) return false;
+      v = *src;
+   }
+   else
+   {
+      if (argc == 3)
       {
-         cv = vmPtr->getStringInZone(requestedZone, 256);
-         if (cv.isNull())
-         {
-            return cv;
-         }
+         v.x = (F32)argv[0].getFloat((F64)argv[0].getInt(0));
+         v.y = (F32)argv[1].getFloat((F64)argv[1].getInt(0));
+         v.z = (F32)argv[2].getFloat((F64)argv[2].getInt(0));
+      }
+      else if (argc == 1)
+      {
+         const char* s = vmPtr->valueAsString(argv[0]);
+         if (!s) s = "";
+
+         dSscanf(s, "%g %g %g", &v.x, &v.y, &v.z);
       }
       else
       {
-         cv = KorkApi::ConsoleValue::makeString(destPtr);
+         // Not supported
+         return false;
       }
-      
-      dSprintf(destPtr, 256, "%g %g %g", pt->x, pt->y, pt->z);
-      return cv;
    }
-   else if ((requestedType & KorkApi::TypeDirectCopy) != 0) // i.e. same type
-   {
-      cv = vmPtr->getTypeInZone(requestedZone, realRequestedType);
-      *((MyPoint3F*)cv.ptr()) = *pt;
-      return cv;
-   }
-}
 
-ConsoleSetType( TypeMyPoint3F )
-{
-   MyPoint3F* p = reinterpret_cast<MyPoint3F*>(dptr);
-   if (!p)
-      return;
-   
-   if (argc >= 3)
+   // -> output
+
+   if (requestedType == TypeMyPoint3F)
    {
-      p->x = vmPtr->valueAsFloat(argv[0]);
-      p->y = vmPtr->valueAsFloat(argv[1]);
-      p->z = vmPtr->valueAsFloat(argv[2]);
+      MyPoint3F* dstPtr = (MyPoint3F*)outputStorage->data.storageAddress.evaluatePtr(vmPtr->getAllocBase());
+      if (!dstPtr)
+      {
+         return false;
+      }
+
+      *dstPtr = v;
+
+      if (outputStorage->data.storageRegister)
+         *outputStorage->data.storageRegister = outputStorage->data.storageAddress;
+
+      return true;
    }
-   else if (argc == 1)
+   else if (requestedType == KorkApi::ConsoleValue::TypeInternalString)
    {
-      if (argv[0].typeId == typeId)
-      {
-         *p = *((MyPoint3F*)(argv[0].evaluatePtr(vmPtr->getAllocBase())));
-      }
-      else if (argv[0].typeId == KorkApi::ConsoleValue::TypeInternalString)
-      {
-         *p = {};
-         const char* inputStr = (const char*)(argv[0].evaluatePtr(vmPtr->getAllocBase()));
-         sscanf(inputStr, "%f %f %f", &p->x, &p->y, &p->z);
-      }
-      else
-      {
-         *((MyPoint3F*)dptr) = {};
-      }
+      const U32 bufLen = 96;
+
+      outputStorage->FinalizeStorage(outputStorage, bufLen);
+
+      char* out = (char*)outputStorage->data.storageAddress.evaluatePtr(vmPtr->getAllocBase());
+      if (!out) return false;
+
+      dSprintf(out, bufLen, "%.9g %.9g %.9g", v.x, v.y, v.z);
+
+      if (outputStorage->data.storageRegister)
+         *outputStorage->data.storageRegister = outputStorage->data.storageAddress;
+
+      return true;
+   }
+   else
+   {
+      KorkApi::ConsoleValue vals[3];
+      vals[0] = KorkApi::ConsoleValue::makeNumber(v.x);
+      vals[1] = KorkApi::ConsoleValue::makeNumber(v.y);
+      vals[2] = KorkApi::ConsoleValue::makeNumber(v.z);
+
+      KorkApi::TypeStorageInterface castInput =
+         KorkApi::CreateRegisterStorageFromArgs(vmPtr->mInternal, 3, vals);
+
+      return vmPtr->castValue(requestedType, &castInput, outputStorage, tbl, flag);
    }
 }
 

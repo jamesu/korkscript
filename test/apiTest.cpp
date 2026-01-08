@@ -63,80 +63,110 @@ struct MyPoint3F
    F32 x,y,z;
 };
 
-static void MyPoint3F_SetValue(void*, 
-                               KorkApi::Vm* vm,
-                               void* dptr,
-                              S32 argc, ConsoleValue* argv,
-                              const EnumTable*, 
-                              BitSet32,
-                              U32 typeId) {
-   MyPoint3F* p = reinterpret_cast<MyPoint3F*>(dptr);
-   if (!p)
-      return;
-   
-   if (argc >= 3) 
-   {
-      p->x = vm->valueAsFloat(argv[0]);
-      p->y = vm->valueAsFloat(argv[1]);
-      p->z = vm->valueAsFloat(argv[2]);
-   } 
-   else if (argc == 1) 
-   {
-      if (argv[0].typeId == typeId)
-      {
-         *p = *((MyPoint3F*)(argv[0].evaluatePtr(vm->getAllocBase())));
-      }
-      else if (argv[0].typeId == KorkApi::ConsoleValue::TypeInternalString)
-      {
-         *p = {};
-         const char* inputStr = (const char*)(argv[0].evaluatePtr(vm->getAllocBase()));
-         sscanf(inputStr, "%f %f %f", &p->x, &p->y, &p->z);
-      }
-      else
-      {
-         *((MyPoint3F*)dptr) = {};
-      }
-   }
+// Hack until we define these properly in the API
+namespace KorkApi
+{
+TypeStorageInterface CreateRegisterStorageFromArgs(KorkApi::VmInternal* vmInternal, U32 argc, KorkApi::ConsoleValue* argv);
 }
 
-static ConsoleValue MyPoint3F_CopyData(void* userPtr,
-                         KorkApi::Vm* vm,
-                         void* sptr,
-                         const EnumTable* tbl,
-                         BitSet32 flag,
-                         U32 requestedType,
-                         U32 requestedZone) {
-   static char buf[96];
-   MyPoint3F* pt = reinterpret_cast<MyPoint3F*>(sptr);
-   ConsoleValue cv;
-   U32 realRequestedType = requestedZone & KorkApi::TypeDirectCopyMask;
+static bool MyPoint3F_CastValue(void*,
+                               KorkApi::Vm* vm,
+                               KorkApi::TypeStorageInterface* inputStorage,
+                               KorkApi::TypeStorageInterface* outputStorage,
+                              const EnumTable* tbl,
+                              BitSet32 flag,
+                              U32 typeId)
+{
+   const KorkApi::ConsoleValue* argv = nullptr;
+   U32 argc = inputStorage ? inputStorage->data.argc : 0;
+   bool directLoad = false;
 
-   if (realRequestedType == KorkApi::ConsoleValue::TypeInternalString)
+   if (argc > 0 && inputStorage->data.storageRegister)
    {
-      char* destPtr = buf;
-      
-      if (requestedZone != KorkApi::ConsoleValue::ZoneExternal)
+      argv = inputStorage->data.storageRegister;
+   }
+   else
+   {
+      argc = 1;
+      argv = &inputStorage->data.storageAddress;
+      directLoad = true;
+   }
+
+   MyPoint3F v = {0, 0, 0};
+
+   if (inputStorage->isField && directLoad)
+   {
+      const MyPoint3F* src = (const MyPoint3F*)inputStorage->data.storageAddress.evaluatePtr(vm->getAllocBase());
+      if (!src) return false;
+      v = *src;
+   }
+   else
+   {
+      if (argc == 3)
       {
-         cv = vm->getStringInZone(requestedZone, 256);
-         if (cv.isNull())
-         {
-            return cv;
-         }
+         v.x = (F32)argv[0].getFloat((F64)argv[0].getInt(0));
+         v.y = (F32)argv[1].getFloat((F64)argv[1].getInt(0));
+         v.z = (F32)argv[2].getFloat((F64)argv[2].getInt(0));
+      }
+      else if (argc == 1)
+      {
+         const char* s = vm->valueAsString(argv[0]);
+         if (!s) s = "";
+
+         dSscanf(s, "%g %g %g", &v.x, &v.y, &v.z);
       }
       else
       {
-         cv = KorkApi::ConsoleValue::makeString(destPtr);
+         // Not supported
+         return false;
       }
-      
-      dSprintf(destPtr, 256, "%g %g %g", pt->x, pt->y, pt->z);
-   }
-   else if ((requestedType & KorkApi::TypeDirectCopy) != 0) // i.e. same type
-   {
-      cv = vm->getTypeInZone(requestedZone, realRequestedType);
-      *((MyPoint3F*)cv.ptr()) = *pt;
    }
 
-   return cv;
+   // -> output
+
+   if (typeId == 3) // TOFIX
+   {
+      MyPoint3F* dstPtr = (MyPoint3F*)outputStorage->data.storageAddress.evaluatePtr(vm->getAllocBase());
+      if (!dstPtr)
+      {
+         return false;
+      }
+
+      *dstPtr = v;
+
+      if (outputStorage->data.storageRegister)
+         *outputStorage->data.storageRegister = outputStorage->data.storageAddress;
+
+      return true;
+   }
+   else if (typeId == KorkApi::ConsoleValue::TypeInternalString)
+   {
+      const U32 bufLen = 96;
+
+      outputStorage->FinalizeStorage(outputStorage, bufLen);
+
+      char* out = (char*)outputStorage->data.storageAddress.evaluatePtr(vm->getAllocBase());
+      if (!out) return false;
+
+      dSprintf(out, bufLen, "%.9g %.9g %.9g", v.x, v.y, v.z);
+
+      if (outputStorage->data.storageRegister)
+         *outputStorage->data.storageRegister = outputStorage->data.storageAddress;
+
+      return true;
+   }
+   else
+   {
+      KorkApi::ConsoleValue vals[3];
+      vals[0] = KorkApi::ConsoleValue::makeNumber(v.x);
+      vals[1] = KorkApi::ConsoleValue::makeNumber(v.y);
+      vals[2] = KorkApi::ConsoleValue::makeNumber(v.z);
+
+      KorkApi::TypeStorageInterface castInput =
+         KorkApi::CreateRegisterStorageFromArgs(vm->mInternal, 3, vals);
+
+      return vm->castValue(typeId, &castInput, outputStorage, tbl, flag);
+   }
 }
 
 static const char* MyPoint3F_GetTypeClassName(void*) { return "MyPoint3F"; }
@@ -295,10 +325,10 @@ int testScript(char* script, const char* filename)
    TypeInfo tInfo{};
    tInfo.name = "MyPoint3F";
    tInfo.userPtr = NULL;
-   tInfo.size = sizeof(MyPoint3F);
+   tInfo.fieldsize = sizeof(MyPoint3F);
+   tInfo.valueSize = sizeof(MyPoint3F);
    tInfo.iFuncs = {
-      &MyPoint3F_SetValue,
-      &MyPoint3F_CopyData,
+      &MyPoint3F_CastValue,
       &MyPoint3F_GetTypeClassName,
       NULL
    };

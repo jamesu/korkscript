@@ -417,7 +417,7 @@ public:
     ClassId getClassId(const char* name);
     TypeInfo* getTypeInfo(TypeId ident);
 
-    bool castValue(TypeId inputType, TypeStorageInterface* inputStorage, TypeStorageInterface* outputStorage, EnumTable* et, BitSet32 flags);
+    bool castValue(TypeId inputType, TypeStorageInterface* inputStorage, TypeStorageInterface* outputStorage, const EnumTable* et, BitSet32 flags);
 
 	// Hard refs to console values
 	ConsoleHeapAllocRef createHeapRef(U32 size);

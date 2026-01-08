@@ -129,7 +129,7 @@ TypeInfo* Vm::getTypeInfo(TypeId ident)
    return &mInternal->mTypes[ident];
 }
 
-bool Vm::castValue(TypeId inputType, TypeStorageInterface* inputStorage, TypeStorageInterface* outputStorage, EnumTable* et, BitSet32 flags)
+bool Vm::castValue(TypeId inputType, TypeStorageInterface* inputStorage, TypeStorageInterface* outputStorage, const EnumTable* et, BitSet32 flags)
 {
    CastValueFn castFn = mInternal->mTypes[inputType].iFuncs.CastValueFn;
    return castFn(
