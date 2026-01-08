@@ -96,7 +96,7 @@ void StringStack::performOp(U32 op, KorkApi::Vm* vm, KorkApi::TypeInfo* typeInfo
    
    KorkApi::TypeInfo& info = typeInfo[lhs.typeId];
    
-   rewind(); // only rhs is on other side
+   rewind(); // only lhs is on other side
    
    info.iFuncs.PerformOp(vm, op, lhs, rhs);
 }
@@ -108,7 +108,7 @@ void StringStack::performOpReverse(U32 op, KorkApi::Vm* vm, KorkApi::TypeInfo* t
    
    KorkApi::TypeInfo& info = typeInfo[lhs.typeId];
    
-   rewind(); // only lhs is on other side
+   rewind(); // only rhs is on other side
    
    KorkApi::ConsoleValue result = info.iFuncs.PerformOp(vm, op, lhs, rhs);
    setConsoleValue(result);

@@ -2335,10 +2335,6 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
                                                                    0,
                                                                    frame.dynTypeId);
             }
-            else
-            {
-               evalState.mSTR.setStringValue("");
-            }
             break;
          case OP_FLT_TO_TYPED:
             if (frame.dynTypeId != 0)
@@ -2363,13 +2359,14 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
             }
             else
             {
-               evalState.mSTR.setStringValue("");
+               KorkApi::ConsoleValue cv = KorkApi::ConsoleValue::makeNumber(evalState.floatStack[frame._FLT--]);
+               evalState.mSTR.setConsoleValue(cv);
             }
             break;
          case OP_UINT_TO_TYPED:
             if (frame.dynTypeId != 0)
             {
-               KorkApi::ConsoleValue cv = KorkApi::ConsoleValue::makeNumber(evalState.intStack[frame._UINT--]);
+               KorkApi::ConsoleValue cv = KorkApi::ConsoleValue::makeUnsigned(evalState.intStack[frame._UINT--]);
 
                KorkApi::TypeStorageInterface outputStorage = KorkApi::CreateExprEvalTypeStorage(vmInternal,
                                                                                        *this,
@@ -2389,7 +2386,8 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
             }
             else
             {
-               evalState.mSTR.setStringValue("");
+               KorkApi::ConsoleValue cv = KorkApi::ConsoleValue::makeUnsigned(evalState.floatStack[frame._UINT--]);
+               evalState.mSTR.setConsoleValue(cv);
             }
             break;
             
@@ -2404,10 +2402,16 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
             frame.dynTypeId = frame.curObject ? vmInternal->getObjectFieldType(frame.curObject, frame.curField, frame.curFieldArray) : 0;
             break;
          }
-            
+         
          case OP_SET_DYNAMIC_TYPE_FROM_ID:
          {
             frame.dynTypeId = frame.codeBlock->getRealTypeID(code[ip++]);
+            break;
+         }
+            
+         case OP_SET_DYNAMIC_TYPE_TO_NULL:
+         {
+            frame.dynTypeId = 0;
             break;
          }
             

@@ -217,9 +217,11 @@ namespace Compiler
       OP_SAVEFIELD_VAR,     // save current variable to object field
       OP_SETCURVAR_TYPE,    // set type of current var
 
+      // Dynamic type id set
       OP_SET_DYNAMIC_TYPE_FROM_VAR,   // sets dynamic type to type of var
       OP_SET_DYNAMIC_TYPE_FROM_FIELD, // sets dynamic typeid to field type
-      OP_SET_DYNAMIC_TYPE_FROM_ID, // sets dynamic typeid to specific type (for casts)
+      OP_SET_DYNAMIC_TYPE_FROM_ID,    // sets dynamic typeid to specific type (for casts)
+      OP_SET_DYNAMIC_TYPE_TO_NULL,
 
       // Tuple type assignments
       // (these basically act like function calls)

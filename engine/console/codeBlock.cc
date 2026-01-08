@@ -1841,6 +1841,13 @@ void CodeBlock::dumpInstructions( U32 startIp, bool upToReturn, bool downcaseStr
             ip++;
             break;
          }
+
+         case OP_SET_DYNAMIC_TYPE_TO_NULL:
+         {
+            mVM->printf(0, "%i: OP_SET_DYNAMIC_TYPE_TO_NULL %i", ip - 1);
+            ip++;
+            break;
+         }
          
          case OP_SETCURVAR_TYPE:
          {

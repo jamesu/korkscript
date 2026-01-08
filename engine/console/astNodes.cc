@@ -800,7 +800,7 @@ U32 IntNode::compile(CodeStream &codeStream, U32 ip, TypeReq type)
 {
    if(type == TypeReqString)
       index = codeStream.mResources->getCurrentStringTable()->addIntString(value);
-   else if(type == TypeReqFloat)
+   else if(type == TypeReqFloat || type == TypeReqTypedString)
       index = codeStream.mResources->getCurrentFloatTable()->add(value);
    
    switch(type)
@@ -817,6 +817,12 @@ U32 IntNode::compile(CodeStream &codeStream, U32 ip, TypeReq type)
       codeStream.emit(OP_LOADIMMED_FLT);
       codeStream.emit(index);
       break;
+   case TypeReqTypedString:
+         codeStream.emit(OP_LOADIMMED_FLT);
+         codeStream.emit(index);
+         codeStream.emit(OP_SET_DYNAMIC_TYPE_TO_NULL);
+         codeStream.emit(OP_FLT_TO_TYPED);
+         break;
    case TypeReqNone:
    default:
       break;
@@ -835,7 +841,7 @@ U32 FloatNode::compile(CodeStream &codeStream, U32 ip, TypeReq type)
 {
    if(type == TypeReqString)
       index = codeStream.mResources->getCurrentStringTable()->addFloatString(value);
-   else if(type == TypeReqFloat)
+   else if(type == TypeReqFloat || type == TypeReqTypedString)
       index = codeStream.mResources->getCurrentFloatTable()->add(value);
    
    switch(type)
@@ -852,6 +858,12 @@ U32 FloatNode::compile(CodeStream &codeStream, U32 ip, TypeReq type)
       codeStream.emit(OP_LOADIMMED_FLT);
       codeStream.emit(index);
       break;
+   case TypeReqTypedString:
+         codeStream.emit(OP_LOADIMMED_FLT);
+         codeStream.emit(index);
+         codeStream.emit(OP_SET_DYNAMIC_TYPE_TO_NULL);
+         codeStream.emit(OP_FLT_TO_TYPED);
+         break;
    case TypeReqNone:
    default:
       break;
@@ -873,7 +885,7 @@ U32 StrConstNode::compile(CodeStream &codeStream, U32 ip, TypeReq type)
    {
       index = codeStream.mResources->getCurrentStringTable()->add(str, true, tag);
    }
-   else if(type == TypeReqString)
+   else if(type == TypeReqString || type == TypeReqTypedString)
    {
       index = codeStream.mResources->getCurrentStringTable()->add(str, true, tag);
    }
@@ -897,6 +909,7 @@ U32 StrConstNode::compile(CodeStream &codeStream, U32 ip, TypeReq type)
    // Otherwise, deal with it normally as a string literal case.
    switch(type)
    {
+   case TypeReqTypedString:
    case TypeReqString:
       codeStream.emit(tag ? OP_TAG_TO_STR : OP_LOADIMMED_STR);
       codeStream.emit(index);
@@ -1176,6 +1189,13 @@ U32 AssignOpExprNode::compile(CodeStream &codeStream, U32 ip, TypeReq type)
    getAssignOpTypeOp(op, subType, operand); // op -> subType, operand
    codeStream.mResources->precompileIdent(varName);
 
+   // Change to typed op if var is typed
+   bool isTyped = varInfo->typeId != -1;
+   if (isTyped)
+   {
+      subType = TypeReqTypedString;
+   }
+   
    if (dynamic_cast<TupleExprNode*>(rhsExpr))
    {
       AssertFatal(false, "Something went seriously wrong in handleExpressionTuples");
@@ -1204,16 +1224,21 @@ U32 AssignOpExprNode::compile(CodeStream &codeStream, U32 ip, TypeReq type)
    // NOTE: no mechanism to set type here.
    
    emitStackConversion(codeStream, TypeReqVar, subType);
+   
    if (subType == TypeReqTypedString)
    {
       codeStream.emit(OP_TYPED_OP);
    }
+   
    codeStream.emit(operand);
    emitStackConversion(codeStream, subType, TypeReqVar); // usually goes for FLT or UINT here
    
    // -> output
-   if(subType != type)
-      emitStackConversion(codeStream, subType, type);
+   if(type != TypeReqVar)
+   {
+      emitStackConversion(codeStream, TypeReqVar, type);
+   }
+   
    return codeStream.tell();
 }
 
@@ -2007,7 +2032,7 @@ static U32 conversionOp(TypeReq src, TypeReq dst)
       case TypeReqField:
          return OP_SAVEFIELD_VAR;
       case TypeReqTypedString:
-         return OP_SAVEFIELD_VAR;
+         return OP_LOADVAR_TYPED;
       default:
          break;
       }
