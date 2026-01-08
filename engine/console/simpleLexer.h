@@ -5,6 +5,7 @@
 #include <vector>
 #include <cctype>
 #include "core/stringTable.h"
+#include <cinttypes>
 
 namespace SimpleLexer
 {
@@ -240,7 +241,7 @@ public:
       }
       else if (t.kind == TokenType::INTCONST)
       {
-         snprintf(buf, sizeof(buf), "%s=INT(%llu)", kindToString(t.kind), t.ivalue);
+         snprintf(buf, sizeof(buf), "%s=INT(%" PRIu64 ")", kindToString(t.kind), t.ivalue);
       }
       else if (t.kind == TokenType::FLTCONST)
       {

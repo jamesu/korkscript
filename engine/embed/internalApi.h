@@ -72,7 +72,7 @@ struct VmInternal
    Config mConfig;
    ConsoleValue::AllocBase mAllocBase;
 
-   KorkApi::ConsoleValue mTempConversionValue[MaxTempStringSize];
+   KorkApi::ConsoleValue mTempConversionValue[MaxStringConvs];
    KorkApi::ConsoleValue mReturnBufferValue;
    Vector<U8> mReturnBuffer;
 

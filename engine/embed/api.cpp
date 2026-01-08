@@ -9,6 +9,7 @@
 #include "console/telnetDebugger.h"
 #include "console/telnetConsole.h"
 
+#include <cinttypes>
 
 namespace KorkApi
 {
@@ -855,7 +856,7 @@ VmInternal::VmInternal(Vm* vm, Config* cfg) : mGlobalVars(this)
      switch (requestedType)
      {
         case KorkApi::ConsoleValue::TypeInternalString: {
-           const char* strValue = vm->valueAsString(inputStorage->data.storageAddress);
+           const char* strValue = vm->valueAsString(inputStorage->data.storageRegister ? *inputStorage->data.storageRegister : inputStorage->data.storageAddress);
            U32 strLen = dStrlen(strValue)+1;
            outputStorage->ResizeStorage(outputStorage, strLen);
            memcpy(outputStorage->data.storageAddress.evaluatePtr(vm->getAllocBase()), strValue, strLen);
@@ -863,10 +864,10 @@ VmInternal::VmInternal(Vm* vm, Config* cfg) : mGlobalVars(this)
         }
            break;
         case KorkApi::ConsoleValue::TypeInternalNumber:
-           *(outputStorage->data.storageRegister) = KorkApi::ConsoleValue::makeNumber(vm->valueAsFloat(*inputStorage->data.storageRegister));
+           *(outputStorage->data.storageRegister) = KorkApi::ConsoleValue::makeNumber(inputStorage->data.storageRegister ? vm->valueAsFloat(*inputStorage->data.storageRegister) : 0.0f);
            break;
         case KorkApi::ConsoleValue::TypeInternalUnsigned:
-           *(outputStorage->data.storageRegister) = KorkApi::ConsoleValue::makeUnsigned((U64)vm->valueAsInt(*inputStorage->data.storageRegister));
+           *(outputStorage->data.storageRegister) = KorkApi::ConsoleValue::makeUnsigned(inputStorage->data.storageRegister ? (U64)vm->valueAsInt(*inputStorage->data.storageRegister) : 0);
            break;
         default:
            return false;
@@ -1151,7 +1152,7 @@ const char* VmInternal::tempFloatConv(F64 val)
    if (mConvIndex == MaxStringConvs)
       mConvIndex = 0;
 
-   snprintf(mTempStringConversions[mConvIndex], MaxTempStringSize, "%g", val);
+   snprintf(mTempStringConversions[mConvIndex], MaxTempStringSize, "%.9g", val);
    return mTempStringConversions[mConvIndex++];
 }
 
@@ -1160,7 +1161,7 @@ const char* VmInternal::tempIntConv(U64 val)
    if (mConvIndex == MaxStringConvs)
       mConvIndex = 0;
 
-   snprintf(mTempStringConversions[mConvIndex], MaxTempStringSize, "%llu", val);
+   snprintf(mTempStringConversions[mConvIndex], MaxTempStringSize, "%" PRIu64, val);
    return mTempStringConversions[mConvIndex++];
 }
 
