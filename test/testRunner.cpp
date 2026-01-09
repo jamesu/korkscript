@@ -59,10 +59,21 @@ ConsoleGetType( TypeMyPoint3F )
       }
       else if (argc == 1)
       {
-         const char* s = vmPtr->valueAsString(argv[0]);
-         if (!s) s = "";
-
-         dSscanf(s, "%g %g %g", &v.x, &v.y, &v.z);
+         if (argv[0].typeId == TypeMyPoint3F)
+         {
+            MyPoint3F* src = (MyPoint3F*)ConsoleGetInputStoragePtr();
+            if (src)
+            {
+               v = *src;
+            }
+         }
+         else
+         {
+            const char* s = vmPtr->valueAsString(argv[0]);
+            if (!s) s = "";
+            
+            dSscanf(s, "%g %g %g", &v.x, &v.y, &v.z);
+         }
       }
       else
       {

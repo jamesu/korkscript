@@ -215,7 +215,7 @@ struct StringStack
       }
       else
       {
-         // TOFIX: needs to use storage api
+         // TOFIX: needs to use storage api (mLen issues)
          valueBase = v.evaluatePtr(*mAllocBase);
          if (valueBase != (mBuffer + mStart)) // account for setting same head
          {
@@ -223,10 +223,28 @@ struct StringStack
             {
                setStringValue((const char*)valueBase);
             }
+            else if (valueBase)
+            {
+               KorkApi::TypeInfo info = (*mTypes)[v.typeId];
+               
+               if (info.valueSize != UINT_MAX)
+               {
+                  mLen = (U32)info.valueSize;
+                  memmove(mBuffer + mStart, valueBase, mLen);
+                  mValue = mStart;
+               }
+               else
+               {
+                  // TOFIX: Storage API here
+                  mValue = 0;
+                  mType = 0;
+                  mLen = 0;
+                  return;
+               }
+            }
             else
             {
-               mLen = (U32)((*mTypes)[v.typeId].valueSize);
-               memcpy(mBuffer + mStart, valueBase, mLen);
+               mValue = v.cvalue;
             }
          }
          mType = v.typeId;

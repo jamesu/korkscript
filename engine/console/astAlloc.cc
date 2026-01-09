@@ -205,8 +205,9 @@ VarNode *VarNode::alloc( Compiler::Resources* res, S32 lineNumber, StringTableEn
    ret->dbgLineNumber = lineNumber;
    ret->varName = varName;
    ret->arrayIndex = arrayIndex;
-   ret->varType = typeName;
+   ret->varType = res->allowTypes ? typeName : NULL;
    ret->varInfo = res->getVarInfo(varName, ret->varType);
+   ret->disableTypes = !res->allowTypes;
    return ret;
 }
 
@@ -284,6 +285,7 @@ AssignExprNode *AssignExprNode::alloc( Compiler::Resources* res, S32 lineNumber,
    ret->subType = TypeReqNone;
    ret->assignTypeName = typeName;
    ret->varInfo = res->getVarInfo(varName, ret->assignTypeName);
+   ret->disableTypes = !res->allowTypes;
    
    return ret;
 }
@@ -403,7 +405,7 @@ SlotAssignNode *SlotAssignNode::alloc( Compiler::Resources* res, S32 lineNumber,
    ret->arrayExpr = arrayExpr;
    ret->slotName = slotName;
    ret->rhsExpr = valueExpr;
-   ret->varType = typeName;
+   ret->varType = res->allowTypes ? typeName : NULL;
    return ret;
 }
 

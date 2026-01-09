@@ -91,24 +91,24 @@ void StringStack::convertArgsReverse(KorkApi::VmInternal* vm, U32 numArgs, const
 
 void StringStack::performOp(U32 op, KorkApi::Vm* vm, KorkApi::TypeInfo* typeInfo)
 {
-   KorkApi::ConsoleValue rhs = getStackConsoleValue(mStartStackSize-1);
-   KorkApi::ConsoleValue lhs = getConsoleValue();
-   
-   KorkApi::TypeInfo& info = typeInfo[lhs.typeId];
-   
-   rewind(); // only lhs is on other side
-   
-   info.iFuncs.PerformOp(vm, op, lhs, rhs);
-}
-
-void StringStack::performOpReverse(U32 op, KorkApi::Vm* vm, KorkApi::TypeInfo* typeInfo)
-{
    KorkApi::ConsoleValue lhs = getStackConsoleValue(mStartStackSize-1);
    KorkApi::ConsoleValue rhs = getConsoleValue();
    
    KorkApi::TypeInfo& info = typeInfo[lhs.typeId];
    
    rewind(); // only rhs is on other side
+   
+   info.iFuncs.PerformOp(vm, op, lhs, rhs);
+}
+
+void StringStack::performOpReverse(U32 op, KorkApi::Vm* vm, KorkApi::TypeInfo* typeInfo)
+{
+   KorkApi::ConsoleValue rhs = getStackConsoleValue(mStartStackSize-1);
+   KorkApi::ConsoleValue lhs = getConsoleValue();
+   
+   KorkApi::TypeInfo& info = typeInfo[lhs.typeId];
+   
+   rewind(); // only lhs is on other side
    
    KorkApi::ConsoleValue result = info.iFuncs.PerformOp(vm, op, lhs, rhs);
    setConsoleValue(result);

@@ -143,6 +143,7 @@ struct ExprNode : StmtNode
 
    virtual U32 compile(CodeStream &codeStream, U32 ip, TypeReq type) = 0;
    virtual TypeReq getPreferredType() = 0;
+   virtual bool canBeTyped() { return getPreferredType() == TypeReqTypedString; }
 };
 
 struct ReturnStmtNode : StmtNode
@@ -318,12 +319,14 @@ struct VarNode : ExprNode
    StringTableEntry varType;
    Compiler::VarTypeTableEntry* varInfo;
    ExprNode *arrayIndex;
+   bool disableTypes;
 
    static VarNode *alloc( Compiler::Resources* res, S32 lineNumber, StringTableEntry varName, ExprNode *arrayIndex, StringTableEntry assignTypeName = NULL );
   
    U32 compile(CodeStream &codeStream, U32 ip, TypeReq type);
    TypeReq getPreferredType();
    bool isTyped();
+   bool canBeTyped();
 
    DBG_STMT_TYPE(VarNode);
 };
@@ -402,6 +405,8 @@ struct AssignExprNode : BaseAssignExprNode
 
    ExprNode *arrayIndex;
    TypeReq subType;
+   
+   bool disableTypes;
 
    static AssignExprNode *alloc( Compiler::Resources* res, S32 lineNumber, StringTableEntry varName, ExprNode *arrayIndex, ExprNode *expr, StringTableEntry assignTypeName = NULL);
   

@@ -2421,7 +2421,8 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
             
             if (frame.currentVar.var)
             {
-               frame.currentVar.dictionary->setEntryType(frame.currentVar.var, frame.codeBlock->getRealTypeID((U16)typeId));
+               typeId = frame.codeBlock->getRealTypeID((U16)typeId);
+               frame.currentVar.dictionary->setEntryType(frame.currentVar.var, typeId);
             }
             
             break;

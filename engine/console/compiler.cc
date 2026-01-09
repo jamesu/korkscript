@@ -152,7 +152,7 @@ namespace Compiler
          }
          
          tt->typeName = typeName;
-         tt->typeId = precompileType(typeName);
+         tt->typeId = allowTypes ? precompileType(typeName) : -1;
       }
 
       return tt;

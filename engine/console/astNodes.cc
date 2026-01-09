@@ -388,11 +388,11 @@ U32 FloatBinaryExprNode::compile(CodeStream &codeStream, U32 ip, TypeReq type)
    
    TypeReq nodeOpOutputType = TypeReqFloat;
    
-   bool firstIsTyped = right->getPreferredType() == TypeReqTypedString;
-   bool secondIsTyped = left->getPreferredType() == TypeReqTypedString;
-   bool outputIsTyped = type == TypeReqTypedString;
+   bool firstIsTyped = right->canBeTyped();
+   bool secondIsTyped = left->canBeTyped();
+   //bool outputIsTyped = type == TypeReqTypedString;
    
-   if (outputIsTyped)
+   //if (outputIsTyped)
    {
       if (firstIsTyped || secondIsTyped)
       {
@@ -528,8 +528,8 @@ U32 IntBinaryExprNode::compile(CodeStream &codeStream, U32 ip, TypeReq type)
    else
    {
       // Non-OR/AND: apply typed-op selection logic like FloatBinaryExprNode
-      bool firstIsTyped  = right->getPreferredType() == TypeReqTypedString; // compiled first
-      bool secondIsTyped = left->getPreferredType()  == TypeReqTypedString;
+      bool firstIsTyped = right->canBeTyped();
+      bool secondIsTyped = left->canBeTyped();
       bool outputIsTyped = (type == TypeReqTypedString);
 
       bool doTypedOp = (firstIsTyped || secondIsTyped);
@@ -791,7 +791,12 @@ U32 VarNode::compile(CodeStream &codeStream, U32 ip, TypeReq type)
 
 TypeReq VarNode::getPreferredType()
 {
-   return TypeReqNone; // no preferred type
+   return disableTypes ? TypeReqNone : TypeReqVar; // no preferred type
+}
+
+bool VarNode::canBeTyped()
+{
+   return (varInfo && !disableTypes) ? varInfo->typeId >= 0 : false;
 }
 
 //------------------------------------------------------------
@@ -1106,7 +1111,7 @@ U32 AssignExprNode::compile(CodeStream &codeStream, U32 ip, TypeReq type)
 TypeReq AssignExprNode::getPreferredType()
 {
    // This SHOULD be TypeReqVar since usually we end up doing %a = <expr>;
-   return TypeReqVar; //assignTypeName != NULL && assignTypeName[0] != '\0' ? TypeReqTypedString : rhsExpr->getPreferredType();
+   return disableTypes ? (assignTypeName != NULL && assignTypeName[0] != '\0' ? TypeReqTypedString : rhsExpr->getPreferredType()) : TypeReqVar;
 }
 
 void AssignExprNode::setAssignType(StringTableEntry typeName)

@@ -681,6 +681,9 @@ bool CodeBlock::compileToStream(Stream &st, StringTableEntry fileName, const cha
    SimpleLexer::Tokenizer lex(StringTable, inScript, fileName);
    SimpleParser::ASTGen astGen(&lex, mVM->mCompilerResources);
    
+   // Reset all our value tables...
+   mVM->mCompilerResources->resetTables();
+   
    try
    {
       astGen.processTokens();
@@ -702,9 +705,6 @@ bool CodeBlock::compileToStream(Stream &st, StringTableEntry fileName, const cha
       mVM->mCompilerResources->consoleAllocReset();
       return false;
    }
-   
-   // Reset all our value tables...
-   mVM->mCompilerResources->resetTables();
    
    CodeStream codeStream(mVM->mCompilerResources);
    codeStream.setFilename(fileName);
@@ -829,6 +829,9 @@ bool CodeBlock::compileToStream(Stream &st, StringTableEntry fileName, const cha
    
    SimpleLexer::Tokenizer lex(StringTable, inString, fileName ? fileName : "");
    SimpleParser::ASTGen astGen(&lex, mVM->mCompilerResources);
+    
+    // Need to do this here as ast node gen stores stuff in tables
+    mVM->mCompilerResources->resetTables();
    
    try
    {
@@ -845,8 +848,6 @@ bool CodeBlock::compileToStream(Stream &st, StringTableEntry fileName, const cha
       delete this;
       return KorkApi::ConsoleValue();
    }
-   
-   mVM->mCompilerResources->resetTables();
    
    CodeStream codeStream(mVM->mCompilerResources);
    codeStream.setFilename(fileName);

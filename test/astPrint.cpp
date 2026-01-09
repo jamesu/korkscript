@@ -472,7 +472,7 @@ void dumpToInstructionsPrint(Compiler::Resources& res, StmtNode* rootNode)
 
    CodeBlock* cb = new CodeBlock(vm->mInternal, true);
    res.STEtoCode = &Compiler::compileSTEtoCode;
-   res.resetTables();
+   //res.resetTables(); // NOTE: should be done before
    
    U32 lastIP = Compiler::compileBlock(rootNode, codeStream, 0) + 1;
    
