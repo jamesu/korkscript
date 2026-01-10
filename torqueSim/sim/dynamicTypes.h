@@ -98,6 +98,9 @@ public:
    virtual StringTableEntry getTypePrefix( void ) const { return StringTable->EmptyString; }
 
    virtual void exportToVm(KorkApi::Vm* vm) = 0;
+   virtual KorkApi::ConsoleValue performOp(KorkApi::Vm* vm, U32 op, KorkApi::ConsoleValue lhs, KorkApi::ConsoleValue rhs);
+   virtual KorkApi::ConsoleValue performOpNumeric(KorkApi::Vm* vm, U32 op, KorkApi::ConsoleValue lhs, KorkApi::ConsoleValue rhs);
+   virtual KorkApi::ConsoleValue performOpUnsigned(KorkApi::Vm* vm, U32 op, KorkApi::ConsoleValue lhs, KorkApi::ConsoleValue rhs);
 };
 
 #define DefineConsoleType( type ) extern S32 type;
@@ -111,6 +114,7 @@ public:
       virtual const char *getTypeClassName() { return #typeName ; } \
       virtual StringTableEntry getTypePrefix( void ) const { return StringTable->insert( typePrefix ); }\
       void exportToVm(KorkApi::Vm* vm) { exportTypeToVm(this, vm); } \
+      virtual KorkApi::ConsoleValue performOp(KorkApi::Vm* vm, U32 op, KorkApi::ConsoleValue lhs, KorkApi::ConsoleValue rhs); \
    }; \
    S32 type = -1; \
    ConsoleType##type gConsoleType##type##Instance(size,vsize,&type,#type); \
@@ -125,6 +129,7 @@ public:
       virtual const char *prepData(KorkApi::Vm* vmPtr, const char *data, char *buffer, U32 bufferLen); \
       virtual StringTableEntry getTypePrefix( void ) const { return StringTable->insert( typePrefix ); }\
       void exportToVm(KorkApi::Vm* vm) { exportTypeToVm(this, vm); } \
+      virtual KorkApi::ConsoleValue performOp(KorkApi::Vm* vm, U32 op, KorkApi::ConsoleValue lhs, KorkApi::ConsoleValue rhs); \
    }; \
    S32 type = -1; \
    ConsoleType##type gConsoleType##type##Instance(size,&type,#type); \
@@ -137,6 +142,18 @@ public:
 
 #define ConsoleGetType( type ) \
    bool ConsoleType##type::getData(KorkApi::Vm* vmPtr, KorkApi::TypeStorageInterface *inputStorage, KorkApi::TypeStorageInterface *outputStorage, const EnumTable* tbl, BitSet32 flag, U32 requestedType)
+
+#define ConsoleTypeOp( type ) \
+   KorkApi::ConsoleValue ConsoleType##type::performOp(KorkApi::Vm* vmPtr, U32 op, KorkApi::ConsoleValue lhs, KorkApi::ConsoleValue rhs)
+
+#define ConsoleTypeOpDefault( type ) \
+   KorkApi::ConsoleValue ConsoleType##type::performOp(KorkApi::Vm* vmPtr, U32 op, KorkApi::ConsoleValue lhs, KorkApi::ConsoleValue rhs) { return ConsoleBaseType::performOp(vmPtr, op, lhs, rhs); }
+
+#define ConsoleTypeOpDefaultNumeric( type ) \
+   KorkApi::ConsoleValue ConsoleType##type::performOp(KorkApi::Vm* vmPtr, U32 op, KorkApi::ConsoleValue lhs, KorkApi::ConsoleValue rhs) { return ConsoleBaseType::performOpNumeric(vmPtr, op, lhs, rhs); }
+
+#define ConsoleTypeOpDefaultUnsigned( type ) \
+   KorkApi::ConsoleValue ConsoleType##type::performOp(KorkApi::Vm* vmPtr, U32 op, KorkApi::ConsoleValue lhs, KorkApi::ConsoleValue rhs) { return ConsoleBaseType::performOpUnsigned(vmPtr, op, lhs, rhs); }
 
 #define ConsoleCopyToOutput( value ) \
    CopyTypeStorageValueToOutput(outputStorage, value);

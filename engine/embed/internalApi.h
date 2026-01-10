@@ -150,6 +150,7 @@ struct VmInternal
 
    const char* tempFloatConv(F64 val);
    const char* tempIntConv(U64 val);
+   const char* tempStringConv(const char* str);
 
    bool setObjectField(VMObject* object, StringTableEntry name, const char* array, ConsoleValue value);
    bool setObjectFieldTuple(VMObject* object, StringTableEntry fieldName, const char* arrayIndex, U32 argc, ConsoleValue* argv);

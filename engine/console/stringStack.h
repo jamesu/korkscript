@@ -314,7 +314,7 @@ struct StringStack
       else
       {
          // Raw values are just placed directly on the stack
-         return KorkApi::ConsoleValue::makeRaw(*((U64*)&mBuffer[mStart]), mType, (KorkApi::ConsoleValue::Zone)(KorkApi::ConsoleValue::ZoneFunc + mFuncId));
+         return KorkApi::ConsoleValue::makeRaw(mValue, mType, KorkApi::ConsoleValue::ZonePacked);
       }
    }
    

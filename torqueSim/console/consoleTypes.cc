@@ -110,6 +110,8 @@ ConsoleGetType( TypeString )
    return true;
 }
 
+ConsoleTypeOpDefaultNumeric( TypeString )
+
 ConsoleGetType( TypeStringTableEntryVector )
 {
    Vector<StringTableEntry> *vec = NULL;
@@ -225,6 +227,8 @@ ConsoleGetType( TypeStringTableEntryVector )
    return false;
 }
 
+ConsoleTypeOpDefaultNumeric( TypeStringTableEntryVector )
+
 ConsoleGetType( TypeCaseString )
 {
    const KorkApi::ConsoleValue* argv = nullptr;
@@ -293,6 +297,8 @@ ConsoleGetType( TypeCaseString )
 
    return true;
 }
+
+ConsoleTypeOpDefaultNumeric( TypeCaseString )
 
 #if 0
 
@@ -371,6 +377,8 @@ ConsoleGetType( TypeS8 )
    }
 }
 
+ConsoleTypeOpDefaultNumeric( TypeS8 )
+
 ConsoleGetType( TypeS32 )
 {
    S32 value = inputStorage->isField ? *((S32*)(ConsoleGetInputStoragePtr())) : vmPtr->valueAsInt(inputStorage->data.storageRegister[0]);
@@ -411,6 +419,8 @@ ConsoleGetType( TypeS32 )
       return vmPtr->castValue(requestedType, &castInput, outputStorage, nullptr, 0);
    }
 }
+
+ConsoleTypeOpDefaultNumeric( TypeS32 )
 
 ConsoleGetType( TypeF32 )
 {
@@ -453,6 +463,8 @@ ConsoleGetType( TypeF32 )
    }
 }
 
+ConsoleTypeOpDefaultNumeric( TypeF32 )
+
 ConsoleGetType( TypeBool )
 {
    bool value = inputStorage->isField ? *((bool*)(ConsoleGetInputStoragePtr())) : vmPtr->valueAsBool(inputStorage->data.storageRegister[0]);
@@ -493,6 +505,9 @@ ConsoleGetType( TypeBool )
       return vmPtr->castValue(requestedType, &castInput, outputStorage, nullptr, 0);
    }
 }
+
+
+ConsoleTypeOpDefaultUnsigned( TypeBool )
 
 ConsoleGetType( TypeS32Vector )
 {
@@ -651,6 +666,8 @@ ConsoleGetType( TypeS32Vector )
    return false;
 }
 
+ConsoleTypeOpDefaultNumeric( TypeS32Vector )
+
 ConsoleGetType( TypeF32Vector )
 {
    Vector<F32> *vec = NULL;
@@ -807,6 +824,8 @@ ConsoleGetType( TypeF32Vector )
    
    return false;
 }
+
+ConsoleTypeOpDefaultNumeric( TypeF32Vector )
 
 ConsoleGetType( TypeBoolVector )
 {
@@ -965,6 +984,8 @@ ConsoleGetType( TypeBoolVector )
    return false;
 }
 
+ConsoleTypeOpDefaultUnsigned( TypeBoolVector )
+
 ConsoleGetType( TypeEnum )
 {
    AssertFatal(tbl, "invalid table");
@@ -1037,6 +1058,8 @@ ConsoleGetType( TypeEnum )
    
    return true;
 }
+
+ConsoleTypeOpDefaultUnsigned( TypeEnum )
 
 #if 0
 

@@ -435,7 +435,7 @@ void Dictionary::setEntryTypeValue(Dictionary::Entry* e, U32 inputTypeId, KorkAp
 
 void Dictionary::setEntryValue(Entry* e, KorkApi::ConsoleValue value)
 {
-   KorkApi::TypeStorageInterface inputStorage = KorkApi::CreateRegisterStorageFromArgs(mVm, 1, &value);
+   KorkApi::TypeStorageInterface inputStorage = KorkApi::CreateRegisterStorageFromArg(mVm, value);
    inputStorage.data.storageRegister = &value;
    setEntryTypeValue(e, value.typeId, &inputStorage);
 }

@@ -440,7 +440,7 @@ U32 FloatBinaryExprNode::compile(CodeStream &codeStream, U32 ip, TypeReq type)
       codeStream.emit(operand);
    }
    
-   if(type != TypeReqFloat || nodeOpOutputType != TypeReqFloat)
+   if(nodeOpOutputType != type)
    {
       emitStackConversion(codeStream, nodeOpOutputType, type);
    }
@@ -451,6 +451,11 @@ U32 FloatBinaryExprNode::compile(CodeStream &codeStream, U32 ip, TypeReq type)
 TypeReq FloatBinaryExprNode::getPreferredType()
 {
    return TypeReqFloat;
+}
+
+bool FloatBinaryExprNode::canBeTyped()
+{
+   return left->canBeTyped() || right->canBeTyped();
 }
 
 //------------------------------------------------------------
@@ -567,6 +572,11 @@ TypeReq IntBinaryExprNode::getPreferredType()
    return TypeReqUInt;
 }
 
+bool IntBinaryExprNode::canBeTyped()
+{
+   return left->canBeTyped() || right->canBeTyped();
+}
+
 //------------------------------------------------------------
 
 U32 StreqExprNode::compile(CodeStream &codeStream, U32 ip, TypeReq type)
@@ -654,11 +664,11 @@ U32 IntUnaryExprNode::compile(CodeStream &codeStream, U32 ip, TypeReq type)
    integer = true;
    TypeReq prefType = expr->getPreferredType();
    if(op == SimpleLexer::TokenType::opPCHAR_EXCL && // !
-      (prefType == TypeReqFloat || prefType == TypeReqString))
+      (prefType == TypeReqFloat || prefType == TypeReqString || prefType == TypeReqTypedString))
       integer = false;
    
    
-   bool operandTyped = expr->getPreferredType() == TypeReqTypedString;
+   bool operandTyped = expr->canBeTyped();
    bool outputTyped  = (type == TypeReqTypedString);
    TypeReq nodeOpOutputType = operandTyped ? TypeReqTypedString : (integer ? TypeReqUInt : TypeReqFloat);
    
@@ -675,16 +685,9 @@ U32 IntUnaryExprNode::compile(CodeStream &codeStream, U32 ip, TypeReq type)
    else if(op == SimpleLexer::TokenType::opPCHAR_TILDE) // ~
       codeStream.emit(OP_ONESCOMPLEMENT);
    
-   if (type != TypeReqUInt)
+   if (type != nodeOpOutputType)
    {
-      if (!operandTyped)
-      {
-         emitStackConversion(codeStream, TypeReqUInt, type);
-      }
-      else
-      {
-         emitStackConversion(codeStream, nodeOpOutputType, type);
-      }
+      emitStackConversion(codeStream, nodeOpOutputType, type);
    }
    
    return codeStream.tell();
@@ -699,7 +702,7 @@ TypeReq IntUnaryExprNode::getPreferredType()
 
 U32 FloatUnaryExprNode::compile(CodeStream &codeStream, U32 ip, TypeReq type)
 {
-   bool operandTyped = expr->getPreferredType() == TypeReqTypedString;
+   bool operandTyped = expr->canBeTyped();
    bool outputTyped  = (type == TypeReqTypedString);
    TypeReq nodeOpOutputType = operandTyped ? TypeReqTypedString : TypeReqFloat;
    
@@ -713,7 +716,10 @@ U32 FloatUnaryExprNode::compile(CodeStream &codeStream, U32 ip, TypeReq type)
    codeStream.emit(OP_NEG);
    
    if(type != nodeOpOutputType)
+   {
       emitStackConversion(codeStream, nodeOpOutputType, type);
+   }
+   
    return codeStream.tell();
 }
 
@@ -776,9 +782,10 @@ U32 VarNode::compile(CodeStream &codeStream, U32 ip, TypeReq type)
    case TypeReqString:
       codeStream.emit(OP_LOADVAR_STR);
       break;
-   case TypeReqVar:
-      codeStream.emit(OP_LOADVAR_VAR);
-      break;
+   // This is now handled externally
+   //case TypeReqVar:
+   //   codeStream.emit(OP_LOADVAR_VAR);
+   //   break;
    case TypeReqTypedString:
       codeStream.emit(OP_LOADVAR_TYPED);
       break;
@@ -791,7 +798,12 @@ U32 VarNode::compile(CodeStream &codeStream, U32 ip, TypeReq type)
 
 TypeReq VarNode::getPreferredType()
 {
-   return disableTypes ? TypeReqNone : TypeReqVar; // no preferred type
+   return TypeReqNone; // no preferred type
+}
+
+TypeReq VarNode::getReturnLoadType()
+{
+   return TypeReqVar;
 }
 
 bool VarNode::canBeTyped()
@@ -985,6 +997,12 @@ TypeReq ConstantNode::getPreferredType()
 U32 AssignExprNode::compile(CodeStream &codeStream, U32 ip, TypeReq type)
 {
    subType = rhsExpr->getPreferredType();
+   
+   if (rhsExpr->canBeTyped())
+   {
+      subType = TypeReqTypedString;
+   }
+   
    if(subType == TypeReqNone)
       subType = type;
 
@@ -1028,6 +1046,12 @@ U32 AssignExprNode::compile(CodeStream &codeStream, U32 ip, TypeReq type)
    TypeReq rhsType = tupleExpr ? TypeReqTuple : subType;
    // NOTE: compiling rhs first is compulsory in this case
    ip = rhsExpr->compile(codeStream, ip, rhsType);
+
+   // Save var so we can copy to the new one
+   if (subType == TypeReqVar)
+   {
+      codeStream.emit(OP_LOADVAR_VAR);
+   }
    
    if(arrayIndex)
    {
@@ -1110,8 +1134,12 @@ U32 AssignExprNode::compile(CodeStream &codeStream, U32 ip, TypeReq type)
 
 TypeReq AssignExprNode::getPreferredType()
 {
-   // This SHOULD be TypeReqVar since usually we end up doing %a = <expr>;
-   return disableTypes ? (assignTypeName != NULL && assignTypeName[0] != '\0' ? TypeReqTypedString : rhsExpr->getPreferredType()) : TypeReqVar;
+   return (assignTypeName != NULL && assignTypeName[0] != '\0' ? TypeReqTypedString : rhsExpr->getPreferredType());
+}
+
+TypeReq AssignExprNode::getReturnLoadType()
+{
+   return TypeReqVar;
 }
 
 void AssignExprNode::setAssignType(StringTableEntry typeName)
@@ -1253,6 +1281,11 @@ TypeReq AssignOpExprNode::getPreferredType()
    return subType;// TOFIX assignTypeName != NULL && assignTypeName[0] != '\0' ? TypeReqTypedString : subType;
 }
 
+TypeReq AssignOpExprNode::getReturnLoadType()
+{
+   return TypeReqVar;
+}
+
 //------------------------------------------------------------
 
 U32 TTagSetStmtNode::compileStmt(CodeStream&, U32 ip)
@@ -1304,9 +1337,15 @@ U32 FuncCallExprNode::compile(CodeStream &codeStream, U32 ip, TypeReq type)
    for(ExprNode *walk = args; walk; walk = (ExprNode *) walk->getNext())
    {
       TypeReq walkType = walk->getPreferredType();
+      TypeReq loadType = walk->getReturnLoadType();
+
+      if (loadType == TypeReqVar) walkType = TypeReqVar;
+      else if (loadType == TypeReqField) walkType = TypeReqField;
+
       if (walkType == TypeReqNone) walkType = TypeReqString;
       ip = walk->compile(codeStream, ip, walkType);
-      switch (walk->getPreferredType())
+      
+      switch (walkType)
       {
          case TypeReqFloat:
             codeStream.emit(OP_PUSH_FLT);
@@ -1315,6 +1354,13 @@ U32 FuncCallExprNode::compile(CodeStream &codeStream, U32 ip, TypeReq type)
             codeStream.emit(OP_PUSH_UINT);
             break;
          case TypeReqTypedString:
+            codeStream.emit(OP_PUSH_TYPED);
+            break;
+         case TypeReqVar:
+            codeStream.emit(OP_PUSH_VAR);
+            break;
+         case TypeReqField:
+            codeStream.emit(OP_LOADFIELD_TYPED);
             codeStream.emit(OP_PUSH_TYPED);
             break;
          default:
@@ -1409,6 +1455,7 @@ U32 SlotAccessNode::compile(CodeStream &codeStream, U32 ip, TypeReq type)
       case TypeReqString:
          codeStream.emit(OP_LOADFIELD_STR);
          break;
+      case TypeReqField:
       case TypeReqNone:
       default:
          break;
@@ -1419,6 +1466,11 @@ U32 SlotAccessNode::compile(CodeStream &codeStream, U32 ip, TypeReq type)
 TypeReq SlotAccessNode::getPreferredType()
 {
    return TypeReqNone;
+}
+
+TypeReq SlotAccessNode::getReturnLoadType()
+{
+   return TypeReqField;
 }
 
 //-----------------------------------------------------------------------------
@@ -1476,18 +1528,29 @@ U32 SlotAssignNode::compile(CodeStream &codeStream, U32 ip, TypeReq type)
    
    // OP_SAVEFIELD
    // convert to return type if necessary.
+
+   TypeReq subType = rhsExpr->getPreferredType();
+
+   if (rhsExpr->canBeTyped())
+   {
+      subType = TypeReqTypedString;
+   }
+   
+   TypeReq outputType = getPreferredType();
    
    codeStream.mResources->precompileIdent(slotName);
 
 
    TupleExprNode* tupleExpr = dynamic_cast<TupleExprNode*>(rhsExpr);
 
+   TypeReq realType = tupleExpr ? TypeReqTuple : subType;
+
    // NOTE: We always use StringStack, but for tuples 
    // we use a frame instead so dont need to advance/push the rhs here.
-   bool usingStringStack = (tupleExpr == NULL);
+   bool usingStringStack = (realType == TypeReqString || realType == TypeReqTypedString);
    
    // NOTE: compiling rhs first is compulsory in this case
-   ip = rhsExpr->compile(codeStream, ip, tupleExpr ? TypeReqTuple : TypeReqString);
+   ip = rhsExpr->compile(codeStream, ip, tupleExpr ? TypeReqTuple : subType);
 
    if (usingStringStack)
    {
@@ -1553,6 +1616,9 @@ U32 SlotAssignNode::compile(CodeStream &codeStream, U32 ip, TypeReq type)
             // NOTE: this is currently never set since VarNode is the only one that gets this TypeReq
             AssertFatal(false, "wtf");
             break;
+         case TypeReqField:
+            // do nothing
+            break;
          case TypeReqTypedString:
             codeStream.emit(OP_LOADFIELD_TYPED);
             break;
@@ -1567,12 +1633,21 @@ U32 SlotAssignNode::compile(CodeStream &codeStream, U32 ip, TypeReq type)
       // (in this case rhsExpr is on top of the stack)
       // NOTE: this is technically incorrect as any transformations made by 
       // the field will not be applied. TOFIX!!
-      codeStream.emit(OP_TERMINATE_REWIND_STR);
-      codeStream.emit(OP_SAVEFIELD_STR);
-      
-      if (type != TypeReqString)
+      if (usingStringStack)
       {
-         emitStackConversion(codeStream, TypeReqString, type);
+         codeStream.emit(OP_TERMINATE_REWIND_STR);
+      }
+      
+      // NOTE: this still retains the string or FLT or whatever in this case
+      emitStackConversion(codeStream, subType, TypeReqField); // i.e. usually OP_SAVEFIELD_STR
+      
+      if (type != subType)
+      {
+         if (type == TypeReqField)
+         {
+            type = TypeReqNone;
+         }
+         emitStackConversion(codeStream, subType, type);
       }
    }
    
@@ -1581,7 +1656,12 @@ U32 SlotAssignNode::compile(CodeStream &codeStream, U32 ip, TypeReq type)
 
 TypeReq SlotAssignNode::getPreferredType()
 {
-   return TypeReqString;
+   return disableTypes ? TypeReqString : TypeReqTypedString;
+}
+
+TypeReq SlotAssignNode::getReturnLoadType()
+{
+   return TypeReqField;
 }
 
 //------------------------------------------------------------
@@ -1645,10 +1725,18 @@ U32 SlotAssignOpNode::compile(CodeStream &codeStream, U32 ip, TypeReq type)
       codeStream.emit(OP_TYPED_OP);
    }
    codeStream.emit(operand);
-   emitStackConversion(codeStream, subType, TypeReqField); // usually goes for FLT or UINT here
+   // usually goes for FLT or UINT here; doesn't consume FLT or UINT
+   emitStackConversion(codeStream, subType, TypeReqField);
    
    if(subType != type)
+   {
+      if (type == TypeReqField)
+      {
+         type = TypeReqNone;
+      }
       emitStackConversion(codeStream, subType, type);
+   }
+   
    return codeStream.tell();
 }
 
@@ -1656,6 +1744,11 @@ TypeReq SlotAssignOpNode::getPreferredType()
 {
    getAssignOpTypeOp(op, subType, operand);
    return subType;
+}
+
+TypeReq SlotAssignOpNode::getReturnLoadType()
+{
+   return TypeReqField;
 }
 
 //------------------------------------------------------------
@@ -1698,7 +1791,7 @@ U32 ObjectDeclNode::compileSubObject(CodeStream &codeStream, U32 ip, bool root)
       TypeReq walkType = exprWalk->getPreferredType();
       if (walkType == TypeReqNone) walkType = TypeReqString;
       ip = exprWalk->compile(codeStream, ip, walkType);
-      switch (exprWalk->getPreferredType())
+      switch (walkType)
       {
          case TypeReqFloat:
             codeStream.emit(OP_PUSH_FLT);
@@ -1919,7 +2012,7 @@ U32 TupleExprNode::compile(CodeStream &codeStream, U32 ip, TypeReq type)
          ip = walk->compile(codeStream, ip, walkType);
          // TODO: could do with a VarNode short-circuit here
 
-         switch (walk->getPreferredType())
+         switch (walkType)
          {
             case TypeReqFloat:
                codeStream.emit(OP_PUSH_FLT);
@@ -2032,8 +2125,9 @@ static U32 conversionOp(TypeReq src, TypeReq dst)
          return OP_LOADVAR_STR;
       case TypeReqNone:
          return OP_COPYVAR_TO_NONE;
-      case TypeReqVar:
-         return OP_LOADVAR_VAR; // i.e. copy this var we just set
+      // NOTE: instead we handle this manually
+      //case TypeReqVar:
+      //   return OP_LOADVAR_VAR; // i.e. copy this var we just set
       case TypeReqField:
          return OP_SAVEFIELD_VAR;
       case TypeReqTypedString:

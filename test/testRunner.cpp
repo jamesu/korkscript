@@ -129,6 +129,74 @@ ConsoleGetType( TypeMyPoint3F )
    }
 }
 
+ConsoleTypeOp( TypeMyPoint3F )
+{
+   MyPoint3F* firstPoint = (MyPoint3F*)lhs.evaluatePtr(vmPtr->getAllocBase());
+   MyPoint3F* secondPoint = (MyPoint3F*)rhs.evaluatePtr(vmPtr->getAllocBase());
+   MyPoint3F* outPoint = NULL;
+   F32 otherScalar = 1.0f;
+   
+   MyPoint3F first;
+   MyPoint3F second;
+   
+   if (firstPoint == NULL)
+   {
+      otherScalar = vmPtr->valueAsFloat(lhs);
+      first.x = first.y = first.z = otherScalar;
+      second = *secondPoint;
+      outPoint = secondPoint;
+   }
+   else if (secondPoint == NULL)
+   {
+      otherScalar = vmPtr->valueAsFloat(rhs);
+      second.x = second.y = second.z = otherScalar;
+      first = *firstPoint;
+      outPoint = firstPoint;
+   }
+   else
+   {
+      first = *firstPoint;
+      second = *secondPoint;
+   }
+      
+   
+   MyPoint3F otherPointValue;
+   using namespace Compiler;
+   
+   switch (op)
+   {
+      case OP_ADD:
+         outPoint->x = first.x + second.x;
+         outPoint->y = first.y + second.y;
+         outPoint->z = first.z + second.z;
+         break;
+      case OP_SUB:
+         outPoint->x = first.x - second.x;
+         outPoint->y = first.y - second.y;
+         outPoint->z = first.z - second.z;
+         break;
+      case OP_MUL:
+         outPoint->x = first.x * second.x;
+         outPoint->y = first.y * second.y;
+         outPoint->z = first.z * second.z;
+         break;
+      case OP_DIV:
+         outPoint->x = second.x == 0 ? 0 : first.x / second.x;
+         outPoint->y = second.y == 0 ? 0 : first.y / second.y;
+         outPoint->z = second.z == 0 ? 0 : first.z / second.z;
+         break;
+      case OP_NEG:
+         outPoint->x = -first.x;
+         outPoint->y = -first.y;
+         outPoint->z = -first.z;
+         break;
+      default:
+         break;
+   }
+   
+   return outPoint == firstPoint ? lhs : rhs;
+}
+
 ConsoleFunction(testAssert, void, 3, 3, "msg, cond")
 {
    if (!dAtob(argv[2]))

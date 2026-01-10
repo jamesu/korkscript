@@ -108,6 +108,9 @@ struct StmtNode
 
    inline BaseAssignExprNode* nextAssign() { StmtNode* rh = rhsAssign(); return rh ? rh->asAssign() : NULL; }
    
+   // Answers "does the result of this node load a field or var we can copy out?"
+   virtual TypeReq getReturnLoadType() { return TypeReqNone; }
+
    void emitStackConversion(CodeStream& codeStream, TypeReq inputType, TypeReq outputType);
 };
 
@@ -228,6 +231,8 @@ struct FloatBinaryExprNode : BinaryExprNode
   
    U32 compile(CodeStream &codeStream, U32 ip, TypeReq type);
    TypeReq getPreferredType();
+   bool canBeTyped();
+   
    DBG_STMT_TYPE(FloatBinaryExprNode);
 };
 
@@ -255,6 +260,8 @@ struct IntBinaryExprNode : BinaryExprNode
    
    U32 compile(CodeStream &codeStream, U32 ip, TypeReq type);
    TypeReq getPreferredType();
+   bool canBeTyped();
+   
    DBG_STMT_TYPE(IntBinaryExprNode);
 };
 
@@ -327,6 +334,9 @@ struct VarNode : ExprNode
    TypeReq getPreferredType();
    bool isTyped();
    bool canBeTyped();
+
+   TypeReq getReturnLoadType();
+
 
    DBG_STMT_TYPE(VarNode);
 };
@@ -412,6 +422,7 @@ struct AssignExprNode : BaseAssignExprNode
   
    U32 compile(CodeStream &codeStream, U32 ip, TypeReq type);
    TypeReq getPreferredType();
+   TypeReq getReturnLoadType();
    virtual void setAssignType(StringTableEntry typeName);
    
    DBG_STMT_TYPE(AssignExprNode);
@@ -438,6 +449,7 @@ struct AssignOpExprNode : BaseAssignExprNode
   
    U32 compile(CodeStream &codeStream, U32 ip, TypeReq type);
    TypeReq getPreferredType();
+   TypeReq getReturnLoadType();
    DBG_STMT_TYPE(AssignOpExprNode);
 };
 
@@ -524,6 +536,7 @@ struct SlotAccessNode : ExprNode
   
    U32 compile(CodeStream &codeStream, U32 ip, TypeReq type);
    TypeReq getPreferredType();
+   TypeReq getReturnLoadType();
    DBG_STMT_TYPE(SlotAccessNode);
 };
 
@@ -552,11 +565,13 @@ struct SlotAssignNode : BaseAssignExprNode
    ExprNode *objectExpr, *arrayExpr;
    StringTableEntry slotName;
    StringTableEntry varType;
+   bool disableTypes;
 
    static SlotAssignNode *alloc( Compiler::Resources* res, S32 lineNumber, ExprNode *objectExpr, ExprNode *arrayExpr, StringTableEntry slotName, ExprNode *valueExpr, StringTableEntry assignTypeName = NULL );
   
    U32 compile(CodeStream &codeStream, U32 ip, TypeReq type);
    TypeReq getPreferredType();
+   TypeReq getReturnLoadType();
    DBG_STMT_TYPE(SlotAssignNode);
 };
 
@@ -572,6 +587,7 @@ struct SlotAssignOpNode : BaseAssignExprNode
   
    U32 compile(CodeStream &codeStream, U32 ip, TypeReq type);
    TypeReq getPreferredType();
+   TypeReq getReturnLoadType();
    DBG_STMT_TYPE(SlotAssignOpNode);
 };
 

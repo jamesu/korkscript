@@ -114,9 +114,9 @@ TypeId Vm::registerType(TypeInfo& info)
       };
    }
    
-   if (chkFunc.iFuncs.PerformOp == NULL)
+   if (chkFunc.iFuncs.PerformOpFn == NULL)
    {
-      chkFunc.iFuncs.PerformOp = [](Vm* vm, U32 op, ConsoleValue lhs, ConsoleValue rhs){
+      chkFunc.iFuncs.PerformOpFn = [](void* userPtr, Vm* vm, U32 op, ConsoleValue lhs, ConsoleValue rhs){
          return lhs;
       };
    }
@@ -840,7 +840,7 @@ VmInternal::VmInternal(Vm* vm, Config* cfg) : mGlobalVars(this)
    typeInfo.fieldsize = sizeof(const char*);
    typeInfo.valueSize = UINT_MAX;
    
-   auto noOpFunc = [](Vm* vm, U32 op, ConsoleValue lhs, ConsoleValue rhs){
+   auto noOpFunc = [](void* userPtr, Vm* vm, U32 op, ConsoleValue lhs, ConsoleValue rhs){
       return lhs;
    };
    
@@ -878,7 +878,7 @@ VmInternal::VmInternal(Vm* vm, Config* cfg) : mGlobalVars(this)
    
    typeInfo.iFuncs.CastValueFn = genericCastFunc;
    
-   typeInfo.iFuncs.PerformOp = noOpFunc;
+   typeInfo.iFuncs.PerformOpFn = noOpFunc;
    
    // TODO
    
@@ -1162,6 +1162,15 @@ const char* VmInternal::tempIntConv(U64 val)
       mConvIndex = 0;
 
    snprintf(mTempStringConversions[mConvIndex], MaxTempStringSize, "%" PRIu64, val);
+   return mTempStringConversions[mConvIndex++];
+}
+
+const char* VmInternal::tempStringConv(const char* val)
+{
+   if (mConvIndex == MaxStringConvs)
+      mConvIndex = 0;
+
+   snprintf(mTempStringConversions[mConvIndex], MaxTempStringSize, "%s", val);
    return mTempStringConversions[mConvIndex++];
 }
 
@@ -1500,8 +1509,10 @@ const char* VmInternal::valueAsString(ConsoleValue v)
                                                                 NULL,
                                                                 0,
                                                                 KorkApi::ConsoleValue::TypeInternalString);
-
-            return (const char*)outputStorage.data.storageRegister->evaluatePtr(mAllocBase);
+            
+            // NOTE: this needs to be put somewhere since the return buffer is often used elsewhere
+            // TODO: maybe need a variant here for custom output storage to handle externally
+            return tempStringConv((const char*)outputStorage.data.storageRegister->evaluatePtr(mAllocBase));
       }
       break;
    }

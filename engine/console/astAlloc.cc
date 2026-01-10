@@ -406,6 +406,7 @@ SlotAssignNode *SlotAssignNode::alloc( Compiler::Resources* res, S32 lineNumber,
    ret->slotName = slotName;
    ret->rhsExpr = valueExpr;
    ret->varType = res->allowTypes ? typeName : NULL;
+   ret->disableTypes = !res->allowTypes;
    return ret;
 }
 

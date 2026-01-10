@@ -21,6 +21,7 @@
 //-----------------------------------------------------------------------------
 
 #include "sim/dynamicTypes.h"
+#include "console/compiler.h"
 
 // Init the globals.
 ConsoleBaseType *ConsoleBaseType::smListHead = NULL;
@@ -97,6 +98,14 @@ void ConsoleBaseType::registerTypeWithVm(KorkApi::Vm* vm)
       ConsoleBaseType* typeInfo = (ConsoleBaseType*)userPtr;
       return typeInfo->mTypeName;
    };
+   info.iFuncs.PerformOpFn = [](void* userPtr, 
+                                KorkApi::Vm* vm,
+                                U32 op, 
+                                KorkApi::ConsoleValue lhs,
+                                KorkApi::ConsoleValue rhs){
+      ConsoleBaseType* typeInfo = (ConsoleBaseType*)userPtr;
+      return typeInfo->performOp(vm, op, lhs, rhs);
+   };
    
    S32 vmTypeId = vm->registerType(info);
    AssertFatal(mTypeId != vmTypeId, "Type Id Mismatch");
@@ -134,4 +143,194 @@ ConsoleBaseType::ConsoleBaseType(const U32 size, const U32 vsize, S32 *idPtr, co
 ConsoleBaseType::~ConsoleBaseType()
 {
    // Nothing to do for now; we could unlink ourselves from the list, but why?
+}
+
+using namespace Compiler;
+
+KorkApi::ConsoleValue ConsoleBaseType::performOp(KorkApi::Vm* vm, U32 op, KorkApi::ConsoleValue lhs, KorkApi::ConsoleValue rhs)
+{
+   return lhs;
+}
+
+KorkApi::ConsoleValue ConsoleBaseType::performOpNumeric(KorkApi::Vm* vm, U32 op, KorkApi::ConsoleValue lhs, KorkApi::ConsoleValue rhs)
+{
+   F64 valueL = vm->valueAsFloat(lhs);
+   F64 valueR = vm->valueAsFloat(rhs);
+   
+   switch (op)
+   {
+      // unary
+      case OP_NOT:
+         valueL = !((U64)valueL);
+         break;
+      case OP_NOTF:
+         valueL = !valueL;
+         break;
+      case OP_ONESCOMPLEMENT:
+         valueL = ~((U64)valueL);
+         break;
+      case OP_NEG:
+         valueL = -valueL;
+         break;
+         
+      // comparisons (return 0/1)
+      case OP_CMPEQ: valueL = (valueL == valueR) ? 1.0f : 0.0f; break;
+      case OP_CMPNE: valueL = (valueL != valueR) ? 1.0f : 0.0f; break;
+      case OP_CMPGR: valueL = (valueL >  valueR) ? 1.0f : 0.0f; break;
+      case OP_CMPGE: valueL = (valueL >= valueR) ? 1.0f : 0.0f; break;
+      case OP_CMPLT: valueL = (valueL <  valueR) ? 1.0f : 0.0f; break;
+      case OP_CMPLE: valueL = (valueL <= valueR) ? 1.0f : 0.0f; break;
+      
+      // bitwise (operate on integer views)
+      case OP_XOR:
+         valueL = (F32)(((U64)valueL) ^ ((U64)valueR));
+         break;
+         
+      case OP_BITAND:
+         valueL = (F32)(((U64)valueL) & ((U64)valueR));
+         break;
+         
+      case OP_BITOR:
+         valueL = (F32)(((U64)valueL) | ((U64)valueR));
+         break;
+         
+      case OP_SHR:
+      {
+         const U64 a = (U64)valueL;
+         const U64 b = (U64)valueR;
+         valueL = (F32)(a >> b);
+         break;
+      }
+         
+      case OP_SHL:
+      {
+         const U64 a = (U64)valueL;
+         const U64 b = (U64)valueR;
+         valueL = (F32)(a << b);
+         break;
+      }
+         
+      // logical (return 0/1)
+      case OP_AND:
+         valueL = (valueL != 0.0f && valueR != 0.0f) ? 1.0f : 0.0f;
+         break;
+         
+      case OP_OR:
+         valueL = (valueL != 0.0f || valueR != 0.0f) ? 1.0f : 0.0f;
+         break;
+         
+      // arithmetic
+      case OP_ADD: valueL = valueL + valueR; break;
+      case OP_SUB: valueL = valueL - valueR; break;
+      case OP_MUL: valueL = valueL * valueR; break;
+         
+      case OP_DIV:
+         valueL = (valueR == 0.0f) ? 0.0f : (valueL / valueR);
+         break;
+         
+      case OP_MOD:
+      {
+         const U64 a = (U64)valueL;
+         const U64 b = (U64)valueR;
+         valueL = (b == 0u) ? 0.0f : (F32)(a % b);
+         break;
+      }
+         
+      default:
+         break;
+   }
+   
+   return KorkApi::ConsoleValue::makeNumber(valueL);
+}
+
+KorkApi::ConsoleValue ConsoleBaseType::performOpUnsigned(KorkApi::Vm* vm, U32 op, KorkApi::ConsoleValue lhs, KorkApi::ConsoleValue rhs)
+{
+   U64 valueL = vm->valueAsInt(lhs);
+   U64 valueR = vm->valueAsInt(rhs);
+   
+   switch (op)
+   {
+      // unary
+      case OP_NOT:
+         valueL = !((U64)valueL);
+         break;
+      case OP_NOTF:
+         valueL = !(F64)valueL;
+         break;
+      case OP_ONESCOMPLEMENT:
+         valueL = ~((U64)valueL);
+         break;
+      case OP_NEG:
+         valueL = -valueL;
+         break;
+         
+      // comparisons (return 0/1)
+      case OP_CMPEQ: valueL = (valueL == valueR) ? 1 : 0; break;
+      case OP_CMPNE: valueL = (valueL != valueR) ? 1 : 0; break;
+      case OP_CMPGR: valueL = (valueL >  valueR) ? 1 : 0; break;
+      case OP_CMPGE: valueL = (valueL >= valueR) ? 1 : 0; break;
+      case OP_CMPLT: valueL = (valueL <  valueR) ? 1 : 0; break;
+      case OP_CMPLE: valueL = (valueL <= valueR) ? 1 : 0; break;
+         
+         
+      // bitwise (operate on integer views)
+      case OP_XOR:
+         valueL = (U64)(((U64)valueL) ^ ((U64)valueR));
+         break;
+         
+      case OP_BITAND:
+         valueL = (U64)(((U64)valueL) & ((U64)valueR));
+         break;
+         
+      case OP_BITOR:
+         valueL = (U64)(((U64)valueL) | ((U64)valueR));
+         break;
+         
+      case OP_SHR:
+      {
+         const U64 a = (U64)valueL;
+         const U64 b = (U64)valueR;
+         valueL = (F32)(a >> b);
+         break;
+      }
+         
+      case OP_SHL:
+      {
+         const U64 a = (U64)valueL;
+         const U64 b = (U64)valueR;
+         valueL = (F32)(a << b);
+         break;
+      }
+         
+      // logical (return 0/1)
+      case OP_AND:
+         valueL = (valueL != 0 && valueR != 0) ? 1 : 0;
+         break;
+         
+      case OP_OR:
+         valueL = (valueL != 0 || valueR != 0) ? 1 : 0;
+         break;
+         
+         // arithmetic
+      case OP_ADD: valueL = valueL + valueR; break;
+      case OP_SUB: valueL = valueL - valueR; break;
+      case OP_MUL: valueL = valueL * valueR; break;
+         
+      case OP_DIV:
+         valueL = (valueR == 0) ? 0 : (valueL / valueR);
+         break;
+         
+      case OP_MOD:
+      {
+         const U64 a = (U64)valueL;
+         const U64 b = (U64)valueR;
+         valueL = (b == 0u) ? 0 : (F32)(a % b);
+         break;
+      }
+         
+      default:
+         break;
+   }
+   
+   return KorkApi::ConsoleValue::makeUnsigned(valueL);
 }

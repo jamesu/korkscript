@@ -20,6 +20,8 @@ DECLARE_CONSOLETYPE(TypeMyPoint3F);
 
 ConsoleType( MyPoint3F, TypeMyPoint3F, sizeof(MyPoint3F), sizeof(MyPoint3F), "" )
 
+ConsoleTypeOpDefault( MyPoint3F )
+
 ConsoleGetType( TypeMyPoint3F )
 {
    const KorkApi::ConsoleValue* argv = nullptr;
