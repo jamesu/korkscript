@@ -1216,8 +1216,8 @@ bool VmInternal::setObjectFieldTuple(VMObject* obj, StringTableEntry fieldName, 
          
          CastValueFn castFn = f.ovrCastValue ? f.ovrCastValue : tinfo.iFuncs.CastValueFn;
 
-         TypeStorageInterface inputStorage = KorkApi::CreateFixedTypeStorage(this, dptr, tid, true);
-         TypeStorageInterface outputStorage = KorkApi::CreateRegisterStorageFromArgs(this, argc, argv);
+         TypeStorageInterface outputStorage = KorkApi::CreateFixedTypeStorage(this, dptr, tid, true);
+         TypeStorageInterface inputStorage = KorkApi::CreateRegisterStorageFromArgs(this, argc, argv);
          
          castFn(f.ovrCastValue ? obj->userPtr : tinfo.userPtr,
                mVM,

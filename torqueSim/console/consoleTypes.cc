@@ -72,7 +72,7 @@ ConsoleGetType( TypeString )
       value = "";
 
     // Handle cast to specific output type (may require specialization)
-    if (requestedType != TypeString ||
+    if (requestedType != TypeString &&
       requestedType != KorkApi::ConsoleValue::TypeInternalString)
     {
       KorkApi::ConsoleValue cv = KorkApi::ConsoleValue::makeString(value);
@@ -82,14 +82,14 @@ ConsoleGetType( TypeString )
    
    // Now all we need to do is deal with whether the output is a field or not
 
-   if (!outputStorage->isField)
+   if (outputStorage->isField)
    {
       StringTableEntry* dst = (StringTableEntry*)ConsoleGetOutputStoragePtr();
       *dst = StringTable->insert(value);
    }
    else
    {
-      // Field output: variable size string stored in relocatable backing store (heap/STR etc.)
+      // Value output: variable size string stored in relocatable backing store (heap/STR etc.)
       U32 len = dStrlen(value) + 1;
 
       outputStorage->FinalizeStorage(outputStorage, len);

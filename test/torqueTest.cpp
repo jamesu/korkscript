@@ -16,11 +16,9 @@ namespace KorkApi
 TypeStorageInterface CreateRegisterStorageFromArgs(KorkApi::VmInternal* vmInternal, U32 argc, KorkApi::ConsoleValue* argv);
 }
 
-DECLARE_CONSOLETYPE(TypeMyPoint3F);
-
 ConsoleType( MyPoint3F, TypeMyPoint3F, sizeof(MyPoint3F), sizeof(MyPoint3F), "" )
 
-ConsoleTypeOpDefault( MyPoint3F )
+ConsoleTypeOpDefault( TypeMyPoint3F )
 
 ConsoleGetType( TypeMyPoint3F )
 {
