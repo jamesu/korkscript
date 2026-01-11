@@ -302,7 +302,7 @@ AssignOpExprNode *AssignOpExprNode::alloc( Compiler::Resources* res, S32 lineNum
    ret->subType = TypeReqNone;
    ret->op = op;
    ret->operand = 0;
-   ret->varInfo = res->getVarInfo(varName, ret->varName);
+   ret->varInfo = res->getVarInfo(varName);
 
    return ret;
 }

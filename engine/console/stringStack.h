@@ -198,9 +198,11 @@ struct StringStack
          dStrcpy(mBuffer + mStart, s);
       }
    }
+   
+   void copyStoredValueToStack(KorkApi::VmInternal* vmInternal, KorkApi::ConsoleValue v, void* ptr);
 
    /// Set a string value on the top of the stack.
-   void setConsoleValue(KorkApi::ConsoleValue v)
+   void setConsoleValue(KorkApi::VmInternal* vmInternal, KorkApi::ConsoleValue v)
    {
       void* valueBase = NULL;
       
@@ -235,10 +237,7 @@ struct StringStack
                }
                else
                {
-                  // TOFIX: Storage API here
-                  mValue = 0;
-                  mType = 0;
-                  mLen = 0;
+                  copyStoredValueToStack(vmInternal, v, v.evaluatePtr(*mAllocBase));
                   return;
                }
             }
@@ -251,14 +250,18 @@ struct StringStack
       }
    }
    
-   void setConsoleValueSize(U32 size)
+   void setConsoleValueSize(U32 typeId, U32 size)
    {
+      mType = typeId;
       mLen = size;
+      mValue = mStart;
    }
 
-   void setConsoleValueValue(U64 value)
+   void setConsoleValueValue(U32 typeId, U64 value)
    {
+      mType = typeId;
       mValue = value;
+      mLen = 0;
    }
 
    void setStringIntValue(U32 value)

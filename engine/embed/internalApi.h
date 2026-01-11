@@ -23,7 +23,7 @@ TypeStorageInterface CreateFixedTypeStorage(KorkApi::VmInternal* vmInternal, voi
 // Create storage ref to block backed by ConsoleVarRef
 TypeStorageInterface CreateConsoleVarTypeStorage(KorkApi::VmInternal* vmInternal, ConsoleVarRef ref, U16 typeId);
 // Create storage ref to block backed by Dictionary
-TypeStorageInterface CreateExprEvalTypeStorage(KorkApi::VmInternal* vmInternal, ExprEvalState& eval, U32 minSize, U16 typeId);
+TypeStorageInterface CreateExprStringStackStorage(KorkApi::VmInternal* vmInternal, StringStack& stack, U32 minSize, U16 typeId);
 // Create storage ref to return buffer
 TypeStorageInterface CreateExprEvalReturnTypeStorage(KorkApi::VmInternal* vmInternal, U32 minSize, U16 typeId);
 // No storage, just register

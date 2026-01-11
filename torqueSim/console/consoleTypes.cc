@@ -522,10 +522,17 @@ ConsoleGetType( TypeS32Vector )
           inputStorage->data.storageRegister->typeId == TypeS32Vector)
       {
          // Just copy data
-         outputStorage->FinalizeStorage(outputStorage, inputStorage->data.size);
-         void* ptr = ConsoleGetInputStoragePtr();
-         void* returnBuffer = ConsoleGetOutputStoragePtr();
-         memcpy(returnBuffer, ptr, inputStorage->data.size);
+         U32* ptr = (U32*)ConsoleGetInputStoragePtr();
+         U32 numElements = ptr ? *ptr++ : 0;
+         U32 dataSize = (numElements * sizeof(S32));
+         outputStorage->FinalizeStorage(outputStorage, sizeof(U32) +  dataSize);
+         U32* returnBuffer = (U32*)ConsoleGetOutputStoragePtr();
+         *returnBuffer++ = numElements;
+         
+         if (ptr)
+         {
+            memcpy(returnBuffer, ptr, dataSize);
+         }
          
          if (outputStorage->data.storageRegister)
          {
@@ -681,10 +688,17 @@ ConsoleGetType( TypeF32Vector )
           inputStorage->data.storageRegister->typeId == TypeF32Vector)
       {
          // Just copy data
-         outputStorage->FinalizeStorage(outputStorage, inputStorage->data.size);
-         void* ptr = ConsoleGetInputStoragePtr();
-         void* returnBuffer = ConsoleGetOutputStoragePtr();
-         memcpy(returnBuffer, ptr, inputStorage->data.size);
+         U32* ptr = (U32*)ConsoleGetInputStoragePtr();
+         U32 numElements = ptr ? *ptr++ : 0;
+         U32 dataSize = (numElements * sizeof(F32));
+         outputStorage->FinalizeStorage(outputStorage, sizeof(U32) +  dataSize);
+         U32* returnBuffer = (U32*)ConsoleGetOutputStoragePtr();
+         *returnBuffer++ = numElements;
+         
+         if (ptr)
+         {
+            memcpy(returnBuffer, ptr, dataSize);
+         }
          
          if (outputStorage->data.storageRegister)
          {
@@ -840,10 +854,17 @@ ConsoleGetType( TypeBoolVector )
           inputStorage->data.storageRegister->typeId == TypeBoolVector)
       {
          // Just copy data
-         outputStorage->FinalizeStorage(outputStorage, inputStorage->data.size);
-         void* ptr = ConsoleGetInputStoragePtr();
-         void* returnBuffer = ConsoleGetOutputStoragePtr();
-         memcpy(returnBuffer, ptr, inputStorage->data.size);
+         U32* ptr = (U32*)ConsoleGetInputStoragePtr();
+         U32 numElements = ptr ? *ptr++ : 0;
+         U32 dataSize = (numElements * sizeof(bool));
+         outputStorage->FinalizeStorage(outputStorage, sizeof(U32) +  dataSize);
+         U32* returnBuffer = (U32*)ConsoleGetOutputStoragePtr();
+         *returnBuffer++ = numElements;
+         
+         if (ptr)
+         {
+            memcpy(returnBuffer, ptr, dataSize);
+         }
          
          if (outputStorage->data.storageRegister)
          {

@@ -1967,7 +1967,7 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
          case OP_PUSH_VAR:
             // OP_LOADVAR_STR, OP_PUSH
             tmpVal = frame.getConsoleVariable();
-            evalState.mSTR.setConsoleValue(tmpVal);
+            evalState.mSTR.setConsoleValue(vmInternal, tmpVal);
             evalState.mSTR.push();
             break;
 
@@ -2292,17 +2292,17 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
             break;
          case OP_LOADVAR_TYPED:
             tmpVal = frame.getConsoleVariable();
-            evalState.mSTR.setConsoleValue(tmpVal);
+            evalState.mSTR.setConsoleValue(vmInternal, tmpVal);
             break;
          case OP_LOADVAR_TYPED_REF:
             // TODO: copy ref?
             tmpVal = frame.getConsoleVariable();
-            evalState.mSTR.setConsoleValue(tmpVal);
+            evalState.mSTR.setConsoleValue(vmInternal, tmpVal);
             break;
          case OP_LOADFIELD_TYPED:
             // field -> typed
             tmpVal = vmInternal->getObjectField(frame.curObject, frame.curField, frame.curFieldArray, KorkApi::ConsoleValue::TypeInternalUnsigned, KorkApi::ConsoleValue::ZoneFunc);
-            evalState.mSTR.setConsoleValue(tmpVal);
+            evalState.mSTR.setConsoleValue(vmInternal, tmpVal);
             break;
          case OP_SAVEVAR_TYPED:
             // typed -> var
@@ -2319,8 +2319,8 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
             {
                KorkApi::ConsoleValue cv = evalState.mSTR.getConsoleValue();
 
-               KorkApi::TypeStorageInterface outputStorage = KorkApi::CreateExprEvalTypeStorage(vmInternal,
-                                                                                       *this,
+               KorkApi::TypeStorageInterface outputStorage = KorkApi::CreateExprStringStackStorage(vmInternal,
+                                                                                       mSTR,
                                                                                        0,
                                                                                        frame.dynTypeId);
 
@@ -2341,8 +2341,8 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
             {
                KorkApi::ConsoleValue cv = KorkApi::ConsoleValue::makeNumber(evalState.floatStack[frame._FLT--]);
 
-               KorkApi::TypeStorageInterface outputStorage = KorkApi::CreateExprEvalTypeStorage(vmInternal,
-                                                                                       *this,
+               KorkApi::TypeStorageInterface outputStorage = KorkApi::CreateExprStringStackStorage(vmInternal,
+                                                                                       mSTR,
                                                                                        0,
                                                                                        frame.dynTypeId);
 
@@ -2360,7 +2360,7 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
             else
             {
                KorkApi::ConsoleValue cv = KorkApi::ConsoleValue::makeNumber(evalState.floatStack[frame._FLT--]);
-               evalState.mSTR.setConsoleValue(cv);
+               evalState.mSTR.setConsoleValue(vmInternal, cv);
             }
             break;
          case OP_UINT_TO_TYPED:
@@ -2368,8 +2368,8 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
             {
                KorkApi::ConsoleValue cv = KorkApi::ConsoleValue::makeUnsigned(evalState.intStack[frame._UINT--]);
 
-               KorkApi::TypeStorageInterface outputStorage = KorkApi::CreateExprEvalTypeStorage(vmInternal,
-                                                                                       *this,
+               KorkApi::TypeStorageInterface outputStorage = KorkApi::CreateExprStringStackStorage(vmInternal,
+                                                                                       mSTR,
                                                                                        0,
                                                                                        frame.dynTypeId);
 
@@ -2387,7 +2387,7 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
             else
             {
                KorkApi::ConsoleValue cv = KorkApi::ConsoleValue::makeUnsigned(evalState.floatStack[frame._UINT--]);
-               evalState.mSTR.setConsoleValue(cv);
+               evalState.mSTR.setConsoleValue(vmInternal, cv);
             }
             break;
             

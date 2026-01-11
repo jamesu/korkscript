@@ -111,7 +111,7 @@ void StringStack::performOpReverse(U32 op, KorkApi::Vm* vm, KorkApi::TypeInfo* t
    rewind(); // only lhs is on other side
    
    KorkApi::ConsoleValue result = info.iFuncs.PerformOpFn(info.userPtr, vm, op, lhs, rhs);
-   setConsoleValue(result);
+   setConsoleValue(vm->mInternal, result);
 }
 
 void StringStack::performUnaryOp(U32 op, KorkApi::Vm* vm, KorkApi::TypeInfo* typeInfo)
@@ -119,5 +119,33 @@ void StringStack::performUnaryOp(U32 op, KorkApi::Vm* vm, KorkApi::TypeInfo* typ
    KorkApi::ConsoleValue lhs = getConsoleValue();
    KorkApi::TypeInfo& info = typeInfo[lhs.typeId];
    KorkApi::ConsoleValue result = info.iFuncs.PerformOpFn(info.userPtr, vm, op, lhs, lhs);
-   setConsoleValue(result);
+   setConsoleValue(vm->mInternal, result);
+}
+
+void StringStack::copyStoredValueToStack(KorkApi::VmInternal* vm, KorkApi::ConsoleValue v, void* ptr)
+{
+   if (ptr)
+   {
+      KorkApi::TypeStorageInterface outputStorage = KorkApi::CreateExprStringStackStorage(vm,
+                                                                              *this,
+                                                                              0,
+                                                                              v.typeId);
+
+      KorkApi::TypeStorageInterface inputStorage = KorkApi::CreateRegisterStorageFromArg(vm, v);
+      
+      // NOTE: types should set head of stack to value if data pointer is NULL in this case
+      vm->mTypes[v.typeId].iFuncs.CastValueFn(vm->mTypes[v.typeId].userPtr,
+                                                          vm->mVM,
+                                                          &inputStorage,
+                                                          &outputStorage,
+                                                          NULL,
+                                                          0,
+                                                          v.typeId);
+   }
+   else
+   {
+      mValue = 0;
+      mType = 0;
+      mLen = 0;
+   }
 }

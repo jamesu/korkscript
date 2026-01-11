@@ -733,23 +733,23 @@ static void Finalize_ConsoleVar(TypeStorageInterface* state, U32 newSize)
 
 static void Resize_ExprEval(TypeStorageInterface* state, U32 newSize)
 {
-   auto* eval = reinterpret_cast<ExprEvalState*>(state->userPtr1);
-   if (!eval)
+   auto* stack = reinterpret_cast<StringStack*>(state->userPtr1);
+   if (!stack)
       return;
 
-   eval->mSTR.validateBufferSize(newSize);
+   stack->validateBufferSize(newSize);
 
    state->data.size = newSize;
 }
 
 static void Finalize_ExprEval(TypeStorageInterface* state, U32 newSize)
 {
-   auto* eval = reinterpret_cast<ExprEvalState*>(state->userPtr1);
-   if (!eval)
+   auto* stack = reinterpret_cast<StringStack*>(state->userPtr1);
+   if (!stack)
       return;
 
-   eval->mSTR.validateBufferSize(newSize);
-   eval->mSTR.setConsoleValueSize(newSize);
+   stack->validateBufferSize(newSize);
+   stack->setConsoleValueSize(state->data.storageAddress.typeId, newSize);
    state->data.size = newSize;
 }
 
@@ -822,8 +822,8 @@ TypeStorageInterface CreateConsoleVarTypeStorage(KorkApi::VmInternal* vmInternal
    return s;
 }
 
-TypeStorageInterface CreateExprEvalTypeStorage(KorkApi::VmInternal* vmInternal,
-   ExprEvalState& eval,
+TypeStorageInterface CreateExprStringStackStorage(KorkApi::VmInternal* vmInternal,
+   StringStack& stack,
    U32 minSize,
    U16 typeId) // ZoneFunc + n
 {
@@ -832,15 +832,15 @@ TypeStorageInterface CreateExprEvalTypeStorage(KorkApi::VmInternal* vmInternal,
    s.ResizeStorage = &Resize_ExprEval;
    s.FinalizeStorage = &Finalize_ExprEval;
    
-   s.userPtr1 = &eval;
+   s.userPtr1 = &stack;
    s.userPtr2 = NULL;
    s.isField = false;
    
    s.data.storageRegister = vmInternal->getTempValuePtr();
-   *s.data.storageRegister = eval.mSTR.getConsoleValue();
-   s.data.storageAddress  = ConsoleValue::makeRaw(eval.mSTR.mStart,
+   *s.data.storageRegister = stack.getConsoleValue();
+   s.data.storageAddress  = ConsoleValue::makeRaw(stack.mStart,
       typeId,
-      (KorkApi::ConsoleValue::Zone)(KorkApi::ConsoleValue::ZoneFiberStart + eval.mSTR.mFuncId)
+      (KorkApi::ConsoleValue::Zone)(KorkApi::ConsoleValue::ZoneFiberStart + stack.mFuncId)
    );
 
    return s;

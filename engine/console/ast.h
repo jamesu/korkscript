@@ -673,6 +673,7 @@ struct TupleExprNode : ExprNode
    
    virtual U32 compile(CodeStream &codeStream, U32 ip, TypeReq type);
    virtual TypeReq getPreferredType();
+   virtual bool canBeTyped();
 };
 
 #endif

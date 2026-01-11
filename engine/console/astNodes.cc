@@ -1339,8 +1339,10 @@ U32 FuncCallExprNode::compile(CodeStream &codeStream, U32 ip, TypeReq type)
       TypeReq walkType = walk->getPreferredType();
       TypeReq loadType = walk->getReturnLoadType();
 
-      if (loadType == TypeReqVar) walkType = TypeReqVar;
-      else if (loadType == TypeReqField) walkType = TypeReqField;
+      if (loadType == TypeReqVar)
+         walkType = TypeReqVar;
+      else if (loadType == TypeReqField)
+         walkType = TypeReqField;
 
       if (walkType == TypeReqNone) walkType = TypeReqString;
       ip = walk->compile(codeStream, ip, walkType);
@@ -2048,6 +2050,10 @@ TypeReq TupleExprNode::getPreferredType()
    return TypeReqNone;
 }
 
+bool TupleExprNode::canBeTyped()
+{
+   return true;
+}
 
 static U32 conversionOp(TypeReq src, TypeReq dst)
 {
