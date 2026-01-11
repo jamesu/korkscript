@@ -326,7 +326,7 @@ static VMObject* Enum_GetAtIndexThunk(VMObject* object, U32 index);
 //
 
 static ConsoleValue CF_GetFieldByNameThunk(Vm* vm, VMObject* object, const char* name);
-static void CF_SetFieldByNameThunk(Vm* vm, VMObject* object, const char* name, ConsoleValue value);
+static void CF_SetFieldByNameThunk(Vm* vm, VMObject* object, const char* name, const char* array, ConsoleValue value);
 
 //
 // TypeInfo Thunks
@@ -576,7 +576,7 @@ public:
       info.iCustomFields.IterateFields      = nullptr;
       info.iCustomFields.GetFieldByIterator = nullptr;
       info.iCustomFields.GetFieldByName     = &CF_GetFieldByNameThunk;
-      info.iCustomFields.SetFieldByName     = &CF_SetFieldByNameThunk;
+      info.iCustomFields.SetCustomFieldByName     = &CF_SetFieldByNameThunk;
       
       // Register
       ClassId cid = mVm->registerClass(info);
@@ -1241,7 +1241,7 @@ static ConsoleValue CF_GetFieldByNameThunk(Vm* vm, VMObject* object, const char*
    return cv;
 }
 
-static void CF_SetFieldByNameThunk(Vm* vm, VMObject* object, const char* name, ConsoleValue value)
+static void CF_SetFieldByNameThunk(Vm* vm, VMObject* object, const char* name, const char* array, ConsoleValue value)
 {
    auto* ob = static_cast<ObjBinding*>(object ? object->userPtr : nullptr);
    auto* kb = ob ? ob->klass : nullptr;

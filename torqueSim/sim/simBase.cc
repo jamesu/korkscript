@@ -164,7 +164,7 @@ SimFieldDictionary::~SimFieldDictionary()
    }
 }
 
-void SimFieldDictionary::setFieldValue(StringTableEntry slotName, const char *value)
+void SimFieldDictionary::setFieldValue(StringTableEntry slotName, const char *value, U32 typeId)
 {
    U32 bucket = HashPointer(slotName) % HashTableSize;
    Entry **walk = &mHashTable[bucket];
@@ -172,7 +172,7 @@ void SimFieldDictionary::setFieldValue(StringTableEntry slotName, const char *va
       walk = &((*walk)->next);
 
    Entry *field = *walk;
-   if(!*value)
+   if(!*value && typeId == UINT_MAX)
    {
       if(field)
       {
@@ -189,6 +189,10 @@ void SimFieldDictionary::setFieldValue(StringTableEntry slotName, const char *va
       {
          dFree(field->value);
          field->value = dStrdup(value);
+         if (typeId != UINT_MAX)
+         {
+            field->enforcedTypeId = typeId;
+         }
       }
       else
       {
@@ -198,19 +202,34 @@ void SimFieldDictionary::setFieldValue(StringTableEntry slotName, const char *va
          field->value = dStrdup(value);
          field->slotName = slotName;
          field->next = NULL;
+         if (typeId != UINT_MAX)
+         {
+            field->enforcedTypeId = typeId;
+         }
+         else
+         {
+            field->enforcedTypeId = 0;
+         }
          *walk = field;
       }
    }
 }
 
-const char *SimFieldDictionary::getFieldValue(StringTableEntry slotName)
+const char *SimFieldDictionary::getFieldValue(StringTableEntry slotName, U32* typeId)
 {
    U32 bucket = HashPointer(slotName) % HashTableSize;
-
+   
    for(Entry *walk = mHashTable[bucket];walk;walk = walk->next)
+   {
       if(walk->slotName == slotName)
+      {
+         if (typeId)
+         {
+            *typeId = walk->enforcedTypeId;
+         }
          return walk->value;
-
+      }
+   }
    return NULL;
 }
 
@@ -1697,19 +1716,21 @@ void SimObject::setDataField(StringTableEntry slotName, const char *array, const
 #endif
 }
 
-void SimObject::setDataFieldDynamic(StringTableEntry slotName, const char *array, const char *value)
+void SimObject::setDataFieldDynamic(StringTableEntry slotName, const char *array, const char *value, U32 typeId)
 {
    if(!mFieldDictionary)
       mFieldDictionary = new SimFieldDictionary;
 
    if(!array)
-      mFieldDictionary->setFieldValue(slotName, value);
+   {
+      mFieldDictionary->setFieldValue(slotName, value, typeId);
+   }
    else
    {
       char buf[256];
       dStrcpy(buf, slotName);
       dStrcat(buf, array);
-      mFieldDictionary->setFieldValue(StringTable->insert(buf), value);
+      mFieldDictionary->setFieldValue(StringTable->insert(buf), value, typeId);
    }
 }
 
@@ -1754,14 +1775,19 @@ const char *SimObject::getDataField(StringTableEntry slotName, const char *array
 }
 
 
-const char *SimObject::getDataFieldDynamic(StringTableEntry slotName, const char *array)
+const char *SimObject::getDataFieldDynamic(StringTableEntry slotName, const char *array, U32* outTypeId)
 {
    if(!mFieldDictionary)
       return "";
 
+   if (outTypeId)
+   {
+      *outTypeId = 0;
+   }
+   
    if(!array)
    {
-      if (const char* val = mFieldDictionary->getFieldValue(slotName))
+      if (const char* val = mFieldDictionary->getFieldValue(slotName, outTypeId))
          return val;
    }
    else
@@ -1769,9 +1795,11 @@ const char *SimObject::getDataFieldDynamic(StringTableEntry slotName, const char
       static char buf[256];
       dStrcpy(buf, slotName);
       dStrcat(buf, array);
-      if (const char* val = mFieldDictionary->getFieldValue(StringTable->insert(buf)))
+      if (const char* val = mFieldDictionary->getFieldValue(StringTable->insert(buf), outTypeId))
          return val;
    }
+   
+   return "";
 }
 
 //-----------------------------------------------------------------------------

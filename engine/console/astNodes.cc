@@ -1107,7 +1107,7 @@ U32 AssignExprNode::compile(CodeStream &codeStream, U32 ip, TypeReq type)
             codeStream.emit(OP_SAVEVAR_FLT);
             break;
          case TypeReqVar:
-            codeStream.emit(OP_SAVEVAR_VAR);
+            codeStream.emit(OP_SAVEVAR_VAR); // uses the stored copyvar
             break;
          case TypeReqTypedString:
             codeStream.emit(OP_SAVEVAR_TYPED);
@@ -1595,6 +1595,12 @@ U32 SlotAssignNode::compile(CodeStream &codeStream, U32 ip, TypeReq type)
       // terminate array expr
       codeStream.emit(OP_TERMINATE_REWIND_STR);
       codeStream.emit(OP_SETCURFIELD_ARRAY);
+   }
+   
+   // Restore copy var
+   if (rhsType == TypeReqVar)
+   {
+      codeStream.emit(OP_SETVAR_FROM_COPY);
    }
    
    // Set type FIRST

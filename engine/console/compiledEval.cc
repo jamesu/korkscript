@@ -1437,10 +1437,17 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
             break;
 
          case OP_SETCURFIELD_TYPE:
-            //if(curObject)
-            //   frame.curObject->setDataFieldType(code[ip], curField, curFieldArray);
-            ip++;
+         {
+            U32 typeId = code[ip++];
+            
+            if(frame.curObject)
+            {
+               typeId = frame.codeBlock->getRealTypeID((U16)typeId);
+               frame.curObject->klass->iCustomFields.SetCustomFieldType(vmPublic, frame.curObject, frame.curField, frame.curFieldArray, typeId);
+            }
+            
             break;
+         }
             
          case OP_LOADFIELD_UINT:
             if (frame.curObject)
@@ -2235,6 +2242,12 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
             frame.curField = StringTable->EmptyString;
             frame.curFieldArray[0] = 0;
             break;
+            
+         case OP_SETVAR_FROM_COPY:
+         {
+            frame.currentVar = frame.copyVar;
+            break;
+         }
          
          case OP_SAVEFIELD_MULTIPLE:
          {

@@ -211,6 +211,7 @@ namespace Compiler
 
       // extra useful
       OP_SETCURFIELD_NONE,  // needed for field unset
+      OP_SETVAR_FROM_COPY,  // reset copy var
 
       // Extra missing field related ops
       OP_LOADFIELD_VAR,     // loads object field into current var 

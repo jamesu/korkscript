@@ -1799,6 +1799,14 @@ void CodeBlock::dumpInstructions( U32 startIp, bool upToReturn, bool downcaseStr
             mVM->printf(0, "%i: OP_SETCURFIELD_NONE", ip - 1);
             break;
          }
+            
+         case OP_SETVAR_FROM_COPY:
+         {
+            // Sets cur var to copy var
+            mVM->printf(0, "%i: OP_SETVAR_FROM_COPY", ip - 1);
+            break;
+         }
+            
          case OP_LOADFIELD_VAR:
          {
             mVM->printf(0, "%i: OP_LOADFIELD_VAR", ip - 1);

@@ -241,6 +241,7 @@ class SimFieldDictionary
    {
       StringTableEntry slotName;
       char *value;
+      S32 enforcedTypeId;
       Entry *next;
    };
    enum
@@ -264,8 +265,8 @@ public:
 
    SimFieldDictionary();
    ~SimFieldDictionary();
-   void setFieldValue(StringTableEntry slotName, const char *value);
-   const char *getFieldValue(StringTableEntry slotName);
+   void setFieldValue(StringTableEntry slotName, const char *value, U32 typeId=0);
+   const char *getFieldValue(StringTableEntry slotName, U32* typeId = 0);
    void writeFields(SimObject *obj, Stream &strem, U32 tabStop);
    void printFields(SimObject *obj);
    void assignFrom(SimFieldDictionary *dict);
@@ -648,7 +649,7 @@ public:
     /// @param   array       String containing index into array
     ///                      (if field is an array); if NULL, it is ignored.
     const char *getDataField(StringTableEntry slotName, const char *array);
-    const char *getDataFieldDynamic(StringTableEntry slotName, const char *array);
+    const char *getDataFieldDynamic(StringTableEntry slotName, const char *array, U32* outTypeId = NULL);
 
     /// Set the value of a field on the object.
     ///
@@ -659,7 +660,7 @@ public:
     /// @param   array       String containing index into array; if NULL, it is ignored.
     /// @param   value       Value to store.
     void setDataField(StringTableEntry slotName, const char *array, const char *value);
-    void setDataFieldDynamic(StringTableEntry slotName, const char *array, const char *value);
+    void setDataFieldDynamic(StringTableEntry slotName, const char *array, const char *value, U32 typeId);
 
     const char *getPrefixedDataField(StringTableEntry fieldName, const char *array);
 

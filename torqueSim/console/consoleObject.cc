@@ -164,6 +164,14 @@ ConsoleObject* AbstractClassRep::create(const U32 groupId, const U32 typeId, con
 
 //--------------------------------------
 
+//
+
+namespace KorkApi
+{
+TypeStorageInterface CreateExprEvalReturnTypeStorage(KorkApi::VmInternal* vmInternal, U32 minSize, U16 typeId);
+TypeStorageInterface CreateRegisterStorageFromArgs(KorkApi::VmInternal* vmInternal, U32 argc, KorkApi::ConsoleValue* argv);
+}
+
 void AbstractClassRep::registerClassWithVm(KorkApi::Vm* vm)
 {
    if (mClassInfo.name == NULL)
@@ -354,14 +362,29 @@ void AbstractClassRep::registerClassWithVm(KorkApi::Vm* vm)
          KorkApi::ConsoleValue cv = KorkApi::ConsoleValue();
          ConsoleObject* consoleObject = static_cast<ConsoleObject*>(vmObject->userPtr);
          SimObject* object = dynamic_cast<SimObject*>(consoleObject);
-         const char* val = object->getDataFieldDynamic(StringTable->insert(name), NULL);
-         return KorkApi::ConsoleValue::makeString(val);
+         U32 typeId = 0;
+         const char* val = object->getDataFieldDynamic(StringTable->insert(name), NULL, &typeId);
+         // This will be a string, so we need to convert it
+         KorkApi::ConsoleValue strValue = KorkApi::ConsoleValue::makeString(val);
+         return vm->castToReturn(1, &strValue, typeId, typeId); // loaded as typeId, stored as typeid
       };
-      mClassInfo.iCustomFields.SetFieldByName = [](KorkApi::Vm* vm, KorkApi::VMObject* vmObject, const char* name, KorkApi::ConsoleValue value){
+      mClassInfo.iCustomFields.SetCustomFieldByName = [](KorkApi::Vm* vm, KorkApi::VMObject* vmObject, const char* name, const char* array, U32 argc, KorkApi::ConsoleValue* argv){
          ConsoleObject* consoleObject = static_cast<ConsoleObject*>(vmObject->userPtr);
          SimObject* object = dynamic_cast<SimObject*>(consoleObject);
-         object->setDataFieldDynamic(StringTable->insert(name), vm->valueAsString(value), NULL); // TODO
+         
+         U32 typeId = 0;
+         StringTableEntry steName = StringTable->insert(name);
+         const char* val = object->getDataFieldDynamic(StringTable->insert(name), NULL, &typeId);
+         KorkApi::ConsoleValue castValue = vm->castToReturn(argc, argv, typeId, KorkApi::ConsoleValue::TypeInternalString);  // loaded as typeId, stored as string
+         object->setDataFieldDynamic(StringTable->insert(name), array, (const char*)castValue.evaluatePtr(vm->getAllocBase()), UINT_MAX);
       };
+      mClassInfo.iCustomFields.SetCustomFieldType = [](KorkApi::Vm* vm, KorkApi::VMObject* vmObject, const char* name, const char* array, U32 typeId){
+         ConsoleObject* consoleObject = static_cast<ConsoleObject*>(vmObject->userPtr);
+         SimObject* object = dynamic_cast<SimObject*>(consoleObject);
+         object->setDataFieldDynamic(StringTable->insert(name), array, "", typeId);
+         return true;
+      };
+      
       // Enumeration
       mClassInfo.iEnum = {};
       mClassInfo.iEnum.GetSize = [](KorkApi::VMObject* vmObject){

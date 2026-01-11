@@ -235,7 +235,8 @@ struct CustomFieldsInterface
     bool (*IterateFields)(Vm* vm, VMObject* object, VMIterator& state, StringTableEntry* name);
 	ConsoleValue (*GetFieldByIterator)(Vm* vm, VMObject* object, VMIterator& state);
 	ConsoleValue (*GetFieldByName)(Vm* vm, VMObject* object, const char* name);
-	void (*SetFieldByName)(Vm* vm, VMObject* object, const char* name, ConsoleValue value);
+	void (*SetCustomFieldByName)(Vm* vm, VMObject* object, const char* name, const char* array, U32 argc, ConsoleValue* argv);
+   bool (*SetCustomFieldType)(Vm* vm, VMObject* object, const char* name, const char* array, U32 typeId);
 };
 
 struct ClassInfo {
@@ -418,6 +419,8 @@ public:
     TypeInfo* getTypeInfo(TypeId ident);
 
     bool castValue(TypeId inputType, TypeStorageInterface* inputStorage, TypeStorageInterface* outputStorage, const EnumTable* et, BitSet32 flags);
+   
+   ConsoleValue castToReturn(U32 argc, KorkApi::ConsoleValue* argv, U32 inputTypeId, U32 outputTypeId);
 
 	// Hard refs to console values
 	ConsoleHeapAllocRef createHeapRef(U32 size);
