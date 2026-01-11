@@ -160,7 +160,7 @@ namespace Compiler
 
    VarTypeTableEntry* VarTypeTable::lookupVar(StringTableEntry name)
    {
-      for (VarTypeTableEntry* entry = table; table; table = table->next)
+      for (VarTypeTableEntry* entry = table; entry; entry = entry->next)
       {
          if (entry->name == name)
          {
@@ -171,6 +171,7 @@ namespace Compiler
       VarTypeTableEntry* newEntry = (VarTypeTableEntry *) res->consoleAlloc(sizeof(VarTypeTableEntry));
       newEntry->next = table;
       table = newEntry;
+      
       newEntry->name = name;
       newEntry->typeName = NULL;
       newEntry->typeId = -1;
