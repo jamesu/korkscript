@@ -72,6 +72,7 @@ public:
    StmtNode* parseProgram()
    {
       StmtNode* list = NULL;
+      mResources->pushLocalVarContext();
       while (!atEnd())
       {
          StmtNode* d = parseDecl();
@@ -84,6 +85,7 @@ public:
             list->append(d);
          }
       }
+      mResources->popLocalVarContext();
       return list;
    }
    
@@ -929,6 +931,8 @@ private:
          fn = b.stString;  // second is function name
       }
       
+      mResources->pushLocalVarContext();
+      
       // ( ... )
       expectChar('(', "'(' expected");
       VarNode* args = parseVarList();
@@ -943,11 +947,11 @@ private:
       }
       
       // { ... }
-      mResources->pushLocalVarContext();
       StmtNode* body = parseBlockStmt();
-      mResources->popLocalVarContext();
       
       FunctionDeclStmtNode* stmt = FunctionDeclStmtNode::alloc(mResources, line ? line : a.pos.line, fn, ns, args, body, retTypeName);
+      mResources->popLocalVarContext();
+      
       return stmt;
    }
    

@@ -1096,7 +1096,8 @@ U32 AssignExprNode::compile(CodeStream &codeStream, U32 ip, TypeReq type)
    }
    else
    {
-      // This bit is already emitted to in tuple
+      // NOTE: previously we emitted rhsExpr to the optimal type; here
+      // we load it into the var.
       switch(subType)
       {
          case TypeReqString:
@@ -1120,7 +1121,11 @@ U32 AssignExprNode::compile(CodeStream &codeStream, U32 ip, TypeReq type)
       }
    }
    
-   if (type != subType) // need this as we need to copy the var to the output
+   // NOTE: this is needed to clear any stacks; note however that if the input type is
+   // TypeReqVar we don't want to copy anything into the var again as we
+   // previously did it in the block above.
+   if (type != subType &&
+       type != TypeReqVar)
    {
       emitStackConversion(codeStream, subType, type);
    }

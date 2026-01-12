@@ -377,7 +377,7 @@ namespace Compiler
    {
       enum 
       {
-         VarTypeStackSize = 2
+         VarTypeStackSize = 3
       };
 
       CompilerStringTable *currentStringTable, globalStringTable, functionStringTable;

@@ -135,7 +135,7 @@ namespace Compiler
       }
       else if (curLocalVarStackPos == 0)
       {
-         //printf("Bad variable type stack\n");
+         AssertFatal(false, "Bad variable type stack\n");
       }
       else
       {
