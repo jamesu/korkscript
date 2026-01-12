@@ -27,6 +27,8 @@
 #include "core/stringTable.h"
 #include "console/consoleValue.h"
 
+#include <math.h>
+
 /// Core stack for interpreter operations.
 ///
 /// This class provides some powerful semantics for working with strings, and is
