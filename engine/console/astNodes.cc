@@ -1051,7 +1051,16 @@ U32 AssignExprNode::compile(CodeStream &codeStream, U32 ip, TypeReq type)
    // Save var so we can copy to the new one
    if (rhsType == TypeReqVar)
    {
-      codeStream.emit(OP_LOADVAR_VAR);
+      if (codeStream.mResources->allowTypes)
+      {
+         codeStream.emit(OP_LOADVAR_VAR);
+      }
+      else
+      {
+         // Previous method: convert this to a string here;
+         // NOTE: this can technically get clobbered by arrayIndex expr.
+         subType = TypeReqString;
+      }
    }
    
    if(arrayIndex)
@@ -1122,10 +1131,16 @@ U32 AssignExprNode::compile(CodeStream &codeStream, U32 ip, TypeReq type)
    }
    
    // NOTE: this is needed to clear any stacks; note however that if the input type is
-   // TypeReqVar we don't want to copy anything into the var again as we
-   // previously did it in the block above.
-   if (type != subType &&
-       type != TypeReqVar)
+   // TypeReqVar we don't want to OP_SAVEVAR_VAR again. So instead we clear whatever stack it used
+   // since we no longer need it.
+   
+   if (type == TypeReqVar &&
+       subType != TypeReqVar)
+   {
+      type = TypeReqNone;
+   }
+   
+   if (type != subType)
    {
       emitStackConversion(codeStream, subType, type);
    }
@@ -2103,6 +2118,10 @@ bool TupleExprNode::canBeTyped()
    return true;
 }
 
+// This handles movement from one source to a destination.
+// Note however ops for saving to FIELD or VAR types DO NOT consume the
+// FLT / UINT so that needs to be accounted for when using this.
+// (i.e. if you emit a field or a var, you still need to clear the float / int stack)
 static U32 conversionOp(TypeReq src, TypeReq dst)
 {
    // NOTE: any _TYPED conversions require the type to be set via 
