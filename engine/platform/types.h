@@ -26,6 +26,7 @@
 #include <cstddef>
 #include <stdlib.h>
 #include <algorithm>
+#include <climits>
 
 //------------------------------------------------------------------------------
 //-------------------------------------- Basic Types...

@@ -24,8 +24,6 @@
 #include "embed/internalApi.h"
 #include "stringStack.h"
 
-#include <climits>
-
 void StringStack::getArgcArgv(StringTableEntry name, U32 *argc, KorkApi::ConsoleValue **in_argv, bool popStackFrame /* = false */)
 {
    AssertFatal(mNumFrames != 0, "Stack underflow!");

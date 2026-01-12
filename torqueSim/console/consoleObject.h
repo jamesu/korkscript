@@ -583,7 +583,6 @@ protected:
    static void addProtectedField(const char*   in_pFieldname,
       const U32     in_fieldType,
       const dsize_t in_fieldOffset,
-      AbstractClassRep::SetValue in_setDataFn,
       AbstractClassRep::CastValue in_getDataFn = NULL,
       const U32     in_elementCount = 1,
       EnumTable *   in_table        = NULL,
@@ -603,7 +602,6 @@ protected:
    static void addProtectedField(const char*   in_pFieldname,
       const U32     in_fieldType,
       const dsize_t in_fieldOffset,
-      AbstractClassRep::SetValue in_setDataFn,
       AbstractClassRep::CastValue in_getDataFn = NULL,
       AbstractClassRep::WriteDataNotify in_writeDataFn = &defaultProtectedWriteFn,
       const U32     in_elementCount = 1,
@@ -621,7 +619,6 @@ protected:
    static void addProtectedField(const char*   in_pFieldname,
       const U32     in_fieldType,
       const dsize_t in_fieldOffset,
-      AbstractClassRep::SetValue in_setDataFn,
       AbstractClassRep::CastValue in_getDataFn = NULL,
       const char*   in_pFieldDocs = NULL);
 
@@ -637,7 +634,6 @@ protected:
    static void addProtectedField(const char*   in_pFieldname,
       const U32     in_fieldType,
       const dsize_t in_fieldOffset,
-      AbstractClassRep::SetValue in_setDataFn,
       AbstractClassRep::CastValue in_getDataFn = NULL,
       AbstractClassRep::WriteDataNotify in_writeDataFn = &defaultProtectedWriteFn,
       const char*   in_pFieldDocs = NULL);
