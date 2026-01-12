@@ -131,7 +131,7 @@ TypeInfo* Vm::getTypeInfo(TypeId ident)
 
 bool Vm::castValue(TypeId inputType, TypeStorageInterface* inputStorage, TypeStorageInterface* outputStorage, const EnumTable* et, BitSet32 flags)
 {
-   CastValueFn castFn = mInternal->mTypes[inputType].iFuncs.CastValueFn;
+   CastValueFnType castFn = mInternal->mTypes[inputType].iFuncs.CastValueFn;
    return castFn(
       mInternal->mTypes[inputType].userPtr,
       this,
@@ -1247,7 +1247,7 @@ bool VmInternal::setObjectFieldTuple(VMObject* obj, StringTableEntry fieldName, 
          U8* base = static_cast<U8*>(obj->userPtr);
          U8* dptr = base + f.offset + (idx * (U32)tinfo.fieldsize);
          
-         CastValueFn castFn = f.ovrCastValue ? f.ovrCastValue : tinfo.iFuncs.CastValueFn;
+         CastValueFnType castFn = f.ovrCastValue ? f.ovrCastValue : tinfo.iFuncs.CastValueFn;
 
          TypeStorageInterface outputStorage = KorkApi::CreateFixedTypeStorage(this, dptr, tid, true);
          TypeStorageInterface inputStorage = KorkApi::CreateRegisterStorageFromArgs(this, argc, argv);
@@ -1311,7 +1311,7 @@ ConsoleValue VmInternal::getObjectField(VMObject* obj, StringTableEntry name, co
       TypeStorageInterface inputStorage = KorkApi::CreateFixedTypeStorage(this, dptr, tid, true);
       TypeStorageInterface outputStorage = KorkApi::CreateExprEvalReturnTypeStorage(this, 0, 0);
       
-      CastValueFn castFn = f.ovrCastValue ? f.ovrCastValue : tinfo.iFuncs.CastValueFn;
+      CastValueFnType castFn = f.ovrCastValue ? f.ovrCastValue : tinfo.iFuncs.CastValueFn;
 
       // For fixed size types, ensure we are the correct size (avoids adding check in CastValueFn)
       if (tinfo.valueSize != UINT_MAX && tinfo.valueSize > 0)

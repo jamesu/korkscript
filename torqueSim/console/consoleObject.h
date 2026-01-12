@@ -187,8 +187,7 @@ class AbstractClassRep
    friend class ConsoleObject;
 
 public:
-   using SetValue = KorkApi::SetStoredFn;
-   using CastValue = KorkApi::CastValueFn;
+   using CastValue = KorkApi::CastValueFnType;
    using WriteDataNotify = KorkApi::WriteDataNotifyFn;
    
    static void registerWithVM(KorkApi::Vm* vm);

@@ -79,17 +79,8 @@ struct TypeStorageInterface
    bool isField;
 };
 
-// Set native object type
-typedef bool(*SetStoredFn)(void* userPtr,
-                  Vm* vm,
-                          TypeStorageInterface* storage,
-                          S32 argc,
-                          ConsoleValue* argv,
-                          const EnumTable* tbl,
-                          BitSet32 flag,
-                          U32 typeId);
 
-typedef bool(*CastValueFn)(void* userPtr,
+typedef bool(*CastValueFnType)(void* userPtr,
                                    Vm* vm,
                                    TypeStorageInterface* inputStorage,
                                    TypeStorageInterface* outputStorage,
@@ -102,7 +93,7 @@ struct TypeInterface
 {
 // sptr -> [return]
 // destVal = srcVal
-CastValueFn CastValueFn;
+CastValueFnType CastValueFn;
 
 // TypeName
 const char*(*GetTypeClassNameFn)(void* userPtr);
@@ -141,7 +132,7 @@ struct FieldInfo {
    EnumTable *     table;
    const char*     pFieldDocs;
    TypeValidator*  validator;
-   CastValueFn       ovrCastValue;
+   CastValueFnType   ovrCastValue;
    WriteDataNotifyFn writeDataFn;
    S32             elementCount;
    U32             offset;
