@@ -27,7 +27,7 @@
 #include "core/stringTable.h"
 #include "console/consoleValue.h"
 
-#include <math.h>
+#include <climits>
 
 /// Core stack for interpreter operations.
 ///
