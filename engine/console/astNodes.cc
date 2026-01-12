@@ -1358,10 +1358,13 @@ U32 FuncCallExprNode::compile(CodeStream &codeStream, U32 ip, TypeReq type)
       TypeReq walkType = walk->getPreferredType();
       TypeReq loadType = walk->getReturnLoadType();
 
-      if (loadType == TypeReqVar)
-         walkType = TypeReqVar;
-      else if (loadType == TypeReqField)
-         walkType = TypeReqField;
+      if (codeStream.mResources->allowTypes)
+      {
+         if (loadType == TypeReqVar)
+            walkType = TypeReqVar;
+         else if (loadType == TypeReqField)
+            walkType = TypeReqField;
+      }
 
       if (walkType == TypeReqNone) walkType = TypeReqString;
       ip = walk->compile(codeStream, ip, walkType);
@@ -1378,29 +1381,11 @@ U32 FuncCallExprNode::compile(CodeStream &codeStream, U32 ip, TypeReq type)
             codeStream.emit(OP_PUSH_TYPED);
             break;
          case TypeReqVar:
-            
-            if (codeStream.mResources->allowTypes)
-            {
-               codeStream.emit(OP_PUSH_VAR);
-            }
-            else
-            {
-               codeStream.emit(OP_LOADVAR_STR);
-               codeStream.emit(OP_PUSH);
-            }
+            codeStream.emit(OP_PUSH_VAR);
             break;
          case TypeReqField:
-            
-            if (codeStream.mResources->allowTypes)
-            {
-               codeStream.emit(OP_LOADFIELD_TYPED);
-               codeStream.emit(OP_PUSH_TYPED);
-            }
-            else
-            {
-               codeStream.emit(OP_LOADFIELD_STR);
-               codeStream.emit(OP_PUSH);
-            }
+            codeStream.emit(OP_LOADFIELD_TYPED);
+            codeStream.emit(OP_PUSH_TYPED);
             break;
          default:
             codeStream.emit(OP_PUSH);
