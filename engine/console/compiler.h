@@ -446,6 +446,8 @@ namespace Compiler
          
          curLocalVarStackPos = 0;
          currentASTGen = NULL;
+         
+         resetTables();
       }
    };
 };

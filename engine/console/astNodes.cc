@@ -671,6 +671,7 @@ U32 IntUnaryExprNode::compile(CodeStream &codeStream, U32 ip, TypeReq type)
    bool operandTyped = expr->canBeTyped();
    bool outputTyped  = (type == TypeReqTypedString);
    TypeReq nodeOpOutputType = operandTyped ? TypeReqTypedString : (integer ? TypeReqUInt : TypeReqFloat);
+   TypeReq postOpOutputType = operandTyped ? TypeReqTypedString : TypeReqUInt;
    
    ip = expr->compile(codeStream, ip, nodeOpOutputType);
    
@@ -685,7 +686,7 @@ U32 IntUnaryExprNode::compile(CodeStream &codeStream, U32 ip, TypeReq type)
    else if(op == SimpleLexer::TokenType::opPCHAR_TILDE) // ~
       codeStream.emit(OP_ONESCOMPLEMENT);
    
-   if (type != nodeOpOutputType)
+   if (type != postOpOutputType)
    {
       emitStackConversion(codeStream, nodeOpOutputType, type);
    }
@@ -1005,7 +1006,8 @@ U32 AssignExprNode::compile(CodeStream &codeStream, U32 ip, TypeReq type)
    
    if (loadType == TypeReqVar) // NOTE: cant load fields this way YET since we need to compile array statement
    {
-      subType = loadType;
+      // NOTE: we used VarNode shortcut here before
+      subType = loadType; //disableTypes ? TypeReqString : loadType;
    }
    else if (rhsExpr->canBeTyped())
    {
@@ -1261,9 +1263,10 @@ U32 AssignOpExprNode::compile(CodeStream &codeStream, U32 ip, TypeReq type)
    emitStackConversion(codeStream, subType, TypeReqVar); // usually goes for FLT or UINT here
    
    // -> output
-   if (type != TypeReqVar)
+   // (NOTE: TypeReqVar doesn't consume FLT here so we need to dispose of the subType)
+   if (type != subType)
    {
-      emitStackConversion(codeStream, TypeReqVar, type);
+      emitStackConversion(codeStream, subType, type);
    }
    
    return codeStream.tell();
@@ -1353,11 +1356,29 @@ U32 FuncCallExprNode::compile(CodeStream &codeStream, U32 ip, TypeReq type)
             codeStream.emit(OP_PUSH_TYPED);
             break;
          case TypeReqVar:
-            codeStream.emit(OP_PUSH_VAR);
+            
+            if (codeStream.mResources->allowTypes)
+            {
+               codeStream.emit(OP_PUSH_VAR);
+            }
+            else
+            {
+               codeStream.emit(OP_LOADVAR_STR);
+               codeStream.emit(OP_PUSH);
+            }
             break;
          case TypeReqField:
-            codeStream.emit(OP_LOADFIELD_TYPED);
-            codeStream.emit(OP_PUSH_TYPED);
+            
+            if (codeStream.mResources->allowTypes)
+            {
+               codeStream.emit(OP_LOADFIELD_TYPED);
+               codeStream.emit(OP_PUSH_TYPED);
+            }
+            else
+            {
+               codeStream.emit(OP_LOADFIELD_STR);
+               codeStream.emit(OP_PUSH);
+            }
             break;
          default:
             codeStream.emit(OP_PUSH);
@@ -1525,7 +1546,7 @@ U32 SlotAssignNode::compile(CodeStream &codeStream, U32 ip, TypeReq type)
    // OP_SAVEFIELD
    // convert to return type if necessary.
 
-   TypeReq subType = rhsExpr->getPreferredType();
+   TypeReq subType = disableTypes ? TypeReqString : rhsExpr->getPreferredType();
 
    // Normally %a.slot = %b; will be type=TypeReqNone or a a float or whatever if we're part of another
    // expression.
@@ -1534,7 +1555,7 @@ U32 SlotAssignNode::compile(CodeStream &codeStream, U32 ip, TypeReq type)
    
    if (loadType == TypeReqVar) // NOTE: cant load fields this way YET since we need to compile array statement
    {
-      subType = loadType;
+      subType = disableTypes ? TypeReqString : loadType;
    }
    else if (rhsExpr->canBeTyped())
    {
@@ -1542,7 +1563,7 @@ U32 SlotAssignNode::compile(CodeStream &codeStream, U32 ip, TypeReq type)
    }
    else if (subType == TypeReqNone)
    {
-      // We need to set the string stack regardless
+      // We need to set the string stack regardless (TODO: possibly not?)
       subType = disableTypes ? TypeReqString : TypeReqTypedString;
    }
    
