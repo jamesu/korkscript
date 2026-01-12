@@ -999,15 +999,26 @@ U32 AssignExprNode::compile(CodeStream &codeStream, U32 ip, TypeReq type)
 {
    subType = rhsExpr->getPreferredType();
    
+   //
+   if (disableTypes &&
+       subType == TypeReqNone)
+   {
+      subType = type;
+   }
+   
    // Normally %a = %b; will be type=TypeReqNone or a a float or whatever if we're part of another
    // expression.
    // If rhs loads a var or field,
    TypeReq loadType = rhsExpr->getReturnLoadType();
    
-   if (loadType == TypeReqVar) // NOTE: cant load fields this way YET since we need to compile array statement
+   if (disableTypes && (subType == TypeReqNone))
+   {
+      subType = (loadType == TypeReqVar) ? TypeReqVar : TypeReqString;
+   }
+   else if (!disableTypes && (loadType == TypeReqVar)) // NOTE: cant load fields this way YET since we need to compile array statement
    {
       // NOTE: we used VarNode shortcut here before
-      subType = loadType; //disableTypes ? TypeReqString : loadType;
+      subType = loadType;
    }
    else if (rhsExpr->canBeTyped())
    {
@@ -1051,16 +1062,7 @@ U32 AssignExprNode::compile(CodeStream &codeStream, U32 ip, TypeReq type)
    // Save var so we can copy to the new one
    if (rhsType == TypeReqVar)
    {
-      if (codeStream.mResources->allowTypes)
-      {
-         codeStream.emit(OP_LOADVAR_VAR);
-      }
-      else
-      {
-         // Previous method: convert this to a string here;
-         // NOTE: this can technically get clobbered by arrayIndex expr.
-         subType = TypeReqString;
-      }
+      codeStream.emit(OP_LOADVAR_VAR);
    }
    
    if(arrayIndex)
