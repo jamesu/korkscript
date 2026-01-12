@@ -27,8 +27,6 @@
 #include "core/stringTable.h"
 #include "console/consoleValue.h"
 
-#include <climits>
-
 /// Core stack for interpreter operations.
 ///
 /// This class provides some powerful semantics for working with strings, and is
@@ -204,53 +202,7 @@ struct StringStack
    void copyStoredValueToStack(KorkApi::VmInternal* vmInternal, KorkApi::ConsoleValue v, void* ptr);
 
    /// Set a string value on the top of the stack.
-   void setConsoleValue(KorkApi::VmInternal* vmInternal, KorkApi::ConsoleValue v)
-   {
-      void* valueBase = NULL;
-      
-      if (v.typeId != KorkApi::ConsoleValue::TypeInternalString && 
-          v.typeId < KorkApi::ConsoleValue::TypeBeginCustom)
-      {
-         mType = v.typeId;
-         mLen = 0;
-         validateBufferSize(mStart + mLen);
-         *((U64*)&mValue) = v.cvalue;
-         return;
-      }
-      else
-      {
-         // TOFIX: needs to use storage api (mLen issues)
-         valueBase = v.evaluatePtr(*mAllocBase);
-         if (valueBase != (mBuffer + mStart)) // account for setting same head
-         {
-            if (v.typeId == KorkApi::ConsoleValue::TypeInternalString)
-            {
-               setStringValue((const char*)valueBase);
-            }
-            else if (valueBase)
-            {
-               KorkApi::TypeInfo info = (*mTypes)[v.typeId];
-               
-               if (info.valueSize != UINT_MAX)
-               {
-                  mLen = (U32)info.valueSize;
-                  memmove(mBuffer + mStart, valueBase, mLen);
-                  mValue = mStart;
-               }
-               else
-               {
-                  copyStoredValueToStack(vmInternal, v, v.evaluatePtr(*mAllocBase));
-                  return;
-               }
-            }
-            else
-            {
-               mValue = v.cvalue;
-            }
-         }
-         mType = v.typeId;
-      }
-   }
+   void setConsoleValue(KorkApi::VmInternal* vmInternal, KorkApi::ConsoleValue v);
    
    void setConsoleValueSize(U32 typeId, U32 size)
    {

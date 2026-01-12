@@ -24,6 +24,8 @@
 #include "embed/internalApi.h"
 #include "stringStack.h"
 
+#include <climits>
+
 void StringStack::getArgcArgv(StringTableEntry name, U32 *argc, KorkApi::ConsoleValue **in_argv, bool popStackFrame /* = false */)
 {
    AssertFatal(mNumFrames != 0, "Stack underflow!");
@@ -147,5 +149,53 @@ void StringStack::copyStoredValueToStack(KorkApi::VmInternal* vm, KorkApi::Conso
       mValue = 0;
       mType = 0;
       mLen = 0;
+   }
+}
+
+void StringStack::setConsoleValue(KorkApi::VmInternal* vmInternal, KorkApi::ConsoleValue v)
+{
+   void* valueBase = NULL;
+   
+   if (v.typeId != KorkApi::ConsoleValue::TypeInternalString && 
+       v.typeId < KorkApi::ConsoleValue::TypeBeginCustom)
+   {
+      mType = v.typeId;
+      mLen = 0;
+      validateBufferSize(mStart + mLen);
+      *((U64*)&mValue) = v.cvalue;
+      return;
+   }
+   else
+   {
+      // TOFIX: needs to use storage api (mLen issues)
+      valueBase = v.evaluatePtr(*mAllocBase);
+      if (valueBase != (mBuffer + mStart)) // account for setting same head
+      {
+         if (v.typeId == KorkApi::ConsoleValue::TypeInternalString)
+         {
+            setStringValue((const char*)valueBase);
+         }
+         else if (valueBase)
+         {
+            KorkApi::TypeInfo info = (*mTypes)[v.typeId];
+            
+            if (info.valueSize != UINT_MAX)
+            {
+               mLen = (U32)info.valueSize;
+               memmove(mBuffer + mStart, valueBase, mLen);
+               mValue = mStart;
+            }
+            else
+            {
+               copyStoredValueToStack(vmInternal, v, v.evaluatePtr(*mAllocBase));
+               return;
+            }
+         }
+         else
+         {
+            mValue = v.cvalue;
+         }
+      }
+      mType = v.typeId;
    }
 }
