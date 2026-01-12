@@ -47,10 +47,16 @@ function basicMyPoint()
 	echo(mult);
 	%a = 2 * %a; // should continue with the point
 	%z = %a * 2; // should continue
+	%w = %a * 2 * 3;
+	%p = (3 * 2) * %a;
 	echo(%a);
 	echo(%z);
+	echo(%w);
+	echo(%p);
 	testString("basicMyPoint.a.last", %a, "2 4 6");
 	testString("basicMyPoint.z.last", %z, "4 8 12");
+	testString("basicMyPoint.w.last", %w, "12 24 36");
+	testString("basicMyPoint.p.last", %p, "12 24 36");
 }
 
 
@@ -60,12 +66,21 @@ function objectTuples()
 		testField : TypeF32Vector = 1,2,3;
 		assignField : TypeF32Vector = "4 5 6";
 		assignField2 : TypeS32Vector = "";
+		myPointTest: TypeMyPoint3F = 10,20,30;
 	};
 
 	%so.assignField = 456;
 
 	%v = 1456;
 	%so.assignField2 = %v;// = 4457;
+
+
+	testString("fn.objtuples.so.myPointTest", %so.myPointTest, "10 20 30");
+	%fudge = %so.myPointTest * 3;
+	%so.myPointTest *= 2;
+	testString("fn.objtuples.so.fudge", %so.myPointTest, "30 60 90");
+	testString("fn.objtuples.so.myPointTest2", %so.myPointTest, "20 40 60");
+
 
 	testString("fn.objtuples.so.testField", %so.testField, "1 2 3");
 	testString("fn.objtuples.so.assignField", %so.assignField, "456");

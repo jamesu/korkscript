@@ -1744,6 +1744,12 @@ U32 SlotAssignOpNode::compile(CodeStream &codeStream, U32 ip, TypeReq type)
    getAssignOpTypeOp(op, subType, operand);
    codeStream.mResources->precompileIdent(slotName);
    
+   // Convert to typed string so we can do ops on the field
+   if (codeStream.mResources->allowTypes)
+   {
+      subType = TypeReqTypedString;
+   }
+   
    if (dynamic_cast<TupleExprNode*>(rhsExpr))
    {
       AssertFatal(false, "Something went seriously wrong in handleExpressionTuples");
