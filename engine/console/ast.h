@@ -531,12 +531,14 @@ struct SlotAccessNode : ExprNode
 {
    ExprNode *objectExpr, *arrayExpr;
    StringTableEntry slotName;
+   bool disableTypes;
 
    static SlotAccessNode *alloc( Compiler::Resources* res, S32 lineNumber, ExprNode *objectExpr, ExprNode *arrayExpr, StringTableEntry slotName );
   
    U32 compile(CodeStream &codeStream, U32 ip, TypeReq type);
    TypeReq getPreferredType();
    TypeReq getReturnLoadType();
+   bool canBeTyped();
    DBG_STMT_TYPE(SlotAccessNode);
 };
 

@@ -529,7 +529,7 @@ bool printAST(const char* buf, const char* filename)
    }
    catch (SimpleParser::TokenError& e)
    {
-      printf("Error parsing (%s :: %s)\n", e.what(), lex.toString(e.token()).c_str());
+      printf("Error parsing (\"%s\"; token is %s) at %i:%i\n", e.what(), lex.toString(e.token()).c_str(), e.token().pos.line, e.token().pos.col);
    }
    
    return true;

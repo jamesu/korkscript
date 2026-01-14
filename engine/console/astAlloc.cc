@@ -382,6 +382,7 @@ SlotAccessNode *SlotAccessNode::alloc( Compiler::Resources* res, S32 lineNumber,
    ret->objectExpr = objectExpr;
    ret->arrayExpr = arrayExpr;
    ret->slotName = slotName;
+   ret->disableTypes = !res->allowTypes;
    return ret;
 }
 

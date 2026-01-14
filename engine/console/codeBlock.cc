@@ -691,7 +691,7 @@ bool CodeBlock::compileToStream(Stream &st, StringTableEntry fileName, const cha
    }
    catch (SimpleParser::TokenError& e)
    {
-      mVM->printf(0, "Error parsing (%s :: %s)", e.what(), lex.toString(e.token()).c_str());
+      mVM->printf(0, "Error parsing (\"%s\"; token is %s) at %i:%i", e.what(), lex.toString(e.token()).c_str(), e.token().pos.line, e.token().pos.col);
    }
    
    if(!rootNode)
@@ -840,7 +840,7 @@ bool CodeBlock::compileToStream(Stream &st, StringTableEntry fileName, const cha
    }
    catch (SimpleParser::TokenError& e)
    {
-      mVM->printf(0, "Error parsing (%s :: %s)", e.what(), lex.toString(e.token()).c_str());
+      mVM->printf(0, "Error parsing (\"%s\"; token is %s) at %i:%i", e.what(), lex.toString(e.token()).c_str(), e.token().pos.line, e.token().pos.col);
    }
    
    if(!rootNode)
@@ -1853,8 +1853,7 @@ void CodeBlock::dumpInstructions( U32 startIp, bool upToReturn, bool downcaseStr
 
          case OP_SET_DYNAMIC_TYPE_TO_NULL:
          {
-            mVM->printf(0, "%i: OP_SET_DYNAMIC_TYPE_TO_NULL %i", ip - 1);
-            ip++;
+            mVM->printf(0, "%i: OP_SET_DYNAMIC_TYPE_TO_NULL", ip - 1);
             break;
          }
          

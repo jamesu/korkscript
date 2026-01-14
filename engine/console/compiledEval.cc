@@ -2300,8 +2300,20 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
             break;
          case OP_SAVEFIELD_VAR:
             // var -> field
-            tmpVal = frame.getConsoleVariable();
-            vmInternal->setObjectField(frame.curObject, frame.curField, frame.curFieldArray, tmpVal);
+            
+            if (frame.curObject)
+            {
+               KorkApi::ConsoleValue cv = frame.getConsoleVariable();
+               vmInternal->setObjectField(frame.curObject, frame.curField, frame.curFieldArray, cv);
+            }
+            else
+            {
+               // The field is not being set on an object. Maybe it's
+               // a special accessor?
+               //setFieldComponent( prevObject, prevField, prevFieldArray, curField );
+               frame.prevObject = NULL;
+            }
+            
             break;
          case OP_LOADVAR_TYPED:
             tmpVal = frame.getConsoleVariable();
@@ -2325,7 +2337,21 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
          case OP_SAVEFIELD_TYPED:
             // typed -> field
             // (use OP_SETCURFIELD_TYPE to set the field type if dynamic)
-            vmInternal->setObjectField(frame.curObject, frame.curField, frame.curFieldArray, evalState.mSTR.getConsoleValue());
+
+            if (frame.curObject)
+            {
+   
+               KorkApi::ConsoleValue cv = evalState.mSTR.getConsoleValue();
+               vmInternal->setObjectField(frame.curObject, frame.curField, frame.curFieldArray, cv);
+            }
+            else
+            {
+               // The field is not being set on an object. Maybe it's
+               // a special accessor?
+               //setFieldComponent( prevObject, prevField, prevFieldArray, curField );
+               frame.prevObject = NULL;
+            }
+
             break;
          case OP_STR_TO_TYPED:
             if (frame.dynTypeId != 0)

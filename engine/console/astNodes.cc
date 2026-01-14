@@ -388,13 +388,13 @@ U32 FloatBinaryExprNode::compile(CodeStream &codeStream, U32 ip, TypeReq type)
    
    TypeReq nodeOpOutputType = TypeReqFloat;
    
-   bool firstIsTyped = right->canBeTyped();
-   bool secondIsTyped = left->canBeTyped();
+   bool rightIsTyped = right->canBeTyped();
+   bool leftIsTyped = left->canBeTyped();
    //bool outputIsTyped = type == TypeReqTypedString;
    
    //if (outputIsTyped)
    {
-      if (firstIsTyped || secondIsTyped)
+      if (leftIsTyped || rightIsTyped)
       {
          nodeOpOutputType = TypeReqTypedString;
       }
@@ -429,13 +429,15 @@ U32 FloatBinaryExprNode::compile(CodeStream &codeStream, U32 ip, TypeReq type)
    }
    else
    {
-      if (!firstIsTyped)
+      // top = left
+      // -1 = right
+      if (rightIsTyped)
       {
-         codeStream.emit(OP_TYPED_OP_REVERSE);
+         codeStream.emit(OP_TYPED_OP); // type = right
       }
       else
       {
-         codeStream.emit(OP_TYPED_OP);
+         codeStream.emit(OP_TYPED_OP_REVERSE); // type = left
       }
       codeStream.emit(operand);
    }
@@ -533,11 +535,11 @@ U32 IntBinaryExprNode::compile(CodeStream &codeStream, U32 ip, TypeReq type)
    else
    {
       // Non-OR/AND: apply typed-op selection logic like FloatBinaryExprNode
-      bool firstIsTyped = right->canBeTyped();
-      bool secondIsTyped = left->canBeTyped();
+      bool rightIsTyped = right->canBeTyped();
+      bool leftIsTyped = left->canBeTyped();
       bool outputIsTyped = (type == TypeReqTypedString);
 
-      bool doTypedOp = (firstIsTyped || secondIsTyped);
+      bool doTypedOp = (leftIsTyped || rightIsTyped);
       nodeOpOutputType = doTypedOp ? TypeReqTypedString : subType;
       
       ip = right->compile(codeStream, ip, nodeOpOutputType);
@@ -551,10 +553,16 @@ U32 IntBinaryExprNode::compile(CodeStream &codeStream, U32 ip, TypeReq type)
       }
       else
       {
-         if(!firstIsTyped)
-            codeStream.emit(OP_TYPED_OP_REVERSE);
+         // top = left
+         // -1 = right
+         if (rightIsTyped)
+         {
+            codeStream.emit(OP_TYPED_OP); // type = right
+         }
          else
-            codeStream.emit(OP_TYPED_OP);
+         {
+            codeStream.emit(OP_TYPED_OP_REVERSE); // type = left
+         }
 
          codeStream.emit(operand); // result is also typed value on stack
       }
@@ -1278,10 +1286,17 @@ U32 AssignOpExprNode::compile(CodeStream &codeStream, U32 ip, TypeReq type)
    
    if (subType == TypeReqTypedString)
    {
-      codeStream.emit(OP_TYPED_OP);
+      // here:
+      // top = var
+      // -1 = rhsExpr (e.g. number)
+      codeStream.emit(OP_TYPED_OP_REVERSE); // type = left = var
    }
    
    codeStream.emit(operand);
+   
+   // NOTE: if this is FLT or UINT, we push to FLT/UINT stack
+   // thus we need to convert back to none afterwards.
+   // If we used a typed value, we don't have this problem.
    emitStackConversion(codeStream, subType, TypeReqVar); // usually goes for FLT or UINT here
    
    // -> output
@@ -1479,6 +1494,9 @@ U32 SlotAccessNode::compile(CodeStream &codeStream, U32 ip, TypeReq type)
       case TypeReqString:
          codeStream.emit(OP_LOADFIELD_STR);
          break;
+      case TypeReqTypedString:
+         codeStream.emit(OP_LOADFIELD_TYPED);
+         break;
       case TypeReqField:
       case TypeReqNone:
       default:
@@ -1495,6 +1513,11 @@ TypeReq SlotAccessNode::getPreferredType()
 TypeReq SlotAccessNode::getReturnLoadType()
 {
    return TypeReqField;
+}
+
+bool SlotAccessNode::canBeTyped()
+{
+   return !disableTypes;
 }
 
 //-----------------------------------------------------------------------------
@@ -1775,10 +1798,16 @@ U32 SlotAssignOpNode::compile(CodeStream &codeStream, U32 ip, TypeReq type)
       codeStream.emit(OP_SETCURFIELD_ARRAY);
    }
    
+   // NOTE: if this is FLT or UINT, we push to FLT/UINT stack
+   // thus we need to convert back to none afterwards.
+   // If we used a typed value, we don't have this problem.
    emitStackConversion(codeStream, TypeReqField, subType);
    if (subType == TypeReqTypedString)
    {
-      codeStream.emit(OP_TYPED_OP);
+      // here:
+      // top = field (e.g. %obj.foo)
+      // -1 = rhsExpr (e.g. number)
+      codeStream.emit(OP_TYPED_OP_REVERSE); // type = left = field
    }
    codeStream.emit(operand);
    // usually goes for FLT or UINT here; doesn't consume FLT or UINT
@@ -2237,6 +2266,8 @@ static U32 conversionOp(TypeReq src, TypeReq dst)
       case TypeReqVar:
          return OP_SAVEVAR_TYPED; // i.e. copy this var we just set
       case TypeReqTypedString:
+      case TypeReqField:
+         return OP_SAVEFIELD_TYPED;
       default:
          break;
       }

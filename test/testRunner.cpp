@@ -61,7 +61,8 @@ ConsoleGetType( TypeMyPoint3F )
       {
          if (argv[0].typeId == TypeMyPoint3F)
          {
-            MyPoint3F* src = (MyPoint3F*)ConsoleGetInputStoragePtr();
+            // NOTE: This needs to use evaluatePtr as custom storage can be used
+            const MyPoint3F* src = (MyPoint3F*)argv[0].evaluatePtr(vmPtr->getAllocBase());
             if (src)
             {
                v = *src;

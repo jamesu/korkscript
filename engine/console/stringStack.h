@@ -195,7 +195,7 @@ struct StringStack
       if ((mBuffer + mStart) != s)
       {
          validateBufferSize(mStart + mLen + 2);
-         dStrcpy(mBuffer + mStart, s);
+         memmove(mBuffer + mStart, s, mLen + 1);
       }
    }
    
