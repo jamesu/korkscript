@@ -95,6 +95,13 @@ function myTestPointOperators()
    %t = 1,2,3;
    %t = -%t;
    testString("ASSIGN unary NEG %t=-%t", %t, "-1 -2 -3");
+
+   testString("Typed return", testFunctionTyped(), "4 3 1");
+}
+
+function testFunctionTyped() : TypeMyPoint3F
+{
+	return "4 3 1"; // should cast to TypeMyPoint3F
 }
 
 myTestPointOperators();

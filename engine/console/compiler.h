@@ -503,10 +503,15 @@ protected:
    Vector<bool> mFixLoopStack;
    Vector<PatchEntry> mPatchList;
    /// }
+
+
+   Vector<S32> mReturnTypeStack;
    
    Vector<U32> mBreakLines; ///< Line numbers
    
    const char* mFilename;
+
+   U32 mCurrentReturnType;
    
 public:
    Compiler::Resources* mResources;
@@ -626,6 +631,28 @@ public:
    void emitCodeStream(U32 *size, U32 **stream, U32 **lineBreaks);
    
    void reset();
+
+   void pushReturnType(S32 typeId)
+   {
+      mReturnTypeStack.push_back(typeId);
+   }
+
+   void popReturnType()
+   {
+      mReturnTypeStack.pop_back();
+   }
+
+   S32 getReturnType()
+   {
+      if (mReturnTypeStack.empty())
+      {
+         return -1;
+      }
+      else
+      {
+         return mReturnTypeStack.last();
+      }
+   }
 };
 
 #endif
