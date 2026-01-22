@@ -94,7 +94,7 @@ public:
    void clearAllBreaks();
    void setAllBreaks();
    
-   void dumpInstructions( U32 startIp = 0, bool upToReturn = false, bool downcaseStrings = false );
+   void dumpInstructions( U32 startIp = 0, bool upToReturn = false, bool downcaseStrings = false, bool includeLines = false );
    
    /// Returns the first breakable line or 0 if none was found.
    /// @param lineNumber The one based line number.
@@ -110,6 +110,7 @@ public:
    void findBreakLine(U32 ip, U32 &line, U32 &instruction);
    void getFunctionArgs(char buffer[1024], U32 offset);
    const char *getFileLine(U32 ip);
+   const char *getFileLineInt(U32 ip);
    
    bool read(StringTableEntry fileName, Stream &st, U32 readVersion);
    bool linkTypes();

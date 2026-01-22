@@ -231,6 +231,7 @@ struct FloatBinaryExprNode : BinaryExprNode
   
    U32 compile(CodeStream &codeStream, U32 ip, TypeReq type);
    TypeReq getPreferredType();
+   TypeReq getReturnLoadType();
    bool canBeTyped();
    
    DBG_STMT_TYPE(FloatBinaryExprNode);
@@ -261,6 +262,7 @@ struct IntBinaryExprNode : BinaryExprNode
    U32 compile(CodeStream &codeStream, U32 ip, TypeReq type);
    TypeReq getPreferredType();
    bool canBeTyped();
+   TypeReq getReturnLoadType();
    
    DBG_STMT_TYPE(IntBinaryExprNode);
 };
@@ -305,6 +307,8 @@ struct IntUnaryExprNode : ExprNode
   
    U32 compile(CodeStream &codeStream, U32 ip, TypeReq type);
    TypeReq getPreferredType();
+   TypeReq getReturnLoadType();
+   
    DBG_STMT_TYPE(IntUnaryExprNode);
 };
 
@@ -317,6 +321,8 @@ struct FloatUnaryExprNode : ExprNode
   
    U32 compile(CodeStream &codeStream, U32 ip, TypeReq type);
    TypeReq getPreferredType();
+   TypeReq getReturnLoadType();
+   
    DBG_STMT_TYPE(FloatUnaryExprNode);
 };
 

@@ -245,7 +245,7 @@ void CodeBlock::findBreakLine(U32 ip, U32 &line, U32 &instruction)
       }
    }
    instruction = p[found].instLine & 0xFF;
-   line = p[found].instLine >> 8;
+   line = p[found].instLine;// >> 8;
 }
 
 const char *CodeBlock::getFileLine(U32 ip)
@@ -922,7 +922,7 @@ void CodeBlock::decRefCount()
 
 //-------------------------------------------------------------------------
 
-void CodeBlock::dumpInstructions( U32 startIp, bool upToReturn, bool downcaseStrings )
+void CodeBlock::dumpInstructions( U32 startIp, bool upToReturn, bool downcaseStrings, bool includeLines )
 {
    U32 ip = startIp;
    U32 endFuncIp = 0;
@@ -943,12 +943,27 @@ void CodeBlock::dumpInstructions( U32 startIp, bool upToReturn, bool downcaseStr
       buf[i] = '\0';
       return StringTable->insert(buf, true);
    };
+
+   U32 lastLine = 0;
    
    while( ip < codeSize )
    {
       if (ip >= endFuncIp)
       {
          inFunction = false;
+      }
+
+      if (includeLines)
+      {
+         U32 breakLine = 0;
+         U32 breakInst = 0;
+         findBreakLine(ip, breakLine, breakInst);
+
+         if (breakLine != lastLine)
+         {
+            mVM->printf(0, "# Line %u", lastLine+1);
+            lastLine = breakLine;
+         }
       }
       
       switch( code[ ip ++ ] )

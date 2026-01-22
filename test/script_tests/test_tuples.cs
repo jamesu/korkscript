@@ -78,19 +78,30 @@ function objectTuples()
 	echo("typed math");
 	echo(%v);
 	echo(%so.assignField2);
-	//testString("fn.objtuples.so.myPointTest", %so.myPointTest, "10 20 30");
+	testString("fn.objtuples.so.myPointTest", %so.myPointTest, "10 20 30");
 	//echo("...");
 	%fudge = %so.myPointTest * 3;
-	echo(%fudge);
+	echo("fudge=", %fudge);
 	%so.myPointTest *= 2;
+	%so.newField = %so.myPointTest / 2;
+	echo("set newField2");
+	%so.newField2 = %fudge / 2; // should load 30 as it uses float loading
 	echo(%so.myPointTest);
 	testString("fn.objtuples.so.fudge", %fudge, "30 60 90");
 	testString("fn.objtuples.so.myPointTest2", %so.myPointTest, "20 40 60");
 	echo("...");
 
+
+	%so.myPointTest /= 2;
+	testString("fn.objtuples.so.myPointTest3", %so.myPointTest, "10 20 30");
+	%foo : TypeMyPoint3F = 1,0,1;
+	%so.myPointTest += %foo;
+	testString("fn.objtuples.so.myPointTest4", %so.myPointTest, "11 20 31");
+
 	testString("fn.objtuples.so.testField", %so.testField, "1 2 3");
 	testString("fn.objtuples.so.assignField", %so.assignField, "456");
-	testString("fn.objtuples.so.assignField2", %so.assignField2, "1456");
+	testString("fn.objtuples.so.newField", %so.newField, "10 20 30");
+	testString("fn.objtuples.so.newField2", %so.newField2, "15");
 }
 
 basicTuples();

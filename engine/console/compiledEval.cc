@@ -1517,7 +1517,7 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
             evalState.mSTR.setNumberValue(evalState.floatStack[frame._FLT]);
             if (frame.curObject)
             {
-               KorkApi::ConsoleValue cv = KorkApi::ConsoleValue::makeString(evalState.mSTR.getStringValue());
+               KorkApi::ConsoleValue cv = evalState.mSTR.getConsoleValue();
                vmInternal->setObjectField(frame.curObject, frame.curField, frame.curFieldArray, cv);
             }
             else
@@ -2270,7 +2270,7 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
             break;
             
          case OP_TYPED_TO_FLT:
-            evalState.intStack[++frame._UINT] = vmInternal->valueAsFloat(evalState.mSTR.getConsoleValue());
+            evalState.floatStack[++frame._FLT] = vmInternal->valueAsFloat(evalState.mSTR.getConsoleValue());
             break;
             
          case OP_TYPED_TO_UINT:

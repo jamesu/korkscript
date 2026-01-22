@@ -98,7 +98,8 @@ void StringStack::performOp(U32 op, KorkApi::Vm* vm, KorkApi::TypeInfo* typeInfo
    
    rewind(); // only rhs is on other side
    
-   info.iFuncs.PerformOpFn(info.userPtr, vm, op, lhs, rhs);
+   KorkApi::ConsoleValue result = info.iFuncs.PerformOpFn(info.userPtr, vm, op, lhs, rhs);
+   setConsoleValue(vm->mInternal, result);
 }
 
 void StringStack::performOpReverse(U32 op, KorkApi::Vm* vm, KorkApi::TypeInfo* typeInfo)

@@ -16,6 +16,7 @@
 
 bool gPrintBytecode = false;
 bool gEnableExtensions = false;
+bool gDumpLines = false;
 
 void MyLogger(U32 level, const char *consoleLine, void* userPtr)
 {
@@ -493,7 +494,7 @@ void dumpToInstructionsPrint(Compiler::Resources& res, StmtNode* rootNode)
 
    res.getIdentTable().build(&cb->identStrings, &cb->identStringOffsets, &cb->numIdentStrings);
 
-   cb->dumpInstructions(0, false, true);
+   cb->dumpInstructions(0, false, true, gDumpLines);
 
    KorkApi::destroyVM(vm);
 }
@@ -553,6 +554,10 @@ int procMain(int argc, char **argv)
       if (strcmp(argv[i], "-e") == 0)
       {
          gEnableExtensions = true;
+      }
+      if (strcmp(argv[i], "-l") == 0)
+      {
+         gDumpLines = true;
       }
    }
    

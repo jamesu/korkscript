@@ -132,8 +132,8 @@ ConsoleGetType( TypeMyPoint3F )
 
 ConsoleTypeOp( TypeMyPoint3F )
 {
-   MyPoint3F* firstPoint = (MyPoint3F*)lhs.evaluatePtr(vmPtr->getAllocBase());
-   MyPoint3F* secondPoint = (MyPoint3F*)rhs.evaluatePtr(vmPtr->getAllocBase());
+   MyPoint3F* firstPoint = lhs.typeId == TypeMyPoint3F ? (MyPoint3F*)lhs.evaluatePtr(vmPtr->getAllocBase()) : NULL;
+   MyPoint3F* secondPoint = rhs.typeId == TypeMyPoint3F ? (MyPoint3F*)rhs.evaluatePtr(vmPtr->getAllocBase()) : NULL;
    MyPoint3F* outPoint = NULL;
    F32 otherScalar = 1.0f;
    
@@ -158,6 +158,7 @@ ConsoleTypeOp( TypeMyPoint3F )
    {
       first = *firstPoint;
       second = *secondPoint;
+      outPoint = firstPoint;
    }
       
    

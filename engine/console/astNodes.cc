@@ -455,10 +455,26 @@ TypeReq FloatBinaryExprNode::getPreferredType()
    return TypeReqFloat;
 }
 
+TypeReq FloatBinaryExprNode::getReturnLoadType()
+{
+   bool rightIsTyped = right->canBeTyped();
+   bool leftIsTyped = left->canBeTyped();
+   
+   if (rightIsTyped || leftIsTyped)
+   {
+      return TypeReqTypedString;
+   }
+   else
+   {
+      return TypeReqFloat;
+   }
+}
+
 bool FloatBinaryExprNode::canBeTyped()
 {
    return left->canBeTyped() || right->canBeTyped();
 }
+
 
 //------------------------------------------------------------
 
@@ -578,6 +594,21 @@ U32 IntBinaryExprNode::compile(CodeStream &codeStream, U32 ip, TypeReq type)
 TypeReq IntBinaryExprNode::getPreferredType()
 {
    return TypeReqUInt;
+}
+
+TypeReq IntBinaryExprNode::getReturnLoadType()
+{
+   bool rightIsTyped = right->canBeTyped();
+   bool leftIsTyped = left->canBeTyped();
+   
+   if (rightIsTyped || leftIsTyped)
+   {
+      return TypeReqTypedString;
+   }
+   else
+   {
+      return TypeReqUInt;
+   }
 }
 
 bool IntBinaryExprNode::canBeTyped()
@@ -702,6 +733,18 @@ U32 IntUnaryExprNode::compile(CodeStream &codeStream, U32 ip, TypeReq type)
    return codeStream.tell();
 }
 
+TypeReq IntUnaryExprNode::getReturnLoadType()
+{
+   if (expr->canBeTyped())
+   {
+      return TypeReqTypedString;
+   }
+   else
+   {
+      return TypeReqUInt;
+   }
+}
+
 TypeReq IntUnaryExprNode::getPreferredType()
 {
    return TypeReqUInt;
@@ -730,6 +773,18 @@ U32 FloatUnaryExprNode::compile(CodeStream &codeStream, U32 ip, TypeReq type)
    }
    
    return codeStream.tell();
+}
+
+TypeReq FloatUnaryExprNode::getReturnLoadType()
+{
+   if (expr->canBeTyped())
+   {
+      return TypeReqTypedString;
+   }
+   else
+   {
+      return TypeReqFloat;
+   }
 }
 
 TypeReq FloatUnaryExprNode::getPreferredType()
@@ -1023,7 +1078,7 @@ U32 AssignExprNode::compile(CodeStream &codeStream, U32 ip, TypeReq type)
    {
       subType = (loadType == TypeReqVar) ? TypeReqVar : TypeReqString;
    }
-   else if (!disableTypes && (loadType == TypeReqVar)) // NOTE: cant load fields this way YET since we need to compile array statement
+   else if (!disableTypes && (loadType == TypeReqVar || loadType == TypeReqTypedString)) // NOTE: cant load fields this way YET since we need to compile array statement
    {
       // NOTE: we used VarNode shortcut here before
       subType = loadType;
@@ -1379,6 +1434,8 @@ U32 FuncCallExprNode::compile(CodeStream &codeStream, U32 ip, TypeReq type)
             walkType = TypeReqVar;
          else if (loadType == TypeReqField)
             walkType = TypeReqField;
+         else if (loadType == TypeReqTypedString)
+            walkType = TypeReqTypedString;
       }
 
       if (walkType == TypeReqNone) walkType = TypeReqString;
