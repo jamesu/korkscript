@@ -145,6 +145,16 @@ U32 ReturnStmtNode::compileStmt(CodeStream &codeStream, U32 ip)
    {
       TypeReq walkType = expr->getPreferredType();
       if (walkType == TypeReqNone) walkType = TypeReqString;
+
+      // 
+      S32 desiredType = codeStream.getReturnType();
+
+      // Make sure functions which return typed values are not converted to string
+      if (desiredType >= 0)
+      {
+         walkType = TypeReqTypedString;
+      }
+
       ip = expr->compile(codeStream, ip, walkType);
 
       // Return the correct type
@@ -2029,6 +2039,9 @@ U32 FunctionDeclStmtNode::compileStmt(CodeStream &codeStream, U32 ip)
    codeStream.emitSTE(fnName);
    codeStream.emitSTE(nameSpace);
    codeStream.emitSTE(package);
+   
+   S32 typeId = codeStream.mResources->allowTypes ? codeStream.mResources->precompileType(returnTypeName) : -1;
+   codeStream.pushReturnType(typeId);
    
    codeStream.emit(U32( bool(stmts != NULL) ? 1 : 0 ) + U32( dbgLineNumber << 1 ));
    const U32 endIp = codeStream.emit(0);

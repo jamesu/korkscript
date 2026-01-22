@@ -706,6 +706,10 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
       while ( frame._ITER > 0 )
       {
          IterStackRecord& iter = evalState.iterStack[ -- frame._ITER ];
+         if (iter.mIsStringIter)
+         {
+            evalState.mSTR.rewind();
+         }
          iter.mIsStringIter = false;
       }
    };
@@ -1124,13 +1128,14 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
             
             if ( frame._ITER > 0 )
             {
+               // Get last value
+               KorkApi::ConsoleValue returnValueCV = evalState.mSTR.getConsoleValue();
+
                // Clear iterator state.
                cleanupIterator(evalState, frame);
 
-               // TOFIX: this technically doesn't factor in nesting
-               const char* returnValue = evalState.mSTR.getStringValue();
-               evalState.mSTR.rewind();
-               evalState.mSTR.setStringValue( returnValue ); // Not nice but works.
+               // Restore to top of stack
+               evalState.mSTR.setConsoleValue(vmInternal, returnValueCV);
             }
             
             goto execFinished;
