@@ -1682,33 +1682,24 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
             break;
             
          case OP_CALLFUNC_RESOLVE:
+         {
             // This deals with a function that is potentially living in a namespace.
-            tmpFnNamespace = Compiler::CodeToSTE(NULL, identStrings, code, ip+2);
-            tmpFnName      = Compiler::CodeToSTE(NULL, identStrings, code, ip);
             
-            // Try to look it up.
-            tmpNs = vmInternal->mNSState.find(tmpFnNamespace);
-            tmpNsEntry = tmpNs->lookup(tmpFnName);
-            if(!tmpNsEntry)
+            U32 funcSlotIndex = (code[ip+4] >> 16) & 0xFFFF;
+            tmpNsEntry = (Namespace::Entry*)frame.codeBlock->getNSEntry(funcSlotIndex);
+            
+            if (tmpNsEntry == NULL || funcSlotIndex == 0)
             {
-               ip+= 5;
-               vmInternal->printf(0,
-                          "%s: Unable to find function %s%s%s",
-                          frame.codeBlock->getFileLine(ip-4), tmpFnNamespace ? tmpFnNamespace : "",
-                           tmpFnNamespace ? "::" : "", tmpFnName);
-               evalState.mSTR.popFrame();
-               frame.pushStringStackCount--;
-               break;
+               tmpFnNamespace = Compiler::CodeToSTE(NULL, identStrings, code, ip+2);
+               tmpFnName      = Compiler::CodeToSTE(NULL, identStrings, code, ip);
+               
+               tmpNs = vmInternal->mNSState.find(tmpFnNamespace);
+               tmpNsEntry = tmpNs->lookup(tmpFnName);
+               
+               frame.codeBlock->setNSEntry(funcSlotIndex, tmpNsEntry);
             }
-            // Now, rewrite our code a bit (ie, avoid future lookups) and fall
-            // through to OP_CALLFUNC
-#ifdef TORQUE_64
-            *((U64*)(code+ip+2)) = ((U64)tmpNsEntry);
-#else
-            code[ip+2] = ((U32)nsEntry);
-#endif
-            code[ip-1] = OP_CALLFUNC;
-            
+         }
+         
          case OP_CALLFUNC:
          {
             // This routingId is set when we query the object as to whether
@@ -1726,7 +1717,7 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
                evalState.vmFrames.last()->ip = ip - 1;
             }
             
-            frame.lastCallType = code[ip+4];
+            frame.lastCallType = code[ip+4] & 0xFFFF;
             
             ip += 5;
             frame.ip = ip; // sync ip with frame
@@ -1734,11 +1725,9 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
             
             if(frame.lastCallType == FuncCallExprNode::FunctionCall)
             {
-#ifdef TORQUE_64
-               tmpNsEntry = ((Namespace::Entry *) *((U64*)(code+ip-3)));
-#else
-               tmpNsEntry = ((Namespace::Entry *) *(code+ip-3));
-#endif
+               // Lookup function
+               U32 funcSlotIndex = (code[ip-5+4] >> 16) & 0xFFFF;
+               tmpNsEntry = (Namespace::Entry*)frame.codeBlock->getNSEntry(funcSlotIndex);
                tmpNs = NULL;
             }
             else if(frame.lastCallType == FuncCallExprNode::MethodCall)

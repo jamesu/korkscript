@@ -1474,15 +1474,23 @@ U32 FuncCallExprNode::compile(CodeStream &codeStream, U32 ip, TypeReq type)
             break;
       }
    }
+   
+   U32 callNumber = 0;
+   
    if(callType == MethodCall || callType == ParentCall)
+   {
       codeStream.emit(OP_CALLFUNC);
+   }
    else
+   {
       codeStream.emit(OP_CALLFUNC_RESOLVE);
-
+      callNumber = codeStream.addFuncCall();
+   }
+   
    codeStream.emitSTE(funcName);
    codeStream.emitSTE(nameSpace);
    
-   codeStream.emit(callType);
+   codeStream.emit(callType | (callNumber << 16));
    if(type != TypeReqString)
       emitStackConversion(codeStream, TypeReqString, type);
    return codeStream.tell();

@@ -80,6 +80,9 @@ public:
    StringTableEntry* identStrings;
    U32* identStringOffsets;
    U32 numIdentStrings;
+   
+   U32 numFunctionCalls;
+   void** functionCalls;
 
    U32 startTypeStrings;
    U32 numTypeStrings;
@@ -111,6 +114,9 @@ public:
    void getFunctionArgs(char buffer[1024], U32 offset);
    const char *getFileLine(U32 ip);
    const char *getFileLineInt(U32 ip);
+   
+   void* getNSEntry(U32 index);
+   void setNSEntry(U32 index, void* entry);
    
    bool read(StringTableEntry fileName, Stream &st, U32 readVersion);
    bool linkTypes();

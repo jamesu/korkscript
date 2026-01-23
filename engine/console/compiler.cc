@@ -522,7 +522,7 @@ void CodeStream::fixLoop(U32 loopBlockStart, U32 breakPoint, U32 continuePoint)
 
 //-------------------------------------------------------------------------
   
-void CodeStream::emitCodeStream(U32 *size, U32 **stream, U32 **lineBreaks)
+void CodeStream::emitCodeStream(U32 *size, U32 **stream, U32 **lineBreaks, U32* numFuncCalls, void*** funcCallsPtr)
 {
    // Alloc stream
    U32 numLineBreaks = getNumLineBreaks();
@@ -543,6 +543,12 @@ void CodeStream::emitCodeStream(U32 *size, U32 **stream, U32 **lineBreaks)
    
    *lineBreaks = *stream + mCodePos;
    dMemcpy(*lineBreaks, mBreakLines.address(), sizeof(U32) * mBreakLines.size());
+   
+   // Dump func calls
+   mNumFuncCalls++; // reserve 0
+   *numFuncCalls = mNumFuncCalls;
+   *funcCallsPtr = new void*[mNumFuncCalls];
+   memset(*funcCallsPtr, '\0', sizeof(void*) * mNumFuncCalls);
    
    // Apply patches on top
    for (U32 i=0; i<mPatchList.size(); i++)

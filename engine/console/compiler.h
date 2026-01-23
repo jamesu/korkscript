@@ -469,6 +469,7 @@ public:
    enum Constants
    {
       BlockSize = 16384,
+      MaxCalls = 65535,
       MaxVarStackDepth
    };
    
@@ -513,6 +514,8 @@ protected:
    const char* mFilename;
 
    U32 mCurrentReturnType;
+   
+   U32 mNumFuncCalls;
    
 public:
    Compiler::Resources* mResources;
@@ -629,7 +632,7 @@ public:
       return mBreakLines.size() / 2;
    }
    
-   void emitCodeStream(U32 *size, U32 **stream, U32 **lineBreaks);
+   void emitCodeStream(U32 *size, U32 **stream, U32 **lineBreaks, U32* numFuncCalls, void*** funcCallsPtr);
    
    void reset();
 
@@ -653,6 +656,17 @@ public:
       {
          return mReturnTypeStack.last();
       }
+   }
+   
+   U32 addFuncCall()
+   {
+      U32 cn = ++mNumFuncCalls;
+      if (cn > MaxCalls)
+      {
+         // Fallback for max calls reached
+         cn = 0;
+      }
+      return cn;
    }
 };
 

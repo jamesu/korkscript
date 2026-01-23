@@ -480,7 +480,7 @@ void dumpToInstructionsPrint(Compiler::Resources& res, StmtNode* rootNode)
    U32 lastIP = Compiler::compileBlock(rootNode, codeStream, 0) + 1;
    
    codeStream.emit(Compiler::OP_RETURN);
-   codeStream.emitCodeStream(&cb->codeSize, &cb->code, &cb->lineBreakPairs);
+   codeStream.emitCodeStream(&cb->codeSize, &cb->code, &cb->lineBreakPairs, &cb->numFunctionCalls, &cb->functionCalls);
    
    
    cb->lineBreakPairCount = codeStream.getNumLineBreaks();

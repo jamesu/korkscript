@@ -56,6 +56,8 @@ CodeBlock::CodeBlock(KorkApi::VmInternal* vm, bool _isExecBlock)
    
    identStrings = NULL;
    identStringOffsets = NULL;
+   numFunctionCalls = 0;
+   functionCalls = NULL;
    numIdentStrings = 0;
    startTypeStrings = 0;
    numTypeStrings = 0;
@@ -88,6 +90,8 @@ CodeBlock::~CodeBlock()
    delete[] code;
    delete[] breakList;
    
+   if (functionCalls)
+      delete[] functionCalls;
    if (identStrings)
       delete[] identStrings;
    if (identStringOffsets)
@@ -356,6 +360,19 @@ void CodeBlock::calcBreakList()
       mVM->mTelDebugger->addAllBreakpoints( this );
 }
 
+void* CodeBlock::getNSEntry(U32 index)
+{
+   return functionCalls && index < numFunctionCalls ? functionCalls[index] : NULL;
+}
+
+void CodeBlock::setNSEntry(U32 index, void* entry)
+{
+   if (functionCalls && index < numFunctionCalls)
+   {
+      functionCalls[index] = entry;
+   }
+}
+
 bool CodeBlock::read(StringTableEntry fileName, Stream &st, U32 readVersion)
 {
    const StringTableEntry exePath = Platform::getMainDotCsDir();
@@ -513,6 +530,7 @@ bool CodeBlock::read(StringTableEntry fileName, Stream &st, U32 readVersion)
 
    if (readVersion > 77)
    {
+      st.read(&numFunctionCalls);
       st.read(&startTypeStrings);
       st.read(&numTypeStrings);
       typeStringMap = new S32[numTypeStrings];
@@ -520,7 +538,20 @@ bool CodeBlock::read(StringTableEntry fileName, Stream &st, U32 readVersion)
       {
          typeStringMap[i] = -1;
       }
+      
+      if (numFunctionCalls == 0)
+      {
+         numFunctionCalls = 1;
+      }
    }
+   else
+   {
+      numFunctionCalls = 1;
+   }
+   
+   // Alloc memory for func call ptrs
+   functionCalls = new void*[numFunctionCalls];
+   memset(functionCalls, '\0', sizeof(void*) * numFunctionCalls);
    
    if(lineBreakPairCount)
       calcBreakList();
@@ -648,6 +679,7 @@ bool CodeBlock::write(Stream &st)
       st.write((U32)0);
    }
    
+   st.write(numFunctionCalls);
    st.write(startTypeStrings);
    st.write(numTypeStrings);
    
@@ -720,7 +752,7 @@ bool CodeBlock::compileToStream(Stream &st, StringTableEntry fileName, const cha
    }
    
    codeStream.emit(OP_RETURN);
-   codeStream.emitCodeStream(&codeSize, &code, &lineBreakPairs);
+   codeStream.emitCodeStream(&codeSize, &code, &lineBreakPairs, &numFunctionCalls, &functionCalls);
    
    lineBreakPairCount = codeStream.getNumLineBreaks();
    
@@ -883,7 +915,7 @@ bool CodeBlock::compileToStream(Stream &st, StringTableEntry fileName, const cha
    mainTable.build(&identStrings, &identStringOffsets, &numIdentStrings);
    
    codeStream.emit(OP_RETURN);
-   codeStream.emitCodeStream(&codeSize, &code, &lineBreakPairs);
+   codeStream.emitCodeStream(&codeSize, &code, &lineBreakPairs, &numFunctionCalls, &functionCalls);
    
    mVM->mCompilerResources->consoleAllocReset();
    
