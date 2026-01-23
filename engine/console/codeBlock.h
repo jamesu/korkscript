@@ -90,6 +90,7 @@ public:
 
    bool isExecBlock;
    bool inList;
+   bool didFlushFunctions;
    
    void addToCodeList();
    void removeFromCodeList();
@@ -117,6 +118,7 @@ public:
    
    void* getNSEntry(U32 index);
    void setNSEntry(U32 index, void* entry);
+   void flushNSEntries();
    
    bool read(StringTableEntry fileName, Stream &st, U32 readVersion);
    bool linkTypes();

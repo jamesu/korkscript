@@ -165,6 +165,11 @@ void NamespaceState::unlinkPackages()
    if(!mNumActivePackages)
       return;
    deactivatePackage(mActivePackages[0]);
+   
+   for (CodeBlock* block = mVmInternal->mCodeBlockList; block; block = block->nextFile)
+   {
+      block->flushNSEntries();
+   }
 }
 
 void NamespaceState::relinkPackages()

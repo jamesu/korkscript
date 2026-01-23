@@ -65,6 +65,7 @@ CodeBlock::CodeBlock(KorkApi::VmInternal* vm, bool _isExecBlock)
 
    isExecBlock = _isExecBlock;
    inList = false;
+   didFlushFunctions = false;
    
    refCount = 0;
    code = NULL;
@@ -369,8 +370,20 @@ void CodeBlock::setNSEntry(U32 index, void* entry)
 {
    if (functionCalls && index < numFunctionCalls)
    {
+      didFlushFunctions = false;
       functionCalls[index] = entry;
    }
+}
+
+void CodeBlock::flushNSEntries()
+{
+   if (didFlushFunctions)
+   {
+      return;
+   }
+   
+   memset(functionCalls, '\0', sizeof(void*) * numFunctionCalls);
+   didFlushFunctions = true;
 }
 
 bool CodeBlock::read(StringTableEntry fileName, Stream &st, U32 readVersion)
