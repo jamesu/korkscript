@@ -17,6 +17,7 @@
 bool gPrintBytecode = false;
 bool gEnableExtensions = false;
 bool gDumpLines = false;
+bool gPrintLexer = false;
 
 void MyLogger(U32 level, const char *consoleLine, void* userPtr)
 {
@@ -517,6 +518,14 @@ bool printAST(const char* buf, const char* filename)
    try
    {
       astGen.processTokens();
+      
+      if (gPrintLexer)
+      {
+         std::stringbuf buf;
+         astGen.emitTokens(buf);
+         printf("%s\n", buf.str().c_str());
+      }
+      
       rootNode = astGen.parseProgram();
       
       if (gPrintBytecode)
@@ -560,6 +569,10 @@ int procMain(int argc, char **argv)
       if (strcmp(argv[i], "-l") == 0)
       {
          gDumpLines = true;
+      }
+      if (strcmp(argv[i], "-x") == 0)
+      {
+         gPrintLexer = true;
       }
    }
    

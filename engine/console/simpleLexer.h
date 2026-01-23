@@ -210,7 +210,23 @@ public:
          
          "opCHAR",
          
-         "opCONCAT"
+         "opPCHAR_PLUS",      // '+'
+         "opPCHAR_MINUS",     // '-'
+         "opPCHAR_SLASH",     // '/'
+         "opPCHAR_ASTERISK",  // '*'
+         "opPCHAR_CARET",     // '^'
+         "opPCHAR_PERCENT",   // '%'
+         "opPCHAR_AMPERSAND", // '&'
+         "opPCHAR_PIPE",      // '|'
+         "opPCHAR_LESS",      // '<'
+         "opPCHAR_GREATER",   // '>'
+         "opPCHAR_EXCL",      // '!'
+         "opPCHAR_TILDE",     // '~'
+         
+         "opCONCAT",
+         
+         "STRBEG",
+         "STREND"
       };
       
       return map[(unsigned int)k];
@@ -218,7 +234,7 @@ public:
    
    std::string stringValue(const Token& t)
    {
-      if (t.kind == TokenType::TAGATOM || t.kind == TokenType::STRATOM || t.kind == TokenType::DOCBLOCK)
+      if (t.kind == TokenType::TAGATOM || t.kind == TokenType::STREND || t.kind == TokenType::STRATOM || t.kind == TokenType::DOCBLOCK)
       {
          return std::string(mSource.begin() + t.stringValue.offset, mSource.begin() + t.stringValue.offset + t.stringValue.len);
       }
@@ -241,7 +257,7 @@ public:
    {
       char buf[4096];
       
-      if (t.kind == TokenType::TAGATOM || t.kind == TokenType::STRATOM)
+      if (t.kind == TokenType::TAGATOM || t.kind == TokenType::STRATOM || t.kind == TokenType::STREND)
       {
          std::string ss(mSource.begin() + t.stringValue.offset, mSource.begin() + t.stringValue.offset + t.stringValue.len);
          snprintf(buf, sizeof(buf), "%s=\"%s\"", kindToString(t.kind), ss.c_str());
@@ -282,11 +298,16 @@ public:
       if (peek() == '"')
       {
          // blank string, so ignore
+         Token te = make(TokenType::STREND);
+         te.stringValue.offset = (U32)mBytePos;
+         te.stringValue.len = 0;
+         mSource[mBytePos] = '\0';
+         // ...
          advance();
          mInterpState.depth--;
          mInterpState.inLiteral = false;
          mInterpState.inBrace = mInterpState.depth > 0;
-         return make(TokenType::STREND);
+         return te;
       }
       
       Token tok = decodeStringInPlace(&mSource[0],
@@ -295,7 +316,8 @@ public:
                                       TokenType::STRATOM,
                                       '"',
                                       '{',
-                                      &endQuote);
+                                      &endQuote,
+                                      true);
       
       if (endQuote == '"')
       {
@@ -322,7 +344,7 @@ public:
    Token emitPendingConcat()
    {
       mInterpState.needStrConcat = false;
-      return makeConcat('@');
+      return makeConcat(0);
    }
    
    Token next()
@@ -332,14 +354,7 @@ public:
          // Interpolated strings - handle pending @
          if (havePendingConcat())
          {
-            if (peek() != '"')
-            {
-               return emitPendingConcat();
-            }
-            else
-            {
-               mInterpState.needStrConcat = false;
-            }
+            return emitPendingConcat();
          }
          
          Token t;
@@ -349,45 +364,53 @@ public:
             return make(TokenType::END);
          }
          
-         // Handle newlines / whitespace
-         if (peek() == '\r')
-         {
-            advance();
-            continue;
-         }
+         // Skip skipping spaces if in interp mode
+         bool noSkipSpaces = mInterpState.depth > 0 &&
+         mInterpState.inLiteral &&
+         mInterpState.inBrace == false;
          
-         if (peek() == '\n')
+         if (!noSkipSpaces)
          {
-            advanceNewline();
-            continue;
-         }
-         
-         if (isSpace(peek()))
-         {
-            skipSpaces();
-            continue;
-         }
-         
-         // Line docblocks: ("///" [^/] ... newline)+
-         if (matchDocblockStart())
-         {
-            return scanDocblock();
-         }
-         
-         // C++-style comment //
-         if (peek() == '/' && peek(1) == '/' && !(peek(2) == '/' && peek(3) != '/'))
-         {
-            skipLine(); continue;
-         }
-         
-         // C-style comment /* ... */
-         if (bpeek2('/', '*'))
-         {
-            if (!skipBlockComment())
+            // Handle newlines / whitespace
+            if (peek() == '\r')
             {
-               return illegal("unterminated block comment");
+               advance();
+               continue;
             }
-            continue;
+            
+            if (peek() == '\n')
+            {
+               advanceNewline();
+               continue;
+            }
+            
+            if (isSpace(peek()))
+            {
+               skipSpaces();
+               continue;
+            }
+            
+            // Line docblocks: ("///" [^/] ... newline)+
+            if (matchDocblockStart())
+            {
+               return scanDocblock();
+            }
+            
+            // C++-style comment //
+            if (peek() == '/' && peek(1) == '/' && !(peek(2) == '/' && peek(3) != '/'))
+            {
+               skipLine(); continue;
+            }
+            
+            // C-style comment /* ... */
+            if (bpeek2('/', '*'))
+            {
+               if (!skipBlockComment())
+               {
+                  return illegal("unterminated block comment");
+               }
+               continue;
+            }
          }
          
          // Handle being inside the string literal (NOT the expression)
@@ -940,7 +963,7 @@ private:
       }
    }
    
-   Token decodeStringInPlace(char* buf, S64 bufEnd, S64& idx, TokenType tokenType, const char quote, const char altQuote, char* outQuote)
+   Token decodeStringInPlace(char* buf, S64 bufEnd, S64& idx, TokenType tokenType, const char quote, const char altQuote, char* outQuote, bool dontSkipStart=false)
    {
       const S64 open = idx;
       if (open >= bufEnd || bufEnd <= 0 || idx < 0)
@@ -955,7 +978,10 @@ private:
       S64 effective_boundary = -1; // overridden by \c0 (first occurrence)
       
       // advance past the opening quote
-      ++idx;
+      if (!dontSkipStart)
+      {
+         ++idx;
+      }
       
       Token t = make(tokenType);
       
@@ -987,7 +1013,7 @@ private:
             buf[idx++] = '\0';   // zap the closing quote
             if (outQuote)
             {
-               *outQuote = quote;
+               *outQuote = c;
             }
             break;
          }
@@ -1110,7 +1136,7 @@ private:
       : base_boundary;
       
       // 2) compaction pass over [start, boundary):
-      const S64 start = open + 1;
+      const S64 start = !dontSkipStart ? (open + 1) : open;
       S64 read = start;
       S64 write = start;
       while (read < boundary)

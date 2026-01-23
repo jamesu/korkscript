@@ -2,6 +2,7 @@
 #include <vector>
 #include <stdexcept>
 #include <string>
+#include <sstream>
 #include "core/stringTable.h"
 
 namespace Compiler
@@ -66,6 +67,16 @@ public:
       }
       
       return true;
+   }
+   
+   void emitTokens(std::stringbuf& buf)
+   {
+      std::ostream os(&buf);
+      for (U32 i=0; i<mTokens.size(); i++)
+      {
+         os << "\n";
+         os << mTokenizer->toString(mTokens[i]);
+      }
    }
    
    // start : decl_list ;
@@ -1316,6 +1327,13 @@ private:
    {
       // prefix / primary
       TOK t = mTokens[mTokenPos++];
+      
+      // Skip begin string
+      if (t.kind == TT::STRBEG)
+      {
+         t = mTokens[mTokenPos++];
+      }
+      
       ExprNode* left = nud(t);
       
       // infix / postfix loop
@@ -1561,6 +1579,7 @@ private:
             // Literals
          case TT::INTCONST:   return IntNode::alloc(mResources, t.pos.line, (S32)t.ivalue);
          case TT::FLTCONST:   return FloatNode::alloc(mResources, t.pos.line, t.value);
+         case TT::STREND:
          case TT::STRATOM:    return StrConstNode::alloc(mResources, t.pos.line, mTokenizer->bufferAtOffset(t.stringValue.offset), false);
          case TT::TAGATOM:    return StrConstNode::alloc(mResources, t.pos.line, mTokenizer->bufferAtOffset(t.stringValue.offset), true);
          case TT::DOCBLOCK:   return StrConstNode::alloc(mResources, t.pos.line, mTokenizer->bufferAtOffset(t.stringValue.offset), false, true, t.stringValue.len);
