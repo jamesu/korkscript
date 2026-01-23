@@ -103,13 +103,13 @@ public:
 private:
    
    SimpleLexer::Tokenizer* mTokenizer;
-   std::vector<TOK> mTokens;
-   U64 mTokenPos;
+   Vector<TOK> mTokens;
+   U32 mTokenPos;
    Compiler::Resources* mResources;
    
    // Token helpers
    
-   const TOK& LA(size_t k=0) const
+   const TOK& LA(U32 k=0) const
    {
       static TOK eof; // default END
       return (mTokenPos+k < mTokens.size()) ? mTokens[mTokenPos+k] : eof;
@@ -132,7 +132,7 @@ private:
       return false;
    }
 
-   U32 LAChar(size_t k = 0) const
+   U32 LAChar(U32 k = 0) const
    {
       TOK laTok = LA(k);
       return (laTok.kind == TT::opCHAR) ? laTok.ivalue : 0;
