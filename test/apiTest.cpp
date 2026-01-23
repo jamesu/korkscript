@@ -1,9 +1,7 @@
 #include "platform/platform.h"
-#include "console/simpleLexer.h"
-#include "console/ast.h"
 #include "console/compiler.h"
-#include "console/simpleParser.h"
 #include "core/fileStream.h"
+#include "core/stringTable.h"
 #include <stdio.h>
 #include <unordered_map>
 #include "embed/api.h"

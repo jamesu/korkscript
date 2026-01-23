@@ -33,7 +33,11 @@ class VmInternal;
 }
 
 class Stream;
+class Namespace;
+class CodeStream;
+
 struct ConsoleFrame;
+struct ExprEvalState;
 
 
 /// Core TorqueScript code management class.

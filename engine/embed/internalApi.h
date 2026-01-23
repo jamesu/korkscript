@@ -9,6 +9,8 @@ class TelnetConsole;
 #include "console/consoleNamespace.h"
 #include "console/consoleInternal.h"
 #include "core/freeListHandleHelpers.h"
+//
+#include "console/simpleLexer.h"
 
 namespace Compiler
 {

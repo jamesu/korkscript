@@ -1,12 +1,11 @@
 #include "platform/platform.h"
-#include "console/simpleLexer.h"
+#include "embed/api.h"
+#include "embed/internalApi.h"
 #include "console/ast.h"
 #include "console/compiler.h"
 #include "console/simpleParser.h"
 #include "core/fileStream.h"
 #include <stdio.h>
-#include "embed/api.h"
-#include "embed/internalApi.h"
 
 /*
  

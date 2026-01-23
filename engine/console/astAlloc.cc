@@ -25,6 +25,7 @@
 #include "embed/internalApi.h"
 #include "console/compiler.h"
 #include "console/consoleInternal.h"
+#include "console/ast.h"
 
 using namespace Compiler;
 

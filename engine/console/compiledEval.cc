@@ -25,8 +25,6 @@
 
 #include "embed/api.h"
 #include "embed/internalApi.h"
-#include "console/simpleLexer.h"
-#include "console/ast.h"
 #include "console/consoleNamespace.h"
 
 #include "core/findMatch.h"
@@ -39,6 +37,9 @@
 #include "console/stringStack.h"
 
 #include "console/telnetDebugger.h"
+
+
+#include "console/ast.h"
 
 using namespace Compiler;
 

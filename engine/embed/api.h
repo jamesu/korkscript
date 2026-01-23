@@ -1,7 +1,6 @@
 #pragma once
 
 #include "console/compiler.h"
-#include "console/simpleLexer.h"
 #include "console/consoleValue.h"
 #include "core/bitSet.h"
 

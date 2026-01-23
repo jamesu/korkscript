@@ -1,5 +1,6 @@
 #include "platform/platform.h"
 #include "console/console.h"
+#include "core/stringTable.h"
 
 #include "core/fileStream.h"
 

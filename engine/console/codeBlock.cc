@@ -22,7 +22,6 @@
 
 #include "embed/api.h"
 #include "embed/internalApi.h"
-#include "console/simpleLexer.h"
 #include "console/ast.h"
 #include "console/consoleNamespace.h"
 

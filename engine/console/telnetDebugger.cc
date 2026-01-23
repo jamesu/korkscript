@@ -26,8 +26,6 @@
 #include "embed/internalApi.h"
 #include "console/consoleInternal.h"
 #include "console/consoleNamespace.h"
-#include "console/simpleLexer.h"
-#include "console/ast.h"
 #include "console/compiler.h"
 #include "core/tempAlloc.h"
 #include "console/telnetDebugger.h"

@@ -22,11 +22,9 @@
 
 #include "platform/platform.h"
 
-#include "console/simpleLexer.h"
-#include "console/ast.h"
-
 #include "embed/api.h"
 #include "embed/internalApi.h"
+#include "console/ast.h"
 
 #include "core/findMatch.h"
 #include "console/consoleInternal.h"
@@ -41,7 +39,6 @@ struct Token
    T value;
    S32 lineNumber;
 };
-#include "console/simpleLexer.h"
 
 
 namespace Compiler

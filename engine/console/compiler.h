@@ -34,18 +34,20 @@ class Stream;
 class DataChunker;
 
 #include "platform/platform.h"
-#include "console/simpleLexer.h"
-#include "console/ast.h"
 #include "console/codeBlock.h"
 
 #ifndef _TVECTOR_H_
 #include "core/tVector.h"
 #endif
 
+#include "core/dataChunker.h"
+
 namespace SimpleParser
 {
 class ASTGen;
 }
+
+struct StmtNode;
 
 namespace Compiler
 {
