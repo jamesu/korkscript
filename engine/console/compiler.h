@@ -196,7 +196,7 @@ namespace Compiler
 
       CompilerStringTable *currentStringTable, globalStringTable, functionStringTable;
       CompilerFloatTable  *currentFloatTable,  globalFloatTable,  functionFloatTable;
-      DataChunker<>        consoleAllocator;
+      KorkApi::VMChunker   consoleAllocator;
       CompilerIdentTable   identTable;
       CompilerIdentTable   typeTable;
 

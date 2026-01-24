@@ -6,6 +6,7 @@
 #include <type_traits>
 #include <vector>
 #include <string>
+#include "core/dataChunker.h"
 
 namespace KorkApi
 {
@@ -93,6 +94,7 @@ struct TlsVmAllocator
 using String = std::basic_string<char, std::char_traits<char>, TlsVmAllocator<char>>;
 template<class T>
 using Vector = std::vector<T, TlsVmAllocator<T>>;
+using VMChunker = DataChunker<TlsVmAllocator<char>>;
 
 }
 

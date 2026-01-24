@@ -47,7 +47,7 @@ public:
          return this+1;
       }
 
-      inline dsize_t getCapacityBytes()
+      inline size_t getCapacityBytes()
       {
          return mCapacityBytes;
       }
@@ -57,9 +57,9 @@ protected:
    using ByteAlloc   = typename std::allocator_traits<Alloc>::template rebind_alloc<std::byte>;
    using ByteTraits  = std::allocator_traits<ByteAlloc>;
 
-   dsize_t mChunkSize;
+   size_t mChunkSize;
    DataBlock* mChunkHead;
-   Alloc mAlloc;
+   ByteAlloc mAlloc;
 
 public:
    
@@ -75,10 +75,10 @@ public:
 
    const ByteAlloc& get_allocator() const noexcept { return mAlloc; }
    
-   DataBlock* allocChunk(dsize_t chunkSize)
+   DataBlock* allocChunk(size_t chunkSize)
    {
-      const dsize_t headerBytes = sizeof(DataBlock);
-      const dsize_t totalBytes  = headerBytes + chunkSize;
+      const size_t headerBytes = sizeof(DataBlock);
+      const size_t totalBytes  = headerBytes + chunkSize;
 
       std::byte* raw = ByteTraits::allocate(mAlloc, totalBytes);
 
@@ -96,12 +96,12 @@ public:
       return newChunk;
    }
 
-   void* alloc(dsize_t numBytes)
+   void* alloc(size_t numBytes)
    {
       void* theAlloc = mChunkHead ? mChunkHead->allocBytes(numBytes) : NULL;
       if (theAlloc == NULL)
       {
-         dsize_t actualSize = std::max<dsize_t>(mChunkSize, numBytes);
+         size_t actualSize = std::max<size_t>(mChunkSize, numBytes);
          allocChunk(actualSize);
          theAlloc = mChunkHead->allocBytes(numBytes);
          AssertFatal(theAlloc != NULL, "Something really odd going on here");
@@ -121,7 +121,7 @@ public:
             break;
          }
 
-         const dsize_t totalBytes = sizeof(DataBlock) + itr->getCapacityBytes();
+         const size_t totalBytes = sizeof(DataBlock) + itr->getCapacityBytes();
 
          destructInPlace(itr);
          ByteTraits::deallocate(mAlloc, reinterpret_cast<std::byte*>(itr), totalBytes);
@@ -142,9 +142,9 @@ public:
       return count;
    }
    
-   dsize_t countUsedBytes()
+   size_t countUsedBytes()
    {
-      dsize_t count = 0;
+      size_t count = 0;
       for (DataBlock* itr = mChunkHead; itr; itr = itr->mNext)
       {
          count += itr->getPositionBytes();
@@ -152,7 +152,7 @@ public:
       return count;
    }
 
-   void setChunkSize(dsize_t size)
+   void setChunkSize(size_t size)
    {
       AssertFatal(mChunkHead == NULL, "Tried setting AFTER init");
       mChunkSize = size;
@@ -165,7 +165,7 @@ class DataChunker : public BaseDataChunker<uintptr_t, Alloc>
    using Base = BaseDataChunker<uintptr_t, Alloc>;
 public:
    DataChunker(const Alloc& a = Alloc{}) : Base(BaseDataChunker<uintptr_t>::ChunkSize, a) {;}
-   explicit DataChunker(dsize_t size, const Alloc& a = Alloc{})
+   explicit DataChunker(size_t size, const Alloc& a = Alloc{})
       : Base((U32)size, a) {}
 };
 
@@ -176,8 +176,8 @@ class Chunker : private BaseDataChunker<T, Alloc>
 {
    using Base = BaseDataChunker<T, Alloc>;
 public:
-   Chunker(dsize_t size = Base::ChunkSize, const Alloc& a = Alloc{})
-      : Base((U32)std::max<dsize_t>(sizeof(T), size), a) 
+   Chunker(size_t size = Base::ChunkSize, const Alloc& a = Alloc{})
+      : Base((U32)std::max<size_t>(sizeof(T), size), a) 
    {
    }
 
@@ -235,7 +235,7 @@ protected:
    ChunkerFreeClassList<T> mFreeListHead;
 
 public:
-   ClassChunker(dsize_t size = BaseDataChunker<T>::ChunkSize, const Alloc& alloc = Alloc{}) : Base(size, alloc)
+   ClassChunker(size_t size = BaseDataChunker<T>::ChunkSize, const Alloc& alloc = Alloc{}) : Base(size, alloc)
    {
       
    }
@@ -281,7 +281,7 @@ public:
    {
    }
 
-   FreeListChunker(dsize_t size = BaseDataChunker<T>::ChunkSize)
+   FreeListChunker(size_t size = BaseDataChunker<T>::ChunkSize)
    {
       mChunker = new BaseDataChunker<T, Alloc>(size);
       mOwnsChunker = true;

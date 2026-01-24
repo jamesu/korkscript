@@ -113,8 +113,8 @@ struct NamespaceState
    KorkApi::VmInternal* mVmInternal;
    Namespace *mNamespaceList;
    Namespace *mGlobalNamespace;
-   DataChunker<> mCacheAllocator;
-   DataChunker<> mAllocator;
+   KorkApi::VMChunker mCacheAllocator;
+   KorkApi::VMChunker mAllocator;
    U32 mCacheSequence;
    U32 mNumActivePackages;
    U32 mOldNumActivePackages;
