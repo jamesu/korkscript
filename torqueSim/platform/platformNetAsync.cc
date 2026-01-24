@@ -21,6 +21,7 @@
 //-----------------------------------------------------------------------------
 
 #include "platform/platform.h"
+#include "platform/platformProcess.h"
 #include "platform/threads/mutex.h"
 #include "platform/threads/thread.h"
 #include "platform/platformNetAsync.h"
@@ -168,7 +169,7 @@ bool NetAsync::checkLookup(NetSocket socket, void* out_h_addr,
    lockNetAsyncMutex();
    bool found = false;
    // search for the socket
-   Vector<NameLookupRequest*>::iterator iter;
+   std::vector<NameLookupRequest*>::iterator iter;
    for (iter = mLookupRequests.begin(); 
         iter != mLookupRequests.end(); 
         ++iter)

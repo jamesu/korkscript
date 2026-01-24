@@ -131,7 +131,7 @@ void TelnetConsole::process()
 
          printf("Telnet connection from %s", buffer);
          
-         TelnetClient *cl = new TelnetClient;
+         TelnetClient *cl = mVMInternal->New<TelnetClient>();
          cl->socket = newConnection;
          cl->curPos = 0;
 #if defined(TORQUE_SHIPPING) && defined(TORQUE_DISABLE_TELNET_CONSOLE_PASSWORD)

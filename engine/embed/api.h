@@ -1,6 +1,7 @@
 #pragma once
 
-#include "console/compiler.h"
+#include "platform/types.h"
+#include "embed/compilerOpcodes.h"
 #include "console/consoleValue.h"
 #include "core/bitSet.h"
 
@@ -17,6 +18,9 @@ namespace Compiler
 
 namespace KorkApi
 {
+
+class Vm;
+class VmInternal;
 
 typedef const char * (*StringFuncCallback)(void *obj, void* userPtr, S32 argc, const char *argv[]);
 typedef S32             (*IntFuncCallback)(void *obj, void* userPtr, S32 argc, const char *argv[]);

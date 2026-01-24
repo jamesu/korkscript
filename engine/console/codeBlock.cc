@@ -34,6 +34,7 @@
 #include "core/fileStream.h"
 #include "core/stringTable.h"
 #include "core/unicode.h"
+#include "platform/platformProcess.h" // TOFIX: remove
 
 using namespace Compiler;
 
@@ -83,21 +84,26 @@ CodeBlock::~CodeBlock()
 
    removeFromCodeList();
 
-   delete[] const_cast<char*>(globalStrings);
-   delete[] const_cast<char*>(functionStrings);
-   delete[] globalFloats;
-   delete[] functionFloats;
-   delete[] code;
-   delete[] breakList;
+   if (mVM == NULL)
+   {
+      return;
+   }
+
+   mVM->DeleteArray(const_cast<char*>(globalStrings));
+   mVM->DeleteArray(const_cast<char*>(functionStrings));
+   mVM->DeleteArray(globalFloats);
+   mVM->DeleteArray(functionFloats);
+   mVM->DeleteArray(code);
+   mVM->DeleteArray(breakList);
    
    if (functionCalls)
-      delete[] functionCalls;
+      mVM->DeleteArray(functionCalls);
    if (identStrings)
-      delete[] identStrings;
+      mVM->DeleteArray(identStrings);
    if (identStringOffsets)
-      delete[] identStringOffsets;
+      mVM->DeleteArray(identStringOffsets);
    if (typeStringMap)
-      delete[] typeStringMap;
+      mVM->DeleteArray(typeStringMap);
 }
 
 //-------------------------------------------------------------------------
@@ -321,7 +327,7 @@ void CodeBlock::calcBreakList()
    if(seqCount)
       size++;
    
-   breakList = new U32[size];
+   breakList = mVM->NewArray<U32>(size);
    breakListSize = size;
    line = -1;
    seqCount = 0;
@@ -450,21 +456,21 @@ bool CodeBlock::read(StringTableEntry fileName, Stream &st, U32 readVersion)
    st.read(&size);
    if(size)
    {
-      globalStrings = new char[size];
+      globalStrings = mVM->NewArray<char>(size);
       globalStringsMaxLen = size;
       st.read(size, globalStrings);
    }
    st.read(&size);
    if(size)
    {
-      functionStrings = new char[size];
+      functionStrings = mVM->NewArray<char>(size);
       functionStringsMaxLen = size;
       st.read(size, functionStrings);
    }
    st.read(&size);
    if(size)
    {
-      globalFloats = new F64[size];
+      globalFloats = mVM->NewArray<F64>(size);
       numGlobalFloats = size;
       for(U32 i = 0; i < size; i++)
          st.read(&globalFloats[i]);
@@ -472,7 +478,7 @@ bool CodeBlock::read(StringTableEntry fileName, Stream &st, U32 readVersion)
    st.read(&size);
    if(size)
    {
-      functionFloats = new F64[size];
+      functionFloats = mVM->NewArray<F64>(size);
       numFunctionFloats = size;
       for(U32 i = 0; i < size; i++)
          st.read(&functionFloats[i]);
@@ -483,7 +489,7 @@ bool CodeBlock::read(StringTableEntry fileName, Stream &st, U32 readVersion)
    st.read(&lineBreakPairCount);
    
    U32 totSize = codeSize + lineBreakPairCount * 2;
-   code = new U32[totSize];
+   code = mVM->NewArray<U32>(totSize);
    
    for(i = 0; i < codeSize; i++)
    {
@@ -505,8 +511,8 @@ bool CodeBlock::read(StringTableEntry fileName, Stream &st, U32 readVersion)
    st.read(&identCount);
    numIdentStrings = identCount;
    
-   identStringOffsets = new U32[identCount];
-   identStrings = new StringTableEntry[identCount];
+   identStringOffsets = mVM->NewArray<U32>(identCount);
+   identStrings = mVM->NewArray<StringTableEntry>(identCount);
 
    i = 0;
    while(identCount--)
@@ -545,7 +551,7 @@ bool CodeBlock::read(StringTableEntry fileName, Stream &st, U32 readVersion)
       st.read(&numFunctionCalls);
       st.read(&startTypeStrings);
       st.read(&numTypeStrings);
-      typeStringMap = new S32[numTypeStrings];
+      typeStringMap = mVM->NewArray<S32>(numTypeStrings);
       for (U32 i=0; i<numTypeStrings; i++)
       {
          typeStringMap[i] = -1;
@@ -562,7 +568,7 @@ bool CodeBlock::read(StringTableEntry fileName, Stream &st, U32 readVersion)
    }
    
    // Alloc memory for func call ptrs
-   functionCalls = new void*[numFunctionCalls];
+   functionCalls = mVM->NewArray<void*>(numFunctionCalls);
    memset(functionCalls, '\0', sizeof(void*) * numFunctionCalls);
    
    if(lineBreakPairCount)
@@ -740,7 +746,7 @@ bool CodeBlock::compileToStream(Stream &st, StringTableEntry fileName, const cha
    
    if(!rootNode)
    {
-      delete this;
+      mVM->Delete(this);
       return "";
    }
    
@@ -813,7 +819,7 @@ bool CodeBlock::compileToStream(Stream &st, StringTableEntry fileName, const cha
    mainTable.append(typeTable);
    mainTable.write(st);
    
-   typeStringMap = new S32[numTypeStrings];
+   typeStringMap = mVM->NewArray<S32>(numTypeStrings);
    for (U32 i=0; i<numTypeStrings; i++)
    {
       typeStringMap[i] = -1;
@@ -889,7 +895,7 @@ bool CodeBlock::compileToStream(Stream &st, StringTableEntry fileName, const cha
    
    if(!rootNode)
    {
-      delete this;
+      mVM->Delete(this);
       return KorkApi::ConsoleValue();
    }
    
@@ -917,7 +923,7 @@ bool CodeBlock::compileToStream(Stream &st, StringTableEntry fileName, const cha
    startTypeStrings = mainTable.numIdentStrings;
    numTypeStrings = typeTable.numIdentStrings;
     
-   typeStringMap = new S32[numTypeStrings];
+   typeStringMap = mVM->NewArray<S32>(numTypeStrings);
    for (U32 i=0; i<numTypeStrings; i++)
    {
       typeStringMap[i] = -1;
@@ -960,7 +966,7 @@ void CodeBlock::decRefCount()
    refCount--;
    if(!refCount)
    {
-      delete this;
+      mVM->Delete(this);
    }
 }
 

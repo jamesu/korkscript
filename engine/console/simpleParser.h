@@ -10,6 +10,8 @@ namespace Compiler
 struct Resources;
 }
 
+// NOTE: needs Vector and String type set in SimpleParser namespace
+
 namespace SimpleParser
 {
 using TT = SimpleLexer::TokenType;
@@ -24,7 +26,7 @@ public:
    mExpected(expected) {}
    
    TokenError(const TOK& tok, TT expected, std::string_view msg)
-   : TokenError(tok, expected, std::string(msg).c_str()) {}
+   : TokenError(tok, expected, String(msg).c_str()) {}
    
    const TOK& token()    const noexcept { return mToken; }
    TT    expected() const noexcept { return mExpected; }
@@ -104,7 +106,7 @@ private:
    
    SimpleLexer::Tokenizer* mTokenizer;
    Vector<TOK> mTokens;
-   U32 mTokenPos;
+   U64 mTokenPos;
    Compiler::Resources* mResources;
    
    // Token helpers
@@ -165,7 +167,7 @@ private:
       return mTokens[mTokenPos++];
    }
    
-   void errorHere(const TOK& tok, std::string msg)
+   void errorHere(const TOK& tok, String msg)
    {
       throw TokenError(tok, TT::NONE, msg);
    }

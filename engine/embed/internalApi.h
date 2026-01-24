@@ -5,6 +5,7 @@ class CodeBlock;
 class TelnetDebugger;
 class TelnetConsole;
 
+#include "console/stlTypes.h"
 #include "console/stringStack.h"
 #include "console/consoleNamespace.h"
 #include "console/consoleInternal.h"
@@ -38,7 +39,7 @@ TypeStorageInterface CreateRegisterStorageFromArg(KorkApi::VmInternal* vmInterna
 
 void CopyTypeStorageValueToOutput(TypeStorageInterface* storage, KorkApi::ConsoleValue& v);
 
-typedef FreeListPtr<ExprEvalState, FreeListHandle::Basic32> InternalFiberList;
+typedef FreeListPtr<ExprEvalState, FreeListHandle::Basic32, Vector> InternalFiberList;
 
 struct VmInternal
 {
@@ -105,7 +106,7 @@ struct VmInternal
       if (object->refCount == 0)
       {
          AssertFatal(object->userPtr, "Userptr still present with no refs, check refs!");
-         delete object;
+         Delete(object);
       }
    }
 
@@ -169,6 +170,37 @@ struct VmInternal
    const char* valueAsString(ConsoleValue v);
 
    void assignFieldsFromTo(VMObject* from, VMObject* to);
+   
+   // memory helpers
+   
+   template<class T, class... A>
+   T* New(A&&... a)
+   {
+      void* mem = mConfig.mallocFn(sizeof(T), mConfig.allocUser);
+      return new (mem) T(std::forward<A>(a)...);
+   }
+
+   template<class T>
+   void Delete(T* p)
+   {
+      if (!p) return;
+      p->~T();
+      mConfig.freeFn(p, mConfig.allocUser);
+   }
+   
+   template<class T>
+   void DeleteArray(T* p)
+   {
+      if (!p) return;
+      mConfig.freeFn(p, mConfig.allocUser);
+   }
+
+   template<class T>
+   T* NewArray(size_t n)
+   {
+      void* mem = mConfig.mallocFn(sizeof(T) * n, mConfig.allocUser);
+      return static_cast<T*>(mem);
+   }
 };
 
 }

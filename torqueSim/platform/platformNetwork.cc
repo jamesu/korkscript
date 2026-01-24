@@ -25,15 +25,13 @@
 #include "platform/threads/mutex.h"
 //#include "platform/event.h"
 #include "core/hashFunction.h"
-#include "console/console.h"
 #include "core/fileStream.h"
-#include "core/tVector.h"
 #include "platform/platformNetAsync.h"
 //#include "platform/gameInterface.h"
 #include <string.h>
 #include <stdio.h>
-#include "core/freeListHandleHelpers.h"
 #include <algorithm>
+#include "console/console.h"
 
 // jamesu - debug DNS
 //#define TORQUE_DEBUG_LOOKUPS
@@ -277,7 +275,7 @@ public:
       }
    };
    
-   Vector<EntryType> mSocketList;
+   std::vector<EntryType> mSocketList;
    Mutex *mMutex;
    
    ReservedSocketList()
@@ -428,8 +426,8 @@ template<class T> NetSocket ReservedSocketList<T>::reserve(SOCKET reserveId, boo
       handle.lock(mMutex, true);
    }
    
-   S32 idx = mSocketList.find_next(EntryType());
-   if (idx == -1)
+   auto itr = std::find(mSocketList.begin(), mSocketList.end(), EntryType());
+   if (itr == mSocketList.end())
    {
       EntryType entry;
       entry.value = reserveId;
@@ -439,12 +437,12 @@ template<class T> NetSocket ReservedSocketList<T>::reserve(SOCKET reserveId, boo
    }
    else
    {
-      EntryType &entry = mSocketList[idx];
+      EntryType &entry = *itr;
       entry.used = true;
       entry.value = reserveId;
    }
    
-   return NetSocket::fromHandle(idx);
+   return NetSocket::fromHandle(itr - mSocketList.begin());
 }
 
 template<class T> void ReservedSocketList<T>::remove(NetSocket socketToRemove, bool doLock)
@@ -552,7 +550,7 @@ struct PolledSocket
 };
 
 // list of polled sockets
-static Vector<PolledSocket*> gPolledSockets( __FILE__, __LINE__ );
+static std::vector<PolledSocket*> gPolledSockets;
 
 static PolledSocket* addPolledSocket(NetSocket handleFd, SOCKET fd, S32 state,
                                      char* remoteAddr = NULL, S32 port = -1)

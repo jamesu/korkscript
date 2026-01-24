@@ -51,7 +51,7 @@ bool varCompare(const Dictionary::Entry* a, const Dictionary::Entry* b)
 void Dictionary::exportVariables(const char *varString, const char *fileName, bool append)
 {
    const char *searchStr = varString;
-   Vector<Entry *> sortList(__FILE__, __LINE__);
+   KorkApi::Vector<Entry *> sortList;
    
    for(S32 i = 0; i < mHashTable->size; i++)
    {
@@ -70,7 +70,7 @@ void Dictionary::exportVariables(const char *varString, const char *fileName, bo
    
    std::sort(sortList.begin(), sortList.end(), varCompare);
    
-   Vector<Entry *>::iterator s;
+   KorkApi::Vector<Entry *>::iterator s;
    char expandBuffer[1024];
    FileStream strm;
    
@@ -177,9 +177,10 @@ Dictionary::Entry *Dictionary::add(StringTableEntry name)
          }
          walk->nextEntry = mHashTable->data[i];
       }
-      delete[] mHashTable->data;
+
+      mVm->DeleteArray(mHashTable->data);
       mHashTable->size = mHashTable->size * 4 - 1;
-      mHashTable->data = new Entry *[mHashTable->size];
+      mHashTable->data = mVm->NewArray<Entry *>(mHashTable->size);
       for(i = 0; i < mHashTable->size; i++)
          mHashTable->data[i] = NULL;
       walk = head.nextEntry;
@@ -193,7 +194,7 @@ Dictionary::Entry *Dictionary::add(StringTableEntry name)
       }
    }
    
-   ret = new Entry(name);
+   ret = mVm->New<Entry>(name);
    U32 idx = HashPointer(name) % mHashTable->size;
    ret->nextEntry = mHashTable->data[idx];
    mHashTable->data[idx] = ret;
@@ -234,11 +235,11 @@ void Dictionary::setState(KorkApi::VmInternal *state, Dictionary::HashTableData*
    }
    else
    {
-      mHashTable = new HashTableData;
+      mHashTable = mVm->New<HashTableData>();
       mHashTable->owner = this;
       mHashTable->count = 0;
       mHashTable->size = ST_INIT_SIZE;
-      mHashTable->data = new Entry *[mHashTable->size];
+      mHashTable->data = mVm->NewArray<Entry*>(mHashTable->size);
       
       for(S32 i = 0; i < mHashTable->size; i++)
          mHashTable->data[i] = NULL;
@@ -574,12 +575,11 @@ void Dictionary::validate()
                "Dictionary::validate() - Dictionary not owner of own hashtable!" );
 }
 
-ExprEvalState::ExprEvalState(KorkApi::VmInternal* vm): mSTR(&vm->mAllocBase, vm->mTypes.root()), globalVars(vm, vm->mGlobalVars.mHashTable)
+ExprEvalState::ExprEvalState(KorkApi::VmInternal* vm): mSTR(&vm->mAllocBase, &vm->mTypes), globalVars(vm, vm->mGlobalVars.mHashTable)
 {
    mAllocNumber = 0;
    mGeneration = 0;
    
-   VECTOR_SET_ASSOCIATION(stack);
    vmInternal = vm;
    traceOn = false;
    traceBuffer[0] = '\0';

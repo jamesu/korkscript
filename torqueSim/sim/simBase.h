@@ -23,12 +23,14 @@
 #ifndef _SIMBASE_H_
 #define _SIMBASE_H_
 
-#ifndef _TVECTOR_H_
-#include "core/tVector.h"
-#endif
+
+#include <vector>
+
 #ifndef _BITSET_H_
 #include "core/bitSet.h"
 #endif
+
+#include "embed/api.h"
 
 #ifndef _CONSOLEOBJECT_H_
 #include "console/consoleObject.h"
@@ -97,24 +99,9 @@ typedef U32 SimTime;
 // END TMP T2D BLOCK
 typedef U32 SimObjectId;
 
-// BEGIN T2D BLOCK
-class SimObjectList : public VectorPtr<SimObject*>
-{
-   static bool compareId(const SimObject* a, const SimObject* b);
+using SimObjectList = std::vector<SimObject*>;
 
-public:
-   void pushBack(SimObject*);       ///< Add the SimObject* to the end of the list, unless it's already in the list.
-   void pushBackForce(SimObject*);  ///< Add the SimObject* to the end of the list, moving it there if it's already present in the list.
-   void pushFront(SimObject*);      ///< Add the SimObject* to the start of the list.
-   void remove(SimObject*);         ///< Remove the SimObject* from the list; may disrupt order of the list.
 
-   inline SimObject* at(S32 index) const {  if(index >= 0 && index < size()) return (*this)[index]; return NULL; }
-
-   /// Remove the SimObject* from the list; guaranteed to preserve list order.
-   void removeStable(SimObject* pObject);
-
-   void sortId();                   ///< Sort the list by object ID.
-};
 // END T2D BLOCK
 
 //---------------------------------------------------------------------------
@@ -564,7 +551,7 @@ private:
     Notify*     mNotifyList;
     /// @}
 
-    Vector<StringTableEntry> mFieldFilter;
+    std::vector<StringTableEntry> mFieldFilter;
 
 protected:
     SimObjectId mId;         ///< Id number for this object.
@@ -1354,8 +1341,6 @@ protected:
 
 public:
    SimSet() {
-      VECTOR_SET_ASSOCIATION(objectList);
-
       mMutex = Mutex::createMutex();
    }
 
@@ -1374,8 +1359,8 @@ public:
    typedef SimObjectList::iterator iterator;
    typedef SimObjectList::value_type value;
    SimObject* front() { return objectList.front(); }
-   SimObject* first() { return objectList.first(); }
-   SimObject* last()  { return objectList.last(); }
+   SimObject* first() { return objectList.front(); }
+   SimObject* last()  { return objectList.back(); }
    bool       empty() { return objectList.empty();   }
    S32        size() const  { return objectList.size(); }
    iterator   begin() { return objectList.begin(); }
@@ -1476,17 +1461,14 @@ protected:
       SimSet* set;
       SimSet::iterator itr;
    };
-   class Stack: public Vector<Entry> {
-   public:
-      void push_back(SimSet*);
-   };
-   Stack stack;
+   std::vector<Entry> stack;
+   void push_back_stack(SimSet*);
 
 public:
    SimSetIterator(SimSet*);
    SimObject* operator++();
    SimObject* operator*() {
-      return stack.empty()? 0: *stack.last().itr;
+      return stack.empty()? 0: *stack.back().itr;
    }
 };
 
@@ -1706,6 +1688,11 @@ template<class T> inline bool SimNetDataBlockRef<T>::resolve()
    
    AssertFatal((mId & 0x1) == 0, "Misaligned pointer situation");
    return found;
+}
+
+inline bool SortSimObjectList(const SimObject* a, const SimObject* b)
+{
+    return a->getId() < b->getId();
 }
 
 #endif

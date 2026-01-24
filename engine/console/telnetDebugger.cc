@@ -202,7 +202,7 @@ void TelnetDebugger::setDebugParameters(S32 port, const char *password, bool wai
    // Wait for the client to fully connect.
    while ( mState != Connected  )
    {
-      Platform::sleep(10);
+      // TOFIX Platform::sleep(10);
       process();
    }
    
@@ -406,7 +406,7 @@ void TelnetDebugger::breakProcess()
    mProgramPaused = true;
    while (mProgramPaused)
    {
-      Platform::sleep(10);
+      // TOFIX Platform::sleep(10);
       checkDebugRecv();
       if(mDebugSocket == 0)
       {
@@ -733,7 +733,7 @@ void TelnetDebugger::addBreakpoint(const char *fileName, S32 line, bool clear, S
          code->setBreakpoint(line);
       }
       
-      Breakpoint *brk = new Breakpoint;
+      Breakpoint *brk = mVMInternal->New<Breakpoint>();
       brk->code = code;
       brk->fileName = fileName;
       brk->lineNumber = line;
@@ -909,7 +909,7 @@ void TelnetDebugger::evaluateExpression(const char *tag, S32 frame, const char *
    // Build a buffer just big enough for this eval.
    const char* format = "return %s;";
    dsize_t len = dStrlen( format ) + dStrlen( evalBuffer );
-   char* buffer = new char[ len ];
+   char* buffer = mVMInternal->NewArray<char>(len);
    dSprintf( buffer, len, format, evalBuffer );
    
    // Execute the eval.
@@ -920,7 +920,7 @@ void TelnetDebugger::evaluateExpression(const char *tag, S32 frame, const char *
    // Create a new buffer that fits the result.
    format = "EVALOUT %s %s\r\n";
    len = dStrlen( format ) + dStrlen( tag ) + dStrlen( result );
-   buffer = new char[ len ];
+   buffer = mVMInternal->NewArray<char>(len);
    dSprintf( buffer, len, format, tag, result[0] ? result : "\"\"" );
    
    send( buffer );

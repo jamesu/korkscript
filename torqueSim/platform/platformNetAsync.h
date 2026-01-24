@@ -25,7 +25,7 @@
 
 #include "platform/platform.h"
 #include "platform/platformNetwork.h"
-#include "core/tVector.h"
+#include <vector>
 
 struct NameLookupRequest;
 
@@ -34,7 +34,7 @@ struct NameLookupRequest;
 class NetAsync
 {
    private:
-      Vector<NameLookupRequest*> mLookupRequests;
+      std::vector<NameLookupRequest*> mLookupRequests;
       bool mRunning;
 
    public:

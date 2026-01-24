@@ -27,7 +27,6 @@
 #include "console/ast.h"
 
 
-#include "core/findMatch.h"
 #include "console/consoleInternal.h"
 #include "core/fileStream.h"
 #include "console/compiler.h"
@@ -248,7 +247,7 @@ void CompilerStringTable::reset()
 
 char *CompilerStringTable::build()
 {
-   char *ret = new char[totalLen];
+   char *ret = KorkApi::VMem::NewArray<char>(totalLen);
    for(Entry *walk = list; walk; walk = walk->next)
       dStrcpy(ret + walk->start, walk->string);
    return ret;
@@ -284,7 +283,7 @@ void CompilerFloatTable::reset()
 }
 F64 *CompilerFloatTable::build()
 {
-   F64 *ret = new F64[count];
+   F64 *ret = KorkApi::VMem::NewArray<F64>(count);
    U32 i = 0;
    for(Entry *walk = list; walk; walk = walk->next, i++)
       ret[i] = walk->val;
@@ -419,8 +418,8 @@ void CompilerIdentTable::write(Stream &st)
 void CompilerIdentTable::build(StringTableEntry** strings,  U32** stringOffsets, U32* numStrings)
 {
    *numStrings = numIdentStrings;
-   *stringOffsets = new U32[numIdentStrings];
-   *strings = new StringTableEntry[numIdentStrings];
+   *stringOffsets = KorkApi::VMem::NewArray<U32>(numIdentStrings);
+   *strings = KorkApi::VMem::NewArray<StringTableEntry>(numIdentStrings);
    
    U32 i = 0;
    for(FullEntry* walk = list; walk; walk = walk->next)
@@ -468,8 +467,8 @@ U8 *CodeStream::allocCode(U32 sz)
       }
    }
    
-   CodeData *data = new CodeData;
-   data->data = (U8*)dMalloc(BlockSize);
+   CodeData *data = KorkApi::VMem::New<CodeData>();
+   data->data = KorkApi::VMem::NewArray<U8>(BlockSize);
    data->size = sz;
    data->next = NULL;
    
@@ -541,7 +540,7 @@ void CodeStream::emitCodeStream(U32 *size, U32 **stream, U32 **lineBreaks, U32* 
    }
    
    *lineBreaks = *stream + mCodePos;
-   dMemcpy(*lineBreaks, mBreakLines.address(), sizeof(U32) * mBreakLines.size());
+   std::copy(mBreakLines.begin(), mBreakLines.end(), *lineBreaks);
    
    // Dump func calls
    mNumFuncCalls++; // reserve 0
@@ -572,8 +571,8 @@ void CodeStream::reset()
    while (itr != NULL)
    {
       CodeData *next = itr->next;
-      dFree(itr->data);
-      delete(itr);
+      KorkApi::VMem::Delete(itr->data);
+      KorkApi::VMem::Delete(itr);
       itr = next;
    }
    

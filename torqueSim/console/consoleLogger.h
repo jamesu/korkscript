@@ -41,7 +41,7 @@ class ConsoleLogger : public SimObject
       StringTableEntry mFilename;      ///< The file name to log to.
 
       /// List of active ConsoleLoggers to send log messages to
-      static Vector<ConsoleLogger *> mActiveLoggers;
+      static std::vector<ConsoleLogger *> mActiveLoggers;
 
       /// The log function called by the consumer callback
       /// @param   consoleLine   Line of text to log

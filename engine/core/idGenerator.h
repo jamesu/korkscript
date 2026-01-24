@@ -26,16 +26,14 @@
 #ifndef _PLATFORM_H_
 #include "platform/platform.h"
 #endif
-#ifndef _TVECTOR_H_
-#include "core/tVector.h"
-#endif
+#include <vector>
 
 class IdGenerator
 {
 private:
    U32 mIdBlockBase;
    U32 mIdRangeSize;
-   Vector<U32> mPool;
+   std::vector<U32> mPool;
    U32 mNextId;
 
    void reclaim();
@@ -43,8 +41,6 @@ private:
 public:
    IdGenerator(U32 base, U32 numIds)
    {
-      VECTOR_SET_ASSOCIATION(mPool);
-
       mIdBlockBase = base;
       mIdRangeSize = numIds;
       mNextId = mIdBlockBase;
@@ -61,7 +57,7 @@ public:
       // fist check the pool:
       if(!mPool.empty())
       {
-         U32 id = mPool.last();
+         U32 id = mPool.back();
          mPool.pop_back();
          reclaim();
          return id;

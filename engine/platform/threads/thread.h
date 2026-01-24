@@ -21,7 +21,7 @@
 //-----------------------------------------------------------------------------
 
 #include "platform/types.h"
-#include "core/tVector.h"
+#include <vector>
 #include "platform/threads/mutex.h"
 
 #ifndef _PLATFORM_THREADS_THREAD_H_
@@ -101,7 +101,7 @@ class ThreadManager
       return man;
    }
 
-   Vector<Thread*> threadPool;
+   std::vector<Thread*> threadPool;
    Mutex poolLock;
    
 public:
@@ -142,7 +142,7 @@ public:
       {
          if(manager.threadPool[i]->getId() == threadID)
          {
-            manager.threadPool.erase(i);
+            manager.threadPool.erase(manager.threadPool.begin()+i);
             break;
          }
       }
@@ -158,7 +158,7 @@ public:
       Thread* ret = NULL;
       
       singleton()->poolLock.lock();
-      Vector<Thread*> &pool = singleton()->threadPool;
+      std::vector<Thread*> &pool = singleton()->threadPool;
       for( S32 i = pool.size() - 1; i >= 0; i--)
       {
          Thread* p = pool[i];

@@ -1,8 +1,11 @@
 #include "platform/platform.h"
+#include "platform/platformProcess.h"
 #include "console/console.h"
 #include "core/stringTable.h"
 
 #include "core/fileStream.h"
+
+#include <vector>
 
 // This is a temporary hack to get tools using the library to
 // link in this module which contains no other references.
@@ -619,7 +622,7 @@ ConsoleFunction(NextToken,const char *,4,4,"nextToken(str,token,delim)")
 #if TOFIX
       // set local variable if inside a function
       if (gEvalState.stack.size() && 
-         gEvalState.stack.last()->scopeName)
+         gEvalState.stack.back()->scopeName)
          Con::setLocalVariable(token,tmp);
       else
          Con::setVariable(token,tmp);
@@ -1147,7 +1150,7 @@ ConsoleFunction(getDirectoryList, const char*, 2, 3, "getDirectoryList(%path, %d
       depth = dAtoi(argv[2]);
 
    // Dump the directories.
-   Vector<StringTableEntry> directories;
+   std::vector<StringTableEntry> directories;
    Platform::dumpDirectories(path, directories, depth, true);
 
    // Grab the required buffer length.

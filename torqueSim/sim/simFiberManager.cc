@@ -1,5 +1,4 @@
 #include "sim/simBase.h"
-#include "core/tVector.h"
 #include "sim/simFiberManager.h"
 #include "console/consoleTypes.h"
 
@@ -188,7 +187,7 @@ void SimFiberManager::cleanupFibers()
       
       if (info.fiberId == 0)
       {
-         mFiberSchedules.erase(i);
+         mFiberSchedules.erase(mFiberSchedules.begin() + i);
          continue;
       }
    }

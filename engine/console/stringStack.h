@@ -79,7 +79,7 @@ struct StringStack
    U32 mFunctionOffset;
    
    KorkApi::ConsoleValue::AllocBase* mAllocBase;
-   KorkApi::TypeInfo** mTypes;
+   KorkApi::Vector<KorkApi::TypeInfo>* mTypes;
 
 
    void reset()
@@ -104,7 +104,7 @@ struct StringStack
       }
    }
 
-   StringStack(KorkApi::ConsoleValue::AllocBase* allocBase = NULL, KorkApi::TypeInfo** typeInfos = NULL)
+   StringStack(KorkApi::ConsoleValue::AllocBase* allocBase = NULL, KorkApi::Vector<KorkApi::TypeInfo>* typeInfos = NULL)
    {
       mBufferSize = 0;
       mBuffer = NULL;

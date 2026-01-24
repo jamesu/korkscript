@@ -415,7 +415,7 @@ bool ACRCompare(const AbstractClassRep* a, const AbstractClassRep* b)
 void AbstractClassRep::initialize()
 {
    AssertFatal(!initialized, "Duplicate call to AbstractClassRep::initialize()!");
-   Vector<AbstractClassRep *> dynamicTable(__FILE__, __LINE__);
+   std::vector<AbstractClassRep *> dynamicTable;
 
    AbstractClassRep *walk;
 
@@ -431,7 +431,7 @@ void AbstractClassRep::initialize()
    {
       // sg_tempFieldList is used as a staging area for field lists
       // (see addField, addGroup, etc.)
-      sg_tempFieldList.setSize(0);
+      sg_tempFieldList.resize(0);
 
       walk->init();
 
@@ -786,7 +786,7 @@ bool ConsoleObject::removeField(const char* in_pFieldname)
 {
    for (U32 i = 0; i < (U32)sg_tempFieldList.size(); i++) {
       if (dStricmp(in_pFieldname, sg_tempFieldList[i].pFieldname) == 0) {
-         sg_tempFieldList.erase(i);
+         sg_tempFieldList.erase(sg_tempFieldList.begin() + i);
          return true;
       }
    }

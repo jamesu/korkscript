@@ -56,7 +56,7 @@ public:
 		ScheduleParam param;
 	};
 
-	Vector<ScheduleInfo> mFiberSchedules;
+	std::vector<ScheduleInfo> mFiberSchedules;
 	U64 mFiberGlobalFlags;
 
 	static void initPersistFields();

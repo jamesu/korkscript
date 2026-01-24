@@ -7,6 +7,8 @@
 #include "core/stringTable.h"
 #include <cinttypes>
 
+// NOTE: needs Vector and String type set in SimpleLexer namespace
+
 namespace SimpleLexer
 {
 
@@ -161,7 +163,7 @@ struct Token
 class Tokenizer
 {
 public:
-   explicit Tokenizer(_StringTable* st, std::string_view src, std::string filename, bool enableInterpolation)
+   explicit Tokenizer(_StringTable* st, std::string_view src, String filename, bool enableInterpolation)
    : mStringTable(st), mFilename(std::move(filename))
    {
       mPos = {};
@@ -179,7 +181,7 @@ public:
       mInterpState.doInterp = enableInterpolation;
    }
    
-   inline const std::string& filename() const { return mFilename; }
+   inline const String& filename() const { return mFilename; }
    inline int line()  const { return mPos.line; }
    inline int col()   const { return mPos.col;  }
    
@@ -238,11 +240,11 @@ public:
       return map[(unsigned int)k];
    }
    
-   std::string stringValue(const Token& t)
+   String stringValue(const Token& t)
    {
       if (t.kind == TokenType::TAGATOM || t.kind == TokenType::STREND || t.kind == TokenType::STRATOM || t.kind == TokenType::DOCBLOCK)
       {
-         return std::string(mSource.begin() + t.stringValue.offset, mSource.begin() + t.stringValue.offset + t.stringValue.len);
+         return String(mSource.begin() + t.stringValue.offset, mSource.begin() + t.stringValue.offset + t.stringValue.len);
       }
       else if (t.kind == TokenType::IDENT || t.kind == TokenType::VAR)
       {
@@ -259,13 +261,13 @@ public:
       return &mSource[offset];
    }
    
-   std::string toString(const Token &t)
+   String toString(const Token &t)
    {
       char buf[4096];
       
       if (t.kind == TokenType::TAGATOM || t.kind == TokenType::STRATOM || t.kind == TokenType::STREND)
       {
-         std::string ss(mSource.begin() + t.stringValue.offset, mSource.begin() + t.stringValue.offset + t.stringValue.len);
+         String ss(mSource.begin() + t.stringValue.offset, mSource.begin() + t.stringValue.offset + t.stringValue.len);
          snprintf(buf, sizeof(buf), "%s=\"%s\"", kindToString(t.kind), ss.c_str());
       }
       else if (t.kind == TokenType::IDENT || t.kind == TokenType::VAR)
@@ -274,7 +276,7 @@ public:
       }
       else if (t.kind == TokenType::DOCBLOCK)
       {
-         std::string ss(mSource.begin() + t.stringValue.offset, mSource.begin() + t.stringValue.offset + t.stringValue.len);
+         String ss(mSource.begin() + t.stringValue.offset, mSource.begin() + t.stringValue.offset + t.stringValue.len);
          snprintf(buf, sizeof(buf), "%s=///%s", kindToString(t.kind), ss.c_str());
       }
       else if (t.kind == TokenType::INTCONST)
@@ -294,7 +296,7 @@ public:
          snprintf(buf, sizeof(buf), "%s", kindToString(t.kind));
       }
       
-      return std::string(buf);
+      return String(buf);
    }
    
    Token scanInterpLiteralSegment()
@@ -530,8 +532,8 @@ public:
          }
          
          // Single-char tokens
-         static const std::string singles = "?[]()+-*/<>|.!:;{},&%^~=.";
-         if (singles.find(peek()) != std::string::npos)
+         static const String singles = "?[]()+-*/<>|.!:;{},&%^~=.";
+         if (singles.find(peek()) != String::npos)
          {
             char ch = (char)peek();
             Token t = makeChar(ch);
@@ -547,8 +549,8 @@ public:
    
 private:
    Vector<char> mSource;
-   std::string mFilename;
-   U32 mBytePos;
+   String mFilename;
+   S64 mBytePos;
    SrcPos mPos;
    InterpolationState mInterpState;
    
@@ -907,14 +909,14 @@ private:
          }
       }
       
-      std::string s = std::string(mSource.begin() + start,
-                                  mSource.begin() + start + (mBytePos - start));
+      String s = String(mSource.begin() + start,
+                        mSource.begin() + start + (mBytePos - start));
       
       if (sawDot || sawExp)
       {
          // float
          Token t = make(TokenType::FLTCONST);
-         t.value = std::stod(s);
+         t.value = std::stod(s.c_str());
          
 #ifndef PRECISE_NUMBERS
          F32 f = static_cast<F32>(t.value);
@@ -926,7 +928,7 @@ private:
       {
          // integer
          Token t = make(TokenType::INTCONST);
-         t.ivalue = std::stoll(s);
+         t.ivalue = std::stoll(s.c_str());
          return t;
       }
    }
@@ -941,11 +943,11 @@ private:
          advance();
       }
       
-      std::string s = std::string(mSource.begin() + start,
+      String s = String(mSource.begin() + start,
                                   mSource.begin() + start + (mBytePos - start));
       
       // std::stoi handles 0x prefix with base 16 if specified, but since we consumed, parse manually
-      int val = std::stoi(s, nullptr, 16);
+      int val = std::stoi(s.c_str(), nullptr, 16);
       Token t = make(TokenType::INTCONST);
       t.ivalue = val;
       return t;

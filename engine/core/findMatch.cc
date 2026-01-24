@@ -21,6 +21,8 @@
 //-----------------------------------------------------------------------------
 
 #include "platform/platform.h"
+#include "embed/api.h"
+#include "embed/internalApi.h"
 #include "core/findMatch.h"
 
 //--------------------------------------------------------------------------------
@@ -43,8 +45,6 @@
 
 FindMatch::FindMatch( U32 _maxMatches )
 {
-   VECTOR_SET_ASSOCIATION(matchList);
-   
    expression = NULL;
    maxMatches = _maxMatches;
    matchList.reserve( maxMatches );
@@ -52,8 +52,6 @@ FindMatch::FindMatch( U32 _maxMatches )
 
 FindMatch::FindMatch( const char *_expression, U32 _maxMatches )
 {
-   VECTOR_SET_ASSOCIATION(matchList);
-   
    expression = NULL;
    setExpression( _expression );
    maxMatches = _maxMatches;
@@ -160,3 +158,4 @@ bool FindMatch::isMatchMultipleExprs( const char *exps, const char *str, bool ca
    delete []e;
    return false;
 }
+

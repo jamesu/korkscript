@@ -240,7 +240,7 @@ public:
 
 ConsoleFrame& ExprEvalState::getCurrentFrame()
 {
-   return *vmFrames.last();
+   return *vmFrames.back();
 }
 
 
@@ -577,7 +577,7 @@ ConsoleFrame& CodeBlock::setupExecFrame(
 
       // Push a new frame for the function call and get a ref to it.
       eval.pushFrame(fnName, thisNamespace, packageName, this, ip);
-      newFrame = eval.vmFrames.last();
+      newFrame = eval.vmFrames.back();
       newFrame->thisFunctionName = fnName;
       newFrame->inFunctionCall = true;
 
@@ -611,7 +611,7 @@ ConsoleFrame& CodeBlock::setupExecFrame(
          eval.pushFrameRef(stackIndex, this, ip);
       }
       
-      newFrame = eval.vmFrames.last();
+      newFrame = eval.vmFrames.back();
       newFrame->curFloatTable     = globalFloats;
       newFrame->curStringTable    = globalStrings;
    }
@@ -742,7 +742,7 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
    
    AssertFatal(!vmFrames.empty(), "no frames");
    
-   ConsoleFrame& frame = *vmFrames.last();
+   ConsoleFrame& frame = *vmFrames.back();
    ExprEvalState& evalState = *this;
    U32 ip = frame.ip;
    U32* code = frame.codeBlock->code;
@@ -944,7 +944,7 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
 
                if (klassInfo)
                {
-                  object = new KorkApi::VMObject();
+                  object = vmInternal->New<KorkApi::VMObject>();
                   object->klass = klassInfo;
                   object->ns = NULL;
 
@@ -1714,8 +1714,8 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
             //if this is called from inside a function, append the ip and codeptr
             if (!evalState.vmFrames.empty())
             {
-               evalState.vmFrames.last()->codeBlock = frame.codeBlock;
-               evalState.vmFrames.last()->ip = ip - 1;
+               evalState.vmFrames.back()->codeBlock = frame.codeBlock;
+               evalState.vmFrames.back()->ip = ip - 1;
             }
             
             frame.lastCallType = code[ip+4] & 0xFFFF;
@@ -2009,8 +2009,8 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
          {
             //append the ip and codeptr before managing the breakpoint!
             AssertFatal( !evalState.vmFrames.empty(), "Empty eval stack on break!");
-            evalState.vmFrames.last()->codeBlock = frame.codeBlock;
-            evalState.vmFrames.last()->ip = ip - 1;
+            evalState.vmFrames.back()->codeBlock = frame.codeBlock;
+            evalState.vmFrames.back()->ip = ip - 1;
             
             U32 breakLine;
             frame.codeBlock->findBreakLine(ip-1, breakLine, instruction);
@@ -2277,15 +2277,15 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
             break;
          
          case OP_TYPED_OP:
-            evalState.mSTR.performOp(code[ip++], vmPublic, vmInternal->mTypes.address());
+            evalState.mSTR.performOp(code[ip++], vmPublic, &vmInternal->mTypes[0]);
             break;
             
          case OP_TYPED_OP_REVERSE:
-            evalState.mSTR.performOpReverse(code[ip++], vmPublic, vmInternal->mTypes.address());
+            evalState.mSTR.performOpReverse(code[ip++], vmPublic, &vmInternal->mTypes[0]);
             break;
             
          case OP_TYPED_UNARY_OP:
-            evalState.mSTR.performUnaryOp(code[ip++], vmPublic, vmInternal->mTypes.address());
+            evalState.mSTR.performUnaryOp(code[ip++], vmPublic, &vmInternal->mTypes[0]);
             break;
             
          case OP_LOADFIELD_VAR:
@@ -2607,7 +2607,7 @@ execCheck:
    {
       while ((S32)vmFrames.size() > getMinStackSize())
       {
-         ConsoleFrame* prevFrame = vmFrames.last();
+         ConsoleFrame* prevFrame = vmFrames.back();
          popFrame();
       }
    }
@@ -2617,28 +2617,28 @@ execCheck:
 
 void ExprEvalState::setLocalFrameVariable(StringTableEntry name, KorkApi::ConsoleValue value)
 {
-   vmFrames.last()->dictionary.setVariableValue(name, value);
+   vmFrames.back()->dictionary.setVariableValue(name, value);
 }
 
 KorkApi::ConsoleValue ExprEvalState::getLocalFrameVariable(StringTableEntry name)
 {
-   Dictionary::Entry* e = vmFrames.empty() ? NULL : vmFrames.last()->dictionary.getVariable(name);
+   Dictionary::Entry* e = vmFrames.empty() ? NULL : vmFrames.back()->dictionary.getVariable(name);
    
    if (!e)
    {
       return KorkApi::ConsoleValue();
    }
    
-   return vmFrames.last()->dictionary.getEntryValue(e);
+   return vmFrames.back()->dictionary.getEntryValue(e);
 }
 
 
 void ExprEvalState::pushFrame(StringTableEntry frameName, Namespace *ns, StringTableEntry packageName, CodeBlock* block, U32 ip)
 {
-   ConsoleFrame *newFrame = new ConsoleFrame(vmInternal, this);
+   ConsoleFrame *newFrame = vmInternal->New<ConsoleFrame>(vmInternal, this);
    if (vmFrames.size() > 0)
    {
-      newFrame->copyFrom(vmFrames.last(), false);
+      newFrame->copyFrom(vmFrames.back(), false);
    }
    
    newFrame->scopeName = frameName;
@@ -2669,7 +2669,7 @@ bool ExprEvalState::clearStringStack(ConsoleFrame& frame, bool clearValue)
 
 void ExprEvalState::popFrame()
 {
-   ConsoleFrame *last = vmFrames.last();
+   ConsoleFrame *last = vmFrames.back();
    vmFrames.pop_back();
    
    // Make sure string stack is in correct state
@@ -2726,7 +2726,7 @@ void ExprEvalState::popFrame()
    
    if (vmFrames.size() > 0)
    {
-      ConsoleFrame* prevFrame = vmFrames.last();
+      ConsoleFrame* prevFrame = vmFrames.back();
       AssertFatal(prevFrame->_FLT == last->_FLT && prevFrame->_UINT == last->_UINT && prevFrame->_ITER == last->_ITER, "Stack mismatch");
    }
    
@@ -2740,7 +2740,7 @@ bool ExprEvalState::handleThrow(S32 throwIdx, TryItem* info, S32 minStackPos)
       return false;
    }
    
-   ConsoleFrame* curFrame = vmFrames.last();
+   ConsoleFrame* curFrame = vmFrames.back();
    S32 minFrame = std::max<S32>(minStackPos, info ? info->frameDepth : -1);
    
    // Exit native function state so we dont get weird errors in loop
@@ -2774,7 +2774,7 @@ bool ExprEvalState::handleThrow(S32 throwIdx, TryItem* info, S32 minStackPos)
        info &&
        info->frameDepth == vmFrames.size()-1)
    {
-      curFrame = vmFrames.last();
+      curFrame = vmFrames.back();
       curFrame->_TRY = throwIdx > 0 ? throwIdx-1 : 0; // pop try
       curFrame->ip = info->ip;
    }
@@ -2800,7 +2800,7 @@ void ExprEvalState::throwMask(U32 mask)
 void ExprEvalState::pushFrameRef(S32 stackIndex, CodeBlock* codeBlock, U32 ip)
 {
    AssertFatal( stackIndex >= 0 && stackIndex < stack.size(), "You must be asking for a valid frame!" );
-   ConsoleFrame *newFrame = new ConsoleFrame(vmInternal, this, vmFrames[stackIndex]->dictionary.mHashTable);
+   ConsoleFrame *newFrame = vmInternal->New<ConsoleFrame>(vmInternal, this, vmFrames[stackIndex]->dictionary.mHashTable);
    vmFrames.push_back(newFrame);
    
    ConsoleFrame* oldFrame = vmFrames[stackIndex];
@@ -3387,7 +3387,7 @@ ConsoleFrame* ConsoleSerializer::loadFrame(ExprEvalState* state)
       return NULL;
    }
 
-   ConsoleFrame* frame = new ConsoleFrame(mTarget, state, dict);
+   ConsoleFrame* frame = state->vmInternal->New<ConsoleFrame>(mTarget, state, dict);
    
    if (ownsDict)
    {
@@ -3615,7 +3615,7 @@ void ConsoleSerializer::reset(bool ownObjects)
    mFiberRemap.clear();
 }
 
-bool ConsoleSerializer::read(Vector<ExprEvalState*> &fibers)
+bool ConsoleSerializer::read(KorkApi::Vector<ExprEvalState*> &fibers)
 {
    IFFBlock block;
    if (!mStream->read(sizeof(IFFBlock), &block))
@@ -3664,7 +3664,7 @@ bool ConsoleSerializer::read(Vector<ExprEvalState*> &fibers)
    return true;
 }
 
-bool ConsoleSerializer::write(Vector<ExprEvalState*> &fibers)
+bool ConsoleSerializer::write(KorkApi::Vector<ExprEvalState*> &fibers)
 {
    // This is:
    // CSOB
@@ -3858,7 +3858,7 @@ bool ConsoleSerializer::loadRelatedObjects()
             }
             
             StringTableEntry steFilename = mStream->readSTString();
-            CodeBlock* block = new CodeBlock(mTarget, true);
+            CodeBlock* block = mTarget->New<CodeBlock>(mTarget, true);
             if (!block->read(steFilename[0] == '\0' ? NULL : steFilename, *mStream, 0))
             {
                delete block;
@@ -4000,7 +4000,7 @@ bool KorkApi::VmInternal::getCurrentFiberFileLine(StringTableEntry* outFile, U32
       return false;
    }
    
-   ConsoleFrame* frame = mCurrentFiberState->vmFrames.last();
+   ConsoleFrame* frame = mCurrentFiberState->vmFrames.back();
    CodeBlock* block = frame->codeBlock;
    
    U32 line = 0;

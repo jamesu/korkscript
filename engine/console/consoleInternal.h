@@ -26,9 +26,6 @@
 #ifndef _STRINGTABLE_H_
 #include "core/stringTable.h"
 #endif
-#ifndef _TVECTOR_H_
-#include "core/tVector.h"
-#endif
 #ifndef _DATACHUNKER_H_
 #include "core/dataChunker.h"
 #endif
@@ -354,7 +351,7 @@ public:
 
    /// The stack of callframes.  The extra redirection is necessary since Dictionary holds
    /// an interior pointer that will become invalid when the object changes address.
-   Vector< ConsoleFrame* > vmFrames;
+   KorkApi::Vector< ConsoleFrame* > vmFrames;
    
    KorkApi::FiberRunResult::State mState;
    KorkApi::ConsoleValue mLastFiberValue; ///< Value yielded from function or returned to fiber
@@ -462,10 +459,10 @@ struct ConsoleSerializer
    KorkApi::VmInternal* mTarget;
    Stream* mStream;
    void* mUserPtr;
-   Vector<CodeBlock*> mCodeBlocks;
-   Vector<Dictionary::HashTableData*> mDictionaryTables;
-   Vector<ExprEvalState*> mFibers;
-   Vector<Remap> mFiberRemap;
+   KorkApi::Vector<CodeBlock*> mCodeBlocks;
+   KorkApi::Vector<Dictionary::HashTableData*> mDictionaryTables;
+   KorkApi::Vector<ExprEvalState*> mFibers;
+   KorkApi::Vector<Remap> mFiberRemap;
    bool mAllowId;
 
    ConsoleSerializer(KorkApi::VmInternal* target, void* userPtr, bool allowId, Stream* s);
@@ -521,8 +518,8 @@ struct ConsoleSerializer
    Dictionary::HashTableData* loadHashTable();
    bool writeHashTable(const Dictionary::HashTableData* ht);
    
-   bool read(Vector<ExprEvalState*> &fibers);
-   bool write(Vector<ExprEvalState*> &fibers);
+   bool read(KorkApi::Vector<ExprEvalState*> &fibers);
+   bool write(KorkApi::Vector<ExprEvalState*> &fibers);
 };
 
 struct ConsoleVarRef

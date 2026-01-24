@@ -7,6 +7,9 @@
 #include "console/telnetDebugger.h"
 #include "console/telnetConsole.h"
 
+#include "console/compiler.h"
+#include "console/codeBlock.h"
+
 #include <cinttypes>
 
 namespace KorkApi
@@ -15,6 +18,7 @@ namespace KorkApi
 
 NamespaceId Vm::findNamespace(StringTableEntry name, StringTableEntry package)
 {
+   VmAllocTLS::Scope memScope(mInternal);
    return (NamespaceId)mInternal->mNSState.find(name, package);
 }
 
@@ -36,11 +40,13 @@ NamespaceId Vm::getGlobalNamespace()
 
 void Vm::activatePackage(StringTableEntry pkgName)
 {
+   VmAllocTLS::Scope memScope(mInternal);
    mInternal->mNSState.activatePackage(pkgName);
 }
 
 void Vm::deactivatePackage(StringTableEntry pkgName)
 {
+   VmAllocTLS::Scope memScope(mInternal);
    mInternal->mNSState.deactivatePackage(pkgName);
 }
 
@@ -82,20 +88,23 @@ bool Vm::unlinkNamespaceById(NamespaceId parent, NamespaceId child)
 
 const char* Vm::tabCompleteNamespace(NamespaceId nsId, const char *prevText, S32 baseLen, bool fForward)
 {
+   VmAllocTLS::Scope memScope(mInternal);
    Namespace* ns = (Namespace*)nsId;
    return ns->tabComplete(prevText, baseLen, fForward);
 }
 
 const char* Vm::tabCompleteVariable(const char *prevText, S32 baseLen, bool fForward)
 {
+   VmAllocTLS::Scope memScope(mInternal);
    return mInternal->mGlobalVars.tabComplete(prevText, baseLen, fForward);
 }
 
 TypeId Vm::registerType(TypeInfo& info)
 {
+   VmAllocTLS::Scope memScope(mInternal);
    mInternal->mTypes.push_back(info);
    
-   TypeInfo& chkFunc = mInternal->mTypes.last();
+   TypeInfo& chkFunc = mInternal->mTypes.back();
    
    // stubs
    
@@ -129,6 +138,7 @@ TypeInfo* Vm::getTypeInfo(TypeId ident)
 
 bool Vm::castValue(TypeId inputType, TypeStorageInterface* inputStorage, TypeStorageInterface* outputStorage, const EnumTable* et, BitSet32 flags)
 {
+   VmAllocTLS::Scope memScope(mInternal);
    CastValueFnType castFn = mInternal->mTypes[inputType].iFuncs.CastValueFn;
    return castFn(
       mInternal->mTypes[inputType].userPtr,
@@ -143,6 +153,7 @@ bool Vm::castValue(TypeId inputType, TypeStorageInterface* inputStorage, TypeSto
 
 ConsoleValue Vm::castToReturn(U32 argc, KorkApi::ConsoleValue* argv, U32 inputTypeId, U32 outputTypeId)
 {
+   VmAllocTLS::Scope memScope(mInternal);
    KorkApi::TypeStorageInterface inputStorage = KorkApi::CreateRegisterStorageFromArgs(mInternal, argc, argv);
 
    KorkApi::TypeStorageInterface outputStorage = KorkApi::CreateExprEvalReturnTypeStorage(mInternal,
@@ -170,9 +181,10 @@ ConsoleValue Vm::castToReturn(U32 argc, KorkApi::ConsoleValue* argv, U32 inputTy
 
 ClassId Vm::registerClass(ClassInfo& info)
 {
+   VmAllocTLS::Scope memScope(mInternal);
    mInternal->mClassList.push_back(info);
    
-   ClassInfo& chkFunc = mInternal->mClassList.last();
+   ClassInfo& chkFunc = mInternal->mClassList.back();
    
    // iCreate stubs
    
@@ -277,11 +289,13 @@ ClassId Vm::getClassId(const char* name)
 
 ConsoleHeapAllocRef Vm::createHeapRef(U32 size)
 {
+   VmAllocTLS::Scope memScope(mInternal);
    return mInternal->createHeapRef(size);
 }
 
 void Vm::releaseHeapRef(ConsoleHeapAllocRef value)
 {
+   VmAllocTLS::Scope memScope(mInternal);
    mInternal->releaseHeapRef(value);
 }
 
@@ -330,36 +344,42 @@ void VmInternal::releaseHeapRef(ConsoleHeapAllocRef value)
    {
       mHeapAllocs = next;
    }
-   mConfig.freeFn(ref, mConfig.allocUser);
+   Delete(ref);
 }
 
 ConsoleValue Vm::getStringFuncBuffer(U32 size)
 {
+   VmAllocTLS::Scope memScope(mInternal);
     return mInternal->getStringFuncBuffer(0, size);
 }
 
 ConsoleValue Vm::getStringReturnBuffer(U32 size)
 {
+   VmAllocTLS::Scope memScope(mInternal);
     return mInternal->getStringReturnBuffer(size);
 }
 
 ConsoleValue Vm::getTypeReturn(TypeId typeId, U32 heapSize)
 {
+   VmAllocTLS::Scope memScope(mInternal);
     return mInternal->getTypeReturn(typeId, heapSize);
 }
 
 ConsoleValue Vm::getTypeFunc(TypeId typeId, U32 heapSize)
 {
+   VmAllocTLS::Scope memScope(mInternal);
     return mInternal->getTypeFunc(0, typeId, heapSize);
 }
 
 ConsoleValue Vm::getStringInZone(U16 zone, U32 size)
 {
+   VmAllocTLS::Scope memScope(mInternal);
    return mInternal->getStringInZone(zone, size);
 }
 
 ConsoleValue Vm::getTypeInZone(U16 zone, TypeId typeId, U32 heapSize)
 {
+   VmAllocTLS::Scope memScope(mInternal);
    return mInternal->getTypeInZone(zone, typeId, heapSize);
 }
 
@@ -402,8 +422,8 @@ void VmInternal::validateReturnBufferSize(U32 size)
 {
    if (mReturnBuffer.size() < size)
    {
-      mReturnBuffer.setSize(size + 2048);
-      mAllocBase.arg = mReturnBuffer.address();
+      mReturnBuffer.resize(size + 2048);
+      mAllocBase.arg = &mReturnBuffer[0];
    }
 }
 
@@ -439,11 +459,13 @@ ConsoleValue VmInternal::getTypeReturn(TypeId typeId, U32 heapSize)
 
 void Vm::pushValueFrame()
 {
+   VmAllocTLS::Scope memScope(mInternal);
    return mInternal->mCurrentFiberState->mSTR.pushFrame();
 }
 
 void Vm::popValueFrame()
 {
+   VmAllocTLS::Scope memScope(mInternal);
    return mInternal->mCurrentFiberState->mSTR.popFrame();
 }
 
@@ -451,7 +473,7 @@ void Vm::popValueFrame()
 VMObject* Vm::constructObject(ClassId klassId, const char* name, int argc, const char** argv)
 {
    ClassInfo* ci = &mInternal->mClassList[klassId];
-   VMObject* object = new VMObject();
+   VMObject* object = mInternal->New<VMObject>();
    mInternal->incVMRef(object);
 
    CreateClassReturn ret = {};
@@ -490,79 +512,90 @@ void Vm::setObjectNamespace(VMObject* object, NamespaceId nsId)
 // Internal
 VMObject* Vm::createVMObject(ClassId klassId, void* klassPtr)
 {
-   VMObject* object = new VMObject();
+   VmAllocTLS::Scope memScope(mInternal);
+   VMObject* object = mInternal->New<VMObject>();
    mInternal->incVMRef(object);
    object->klass = &mInternal->mClassList[klassId];
    object->ns = NULL;
    object->userPtr = klassPtr;
-    return object;
+   return object;
 }
 
 void Vm::incVMRef(VMObject* object)
 {
+   VmAllocTLS::Scope memScope(mInternal);
    mInternal->incVMRef(object);
 }
 
 void Vm::decVMRef(VMObject* object)
 {
+   VmAllocTLS::Scope memScope(mInternal);
    mInternal->decVMRef(object);
 }
 
 void Vm::addNamespaceFunction(NamespaceId nsId, StringTableEntry name, StringFuncCallback cb, void* userPtr, const char* usage, S32 minArgs, S32 maxArgs)
 {
+   VmAllocTLS::Scope memScope(mInternal);
    Namespace* ns = (Namespace*)nsId;
    ns->addCommand(name, cb, userPtr, usage, minArgs, maxArgs);
 }
 
 void Vm::addNamespaceFunction(NamespaceId nsId, StringTableEntry name, IntFuncCallback cb, void* userPtr, const char* usage, S32 minArgs, S32 maxArgs)
 {
+   VmAllocTLS::Scope memScope(mInternal);
    Namespace* ns = (Namespace*)nsId;
    ns->addCommand(name, cb, userPtr, usage, minArgs, maxArgs);
 }
 
 void Vm::addNamespaceFunction(NamespaceId nsId, StringTableEntry name, FloatFuncCallback cb, void* userPtr, const char* usage, S32 minArgs, S32 maxArgs)
 {
+   VmAllocTLS::Scope memScope(mInternal);
    Namespace* ns = (Namespace*)nsId;
    ns->addCommand(name, cb, userPtr, usage, minArgs, maxArgs);
 }
 
 void Vm::addNamespaceFunction(NamespaceId nsId, StringTableEntry name, VoidFuncCallback cb, void* userPtr, const char* usage, S32 minArgs, S32 maxArgs)
 {
+   VmAllocTLS::Scope memScope(mInternal);
    Namespace* ns = (Namespace*)nsId;
    ns->addCommand(name, cb, userPtr, usage, minArgs, maxArgs);
 }
 
 void Vm::addNamespaceFunction(NamespaceId nsId, StringTableEntry name, BoolFuncCallback cb, void* userPtr, const char* usage, S32 minArgs, S32 maxArgs)
 {
+   VmAllocTLS::Scope memScope(mInternal);
    Namespace* ns = (Namespace*)nsId;
    ns->addCommand(name, cb, userPtr, usage, minArgs, maxArgs);
 }
 
 void Vm::addNamespaceFunction(NamespaceId nsId, StringTableEntry name, ValueFuncCallback cb, void* userPtr, const char* usage, S32 minArgs, S32 maxArgs)
 {
+   VmAllocTLS::Scope memScope(mInternal);
    Namespace* ns = (Namespace*)nsId;
    ns->addCommand(name, cb, userPtr, usage, minArgs, maxArgs);
 }
 
 bool Vm::isNamespaceFunction(NamespaceId nsId, StringTableEntry name)
 {
+   VmAllocTLS::Scope memScope(mInternal);
    Namespace* ns = (Namespace*)nsId;
    return ns->lookup(name) != NULL;
 }
 
 bool Vm::compileCodeBlock(const char* code, const char* filename, U32* outCodeSize, U8** outCode)
 {
-   CodeBlock* block = new CodeBlock(mInternal, false);
+   VmAllocTLS::Scope memScope(mInternal);
+   CodeBlock* block = mInternal->New<CodeBlock>(mInternal, false);
    
-   U8* buffer = (U8*)dMalloc(1024 * 1024);
+   U8* buffer = (U8*)mInternal->NewArray<U8>(1024 * 1024);
    *outCode = NULL;
    *outCodeSize = 0;
    MemStream outS(1024*1024, buffer, true, true);
    
    if (!block->compileToStream(outS, filename, code))
    {
-      delete block;
-      delete[] code;
+      mInternal->Delete(block);
+      mInternal->Delete(buffer); // []
       return -1;
    }
    
@@ -573,13 +606,14 @@ bool Vm::compileCodeBlock(const char* code, const char* filename, U32* outCodeSi
 
 ConsoleValue Vm::execCodeBlock(U32 codeSize, U8* code, const char* filename, bool noCalls, int setFrame)
 {
-   CodeBlock* block = new CodeBlock(mInternal, (filename == NULL || *filename == '\0') ? true : false);
+   VmAllocTLS::Scope memScope(mInternal);
+   CodeBlock* block = mInternal->New<CodeBlock>(mInternal, (filename == NULL || *filename == '\0') ? true : false);
    
    MemStream stream(codeSize, code, true, false);
    
    if (!block->read(filename, stream, 0))
    {
-      delete block;
+      mInternal->Delete(block);
       return ConsoleValue();
    }
    
@@ -588,8 +622,9 @@ ConsoleValue Vm::execCodeBlock(U32 codeSize, U8* code, const char* filename, boo
 
 ConsoleValue Vm::evalCode(const char* code, const char* filename, S32 setFrame)
 {
-    CodeBlock *newCodeBlock = new CodeBlock(mInternal, (filename == NULL || *filename == '\0') ? true : false);
-    return newCodeBlock->compileExec(filename, code, false, true, (!filename || setFrame < 0) ? -1 : setFrame);
+   VmAllocTLS::Scope memScope(mInternal);
+   CodeBlock *newCodeBlock = mInternal->New<CodeBlock>(mInternal, (filename == NULL || *filename == '\0') ? true : false);
+   return newCodeBlock->compileExec(filename, code, false, true, (!filename || setFrame < 0) ? -1 : setFrame);
 }
 
 ConsoleValue Vm::call(int argc, ConsoleValue* argv, bool startSuspended)
@@ -608,6 +643,7 @@ ConsoleValue Vm::callObject(VMObject* h, int argc, ConsoleValue* argv, bool star
 
 bool Vm::callObjectFunction(VMObject* self, StringTableEntry funcName, int argc, KorkApi::ConsoleValue* argv, ConsoleValue& retValue, bool startSuspended)
 {
+   VmAllocTLS::Scope memScope(mInternal);
    char idBuf[16];
    if (argc < 2)
    {
@@ -670,6 +706,7 @@ bool Vm::callObjectFunction(VMObject* self, StringTableEntry funcName, int argc,
 
 bool Vm::callNamespaceFunction(NamespaceId nsId, StringTableEntry name, int argc, KorkApi::ConsoleValue* argv, ConsoleValue& retValue, bool startSuspended)
 {
+   VmAllocTLS::Scope memScope(mInternal);
    Namespace* ns = (Namespace*)nsId;
    Namespace::Entry* ent = ns->lookup(name);
 
@@ -708,39 +745,45 @@ VMObject* Vm::findObjectById(SimObjectId ident)
 
 bool Vm::setObjectField(VMObject* object, StringTableEntry fieldName, ConsoleValue nativeValue, const char* arrayIndex)
 {
+   VmAllocTLS::Scope memScope(mInternal);
    return mInternal->setObjectField(object, fieldName, arrayIndex, nativeValue);
 }
 
 bool Vm::setObjectFieldTuple(VMObject* object, StringTableEntry fieldName, U32 argc, ConsoleValue* argv, const char* arrayIndex)
 {
+   VmAllocTLS::Scope memScope(mInternal);
    return mInternal->setObjectFieldTuple(object, fieldName, arrayIndex, argc, argv);
 }
 
 bool Vm::setObjectFieldString(VMObject* object, StringTableEntry fieldName, const char* stringValue, const char* arrayIndex)
 {
+   VmAllocTLS::Scope memScope(mInternal);
    ConsoleValue val = ConsoleValue::makeString(stringValue);
    return mInternal->setObjectField(object, fieldName, arrayIndex, val);
 }
 
 ConsoleValue Vm::getObjectField(VMObject* object, StringTableEntry fieldName, ConsoleValue nativeValue, const char* arrayIndex)
 {
-    return mInternal->getObjectField(object, fieldName, arrayIndex, KorkApi::TypeDirectCopy, KorkApi::ConsoleValue::ZoneExternal);
+   VmAllocTLS::Scope memScope(mInternal);
+   return mInternal->getObjectField(object, fieldName, arrayIndex, KorkApi::TypeDirectCopy, KorkApi::ConsoleValue::ZoneExternal);
 }
 
 const char* Vm::getObjectFieldString(VMObject* object, StringTableEntry fieldName, const char** stringValue, const char* arrayIndex)
 {
+   VmAllocTLS::Scope memScope(mInternal);
    ConsoleValue foundValue = mInternal->getObjectField(object, fieldName, arrayIndex, KorkApi::TypeDirectCopy, KorkApi::ConsoleValue::ZoneFunc);
-   
    return (const char*)foundValue.evaluatePtr(mInternal->mAllocBase);
 }
 
 void Vm::setGlobalVariable(StringTableEntry name, KorkApi::ConsoleValue value)
 {
+   VmAllocTLS::Scope memScope(mInternal);
    mInternal->mGlobalVars.setVariableValue(name, value);
 }
 
 ConsoleValue Vm::getGlobalVariable(StringTableEntry name)
 {
+   VmAllocTLS::Scope memScope(mInternal);
    Dictionary::Entry* e = mInternal->mGlobalVars.getVariable(name);
    
    if (!e)
@@ -753,22 +796,26 @@ ConsoleValue Vm::getGlobalVariable(StringTableEntry name)
 
 void Vm::setLocalVariable(StringTableEntry name, KorkApi::ConsoleValue value)
 {
+   VmAllocTLS::Scope memScope(mInternal);
    mInternal->mCurrentFiberState->setLocalFrameVariable(name, value);
 }
 
 ConsoleValue Vm::getLocalVariable(StringTableEntry name)
 {
+   VmAllocTLS::Scope memScope(mInternal);
    return mInternal->mCurrentFiberState->getLocalFrameVariable(name);
 }
 
 
 bool Vm::registerGlobalVariable(StringTableEntry name, S32 type, void *dptr, const char* usage)
 {
+   VmAllocTLS::Scope memScope(mInternal);
    return mInternal->mGlobalVars.addVariable( name, type, dptr, usage );
 }
 
 bool Vm::removeGlobalVariable(StringTableEntry name)
 {
+   VmAllocTLS::Scope memScope(mInternal);
    return name!=0 && mInternal->mGlobalVars.removeVariable(name);
 }
 
@@ -802,16 +849,26 @@ Vm* createVM(Config* cfg)
       return NULL;
    }
    
-   Vm* vm = new Vm();
-   vm->mInternal = new VmInternal(vm, cfg);
+   Vm* vm = (Vm*)cfg->mallocFn(sizeof(Vm), cfg->allocUser);
+   constructInPlace(vm);
+   
+   vm->mInternal = (VmInternal*)cfg->mallocFn(sizeof(VmInternal), cfg->allocUser);
+   VmAllocTLS::Scope memScope(vm->mInternal);
+   vm->mInternal->mConfig = *cfg;
+   constructInPlace(vm->mInternal, vm, cfg);
    
    return vm;
 }
 
 void destroyVM(Vm* vm)
 {
-   delete vm->mInternal;
-   delete vm;
+   FreeFn freeFn = vm->mInternal->mConfig.freeFn;
+   void* freeUser = vm->mInternal->mConfig.allocUser;
+   
+   destructInPlace(vm->mInternal);
+   freeFn(vm->mInternal, freeUser);
+   destructInPlace(vm);
+   freeFn(vm, freeUser);
 }
 
 VmInternal::VmInternal(Vm* vm, Config* cfg) : mGlobalVars(this)
@@ -820,21 +877,21 @@ VmInternal::VmInternal(Vm* vm, Config* cfg) : mGlobalVars(this)
    mConfig = *cfg;
    mCodeBlockList = NULL;
    mCurrentCodeBlock = NULL;
-   mReturnBuffer.setSize(2048);
+   mReturnBuffer.resize(2048);
    mNSState.init(this);
    
    if (cfg->maxFibers == 0)
    {
       cfg->maxFibers = 1024;
    }
-   mAllocBase.func = new void*[cfg->maxFibers];
-   mAllocBase.arg = mReturnBuffer.address();
+   mAllocBase.func = NewArray<void*>(cfg->maxFibers);
+   mAllocBase.arg = &mReturnBuffer[0];
    memset(mAllocBase.func, 0, sizeof(void*)*cfg->maxFibers);
 
    if (mConfig.initTelnet)
    {
-      mTelDebugger = new TelnetDebugger(this);
-      mTelConsole = new TelnetConsole(this);
+      mTelDebugger = New<TelnetDebugger>(this);
+      mTelConsole = New<TelnetConsole>(this);
    }
    else
    {
@@ -854,7 +911,7 @@ VmInternal::VmInternal(Vm* vm, Config* cfg) : mGlobalVars(this)
    }
    else
    {
-      mCompilerResources = new Compiler::Resources();
+      mCompilerResources = New<Compiler::Resources>();
       mOwnsResources = true;
    }
 
@@ -988,21 +1045,22 @@ VmInternal::~VmInternal()
    InternalFiberList mFiberStates;
    ClassChunker<ExprEvalState> mFiberAllocator;
 
-   delete[] mAllocBase.func;
+   Delete(mAllocBase.func);
    
    
-   delete mTelDebugger;
-   delete mTelConsole;
+   Delete(mTelDebugger);
+   Delete(mTelConsole);
+   
    if (mOwnsResources)
    {
-      delete mCompilerResources;
+      Delete(mCompilerResources);
    }
    mNSState.shutdown();
    
    // Cleanup remaining fibers
    for (Vector<ExprEvalState*>::iterator itr = mFiberStates.mItems.begin(), itrEnd = mFiberStates.mItems.end(); itr != itrEnd; itr++)
    {
-      delete *itr;
+      Delete(*itr);
       *itr = NULL;
    }
    mFiberStates.clear();
@@ -1036,7 +1094,7 @@ void VmInternal::setCurrentFiber(FiberId fiber)
 
 FiberId VmInternal::createFiber(void* userPtr)
 {
-   ExprEvalState* newState = new ExprEvalState(this);
+   ExprEvalState* newState = New<ExprEvalState>(this);
    InternalFiberList::HandleType handle = mFiberStates.allocListHandle(newState);
    newState->mSTR.initForFiber(handle.getIndex());
    newState->mUserPtr = userPtr;
@@ -1045,7 +1103,7 @@ FiberId VmInternal::createFiber(void* userPtr)
 
 ExprEvalState* VmInternal::createFiberPtr(void* userPtr)
 {
-   ExprEvalState* newState = new ExprEvalState(this);
+   ExprEvalState* newState =  New<ExprEvalState>(this);
    InternalFiberList::HandleType handle = mFiberStates.allocListHandle(newState);
    newState->mSTR.initForFiber(handle.getIndex());
    newState->mUserPtr = userPtr;
@@ -1064,7 +1122,7 @@ void VmInternal::cleanupFiber(FiberId fiber)
    if (state && state != mFiberStates.mItems[0])
    {
       mFiberStates.freeListPtr(state);
-      delete state;
+      Delete(state);
       mAllocBase.func[vh.getIndex()] = NULL;
    }
 }
@@ -1090,6 +1148,7 @@ void VmInternal::suspendCurrentFiber()
 
 void Vm::throwFiber(U32 mask)
 {
+   VmAllocTLS::Scope memScope(mInternal);
    mInternal->throwFiber(mask);
 }
 
@@ -1170,7 +1229,7 @@ ClassInfo* VmInternal::getClassInfoByName(StringTableEntry name)
 
    if (itr != mClassList.end())
    {
-      return itr;
+      return &*itr;
    }
    else
    {
@@ -1360,21 +1419,25 @@ U16 VmInternal::getObjectFieldType(VMObject* obj, StringTableEntry name, const c
 
 F64 Vm::valueAsFloat(ConsoleValue v)
 {
+   VmAllocTLS::Scope memScope(mInternal);
    return mInternal->valueAsFloat(v);
 }
 
 S64 Vm::valueAsInt(ConsoleValue v)
 {
+   VmAllocTLS::Scope memScope(mInternal);
    return mInternal->valueAsInt(v);
 }
 
 bool Vm::valueAsBool(ConsoleValue v)
 {
+   VmAllocTLS::Scope memScope(mInternal);
    return mInternal->valueAsBool(v);
 }
 
 const char* Vm::valueAsString(ConsoleValue v)
 {
+   VmAllocTLS::Scope memScope(mInternal);
    return mInternal->valueAsString(v);
 }
 
@@ -1589,11 +1652,13 @@ void VmInternal::print(int level, const char* buf)
 
 void Vm::dumpNamespaceClasses(bool dumpScript, bool dumpEngine)
 {
+   VmAllocTLS::Scope memScope(mInternal);
    mInternal->mNSState.dumpClasses(dumpScript, dumpEngine);
 }
 
 void Vm::dumpNamespaceFunctions(bool dumpScript, bool dumpEngine)
 {
+   VmAllocTLS::Scope memScope(mInternal);
    mInternal->mNSState.dumpFunctions(dumpScript, dumpEngine);
 }
 
@@ -1601,6 +1666,7 @@ void Vm::dbgSetParameters(int port, const char* password, bool waitForClient)
 {
    if (mInternal->mTelDebugger)
    {
+      VmAllocTLS::Scope memScope(mInternal);
       mInternal->mTelDebugger->setDebugParameters(port, password, waitForClient);
    }
 }
@@ -1614,6 +1680,7 @@ void Vm::dbgDisconnect()
 {
    if (mInternal->mTelDebugger)
    {
+      VmAllocTLS::Scope memScope(mInternal);
       mInternal->mTelDebugger->disconnect();
    }
 }
@@ -1622,6 +1689,7 @@ void Vm::telnetSetParameters(int port, const char* consolePass, const char* list
 {
    if (mInternal->mTelConsole)
    {
+      VmAllocTLS::Scope memScope(mInternal);
       mInternal->mTelConsole->setTelnetParameters(port, consolePass, listenPass, remoteEcho);
    }
 }
@@ -1630,12 +1698,14 @@ void Vm::telnetDisconnect()
 {
    if (mInternal->mTelConsole)
    {
+      VmAllocTLS::Scope memScope(mInternal);
       mInternal->mTelConsole->disconnect();
    }
 }
 
 void Vm::processTelnet()
 {
+   VmAllocTLS::Scope memScope(mInternal);
    if (mInternal->mTelConsole)
    {
       mInternal->mTelConsole->process();
@@ -1649,36 +1719,43 @@ void Vm::processTelnet()
 
 void Vm::setCurrentFiberMain()
 {
+   VmAllocTLS::Scope memScope(mInternal);
    mInternal->setCurrentFiberMain();
 }
 
 void Vm::setCurrentFiber(FiberId fiber)
 {
+   VmAllocTLS::Scope memScope(mInternal);
    mInternal->setCurrentFiber(fiber);
 }
 
 FiberId Vm::createFiber(void* userPtr)
 {
+   VmAllocTLS::Scope memScope(mInternal);
    return mInternal->createFiber(userPtr);
 }
 
 FiberId Vm::getCurrentFiber()
 {
+   VmAllocTLS::Scope memScope(mInternal);
    return mInternal->getCurrentFiber();
 }
 
 void Vm::cleanupFiber(FiberId fiber)
 {
+   VmAllocTLS::Scope memScope(mInternal);
    mInternal->cleanupFiber(fiber);
 }
 
 FiberRunResult Vm::resumeCurrentFiber(ConsoleValue value)
 {
+   VmAllocTLS::Scope memScope(mInternal);
    return mInternal->resumeCurrentFiber(value);
 }
 
 bool Vm::dumpFiberStateToBlob(U32 numFibers, KorkApi::FiberId* fibers, U32* outBlobSize, U8** outBlob)
 {
+   VmAllocTLS::Scope memScope(mInternal);
    const U32 maxBlobSize = 1024*1024*16;
    U8* buffer = (U8*)dMalloc(maxBlobSize);
    *outBlob = NULL;
@@ -1720,6 +1797,7 @@ bool Vm::dumpFiberStateToBlob(U32 numFibers, KorkApi::FiberId* fibers, U32* outB
 
 bool Vm::restoreFiberStateFromBlob(U32* outNumFibers, KorkApi::FiberId** outFibers, U32 blobSize, U8* blob)
 {
+   VmAllocTLS::Scope memScope(mInternal);
    MemStream inS(blobSize, blob, true, false);
    ConsoleSerializer serializer(mInternal, NULL, false, &inS);
    
@@ -1727,7 +1805,7 @@ bool Vm::restoreFiberStateFromBlob(U32* outNumFibers, KorkApi::FiberId** outFibe
    
    if (serializer.read(fiberList))
    {
-      *outFibers = fiberList.size() > 0 ? (KorkApi::FiberId*)dMalloc(sizeof(KorkApi::FiberId) * fiberList.size()) : 0;
+      *outFibers = fiberList.size() > 0 ? (KorkApi::FiberId*)mInternal->NewArray<KorkApi::FiberId>(fiberList.size()) : 0;
       *outNumFibers = fiberList.size();
       
       for (U32 i=0; i<fiberList.size(); i++)
@@ -1745,21 +1823,25 @@ bool Vm::restoreFiberStateFromBlob(U32* outNumFibers, KorkApi::FiberId** outFibe
 
 void Vm::suspendCurrentFiber()
 {
+   VmAllocTLS::Scope memScope(mInternal);
    return mInternal->suspendCurrentFiber();
 }
 
 FiberRunResult::State Vm::getCurrentFiberState()
 {
+   VmAllocTLS::Scope memScope(mInternal);
    return mInternal->getCurrentFiberState();
 }
 
 void Vm::clearCurrentFiberError()
 {
+   VmAllocTLS::Scope memScope(mInternal);
    return mInternal->clearCurrentFiberError();
 }
 
 void* Vm::getCurrentFiberUserPtr()
 {
+   VmAllocTLS::Scope memScope(mInternal);
    return mInternal->getCurrentFiberUserPtr();
 }
 
@@ -1797,5 +1879,54 @@ const char* FiberRunResult::stateAsString(State inState)
    }
 }
 
+namespace VmAllocTLS
+{
+   thread_local VmInternal* sVM;
+
+   VmInternal* get()
+   {
+      return sVM;
+   }
+
+   void set(VmInternal* theVM) 
+   {
+      sVM = theVM;
+   }
+}
+
+namespace VMem
+{
+
+void* allocBytes(std::size_t n)
+{
+   VmInternal* vm = VmAllocTLS::sVM;
+   if (vm)
+   {
+      return vm->mConfig.mallocFn(n, vm->mConfig.allocUser);
+   }
+   else
+   {
+      return NULL;
+   }
+}
+
+void  freeBytes(void* p)
+{
+   VmInternal* vm = VmAllocTLS::sVM;
+   if (vm)
+   {
+      return vm->mConfig.freeFn(p, vm->mConfig.allocUser);
+   }
+   else
+   {
+      return NULL;
+   }
+}
+
+}
+
+
 
 } // namespace KorkApi
+
+

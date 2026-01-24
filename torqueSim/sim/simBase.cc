@@ -29,7 +29,6 @@
 #include "core/memStream.h"
 
 #include "console/typeValidators.h"
-#include "console/codeBlock.h"
 #include "console/consoleTypes.h"
 #include "sim/dynamicTypes.h"
 
@@ -39,81 +38,7 @@ namespace Sim
 {
    ImplementNamedGroup(ScriptClassGroup)
 
-}   
-
-//---------------------------------------------------------------------------
-
-// BEGIN T2D BLOCK
-
-//-----------------------------------------------------------------------------
-
-void SimObjectList::pushBack(SimObject* obj)
-{
-   if (std::find(begin(),end(),obj) == end())
-      push_back(obj);
-}  
-
-//-----------------------------------------------------------------------------
-
-void SimObjectList::pushBackForce(SimObject* obj)
-{
-   iterator itr = std::find(begin(),end(),obj);
-   if (itr == end())
-   {
-      push_back(obj);
-   }
-   else 
-   {
-      // Move to the back...
-      //
-      SimObject* pBack = *itr;
-      removeStable(pBack);
-      push_back(pBack);
-   }
-}  
-
-//-----------------------------------------------------------------------------
-
-void SimObjectList::pushFront(SimObject* obj)
-{
-   if (std::find(begin(),end(),obj) == end())
-      push_front(obj);
-}  
-
-//-----------------------------------------------------------------------------
-
-void SimObjectList::remove(SimObject* obj)
-{
-   iterator ptr = std::find(begin(),end(),obj);
-   if (ptr != end())
-      erase(ptr);
 }
-
-//-----------------------------------------------------------------------------
-
-void SimObjectList::removeStable(SimObject* obj)
-{
-   iterator ptr = std::find(begin(),end(),obj);
-   if (ptr != end()) 
-      erase(ptr);
-}
-
-//-----------------------------------------------------------------------------
-
-bool SimObjectList::compareId(const SimObject* a, const SimObject* b)
-{
-    return a->getId() < b->getId();
-}
-
-//-----------------------------------------------------------------------------
-
-void SimObjectList::sortId()
-{
-   std::sort(begin(),end(),compareId);
-}
-
-// END T2D BLOCK
-
 
 //---------------------------------------------------------------------------
 //---------------------------------------------------------------------------
@@ -281,7 +206,7 @@ void SimFieldDictionary::writeFields(SimObject *obj, Stream &stream, U32 tabStop
 {
 
    const AbstractClassRep::FieldList &list = obj->getFieldList();
-   Vector<Entry *> flist(__FILE__, __LINE__);
+   std::vector<Entry *> flist;
 
    for(U32 i = 0; i < HashTableSize; i++)
    {
@@ -308,7 +233,7 @@ void SimFieldDictionary::writeFields(SimObject *obj, Stream &stream, U32 tabStop
    std::sort(flist.begin(),flist.end(),compareEntries);
 
    // Save them out
-   for(Vector<Entry *>::iterator itr = flist.begin(); itr != flist.end(); itr++)
+   for(std::vector<Entry *>::iterator itr = flist.begin(); itr != flist.end(); itr++)
    {
       U32 nBufferSize = (dStrlen( (*itr)->value ) * 2) + dStrlen( (*itr)->slotName ) + 16;
       TempAlloc<char> expandedBuffer( nBufferSize );
@@ -327,7 +252,7 @@ void SimFieldDictionary::printFields(SimObject *obj)
 {
    const AbstractClassRep::FieldList &list = obj->getFieldList();
    char expandedBuffer[4096];
-   Vector<Entry *> flist(__FILE__, __LINE__);
+   std::vector<Entry *> flist;
 
    for(U32 i = 0; i < HashTableSize; i++)
    {
@@ -347,7 +272,7 @@ void SimFieldDictionary::printFields(SimObject *obj)
    }
    std::sort(flist.begin(),flist.end(),compareEntries);
 
-   for(Vector<Entry *>::iterator itr = flist.begin(); itr != flist.end(); itr++)
+   for(std::vector<Entry *>::iterator itr = flist.begin(); itr != flist.end(); itr++)
    {
       dSprintf(expandedBuffer, sizeof(expandedBuffer), "  %s = \"", (*itr)->slotName);
       expandEscape(expandedBuffer + dStrlen(expandedBuffer), (*itr)->value);
@@ -2949,7 +2874,7 @@ void SimDataBlock::write(Stream &stream, U32 tabStop, U32 flags)
 void SimSet::addObject(SimObject* obj)
 {
    lock();
-   objectList.pushBack(obj);
+   objectList.push_back(obj);
    deleteNotify(obj);
    unlock();
 }
@@ -2957,7 +2882,11 @@ void SimSet::addObject(SimObject* obj)
 void SimSet::removeObject(SimObject* obj)
 {
    lock();
-   objectList.remove(obj);
+   auto itr = std::find(objectList.begin(), objectList.end(), obj);
+   if (itr != objectList.end())
+   {
+      objectList.erase(itr);
+   }
    clearNotify(obj);
    unlock();
 }
@@ -2965,7 +2894,7 @@ void SimSet::removeObject(SimObject* obj)
 void SimSet::pushObject(SimObject* pObj)
 {
    lock();
-   objectList.pushBackForce(pObj);
+   objectList.push_back(pObj);
    deleteNotify(pObj);
    unlock();
 }
@@ -2981,9 +2910,8 @@ void SimSet::popObject()
       return;
    }
 
-   SimObject* pObject = objectList[objectList.size() - 1];
-
-   objectList.removeStable(pObject);
+   SimObject* pObject = objectList.back();
+   objectList.pop_back();
    clearNotify(pObject);
 }
 
@@ -3064,7 +2992,8 @@ void SimSet::onRemove()
    MutexHandle handle;
    handle.lock(mMutex);
 
-   objectList.sortId();
+   std::sort(objectList.begin(), objectList.end(), SortSimObjectList);
+   
    if (objectList.size())
    {
       // This backwards iterator loop doesn't work if the
@@ -3496,7 +3425,7 @@ void SimSet::clear()
 {
    lock();
    while (size() > 0)
-      removeObject(objectList.last());
+      removeObject(objectList.back());
    unlock();
 }
 
@@ -3518,11 +3447,12 @@ SimGroup::~SimGroup()
    // If we have any objects at this point, they should
    // already have been removed from the manager, so we
    // can just delete them directly.
-   objectList.sortId();
-   while (!objectList.empty()) 
+   std::sort(objectList.begin(), objectList.end(), SortSimObjectList);
+   
+   while (!objectList.empty())
    {
-      delete objectList.last();
-      objectList.decrement();
+      delete objectList.back();
+      objectList.pop_back();
    }
 
    unlock();
@@ -3564,7 +3494,11 @@ void SimGroup::removeObject(SimObject* obj)
    {
       obj->onGroupRemove();
       nameDictionary.remove(obj);
-      objectList.remove(obj);
+      auto itr = std::find(objectList.begin(), objectList.end(), obj);
+      if (itr != objectList.end())
+      {
+         objectList.erase(itr);
+      }
       obj->mGroup = 0;
    }
    unlock();
@@ -3575,7 +3509,7 @@ void SimGroup::removeObject(SimObject* obj)
 void SimGroup::onRemove()
 {
    lock();
-   objectList.sortId();
+   std::sort(objectList.begin(), objectList.end(), SortSimObjectList);
    if (objectList.size())
    {
       // This backwards iterator loop doesn't work if the
@@ -3710,8 +3644,6 @@ IMPLEMENT_CONOBJECT(SimGroup);
 
 
 // BEGIN T2D BLOCK
-
-extern ExprEvalState gEvalState;
 
 //-----------------------------------------------------------------------------
 
@@ -3856,11 +3788,12 @@ ConsoleFunction( getSimTime, S32, 1, 1, "")
 //-----------------------------------------------------------------------------
 
 
-inline void SimSetIterator::Stack::push_back(SimSet* set)
+inline void SimSetIterator::push_back_stack(SimSet* set)
 {
-   increment();
-   last().set = set;
-   last().itr = set->begin();
+   Entry e;
+   e.set = set;
+   e.itr = set->begin();
+   stack.push_back(e);
 }
 
 
@@ -3868,55 +3801,52 @@ inline void SimSetIterator::Stack::push_back(SimSet* set)
 
 SimSetIterator::SimSetIterator(SimSet* set)
 {
-   VECTOR_SET_ASSOCIATION(stack);
-
    if (!set->empty())
-      stack.push_back(set);
+      push_back_stack(set);
 }
-
 
 //-----------------------------------------------------------------------------
 
 SimObject* SimSetIterator::operator++()
 {
    SimSet* set;
-   if ((set = dynamic_cast<SimSet*>(*stack.last().itr)) != 0) 
+   if ((set = dynamic_cast<SimSet*>(*stack.back().itr)) != 0) 
    {
       if (!set->empty()) 
       {
-         stack.push_back(set);
-         return *stack.last().itr;
+         push_back_stack(set);
+         return *stack.back().itr;
       }
    }
 
-   while (++stack.last().itr == stack.last().set->end()) 
+   while (++stack.back().itr == stack.back().set->end()) 
    {
       stack.pop_back();
       if (stack.empty())
          return 0;
    }
-   return *stack.last().itr;
+   return *stack.back().itr;
 }  
 
 SimObject* SimGroupIterator::operator++()
 {
    SimGroup* set;
-   if ((set = dynamic_cast<SimGroup*>(*stack.last().itr)) != 0) 
+   if ((set = dynamic_cast<SimGroup*>(*stack.back().itr)) != 0) 
    {
       if (!set->empty()) 
       {
-         stack.push_back(set);
-         return *stack.last().itr;
+         push_back_stack(set);
+         return *stack.back().itr;
       }
    }
 
-   while (++stack.last().itr == stack.last().set->end()) 
+   while (++stack.back().itr == stack.back().set->end()) 
    {
       stack.pop_back();
       if (stack.empty())
          return 0;
    }
-   return *stack.last().itr;
+   return *stack.back().itr;
 }  
 
 // END T2D BLOCK

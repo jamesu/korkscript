@@ -1,5 +1,4 @@
 #pragma once
-#include "core/tVector.h"
 
 namespace FreeListHandle
 {
@@ -133,14 +132,14 @@ namespace FreeListHandle
 /// Free structure list. T must have "mAllocNumber" to designate it is allocated and 
 /// what index it is. Also "mGeneration" should be present.
 /// T should also implement initFromHandle, makeHandle, isValidHandle and extractHandle.
-template<class T, class B> struct FreeListStruct
+template<class T, class B,  template<class...> class VEC> struct FreeListStruct
 {
-   Vector<T> mItems;
-   Vector<typename B::ValueType> mFreeItems;
-   U32 mChunkReserveSize;
-   
    typedef T ValueType;
    typedef B HandleType;
+   
+   VEC<T> mItems;
+   VEC<typename B::ValueType> mFreeItems;
+   U32 mChunkReserveSize;
    
    FreeListStruct() : mChunkReserveSize(4096)
    {
@@ -241,10 +240,10 @@ template<class T, class B> struct FreeListStruct
 /// Underlying memory management of item pointers should be
 /// handled by another class.
 /// Reference counting should be handled by the handle class.
-template<class T, class B> struct FreeListPtr
+template<class T, class B, template<class...> class VEC> struct FreeListPtr
 {
-   Vector<T*> mItems;
-   Vector<typename B::ValueType> mFreeItems;
+   VEC<T*> mItems;
+   VEC<typename B::ValueType> mFreeItems;
    U32 mChunkReserveSize;
    
    typedef B HandleType;
@@ -272,7 +271,7 @@ template<class T, class B> struct FreeListPtr
       }
       else if (mFreeItems.size() > 0)
       {
-         index = mFreeItems.last();
+         index = mFreeItems.back();
          mFreeItems.pop_back();
          mItems[index] = itemPtr;
          itemPtr->mAllocNumber = index+1;

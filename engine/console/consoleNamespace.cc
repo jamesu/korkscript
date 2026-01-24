@@ -2,6 +2,8 @@
 #include "embed/internalApi.h"
 #include "console/consoleNamespace.h"
 #include "console/consoleInternal.h"
+#include "console/compiler.h"
+#include "console/codeBlock.h"
 
 extern U32 HashPointer(StringTableEntry ptr);
 
@@ -380,7 +382,7 @@ bool compareEntries(const Namespace::Entry* a, const Namespace::Entry* b)
     return dStricmp(a->mFunctionName, b->mFunctionName) < 0;
 }
 
-void Namespace::getEntryList(Vector<Entry *> *vec)
+void Namespace::getEntryList(KorkApi::Vector<Entry *> *vec)
 {
    if(mHashSequence != mVmInternal->mNSState.mCacheSequence)
       buildHashTable();

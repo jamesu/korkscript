@@ -18,7 +18,6 @@ include_directories(
 
 set(KS_SRCS
 	./engine/core/idGenerator.cc
-	./engine/core/tVector.cc
 	./engine/core/findMatch.cc
 	./engine/core/hashFunction.cc
 	./engine/core/memStream.cc

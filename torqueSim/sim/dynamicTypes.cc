@@ -21,14 +21,14 @@
 //-----------------------------------------------------------------------------
 
 #include "sim/dynamicTypes.h"
-#include "console/compiler.h"
+#include "embed/compilerOpcodes.h"
 
 // Init the globals.
 ConsoleBaseType *ConsoleBaseType::smListHead = NULL;
 S32              ConsoleBaseType::smConsoleTypeCount = KorkApi::ConsoleValue::TypeBeginCustom; // tge
 
 // And, we also privately store the types lookup table.
-VectorPtr<ConsoleBaseType*> gConsoleTypeTable;
+std::vector<ConsoleBaseType*> gConsoleTypeTable;
 
 ConsoleBaseType *ConsoleBaseType::getListHead()
 {
@@ -38,8 +38,8 @@ ConsoleBaseType *ConsoleBaseType::getListHead()
 void ConsoleBaseType::initialize()
 {
    // Prep and empty the vector.
-   gConsoleTypeTable.setSize(smConsoleTypeCount+1);
-   dMemset(gConsoleTypeTable.address(), 0, sizeof(ConsoleBaseType*) * gConsoleTypeTable.size());
+   gConsoleTypeTable.resize(smConsoleTypeCount+1);
+   std::fill(gConsoleTypeTable.begin(), gConsoleTypeTable.end(), nullptr);
 
    // Walk the list and register each one with the console system.
    ConsoleBaseType *walk = getListHead();

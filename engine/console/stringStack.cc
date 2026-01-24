@@ -22,7 +22,7 @@
 
 #include "embed/api.h"
 #include "embed/internalApi.h"
-#include "stringStack.h"
+#include "console/stringStack.h"
 
 void StringStack::getArgcArgv(StringTableEntry name, U32 *argc, KorkApi::ConsoleValue **in_argv, bool popStackFrame /* = false */)
 {

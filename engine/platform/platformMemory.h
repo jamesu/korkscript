@@ -40,9 +40,10 @@ extern void* FN_CDECL operator new(dsize_t size, void* ptr);
 
 //------------------------------------------------------------------------------
 
-template <class T> inline T* constructInPlace(T* p)
+template <class T, class... Args>
+inline T* constructInPlace(T* p, Args&&... args)
 {
-   return new(p) T;
+    return new (p) T(std::forward<Args>(args)...);
 }
 
 //------------------------------------------------------------------------------
@@ -68,14 +69,6 @@ template <class T> inline void destructInPlace(T* p)
 
 //------------------------------------------------------------------------------
 
-#if !defined(TORQUE_DISABLE_MEMORY_MANAGER)
-extern void* FN_CDECL operator new(dsize_t size, const char*, const U32);
-extern void* FN_CDECL operator new[](dsize_t size, const char*, const U32);
-extern void  FN_CDECL operator delete(void* ptr);
-extern void  FN_CDECL operator delete[](void* ptr);
-#  define _new new(__FILE__, __LINE__)
-#  define new  _new
-#endif
 
 extern void  setBreakAlloc(dsize_t);
 extern void  setMinimumAllocUnit(U32);

@@ -27,9 +27,7 @@
 #ifndef _PLATFORM_H_
 #include "platform/platform.h"
 #endif
-#ifndef _TVECTOR_H_
-#include "core/tVector.h"
-#endif
+#include <vector>
 #ifndef _STRINGTABLE_H_
 #include "core/stringTable.h"
 #endif
@@ -215,7 +213,7 @@ public:
    };
    
    using Field = KorkApi::FieldInfo;
-   typedef Vector<Field> FieldList;
+   typedef std::vector<Field> FieldList;
 
    KorkApi::ClassInfo mClassInfo;
    FieldList mFieldList;
@@ -233,7 +231,6 @@ public:
 public:
    AbstractClassRep() 
    {
-      VECTOR_SET_ASSOCIATION(mFieldList);
       parentClass  = NULL;
    }
    virtual ~AbstractClassRep() { }

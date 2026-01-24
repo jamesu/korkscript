@@ -90,7 +90,7 @@ class Namespace
    void markGroup(const char* name, const char* usage);
    char * lastUsage;
 
-   void getEntryList(Vector<Entry *> *);
+   void getEntryList(KorkApi::Vector<Entry *> *);
 
    Entry *lookup(StringTableEntry name);
    Entry *lookupRecursive(StringTableEntry name);

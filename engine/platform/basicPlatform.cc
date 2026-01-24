@@ -1,5 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include "platform/platform.h"
+#include "platform/platformProcess.h"
 #include "platform/platformFileIO.h"
 #include "platform/threads/thread.h"
 #include "platform/threads/mutex.h"
@@ -246,194 +248,193 @@ bool File::hasCapability(Capability cap) const
    return (0 != (U32(cap) & capability));
 }
 
-
-void Platform::init()
+namespace Platform
 {
 
-}
-
-void Platform::process()
+void init()
 {
-
+   
 }
 
-void Platform::shutdown()
+void process()
 {
-
+   
 }
 
-void Platform::sleep(U32 ms)
+void shutdown()
 {
-
+   
 }
 
-void Platform::restartInstance()
+void sleep(U32 ms)
 {
-
+   
 }
 
-void Platform::postQuitMessage(const U32 in_quitVal)
+void restartInstance()
 {
-
+   
 }
 
-void Platform::forceShutdown(S32 returnValue)
+void postQuitMessage(const U32 in_quitVal)
 {
-
+   
 }
 
-StringTableEntry Platform::getUserHomeDirectory()
+void forceShutdown(S32 returnValue)
 {
-   return NULL;
+   
 }
 
-StringTableEntry Platform::getUserDataDirectory()
+StringTableEntry getUserHomeDirectory()
 {
    return NULL;
 }
 
+StringTableEntry getUserDataDirectory()
+{
+   return NULL;
+}
 
-U32 Platform::getTime( void )
+
+U32 getTime( void )
 {
    return 0;
 }
 
-U32 Platform::getVirtualMilliseconds( void )
+U32 getVirtualMilliseconds( void )
 {
    return 0;
 }
 
-U32 Platform::getRealMilliseconds( void )
+U32 getRealMilliseconds( void )
 {
    return 0;
 }
 
-void Platform::advanceTime(U32 delta)
+void advanceTime(U32 delta)
 {
-
+   
 }
 
-void Platform::getLocalTime(LocalTime &)
+void getLocalTime(LocalTime &)
 {
-
+   
 }
 
-S32 Platform::compareFileTimes(const FileTime &a, const FileTime &b)
+S32 compareFileTimes(const FileTime &a, const FileTime &b)
 {
    return 0;
 }
 
 /// Math.
-float Platform::getRandom()
+float getRandom()
 {
    return 3;
 }
 
 /// Debug.
-void Platform::debugBreak()
+void debugBreak()
 {
    
 }
 
-void Platform::outputDebugString(const char *string)
+void outputDebugString(const char *string)
 {
    
 }
 
 /// File IO.
-StringTableEntry Platform::getCurrentDirectory()
+StringTableEntry getCurrentDirectory()
 {
    return NULL;
 }
 
-bool Platform::setCurrentDirectory(StringTableEntry newDir)
+bool setCurrentDirectory(StringTableEntry newDir)
 {
    return false;
 }
 
-StringTableEntry Platform::getExecutableName()
+StringTableEntry getExecutableName()
 {
    return NULL;
 }
 
-StringTableEntry Platform::getExecutablePath()
+StringTableEntry getExecutablePath()
 {
    return NULL;
 }
 
-static char *makeFullPathName(const char *path, char *buffer, U32 size, const char *cwd)
-{
-   return NULL;
-}
-
-bool Platform::dumpPath(const char *in_pBasePath, Vector<FileInfo>& out_rFileVector, S32 recurseDepth)
+bool dumpPath(const char *in_pBasePath, std::vector<FileInfo>& out_rFileVector, S32 recurseDepth)
 {
    return false;
 }
 
-bool Platform::dumpDirectories( const char *path, Vector<StringTableEntry> &directoryVector, S32 depth, bool noBasePath )
+bool dumpDirectories( const char *path, std::vector<StringTableEntry> &directoryVector, S32 depth, bool noBasePath )
 {
    return false;
 }
 
-bool Platform::hasSubDirectory( const char *pPath )
+bool hasSubDirectory( const char *pPath )
 {
    return false;
 }
 
-bool Platform::getFileTimes(const char *filePath, FileTime *createTime, FileTime *modifyTime)
+bool getFileTimes(const char *filePath, FileTime *createTime, FileTime *modifyTime)
 {
    return false;
 }
 
-bool Platform::isFile(const char *pFilePath)
+bool isFile(const char *pFilePath)
 {
    return false;
 }
 
-S32  Platform::getFileSize(const char *pFilePath)
+S32  getFileSize(const char *pFilePath)
 {
    return 0;
 }
 
-bool Platform::isDirectory(const char *pDirPath)
+bool isDirectory(const char *pDirPath)
 {
    return false;
 }
 
-bool Platform::isSubDirectory(const char *pParent, const char *pDir)
+bool isSubDirectory(const char *pParent, const char *pDir)
 {
    return false;
 }
 
-bool Platform::createPath(const char *path)
+bool createPath(const char *path)
 {
    return false;
 }
 
-bool Platform::fileDelete(const char *name)
+bool fileDelete(const char *name)
 {
    return false;
 }
 
-bool Platform::fileRename(const char *oldName, const char *newName)
+bool fileRename(const char *oldName, const char *newName)
 {
    return false;
 }
 
-bool Platform::fileTouch(const char *name)
+bool fileTouch(const char *name)
 {
    return false;
 }
 
-bool Platform::pathCopy(const char *fromName, const char *toName, bool nooverwrite)
+bool pathCopy(const char *fromName, const char *toName, bool nooverwrite)
 {
    return false;
 }
 
-StringTableEntry Platform::osGetTemporaryDirectory()
+StringTableEntry osGetTemporaryDirectory()
 {
    return NULL;
+}
+
 }
 
 

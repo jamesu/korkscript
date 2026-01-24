@@ -21,6 +21,7 @@
 //-----------------------------------------------------------------------------
 
 #include "platform/platform.h"
+#include "platform/platformProcess.h"
 #include "platform/threads/thread.h"
 
 #include "embed/api.h"
@@ -29,7 +30,6 @@
 #include "console/console.h"
 #include "console/consoleObject.h"
 #include "console/consoleTypes.h"
-#include "console/stringStack.h"
 
 #include "sim/simBase.h"
 
@@ -183,9 +183,9 @@ struct CallbackInfo
    void* userPtr;
 };
 
-static Vector<CallbackInfo> gConsumers(__FILE__, __LINE__);
+static std::vector<CallbackInfo> gConsumers;
 static DataChunker consoleLogChunker;
-static Vector<ConsoleLogEntry> consoleLog(__FILE__, __LINE__);
+static std::vector<ConsoleLogEntry> consoleLog;
 static bool consoleLogLocked;
 static bool logBufferEnabled=true;
 static S32 printLevel = 10;
@@ -351,8 +351,8 @@ bool isMainThread()
 void getLockLog(ConsoleLogEntry *&log, U32 &size)  
 {  
    consoleLogLocked = true;
-   log = consoleLog.address();
-   size = consoleLog.size();  
+   log = &consoleLog[0];
+   size = consoleLog.size();
 }
 
 void unlockLog()
@@ -545,7 +545,7 @@ void cls( void )
    if(consoleLogLocked)
       return;
    consoleLogChunker.freeBlocks();
-   consoleLog.setSize(0);
+   consoleLog.resize(0);
 };
 
 //------------------------------------------------------------------------------
@@ -793,15 +793,16 @@ void addConsumer(ConsumerCallback consumer, void* userPtr)
    gConsumers.push_back(info);
 }
 
-// dhc - found this empty -- trying what I think is a reasonable impl.
 void removeConsumer(ConsumerCallback consumer, void* userPtr)
 {
-   for(U32 i = 0; i < (U32)gConsumers.size(); i++)
+   for(S32 i = gConsumers.size()-1; i >= 0; i--)
+   {
       if (gConsumers[i].callback == consumer && gConsumers[i].userPtr == userPtr)
       { // remove it from the list.
-         gConsumers.erase(i);
+         gConsumers.erase(gConsumers.begin() + i);
          break;
       }
+   }
 }
 
 void stripColorChars(char* line)
@@ -1128,9 +1129,9 @@ const char *execute(S32 argc, const char *argv[])
       
       KorkApi::ConsoleValue retValue = KorkApi::ConsoleValue();
 
-      KorkApi::ConsoleValue localArgv[StringStack::MaxArgs];
-      StringStack::convertArgsReverse(sVM->mInternal, argc, argv, localArgv);
-      sVM->callNamespaceFunction(sVM->getGlobalNamespace(), funcName, argc, localArgv, retValue);
+      ///KorkApi::ConsoleValue localArgv[StringStack::MaxArgs];
+      // TOFIX StringStack::convertArgsReverse(sVM->mInternal, argc, argv, localArgv);
+      //sVM->callNamespaceFunction(sVM->getGlobalNamespace(), funcName, argc, localArgv, retValue);
       sVM->clearCurrentFiberError();
 
       return sVM->valueAsString(retValue);
@@ -1160,12 +1161,12 @@ const char *execute(SimObject *object, S32 argc, const char *argv[],bool thisCal
       StringTableEntry funcName = StringTable->insert(argv[0]);
 
       KorkApi::ConsoleValue retValue = KorkApi::ConsoleValue();
-      KorkApi::ConsoleValue localArgv[StringStack::MaxArgs];
+      // TOFIX KorkApi::ConsoleValue localArgv[StringStack::MaxArgs];
 
       object->pushScriptCallbackGuard();
-      StringStack::convertArgsReverse(sVM->mInternal, argc, argv, localArgv);
-      localArgv[1] = KorkApi::ConsoleValue::makeUnsigned(object->getId());
-      sVM->callObjectFunction(object->getVMObject(), funcName, argc, localArgv, retValue);
+      //StringStack::convertArgsReverse(sVM->mInternal, argc, argv, localArgv);
+      //localArgv[1] = KorkApi::ConsoleValue::makeUnsigned(object->getId());
+      //sVM->callObjectFunction(object->getVMObject(), funcName, argc, localArgv, retValue);
       object->popScriptCallbackGuard();
 
       return sVM->valueAsString(retValue);

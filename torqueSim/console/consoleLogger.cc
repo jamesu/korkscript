@@ -22,7 +22,7 @@
 #include "console/consoleLogger.h"
 #include "console/consoleTypes.h"
 
-Vector<ConsoleLogger *> ConsoleLogger::mActiveLoggers;
+std::vector<ConsoleLogger *> ConsoleLogger::mActiveLoggers;
 bool ConsoleLogger::smInitialized = false;
 
 IMPLEMENT_CONOBJECT( ConsoleLogger );
@@ -173,7 +173,7 @@ bool ConsoleLogger::detach()
    {
       if( mActiveLoggers[i] == this ) 
       {
-         mActiveLoggers.erase( i );
+         mActiveLoggers.erase( mActiveLoggers.begin() + i );
          mLogging = false;
          return true;
       }

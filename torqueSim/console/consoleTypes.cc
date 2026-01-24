@@ -13,7 +13,7 @@ static inline const char* SkipSpaces(const char* p)
 // Types
 
 ConsoleType( string, TypeString, sizeof(const char*), UINT_MAX, "" )
-ConsoleType( stringList, TypeStringTableEntryVector, sizeof(Vector<StringTableEntry>), UINT_MAX, "" )
+ConsoleType( stringList, TypeStringTableEntryVector, sizeof(std::vector<StringTableEntry>), UINT_MAX, "" )
 ConsoleType( caseString, TypeCaseString, sizeof(const char*), UINT_MAX, "" )
 
 ConsoleType( char, TypeS8, sizeof(U8), sizeof(U8), "" )
@@ -22,9 +22,9 @@ ConsoleType( float, TypeF32, sizeof(F32), sizeof(F32), "" )
 ConsoleType( bool, TypeBool, sizeof(bool), sizeof(bool), "" )
 ConsoleType( enumval, TypeEnum, sizeof(S32), sizeof(S32), "" )
 
-ConsoleType( intList, TypeS32Vector, sizeof(Vector<S32>), UINT_MAX,"" )
-ConsoleType( floatList, TypeF32Vector, sizeof(Vector<F32>), UINT_MAX, "" )
-ConsoleType( boolList, TypeBoolVector, sizeof(Vector<bool>), UINT_MAX, "" )
+ConsoleType( intList, TypeS32Vector, sizeof(std::vector<S32>), UINT_MAX,"" )
+ConsoleType( floatList, TypeF32Vector, sizeof(std::vector<F32>), UINT_MAX, "" )
+ConsoleType( boolList, TypeBoolVector, sizeof(std::vector<bool>), UINT_MAX, "" )
 
 #if 0
 ConsoleType( SimObjectPtr, TypeSimObjectPtr, sizeof(SimObject*), UINT_MAX, "" )
@@ -114,8 +114,8 @@ ConsoleTypeOpDefaultNumeric( TypeString )
 
 ConsoleGetType( TypeStringTableEntryVector )
 {
-   Vector<StringTableEntry> *vec = NULL;
-   static Vector<StringTableEntry> workVec;
+   std::vector<StringTableEntry> *vec = NULL;
+   static std::vector<StringTableEntry> workVec;
    
    if (!inputStorage->isField)
    {
@@ -164,7 +164,7 @@ ConsoleGetType( TypeStringTableEntryVector )
    }
    else
    {
-      vec = (Vector<StringTableEntry>*)ConsoleGetInputStoragePtr();
+      vec = (std::vector<StringTableEntry>*)ConsoleGetInputStoragePtr();
    }
    
    // Set conservative output size
@@ -176,7 +176,7 @@ ConsoleGetType( TypeStringTableEntryVector )
    {
       // In this case we are setting output to this type so just copy the vector
       // NOTE: we will NEVER get outputStorage->isField == true where the type isn't the native type
-      Vector<StringTableEntry> *outputVec = (Vector<StringTableEntry>*)ConsoleGetOutputStoragePtr();
+      std::vector<StringTableEntry> *outputVec = (std::vector<StringTableEntry>*)ConsoleGetOutputStoragePtr();
       *outputVec = *vec;
    }
    else if (requestedType == KorkApi::ConsoleValue::TypeInternalString ||
@@ -188,7 +188,7 @@ ConsoleGetType( TypeStringTableEntryVector )
       returnBuffer[0] = '\0';
       S32 returnLeng = 0;
       
-      for (Vector<StringTableEntry>::iterator itr = vec->begin(); itr < vec->end(); itr++)
+      for (std::vector<StringTableEntry>::iterator itr = vec->begin(); itr < vec->end(); itr++)
       {
          // concatenate the next value onto the return string
          if ( itr == vec->begin() )
@@ -213,14 +213,14 @@ ConsoleGetType( TypeStringTableEntryVector )
    }
    else
    {
-      static Vector<KorkApi::ConsoleValue> tmpArgv;
-      tmpArgv.setSize(inputStorage->data.argc);
+      static std::vector<KorkApi::ConsoleValue> tmpArgv;
+      tmpArgv.resize(inputStorage->data.argc);
       
       for (U32 i=0; i<inputStorage->data.argc; i++)
       {
          tmpArgv[i] = KorkApi::ConsoleValue::makeString(vec->operator[](i));
       }
-      KorkApi::TypeStorageInterface castInput = KorkApi::CreateRegisterStorageFromArgs(vmPtr->mInternal, inputStorage->data.argc, tmpArgv.address());
+      KorkApi::TypeStorageInterface castInput = KorkApi::CreateRegisterStorageFromArgs(vmPtr->mInternal, inputStorage->data.argc, &tmpArgv[0]);
       return vmPtr->castValue(requestedType, &castInput, outputStorage, NULL, 0);
    }
    
@@ -511,8 +511,8 @@ ConsoleTypeOpDefaultUnsigned( TypeBool )
 
 ConsoleGetType( TypeS32Vector )
 {
-   Vector<S32> *vec = NULL;
-   static Vector<S32> workVec;
+   std::vector<S32> *vec = NULL;
+   static std::vector<S32> workVec;
    
    if (!inputStorage->isField)
    {
@@ -596,7 +596,7 @@ ConsoleGetType( TypeS32Vector )
    }
    else
    {
-      vec = (Vector<S32>*)ConsoleGetInputStoragePtr();
+      vec = (std::vector<S32>*)ConsoleGetInputStoragePtr();
    }
    
    // Set conservative output size
@@ -608,7 +608,7 @@ ConsoleGetType( TypeS32Vector )
    {
       // In this case we are setting output to this type so just copy the vector
       // NOTE: we will NEVER get outputStorage->isField == true where the type isn't the native type
-      Vector<S32> *outputVec = (Vector<S32>*)ConsoleGetOutputStoragePtr();
+      std::vector<S32> *outputVec = (std::vector<S32>*)ConsoleGetOutputStoragePtr();
       *outputVec = *vec;
    }
    else if (!outputStorage->isField &&
@@ -617,7 +617,8 @@ ConsoleGetType( TypeS32Vector )
       outputStorage->FinalizeStorage(outputStorage, (vec->size() * sizeof(S32)) + sizeof(U32));
       U32* vecCount = (U32*)ConsoleGetOutputStoragePtr();
       *vecCount++ = vec->size();
-      memcpy(vecCount, vec->address(), vec->size() * sizeof(S32));
+      
+      std::copy(vec->begin(), vec->end(), vecCount);
       
       if (outputStorage->data.storageRegister)
       {
@@ -634,7 +635,7 @@ ConsoleGetType( TypeS32Vector )
       returnBuffer[0] = '\0';
       S32 returnLeng = 0;
       
-      for (Vector<S32>::iterator itr = vec->begin(); itr < vec->end(); itr++)
+      for (std::vector<S32>::iterator itr = vec->begin(); itr < vec->end(); itr++)
       {
          // concatenate the next value onto the return string
          if ( itr == vec->begin() )
@@ -659,14 +660,14 @@ ConsoleGetType( TypeS32Vector )
    }
    else
    {
-      static Vector<KorkApi::ConsoleValue> tmpArgv;
-      tmpArgv.setSize(inputStorage->data.argc);
+      static std::vector<KorkApi::ConsoleValue> tmpArgv;
+      tmpArgv.resize(inputStorage->data.argc);
       
       for (U32 i=0; i<inputStorage->data.argc; i++)
       {
          tmpArgv[i] = KorkApi::ConsoleValue::makeNumber(vec->operator[](i));
       }
-      KorkApi::TypeStorageInterface castInput = KorkApi::CreateRegisterStorageFromArgs(vmPtr->mInternal, inputStorage->data.argc, tmpArgv.address());
+      KorkApi::TypeStorageInterface castInput = KorkApi::CreateRegisterStorageFromArgs(vmPtr->mInternal, inputStorage->data.argc, &tmpArgv[0]);
       return vmPtr->castValue(requestedType, &castInput, outputStorage, NULL, 0);
    }
    
@@ -677,8 +678,8 @@ ConsoleTypeOpDefaultNumeric( TypeS32Vector )
 
 ConsoleGetType( TypeF32Vector )
 {
-   Vector<F32> *vec = NULL;
-   static Vector<F32> workVec;
+   std::vector<F32> *vec = NULL;
+   static std::vector<F32> workVec;
    
    if (!inputStorage->isField)
    {
@@ -762,7 +763,7 @@ ConsoleGetType( TypeF32Vector )
    }
    else
    {
-      vec = (Vector<F32>*)ConsoleGetInputStoragePtr();
+      vec = (std::vector<F32>*)ConsoleGetInputStoragePtr();
    }
    
    // Set conservative output size
@@ -774,7 +775,7 @@ ConsoleGetType( TypeF32Vector )
    {
       // In this case we are setting output to this type so just copy the vector
       // NOTE: we will NEVER get outputStorage->isField == true where the type isn't the native type
-      Vector<F32> *outputVec = (Vector<F32>*)ConsoleGetOutputStoragePtr();
+      std::vector<F32> *outputVec = (std::vector<F32>*)ConsoleGetOutputStoragePtr();
       *outputVec = *vec;
    }
    else if (!outputStorage->isField &&
@@ -783,7 +784,7 @@ ConsoleGetType( TypeF32Vector )
       outputStorage->FinalizeStorage(outputStorage, (vec->size() * sizeof(F32)) + sizeof(U32));
       U32* vecCount = (U32*)ConsoleGetOutputStoragePtr();
       *vecCount++ = vec->size();
-      memcpy(vecCount, vec->address(), vec->size() * sizeof(F32));
+      std::copy(vec->begin(), vec->end(), vecCount);
       
       if (outputStorage->data.storageRegister)
       {
@@ -800,7 +801,7 @@ ConsoleGetType( TypeF32Vector )
       returnBuffer[0] = '\0';
       S32 returnLeng = 0;
       
-      for (Vector<F32>::iterator itr = vec->begin(); itr < vec->end(); itr++)
+      for (std::vector<F32>::iterator itr = vec->begin(); itr < vec->end(); itr++)
       {
          // concatenate the next value onto the return string
          if ( itr == vec->begin() )
@@ -825,14 +826,14 @@ ConsoleGetType( TypeF32Vector )
    }
    else
    {
-      static Vector<KorkApi::ConsoleValue> tmpArgv;
-      tmpArgv.setSize(inputStorage->data.argc);
+      static std::vector<KorkApi::ConsoleValue> tmpArgv;
+      tmpArgv.resize(inputStorage->data.argc);
       
       for (U32 i=0; i<inputStorage->data.argc; i++)
       {
          tmpArgv[i] = KorkApi::ConsoleValue::makeNumber(vec->operator[](i));
       }
-      KorkApi::TypeStorageInterface castInput = KorkApi::CreateRegisterStorageFromArgs(vmPtr->mInternal, inputStorage->data.argc, tmpArgv.address());
+      KorkApi::TypeStorageInterface castInput = KorkApi::CreateRegisterStorageFromArgs(vmPtr->mInternal, inputStorage->data.argc, &tmpArgv[0]);
       return vmPtr->castValue(requestedType, &castInput, outputStorage, NULL, 0);
    }
    
@@ -843,8 +844,8 @@ ConsoleTypeOpDefaultNumeric( TypeF32Vector )
 
 ConsoleGetType( TypeBoolVector )
 {
-   Vector<bool> *vec = NULL;
-   static Vector<bool> workVec;
+   std::vector<bool> *vec = NULL;
+   static std::vector<bool> workVec;
    
    if (!inputStorage->isField)
    {
@@ -928,7 +929,7 @@ ConsoleGetType( TypeBoolVector )
    }
    else
    {
-      vec = (Vector<bool>*)ConsoleGetInputStoragePtr();
+      vec = (std::vector<bool>*)ConsoleGetInputStoragePtr();
    }
    
    // Set conservative output size
@@ -940,7 +941,7 @@ ConsoleGetType( TypeBoolVector )
    {
       // In this case we are setting output to this type so just copy the vector
       // NOTE: we will NEVER get outputStorage->isField == true where the type isn't the native type
-      Vector<bool> *outputVec = (Vector<bool>*)ConsoleGetOutputStoragePtr();
+      std::vector<bool> *outputVec = (std::vector<bool>*)ConsoleGetOutputStoragePtr();
       *outputVec = *vec;
    }
    else if (!outputStorage->isField &&
@@ -949,7 +950,7 @@ ConsoleGetType( TypeBoolVector )
       outputStorage->FinalizeStorage(outputStorage, (vec->size() * sizeof(S32)) + sizeof(U32));
       U32* vecCount = (U32*)ConsoleGetOutputStoragePtr();
       *vecCount++ = vec->size();
-      memcpy(vecCount, vec->address(), vec->size() * sizeof(S32));
+      std::copy(vec->begin(), vec->end(), vecCount);
       
       if (outputStorage->data.storageRegister)
       {
@@ -966,7 +967,7 @@ ConsoleGetType( TypeBoolVector )
       returnBuffer[0] = '\0';
       S32 returnLeng = 0;
       
-      for (Vector<bool>::iterator itr = vec->begin(); itr < vec->end(); itr++)
+      for (std::vector<bool>::iterator itr = vec->begin(); itr < vec->end(); itr++)
       {
          // concatenate the next value onto the return string
          if ( itr == vec->begin() )
@@ -991,14 +992,14 @@ ConsoleGetType( TypeBoolVector )
    }
    else
    {
-      static Vector<KorkApi::ConsoleValue> tmpArgv;
-      tmpArgv.setSize(inputStorage->data.argc);
+      static std::vector<KorkApi::ConsoleValue> tmpArgv;
+      tmpArgv.resize(inputStorage->data.argc);
       
       for (U32 i=0; i<inputStorage->data.argc; i++)
       {
          tmpArgv[i] = KorkApi::ConsoleValue::makeNumber(vec->operator[](i));
       }
-      KorkApi::TypeStorageInterface castInput = KorkApi::CreateRegisterStorageFromArgs(vmPtr->mInternal, inputStorage->data.argc, tmpArgv.address());
+      KorkApi::TypeStorageInterface castInput = KorkApi::CreateRegisterStorageFromArgs(vmPtr->mInternal, inputStorage->data.argc, &tmpArgv[0]);
       return vmPtr->castValue(requestedType, &castInput, outputStorage, NULL, 0);
    }
    

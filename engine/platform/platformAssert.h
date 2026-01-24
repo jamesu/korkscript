@@ -27,6 +27,11 @@
 #include "platform/platform.h"
 #endif
 
+namespace Platform
+{
+   void debugBreak();
+}
+
 class PlatformAssert
 {
 public:
