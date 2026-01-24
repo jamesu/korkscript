@@ -4,7 +4,6 @@
 #include "console/ast.h"
 #include "console/compiler.h"
 #include "console/simpleParser.h"
-#include "core/fileStream.h"
 #include <stdio.h>
 
 /*
@@ -471,31 +470,34 @@ void dumpToInstructionsPrint(Compiler::Resources& res, StmtNode* rootNode)
    cfg.enableStringInterpolation = gEnableExtensions;
 
    KorkApi::Vm* vm = KorkApi::createVM(&cfg);
-
-   CodeBlock* cb = new CodeBlock(vm->mInternal, true);
-   res.STEtoCode = &Compiler::compileSTEtoCode;
-   //res.resetTables(); // NOTE: should be done before
-   
-   U32 lastIP = Compiler::compileBlock(rootNode, codeStream, 0) + 1;
-   
-   codeStream.emit(Compiler::OP_RETURN);
-   codeStream.emitCodeStream(&cb->codeSize, &cb->code, &cb->lineBreakPairs, &cb->numFunctionCalls, &cb->functionCalls);
-   
-   
-   cb->lineBreakPairCount = codeStream.getNumLineBreaks();
-   
-   cb->globalStrings   = res.getGlobalStringTable().build();
-   cb->globalStringsMaxLen = res.getGlobalStringTable().totalLen;
-   
-   cb->functionStrings = res.getFunctionStringTable().build();
-   cb->functionStringsMaxLen = res.getFunctionStringTable().totalLen;
-   
-   cb->globalFloats    = res.getGlobalFloatTable().build();
-   cb->functionFloats  = res.getFunctionFloatTable().build();
-
-   res.getIdentTable().build(&cb->identStrings, &cb->identStringOffsets, &cb->numIdentStrings);
-
-   cb->dumpInstructions(0, false, true, gDumpLines);
+   {
+      KorkApi::VmAllocTLS::Scope memScope(vm->mInternal);
+      
+      CodeBlock* cb = new CodeBlock(vm->mInternal, true);
+      res.STEtoCode = &Compiler::compileSTEtoCode;
+      //res.resetTables(); // NOTE: should be done before
+      
+      U32 lastIP = Compiler::compileBlock(rootNode, codeStream, 0) + 1;
+      
+      codeStream.emit(Compiler::OP_RETURN);
+      codeStream.emitCodeStream(&cb->codeSize, &cb->code, &cb->lineBreakPairs, &cb->numFunctionCalls, &cb->functionCalls);
+      
+      
+      cb->lineBreakPairCount = codeStream.getNumLineBreaks();
+      
+      cb->globalStrings   = res.getGlobalStringTable().build();
+      cb->globalStringsMaxLen = res.getGlobalStringTable().totalLen;
+      
+      cb->functionStrings = res.getFunctionStringTable().build();
+      cb->functionStringsMaxLen = res.getFunctionStringTable().totalLen;
+      
+      cb->globalFloats    = res.getGlobalFloatTable().build();
+      cb->functionFloats  = res.getFunctionFloatTable().build();
+      
+      res.getIdentTable().build(&cb->identStrings, &cb->identStringOffsets, &cb->numIdentStrings);
+      
+      cb->dumpInstructions(0, false, true, gDumpLines);
+   }
 
    KorkApi::destroyVM(vm);
 }
@@ -504,45 +506,67 @@ bool printAST(const char* buf, const char* filename)
 {
    std::string theBuf(buf);
    Compiler::Resources res;
-   SimpleLexer::Tokenizer lex(StringTable, theBuf, filename, gEnableExtensions);
-   SimpleParser::ASTGen astGen(&lex, &res);
+   
+   KorkApi::Config cfg{};
+   cfg.mallocFn = [](size_t sz, void* user) {
+      return (void*)malloc(sz);
+   };
+   cfg.freeFn = [](void* ptr, void* user){
+      free(ptr);
+   };
+   cfg.logFn = MyLogger;
+   cfg.userResources = &res;
+   cfg.enableExceptions = gEnableExtensions;
+   cfg.enableTuples = gEnableExtensions;
+   cfg.enableTypes = gEnableExtensions;
+   cfg.enableStringInterpolation = gEnableExtensions;
 
-   res.allowExceptions = gEnableExtensions;
-   res.allowTuples = gEnableExtensions;
-   res.allowTypes = gEnableExtensions;
-   res.allowStringInterpolation = gEnableExtensions;
-   
-   StmtNode* rootNode = NULL;
-   
-   try
+   // Need a vm around to store malloc
+   KorkApi::Vm* vm = KorkApi::createVM(&cfg);
    {
-      astGen.processTokens();
+      KorkApi::VmAllocTLS::Scope memScope(vm->mInternal);
       
-      if (gPrintLexer)
+      SimpleLexer::Tokenizer lex(StringTable, theBuf, filename, gEnableExtensions);
+      SimpleParser::ASTGen astGen(&lex, &res);
+      
+      res.allowExceptions = gEnableExtensions;
+      res.allowTuples = gEnableExtensions;
+      res.allowTypes = gEnableExtensions;
+      res.allowStringInterpolation = gEnableExtensions;
+      
+      StmtNode* rootNode = NULL;
+      
+      try
       {
-         std::stringbuf buf;
-         astGen.emitTokens(buf);
-         printf("%s\n", buf.str().c_str());
+         astGen.processTokens();
+         
+         if (gPrintLexer)
+         {
+            std::stringbuf buf;
+            astGen.emitTokens(buf);
+            printf("%s\n", buf.str().c_str());
+         }
+         
+         rootNode = astGen.parseProgram();
+         
+         if (gPrintBytecode)
+         {
+            // Convert AST to bytecode
+            printf("== Parser Bytecode ==\n");
+            dumpToInstructionsPrint(res, rootNode);
+         }
+         else
+         {
+            astprint::printTree(rootNode);
+         }
       }
-      
-      rootNode = astGen.parseProgram();
-      
-      if (gPrintBytecode)
+      catch (SimpleParser::TokenError& e)
       {
-         // Convert AST to bytecode
-         printf("== Parser Bytecode ==\n");
-         dumpToInstructionsPrint(res, rootNode);
-      }
-      else
-      {
-         astprint::printTree(rootNode);
+         printf("Error parsing (\"%s\"; token is %s) at %i:%i\n", e.what(), lex.toString(e.token()).c_str(), e.token().pos.line, e.token().pos.col);
       }
    }
-   catch (SimpleParser::TokenError& e)
-   {
-      printf("Error parsing (\"%s\"; token is %s) at %i:%i\n", e.what(), lex.toString(e.token()).c_str(), e.token().pos.line, e.token().pos.col);
-   }
    
+   KorkApi::destroyVM(vm);
    return true;
 }
 
@@ -575,16 +599,21 @@ int procMain(int argc, char **argv)
       }
    }
    
-   FileStream fs;
-   if (!fs.open(argv[1], FileStream::Read))
+   FILE* fp = fopen(argv[1], "r");
+   if (!fp)
    {
       printf("Error loading file %s\n", argv[1]);
       return 1;
    }
    
-   char* data = new char[fs.getStreamSize()+1];
-   fs.read(fs.getStreamSize(), data);
-   data[fs.getStreamSize()] = '\0';
+   fseek(fp, 0, SEEK_END);
+   size_t fend = ftell(fp);
+   fseek(fp, 0, SEEK_SET);
+   
+   char* data = new char[fend+1];
+   fread(data, 1, fend, fp);
+   data[fend] = '\0';
+   fclose(fp);
    
    int ret = printAST(data, argv[1]) ? 0 : 1;
    delete[] data;

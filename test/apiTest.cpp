@@ -1,6 +1,4 @@
 #include "platform/platform.h"
-#include "console/compiler.h"
-#include "core/fileStream.h"
 #include "core/stringTable.h"
 #include <stdio.h>
 #include <unordered_map>
@@ -393,16 +391,22 @@ int procMain(int argc, char **argv)
    {
    }
    
-   FileStream fs;
-   if (!fs.open(argv[1], FileStream::Read))
+
+   FILE* fp = fopen(argv[1], "r");
+   if (!fp)
    {
       printf("Error loading file %s\n", argv[1]);
       return 1;
    }
    
-   char* data = new char[fs.getStreamSize()+1];
-   fs.read(fs.getStreamSize(), data);
-   data[fs.getStreamSize()] = '\0';
+   fseek(fp, 0, SEEK_END);
+   size_t fend = ftell(fp);
+   fseek(fp, 0, SEEK_SET);
+   
+   char* data = new char[fend+1];
+   fread(data, 1, fend, fp);
+   data[fend] = '\0';
+   fclose(fp);
    
    int ret = testScript(data, argv[1]) ? 0 : 1;
    delete[] data;

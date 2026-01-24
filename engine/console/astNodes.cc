@@ -27,7 +27,6 @@
 #include "console/ast.h"
 
 #include "console/consoleInternal.h"
-#include "core/fileStream.h"
 #include "console/compiler.h"
 
 using TT = SimpleLexer::TokenType;

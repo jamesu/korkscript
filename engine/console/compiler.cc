@@ -28,7 +28,6 @@
 
 
 #include "console/consoleInternal.h"
-#include "core/fileStream.h"
 #include "console/compiler.h"
 #include "console/telnetDebugger.h"
 
@@ -524,7 +523,7 @@ void CodeStream::emitCodeStream(U32 *size, U32 **stream, U32 **lineBreaks, U32* 
 {
    // Alloc stream
    U32 numLineBreaks = getNumLineBreaks();
-   *stream = new U32[mCodePos + (numLineBreaks * 2)];
+   *stream = KorkApi::VMem::NewArray<U32>(mCodePos + (numLineBreaks * 2));
    dMemset(*stream, '\0', mCodePos + (numLineBreaks * 2));
    *size = mCodePos;
    

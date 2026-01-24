@@ -28,7 +28,6 @@
 
 #include "core/findMatch.h"
 #include "console/consoleInternal.h"
-#include "core/fileStream.h"
 #include "console/compiler.h"
 #include "core/escape.h"
 
@@ -50,6 +49,7 @@ bool varCompare(const Dictionary::Entry* a, const Dictionary::Entry* b)
 
 void Dictionary::exportVariables(const char *varString, const char *fileName, bool append)
 {
+#ifdef TOFIX
    const char *searchStr = varString;
    KorkApi::Vector<Entry *> sortList;
    
@@ -114,6 +114,7 @@ void Dictionary::exportVariables(const char *varString, const char *fileName, bo
    }
    if(fileName)
       strm.close();
+#endif
 }
 
 void Dictionary::deleteVariables(const char *varString)

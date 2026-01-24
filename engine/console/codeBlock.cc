@@ -31,10 +31,8 @@
 #include "console/telnetDebugger.h"
 
 #include "core/stream.h"
-#include "core/fileStream.h"
 #include "core/stringTable.h"
 #include "core/unicode.h"
-#include "platform/platformProcess.h" // TOFIX: remove
 
 using namespace Compiler;
 
@@ -393,8 +391,8 @@ void CodeBlock::flushNSEntries()
 
 bool CodeBlock::read(StringTableEntry fileName, Stream &st, U32 readVersion)
 {
-   const StringTableEntry exePath = Platform::getMainDotCsDir();
-   const StringTableEntry cwd = Platform::getCurrentDirectory();
+   const StringTableEntry exePath = StringTable->EmptyString;// TOFIX Platform::getMainDotCsDir();
+   const StringTableEntry cwd = StringTable->EmptyString;// TOFIX Platform::getCurrentDirectory();
 
    if (readVersion == 0)
    {
@@ -417,7 +415,7 @@ bool CodeBlock::read(StringTableEntry fileName, Stream &st, U32 readVersion)
    {
       fullPath = NULL;
       
-      if(Platform::isFullPath(fileName))
+      if(true)// TOFIX Platform::isFullPath(fileName))
          fullPath = fileName;
       
       if(dStrnicmp(exePath, fileName, dStrlen(exePath)) == 0)
@@ -428,7 +426,7 @@ bool CodeBlock::read(StringTableEntry fileName, Stream &st, U32 readVersion)
       if(fullPath == NULL)
       {
          char buf[1024];
-         fullPath = StringTable->insert(Platform::makeFullPathName(fileName, buf, sizeof(buf)), true);
+         fullPath = StringTable->EmptyString;// TOFIX StringTable->insert(Platform::makeFullPathName(fileName, buf, sizeof(buf)), true);
       }
       
       modPath = "";// TOFIX Con::getModNameFromPath(fileName);
@@ -704,16 +702,6 @@ bool CodeBlock::write(Stream &st)
    return true;
 }
 
-
-bool CodeBlock::compile(const char *codeFileName, StringTableEntry fileName, const char *inScript)
-{
-   FileStream st;
-   if(!st.open(codeFileName, FileStream::Write))
-      return false;
-   
-   return compileToStream(st, fileName, inScript);
-}
-
 bool CodeBlock::compileToStream(Stream &st, StringTableEntry fileName, const char *inScript)
 {
    // Check for a UTF8 script file
@@ -848,12 +836,12 @@ bool CodeBlock::compileToStream(Stream &st, StringTableEntry fileName, const cha
    
    if(fileName)
    {
-      const StringTableEntry exePath = Platform::getMainDotCsDir();
-      const StringTableEntry cwd = Platform::getCurrentDirectory();
+      const StringTableEntry exePath = StringTable->EmptyString;// TOFIXPlatform::getMainDotCsDir();
+      const StringTableEntry cwd = StringTable->EmptyString;// TOFIXPlatform::getCurrentDirectory();
       
       fullPath = NULL;
       
-      if(Platform::isFullPath(fileName))
+      if(true)// TOFIX Platform::isFullPath(fileName))
          fullPath = fileName;
       
       if(exePath && dStrnicmp(exePath, fileName, dStrlen(exePath)) == 0)
@@ -864,7 +852,7 @@ bool CodeBlock::compileToStream(Stream &st, StringTableEntry fileName, const cha
       if(fullPath == NULL)
       {
          char buf[1024];
-         fullPath = StringTable->insert(Platform::makeFullPathName(fileName, buf, sizeof(buf)), true);
+         fullPath = StringTable->EmptyString; // TOFIX StringTable->insert(Platform::makeFullPathName(fileName, buf, sizeof(buf)), true);
       }
       
       modPath = ""; // TOFIX Con::getModNameFromPath(fileName);

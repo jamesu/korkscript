@@ -132,3 +132,14 @@ const char* avar(const char *message, ...)
    va_end(args);
    return( buffer );
 }
+
+namespace Platform
+{
+
+/// Debug.
+void debugBreak()
+{
+   
+}
+
+}

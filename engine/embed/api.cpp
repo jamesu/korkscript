@@ -1917,10 +1917,6 @@ void  freeBytes(void* p)
    {
       return vm->mConfig.freeFn(p, vm->mConfig.allocUser);
    }
-   else
-   {
-      return NULL;
-   }
 }
 
 }

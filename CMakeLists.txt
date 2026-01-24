@@ -22,13 +22,11 @@ set(KS_SRCS
 	./engine/core/hashFunction.cc
 	./engine/core/memStream.cc
 	./engine/core/stringTable.cc
-	./engine/core/fileStream.cc
 	./engine/core/nStream.cc
 	./engine/core/unicode.cc
 	./engine/core/stringUnit.cc
 	./engine/core/escape.cc
 
-	./engine/platform/platformFileIO.cc
 	./engine/platform/platform.cc
 	./engine/platform/platformAssert.cc
 	./engine/platform/platformMemory.cc
@@ -57,6 +55,7 @@ set(KS_SRCS
 )
 
 set(TORQUESIM_SRCS
+	./torqueSim/core/fileStream.cc
 	./torqueSim/console/console.cc
 	./torqueSim/console/console.h
 	./torqueSim/console/consoleFunctions.cc
@@ -75,6 +74,8 @@ set(TORQUESIM_SRCS
 	./torqueSim/sim/simFiberManager.cc
 	./torqueSim/sim/simFiberManager.h
 	./torqueSim/sim/simManager.cc
+	./torqueSim/platform/basicPlatformProcess.cc
+	./torqueSim/platform/platformFileIO.cc
 	./torqueSim/platform/platformNetAsync.cc
 	./torqueSim/platform/platformNetwork.cc
 )

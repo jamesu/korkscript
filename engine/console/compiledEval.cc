@@ -30,7 +30,6 @@
 #include "core/findMatch.h"
 #include "console/consoleInternal.h"
 #include "console/consoleNamespace.h"
-#include "core/fileStream.h"
 #include "console/compiler.h"
 
 // TOFIX #include "sim/netStringTable.h"

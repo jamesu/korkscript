@@ -30,7 +30,6 @@
 
 
 #include "console/consoleInternal.h"
-#include "core/fileStream.h"
 #include "console/compiler.h"
 
 
