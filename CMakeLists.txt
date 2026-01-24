@@ -22,7 +22,6 @@ set(KS_SRCS
 	./engine/core/hashFunction.cc
 	./engine/core/memStream.cc
 	./engine/core/stringTable.cc
-	./engine/core/dataChunker.cc
 	./engine/core/fileStream.cc
 	./engine/core/nStream.cc
 	./engine/core/unicode.cc

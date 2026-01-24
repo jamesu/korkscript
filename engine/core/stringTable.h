@@ -91,7 +91,7 @@ private:
    Node**      buckets;
    U32         numBuckets;
    U32         itemCount;
-   DataChunker mempool;
+   DataChunker<> mempool;
    
    Mutex mMutex;
    

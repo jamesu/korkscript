@@ -1,323 +1,317 @@
 //-----------------------------------------------------------------------------
-// Copyright (c) 2012 GarageGames, LLC
+// Copyright (c) 2023-2026 tgemit contributors.
+// See AUTHORS file and git repository for contributor information.
 //
-// Permission is hereby granted, free of charge, to any person obtaining a copy
-// of this software and associated documentation files (the "Software"), to
-// deal in the Software without restriction, including without limitation the
-// rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
-// sell copies of the Software, and to permit persons to whom the Software is
-// furnished to do so, subject to the following conditions:
-//
-// The above copyright notice and this permission notice shall be included in
-// all copies or substantial portions of the Software.
-//
-// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
-// FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
-// IN THE SOFTWARE.
+// SPDX-License-Identifier: MIT
 //-----------------------------------------------------------------------------
 
-#ifndef _DATACHUNKER_H_
+#pragma once
 #define _DATACHUNKER_H_
 
 #ifndef _PLATFORM_H_
 #  include "platform/platform.h"
 #endif
+#ifndef _PLATFORMASSERT_H_
+#  include "platform/platformAssert.h"
+#endif
 
-//----------------------------------------------------------------------------
+#include <algorithm>
+#include <stdint.h>
+#include "core/alignedBufferAllocator.h"
+
+// NOTE: this variant of the code uses std::allocator to manage memory.
+
 /// Implements a chunked data allocator.
 ///
-/// Calling new/malloc all the time is a time consuming operation. Therefore,
-/// we provide the DataChunker, which allocates memory in blocks of
-/// chunkSize (by default 16k, see ChunkSize, though it can be set in
-/// the constructor), then doles it out as requested, in chunks of up to
-/// chunkSize in size.
+/// This memory allocator allocates data in chunks of bytes, 
+/// the default size being ChunkSize.
+/// Bytes are sourced from the current head chunk until expended, 
+/// in which case a new chunk of bytes will be allocated from 
+/// the system memory allocator.
 ///
-/// It will assert if you try to get more than ChunkSize bytes at a time,
-/// and it deals with the logic of allocating new blocks and giving out
-/// word-aligned chunks.
-///
-/// Note that new/free/realloc WILL NOT WORK on memory gotten from the
-/// DataChunker. This also only grows (you can call freeBlocks to deallocate
-/// and reset things).
-class DataChunker
+template<class T, class Alloc = std::allocator<std::byte>> class BaseDataChunker
 {
 public:
-   /// Block of allocated memory.
-   ///
-   /// <b>This has nothing to do with datablocks as used in the rest of Torque.</b>
-   struct DataBlock
+   enum
    {
-      DataBlock* next;        ///< linked list pointer to the next DataBlock for this chunker
-      S32 curIndex;           ///< current allocation point within this DataBlock
-      DataBlock();
-      ~DataBlock();
-      inline U8 *getData();
+      ChunkSize = 16384
    };
-   
-   enum {
-      PaddDBSize = (sizeof(DataBlock) + 3) & ~3, ///< Padded size of DataBlock
-      ChunkSize = 16384 - PaddDBSize ///< Default size of each DataBlock page in the DataChunker
-   };
-   
-   /// Return a pointer to a chunk of memory from a pre-allocated block.
-   ///
-   /// This memory goes away when you call freeBlocks.
-   ///
-   /// This memory is word-aligned.
-   /// @param   size    Size of chunk to return. This must be less than chunkSize or else
-   ///                  an assertion will occur.
-   void *alloc(S32 size);
-   
-   /// Free all allocated memory blocks.
-   ///
-   /// This invalidates all pointers returned from alloc().
-   void freeBlocks(bool keepOne = false);
-   
-   /// Initialize using blocks of a given size.
-   ///
-   /// One new block is allocated at constructor-time.
-   ///
-   /// @param   size    Size in bytes of the space to allocate for each block.
-   DataChunker(S32 size=ChunkSize);
-   ~DataChunker();
-   
-   /// Swaps the memory allocated in one data chunker for another.  This can be used to implement
-   /// packing of memory stored in a DataChunker.
-   void swap(DataChunker &d)
+
+   struct alignas(uintptr_t) DataBlock : public AlignedBufferAllocator<T>
    {
-      DataBlock *temp = d.mCurBlock;
-      d.mCurBlock = mCurBlock;
-      mCurBlock = temp;
+      DataBlock* mNext;
+      size_t mCapacityBytes;
+      
+      inline DataBlock* getEnd()
+      {
+         return this+1;
+      }
+
+      inline dsize_t getCapacityBytes()
+      {
+         return mCapacityBytes;
+      }
+   };
+
+protected:
+   using ByteAlloc   = typename std::allocator_traits<Alloc>::template rebind_alloc<std::byte>;
+   using ByteTraits  = std::allocator_traits<ByteAlloc>;
+
+   dsize_t mChunkSize;
+   DataBlock* mChunkHead;
+   Alloc mAlloc;
+
+public:
+   
+   BaseDataChunker(U32 chunkSize=BaseDataChunker<T>::ChunkSize, 
+      const Alloc& alloc = Alloc{}) : mChunkSize(chunkSize), mChunkHead(NULL)
+   {
    }
    
-public:
+   virtual ~BaseDataChunker()
+   {
+      freeBlocks(false);
+   }
+
+   const ByteAlloc& get_allocator() const noexcept { return mAlloc; }
+   
+   DataBlock* allocChunk(dsize_t chunkSize)
+   {
+      const dsize_t headerBytes = sizeof(DataBlock);
+      const dsize_t totalBytes  = headerBytes + chunkSize;
+
+      std::byte* raw = ByteTraits::allocate(mAlloc, totalBytes);
+
+      DataBlock* newChunk = reinterpret_cast<DataBlock*>(raw);
+      constructInPlace(newChunk);
+
+      newChunk->initWithBytes(
+         reinterpret_cast<T*>(reinterpret_cast<std::byte*>(newChunk->getEnd())),
+         chunkSize
+      );
+
+      // push front
+      newChunk->mNext = mChunkHead;
+      mChunkHead = newChunk;
+      return newChunk;
+   }
+
+   void* alloc(dsize_t numBytes)
+   {
+      void* theAlloc = mChunkHead ? mChunkHead->allocBytes(numBytes) : NULL;
+      if (theAlloc == NULL)
+      {
+         dsize_t actualSize = std::max<dsize_t>(mChunkSize, numBytes);
+         allocChunk(actualSize);
+         theAlloc = mChunkHead->allocBytes(numBytes);
+         AssertFatal(theAlloc != NULL, "Something really odd going on here");
+      }
+      return theAlloc;
+   }
+
+   void freeBlocks(bool keepOne = false)
+   {
+      DataBlock* itr = mChunkHead;
+      while (itr)
+      {
+         DataBlock* nextItr = itr->mNext;
+         if (nextItr == NULL && keepOne)
+         {
+            itr->setPosition(0);
+            break;
+         }
+
+         const dsize_t totalBytes = sizeof(DataBlock) + itr->getCapacityBytes();
+
+         destructInPlace(itr);
+         ByteTraits::deallocate(mAlloc, reinterpret_cast<std::byte*>(itr), totalBytes);
+
+
+         itr = nextItr;
+      }
+      mChunkHead = itr;
+   }
+
    U32 countUsedBlocks()
    {
       U32 count = 0;
-      if (!mCurBlock)
-         return 0;
-      for (DataBlock *ptr = mCurBlock; ptr != NULL; ptr = ptr->next)
+      for (DataBlock* itr = mChunkHead; itr; itr = itr->mNext)
       {
          count++;
       }
       return count;
    }
    
-   void setChunkSize(U32 size)
+   dsize_t countUsedBytes()
    {
-      AssertFatal(mCurBlock == NULL, "Cant resize now");
+      dsize_t count = 0;
+      for (DataBlock* itr = mChunkHead; itr; itr = itr->mNext)
+      {
+         count += itr->getPositionBytes();
+      }
+      return count;
+   }
+
+   void setChunkSize(dsize_t size)
+   {
+      AssertFatal(mChunkHead == NULL, "Tried setting AFTER init");
       mChunkSize = size;
    }
-   
-   
-public:
-   
-   DataBlock*  mCurBlock;    ///< current page we're allocating data from.  If the
-   ///< data size request is greater than the memory space currently
-   ///< available in the current page, a new page will be allocated.
-   S32         mChunkSize;    ///< The size allocated for each page in the DataChunker
 };
 
-
-inline U8 *DataChunker::DataBlock::getData()
+template<class Alloc = std::allocator<std::byte>>
+class DataChunker : public BaseDataChunker<uintptr_t, Alloc>
 {
-   return (U8*)this + DataChunker::PaddDBSize;
-}
-
-//----------------------------------------------------------------------------
-
-template<class T>
-class Chunker: private DataChunker
-{
+   using Base = BaseDataChunker<uintptr_t, Alloc>;
 public:
-   Chunker(S32 size = DataChunker::ChunkSize) : DataChunker(size) {};
-   T* alloc()  { return reinterpret_cast<T*>(DataChunker::alloc(S32(sizeof(T)))); }
-   void clear()  { freeBlocks(); }
+   DataChunker(const Alloc& a = Alloc{}) : Base(BaseDataChunker<uintptr_t>::ChunkSize, a) {;}
+   explicit DataChunker(dsize_t size, const Alloc& a = Alloc{})
+      : Base((U32)size, a) {}
 };
 
-//----------------------------------------------------------------------------
-/// This class is similar to the Chunker<> class above.  But it allows for multiple
-/// types of structs to be stored.
-/// CodeReview:  This could potentially go into DataChunker directly, but I wasn't sure if
-/// CodeReview:  That would be polluting it.  BTR
-class MultiTypedChunker : private DataChunker
+/// Implements a derivative of BaseDataChunker designed for 
+/// allocating structs of type T without initialization.
+template<class T, class Alloc = std::allocator<std::byte>>
+class Chunker : private BaseDataChunker<T, Alloc>
 {
+   using Base = BaseDataChunker<T, Alloc>;
 public:
-   MultiTypedChunker(S32 size = DataChunker::ChunkSize) : DataChunker(size) {};
-   
-   /// Use like so:  MyType* t = chunker.alloc<MyType>();
-   template<typename T>
-   T* alloc()  { return reinterpret_cast<T*>(DataChunker::alloc(S32(sizeof(T)))); }
-   void clear()  { freeBlocks(true); }
+   Chunker(dsize_t size = Base::ChunkSize, const Alloc& a = Alloc{})
+      : Base((U32)std::max<dsize_t>(sizeof(T), size), a) 
+   {
+   }
+
+   T* alloc()
+   {
+      return (T*)BaseDataChunker<T>::alloc(sizeof(T));
+   }
+
+   void clear()
+   {
+      BaseDataChunker<T>::freeBlocks();
+   }
 };
 
-//----------------------------------------------------------------------------
-
-/// Templatized data chunker class with proper construction and destruction of its elements.
-///
-/// DataChunker just allocates space. This subclass actually constructs/destructs the
-/// elements. This class is appropriate for more complex classes.
-template<class T>
-class ClassChunker: private DataChunker
+/// Implements a simple linked list for ClassChunker and FreeListChunker.
+template<class T> struct ChunkerFreeClassList
 {
-public:
-   ClassChunker(S32 size = DataChunker::ChunkSize) : DataChunker(size)
+   ChunkerFreeClassList<T>* mNextList;
+
+   ChunkerFreeClassList() : mNextList(NULL)
    {
-      mElementSize = getMax(U32(sizeof(T)), U32(sizeof(T *)));
-      mFreeListHead = NULL;
    }
-   
-   /// Allocates and properly constructs in place a new element.
-   T *alloc()
+
+   void reset()
    {
-      if(mFreeListHead == NULL)
-         return constructInPlace(reinterpret_cast<T*>(DataChunker::alloc(mElementSize)));
-      T* ret = mFreeListHead;
-      mFreeListHead = *(reinterpret_cast<T**>(mFreeListHead));
-      return constructInPlace(ret);
+      mNextList = NULL;
    }
-   
-   /// Properly destructs and frees an element allocated with the alloc method.
-   void free(T* elem)
+
+   bool isEmpty()
    {
-      destructInPlace(elem);
-      *(reinterpret_cast<T**>(elem)) = mFreeListHead;
-      mFreeListHead = elem;
+      return mNextList == NULL;
    }
-   
-   void freeBlocks( bool keepOne = false )
+
+   T* pop()
    {
-      DataChunker::freeBlocks( keepOne );
-      mFreeListHead = NULL;
+      ChunkerFreeClassList<T>* oldNext = mNextList;
+      mNextList = mNextList ? mNextList->mNextList : NULL;
+      return (T*)oldNext;
    }
-   
-private:
-   S32   mElementSize;     ///< the size of each element, or the size of a pointer, whichever is greater
-   T     *mFreeListHead;   ///< a pointer to a linked list of freed elements for reuse
+
+   void push(ChunkerFreeClassList<T>* other)
+   {
+      other->mNextList = mNextList;
+      mNextList = other;
+   }
 };
 
-//----------------------------------------------------------------------------
+/// Implements a derivative of BaseDataChunker designed for 
+/// allocating structs or classes of type T with initialization.
+template<class T, class Alloc = std::allocator<std::byte>> class ClassChunker : private BaseDataChunker<T, Alloc>
+{
+   using Base = BaseDataChunker<T, Alloc>;
 
-template<class T>
+protected:
+   ChunkerFreeClassList<T> mFreeListHead;
+
+public:
+   ClassChunker(dsize_t size = BaseDataChunker<T>::ChunkSize, const Alloc& alloc = Alloc{}) : Base(size, alloc)
+   {
+      
+   }
+   
+   T* alloc()
+   {
+      if (mFreeListHead.isEmpty())
+      {
+         return constructInPlace((T*)BaseDataChunker<T>::alloc(sizeof(T)));
+      }
+      else
+      {
+         return constructInPlace(mFreeListHead.pop());
+      }
+   }
+   
+   void free(T* item)
+   {
+      destructInPlace(item);
+      mFreeListHead.push(reinterpret_cast< ChunkerFreeClassList<T>* >(item));
+   }
+   
+   void freeBlocks(bool keepOne=false)
+   {
+      BaseDataChunker<T>::freeBlocks(keepOne);
+   }
+};
+
+/// Implements a chunker which uses the data of another BaseDataChunker 
+/// as underlying storage.
+template<class T, class Alloc = std::allocator<std::byte>>
 class FreeListChunker
 {
-public:
-   FreeListChunker(DataChunker *inChunker)
-   :  mChunker( inChunker ),
-   mOwnChunker( false ),
-   mFreeListHead( NULL )
-   {
-      mElementSize = getMax(U32(sizeof(T)), U32(sizeof(T *)));
-   }
-   
-   FreeListChunker(S32 size = DataChunker::ChunkSize)
-   :  mFreeListHead( NULL )
-   {
-      mChunker = new DataChunker( size );
-      mOwnChunker = true;
-      
-      mElementSize = getMax(U32(sizeof(T)), U32(sizeof(T *)));
-   }
-   
-   ~FreeListChunker()
-   {
-      if ( mOwnChunker )
-         delete mChunker;
-   }
-   
-   T *alloc()
-   {
-      if(mFreeListHead == NULL)
-         return reinterpret_cast<T*>(mChunker->alloc(mElementSize));
-      T* ret = mFreeListHead;
-      mFreeListHead = *(reinterpret_cast<T**>(mFreeListHead));
-      return ret;
-   }
-   
-   void free(T* elem)
-   {
-      *(reinterpret_cast<T**>(elem)) = mFreeListHead;
-      mFreeListHead = elem;
-   }
-   
-   /// Allow people to free all their memory if they want.
-   void freeBlocks( bool keepOne = false )
-   {
-      mChunker->freeBlocks( keepOne );
-      mFreeListHead = NULL;
-   }
-   
-private:
-   DataChunker *mChunker;
-   bool        mOwnChunker;
-   
-   S32   mElementSize;
-   T     *mFreeListHead;
-};
+protected:
+   BaseDataChunker<T, Alloc>* mChunker;
+   bool mOwnsChunker;
+   ChunkerFreeClassList<T> mFreeListHead;
 
-
-class FreeListChunkerUntyped
-{
 public:
-   FreeListChunkerUntyped(U32 inElementSize, DataChunker *inChunker)
-   :  mChunker( inChunker ),
-   mOwnChunker( false ),
-   mElementSize( inElementSize ),
-   mFreeListHead( NULL )
+   FreeListChunker(BaseDataChunker<T>* otherChunker) :
+   mChunker(otherChunker),
+   mOwnsChunker(false)
    {
    }
-   
-   FreeListChunkerUntyped(U32 inElementSize, S32 size = DataChunker::ChunkSize)
-   :  mElementSize( inElementSize ),
-   mFreeListHead( NULL )
+
+   FreeListChunker(dsize_t size = BaseDataChunker<T>::ChunkSize)
    {
-      mChunker = new DataChunker( size );
-      mOwnChunker = true;
+      mChunker = new BaseDataChunker<T, Alloc>(size);
+      mOwnsChunker = true;
    }
    
-   ~FreeListChunkerUntyped()
+   BaseDataChunker<T>* getChunker()
    {
-      if ( mOwnChunker )
-         delete mChunker;
+      return mChunker;
    }
-   
-   void *alloc()
+
+   T* alloc()
    {
-      if(mFreeListHead == NULL)
-         return mChunker->alloc(mElementSize);
-      
-      void  *ret = mFreeListHead;
-      mFreeListHead = *(reinterpret_cast<void**>(mFreeListHead));
-      return ret;
+      if (mFreeListHead.isEmpty())
+      {
+         return constructInPlace((T*)mChunker->alloc(sizeof(T)));
+      }
+      else
+      {
+         return constructInPlace(mFreeListHead.pop());
+      }
    }
-   
-   void free(void* elem)
+
+   void free(T* item)
    {
-      *(reinterpret_cast<void**>(elem)) = mFreeListHead;
-      mFreeListHead = elem;
+      destructInPlace(item);
+      mFreeListHead.push(reinterpret_cast< ChunkerFreeClassList<T>* >(item));
    }
-   
-   // Allow people to free all their memory if they want.
-   void freeBlocks()
+
+   void freeBlocks(bool keepOne)
    {
-      mChunker->freeBlocks();
-      
-      // We have to terminate the freelist as well or else we'll run
-      // into crazy unused memory.
-      mFreeListHead = NULL;
+      BaseDataChunker<T>::freeBlocks(keepOne);
    }
-   
-   U32   getElementSize() const { return mElementSize; }
-   
-private:
-   DataChunker *mChunker;
-   bool        mOwnChunker;
-   
-   const U32   mElementSize;
-   void        *mFreeListHead;
 };
-#endif

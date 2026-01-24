@@ -31,7 +31,6 @@
 #endif
 
 class Stream;
-class DataChunker;
 
 #include "platform/platform.h"
 #include "console/codeBlock.h"
@@ -197,7 +196,7 @@ namespace Compiler
 
       CompilerStringTable *currentStringTable, globalStringTable, functionStringTable;
       CompilerFloatTable  *currentFloatTable,  globalFloatTable,  functionFloatTable;
-      DataChunker          consoleAllocator;
+      DataChunker<>        consoleAllocator;
       CompilerIdentTable   identTable;
       CompilerIdentTable   typeTable;
 
