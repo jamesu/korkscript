@@ -44,7 +44,7 @@
 #endif
 
 #ifndef _PLATFORMSEMAPHORE_H_
-#include "platform/platformSemaphore.h"
+#include "platform/threads/semaphore.h"
 #endif
 
 #include <algorithm>

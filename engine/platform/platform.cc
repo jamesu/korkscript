@@ -21,7 +21,6 @@
 //-----------------------------------------------------------------------------
 
 #include "platform/platform.h"
-#include "platform/threads/mutex.h"
 
 //Added for the cprintf below
 #include <stdarg.h>
