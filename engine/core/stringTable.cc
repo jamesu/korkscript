@@ -80,12 +80,11 @@ U32 _StringTable::hashStringn(const char* str, S32 len)
 //--------------------------------------
 _StringTable::_StringTable()
 {
-   buckets = (Node **) dMalloc(csm_stInitSize * sizeof(Node *));
+   buckets.resize(csm_stInitSize);
    for(U32 i = 0; i < csm_stInitSize; i++) {
       buckets[i] = 0;
    }
    
-   numBuckets = csm_stInitSize;
    itemCount = 0;
    
    // Insert empty string.
@@ -95,7 +94,6 @@ _StringTable::_StringTable()
 //--------------------------------------
 _StringTable::~_StringTable()
 {
-   dFree(buckets);
 }
 
 
@@ -128,7 +126,7 @@ StringTableEntry _StringTable::insert(const char* val, const bool  caseSens)
    
    Node **walk, *temp;
    U32 key = hashString(val);
-   walk = &buckets[key % numBuckets];
+   walk = &buckets[key % (U32)buckets.size()];
    while((temp = *walk) != NULL)   {
       if(caseSens && !dStrcmp(temp->val, val))
          return temp->val;
@@ -147,6 +145,8 @@ StringTableEntry _StringTable::insert(const char* val, const bool  caseSens)
       ret = (*walk)->val;
       itemCount ++;
    }
+   
+   U32 numBuckets = (U32)buckets.size();
    if(itemCount > 2 * numBuckets) {
       resize(4 * numBuckets - 1);
    }
@@ -180,7 +180,7 @@ StringTableEntry _StringTable::lookup(const char* val, const bool  caseSens)
    
    Node **walk, *temp;
    U32 key = hashString(val);
-   walk = &buckets[key % numBuckets];
+   walk = &buckets[key % (U32)buckets.size()];
    while((temp = *walk) != NULL)   {
       if(caseSens && !dStrcmp(temp->val, val))
          return temp->val;
@@ -202,7 +202,7 @@ StringTableEntry _StringTable::lookupn(const char* val, S32 len, const bool  cas
    
    Node **walk, *temp;
    U32 key = hashStringn(val, len);
-   walk = &buckets[key % numBuckets];
+   walk = &buckets[key % (U32)buckets.size()];
    while((temp = *walk) != NULL) {
       if(caseSens && !dStrncmp(temp->val, val, len) && temp->val[len] == 0)
          return temp->val;
@@ -223,7 +223,7 @@ void _StringTable::resize(const U32 newSize)
    // lists so that case sens strings are always after their
    // corresponding case insens strings
    
-   for(i = 0; i < numBuckets; i++) {
+   for(i = 0; i < buckets.size(); i++) {
       walk = buckets[i];
       while(walk)
       {
@@ -233,11 +233,10 @@ void _StringTable::resize(const U32 newSize)
          walk = temp;
       }
    }
-   buckets = (Node **) dRealloc(buckets, newSize * sizeof(Node));
+   buckets.resize(newSize);
    for(i = 0; i < newSize; i++) {
       buckets[i] = 0;
    }
-   numBuckets = newSize;
    walk = head;
    while(walk) {
       U32 key;

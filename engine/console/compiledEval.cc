@@ -835,9 +835,9 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
 
                   if (tmpFnNamespace == StringTable->lookupn(classText, frame.nsDocBlockClassNameLength))
                   {
-                     char *usageStr = dStrdup(baseDocStr + frame.nsDocBlockOffset);
-                     tmpNs->mUsage = usageStr;
-                     tmpNs->mCleanUpUsage = true;
+                     const char *usageStr = baseDocStr + frame.nsDocBlockOffset;
+                     tmpNs->mUsage = NULL;
+                     tmpNs->mDynamicUsage = usageStr;
                      frame.nsDocBlockClassLocation = 0;
                   }
                }
@@ -1831,7 +1831,7 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
                {
                   const char* nsName = tmpNs? tmpNs->mName: "";
                   vmInternal->printf(0, "%s: %s::%s - wrong number of arguments.", frame.codeBlock->getFileLine(ip-4), nsName, tmpFnName);
-                  vmInternal->printf(0, "%s: usage: %s", frame.codeBlock->getFileLine(ip-4), tmpNsEntry->mUsage);
+                  vmInternal->printf(0, "%s: usage: %s", frame.codeBlock->getFileLine(ip-4), tmpNsEntry->getUsage());
                   evalState.mSTR.popFrame();
                   frame.pushStringStackCount--;
                   evalState.mSTR.setStringValue("");
@@ -3330,8 +3330,16 @@ void ConsoleSerializer::writeObjectRef(LocalRefTrack& track)
 bool ConsoleSerializer::readStringStack(StringStack& stack)
 {
    stack.reset();
-   return mStream->read(&stack.mBufferSize) &&
-     mStream->read(stack.mBufferSize, stack.mBuffer) &&
+   
+   U32 bufferSize = 0;
+   if (!mStream->read(&bufferSize))
+   {
+      return false;
+   }
+   
+   stack.mBuffer.resize(bufferSize);
+   
+   return mStream->read(bufferSize, stack.mBuffer.data()) &&
      mStream->read(sizeof(stack.mFrameOffsets), stack.mFrameOffsets) &&
      mStream->read(sizeof(stack.mStartOffsets), stack.mStartOffsets) &&
      mStream->read(sizeof(stack.mStartTypes), stack.mStartTypes) &&
@@ -3348,8 +3356,8 @@ bool ConsoleSerializer::readStringStack(StringStack& stack)
 
 bool ConsoleSerializer::writeStringStack(StringStack& stack)
 {
-   return mStream->write(stack.mBufferSize) &&
-     mStream->write(stack.mBufferSize, stack.mBuffer) &&
+   return mStream->write((U32)stack.mBuffer.size()) &&
+     mStream->write((U32)stack.mBuffer.size(), stack.mBuffer.data()) &&
      mStream->write(sizeof(stack.mFrameOffsets), stack.mFrameOffsets) &&
      mStream->write(sizeof(stack.mStartOffsets), stack.mStartOffsets) &&
      mStream->write(sizeof(stack.mStartTypes), stack.mStartTypes) &&

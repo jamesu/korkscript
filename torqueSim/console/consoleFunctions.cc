@@ -882,7 +882,7 @@ ConsoleFunction(exec, bool, 2, 4, "exec(fileName [, nocalls [,journalScript]])")
          {
             compiledStream.setPosition(0);
             blockSize = compiledStream.getStreamSize();
-            blockBytes = (U8*)dMalloc(blockSize);
+            blockBytes = (U8*)malloc(blockSize);
             compiledStream.read(blockSize, blockBytes);
          }
       }
@@ -909,7 +909,7 @@ ConsoleFunction(exec, bool, 2, 4, "exec(fileName [, nocalls [,journalScript]])")
       {
          if (blockBytes)
          {
-            dFree(blockBytes);
+            free(blockBytes);
          }
          delete [] script;
          Con::errorf(ConsoleLogEntry::Script, "exec: invalid script file %s.", scriptFileName);
@@ -940,7 +940,7 @@ ConsoleFunction(exec, bool, 2, 4, "exec(fileName [, nocalls [,journalScript]])")
 
             if (blockBytes)
             {
-               dFree(blockBytes);
+               free(blockBytes);
             }
             return false;
          }
@@ -959,7 +959,7 @@ ConsoleFunction(exec, bool, 2, 4, "exec(fileName [, nocalls [,journalScript]])")
       vmPtr->execCodeBlock(blockSize, blockBytes, scriptFileName, noCalls, 0);
       vmPtr->clearCurrentFiberError();
 
-      dFree(blockBytes);
+      free(blockBytes);
       ret = true;
    }
    else if(script)
@@ -973,7 +973,7 @@ ConsoleFunction(exec, bool, 2, 4, "exec(fileName [, nocalls [,journalScript]])")
       {
          vmPtr->execCodeBlock(blockSize, blockBytes, scriptFileName, noCalls, 0);
          vmPtr->clearCurrentFiberError();
-         dFree(blockBytes);
+         free(blockBytes);
          ret = true;
       }
    }

@@ -230,7 +230,7 @@ void NamespaceState::printNamespaceEntries(Namespace * g, bool dumpScript, bool 
          // *.methodName(*)
          // then we will also extract parameters.
 
-         const char *use = ewalk->mUsage ? ewalk->mUsage : "";
+         const char *use = ewalk->getUsage();
          const char *bgn = dStrchr(use, '(');
          const char *end = dStrchr(use, ')');
          const char *dot = dStrchr(use, '.');
@@ -281,13 +281,13 @@ void NamespaceState::printNamespaceEntries(Namespace * g, bool dumpScript, bool 
          }
 
          // Default...
-         printClassMethod(true, typeNames[eType], funcName, "", ewalk->mUsage);
+         printClassMethod(true, typeNames[eType], funcName, "", ewalk->getUsage());
       }
       else if(ewalk->mType == Namespace::Entry::GroupMarker)
       {
          if(!inGroup)
-            printGroupStart(ewalk->cb.mGroupName, ewalk->mUsage);
-         else 
+            printGroupStart(ewalk->cb.mGroupName, ewalk->getUsage());
+         else
             printGroupEnd();
 
          inGroup = !inGroup;
@@ -400,7 +400,7 @@ void NamespaceState::dumpClasses( bool dumpScript, bool dumpEngine )
       }
 
       // Print the header for the class..
-      printClassHeader(vec[i]->mUsage, className, superClassName, false);
+      printClassHeader(vec[i]->getUsage(), className, superClassName, false);
 
       // Deal with entries.
       printNamespaceEntries(vec[i], dumpScript, dumpEngine);
@@ -475,7 +475,7 @@ void NamespaceState::dumpClasses( bool dumpScript, bool dumpEngine )
          char fieldDoc[1024];
 
          // Usage string iterator.
-         const char* field = vec[i]->mUsage;
+         const char* field = vec[i]->getUsage();
 
          while( field )
          {

@@ -279,7 +279,7 @@ ConsoleFunction(saveFibers, bool, 3, 3, "fiberIdList, fileName")
    if (count <= 0)
       return false;
 
-   KorkApi::FiberId* fibers = (KorkApi::FiberId*)dMalloc(sizeof(KorkApi::FiberId) * count);
+   KorkApi::FiberId* fibers = (KorkApi::FiberId*)malloc(sizeof(KorkApi::FiberId) * count);
 
    for (S32 i = 0; i < count; ++i)
    {
@@ -288,7 +288,7 @@ ConsoleFunction(saveFibers, bool, 3, 3, "fiberIdList, fileName")
    }
 
    bool ok = vmPtr->dumpFiberStateToBlob((U32)count, fibers, &blobSize, &blob);
-   dFree(fibers);
+   free(fibers);
 
    if (!ok)
    {
@@ -301,7 +301,7 @@ ConsoleFunction(saveFibers, bool, 3, 3, "fiberIdList, fileName")
       didWrite = true;
    }
 
-   dFree(blob);
+   free(blob);
    return didWrite;
 }
 
@@ -312,7 +312,7 @@ ConsoleFunction(restoreFibers, const char*, 2, 2, "fileName")
    if (fs.open(argv[1], FileStream::Read))
    {
       U32 blobSize = fs.getStreamSize();
-      U8* blob = (U8*)dMalloc(blobSize);
+      U8* blob = (U8*)malloc(blobSize);
       fs.read(blobSize, blob);
       
       KorkApi::FiberId* outFibers = NULL;
@@ -340,12 +340,12 @@ ConsoleFunction(restoreFibers, const char*, 2, 2, "fileName")
          KorkApi::ConsoleValue cv = KorkApi::ConsoleValue::makeString(buf);
          result = vmPtr->valueAsString(cv);
 
-         dFree(outFibers);
-         dFree(blob);
+         free(outFibers);
+         free(blob);
          return result;
       }
 
-      dFree(blob);
+      free(blob);
    }
    
    return "";

@@ -33,6 +33,8 @@
 #include "core/dataChunker.h"
 #endif
 
+#include <vector>
+
 //--------------------------------------
 /// A global table for the hashing and tracking of strings.
 ///
@@ -88,8 +90,7 @@ private:
       Node *next;
    };
    
-   Node**      buckets;
-   U32         numBuckets;
+   std::vector<Node*> buckets;
    U32         itemCount;
    DataChunker<> mempool;
    

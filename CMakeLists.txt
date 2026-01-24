@@ -22,12 +22,10 @@ set(KS_SRCS
 	./engine/core/memStream.cc
 	./engine/core/stringTable.cc
 	./engine/core/nStream.cc
-	./engine/core/unicode.cc
 	./engine/core/escape.cc
 
 	./engine/platform/platform.cc
 	./engine/platform/platformAssert.cc
-	./engine/platform/platformMemory.cc
 	./engine/platform/platformStrings.cc
 	./engine/platform/basicPlatform.cc
 

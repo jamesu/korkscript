@@ -122,7 +122,7 @@ bool MemStream::_read(const U32 in_numBytes, void *out_pBuffer)
 
    // Obtain a current pointer, and do the copy
    const void* pCurrent = (const void*)((const U8*)m_pBufferBase + m_currentPosition);
-   dMemcpy(out_pBuffer, pCurrent, actualBytes);
+   memcpy(out_pBuffer, pCurrent, actualBytes);
 
    // Advance the stream position
    m_currentPosition += actualBytes;
@@ -159,7 +159,7 @@ bool MemStream::_write(const U32 in_numBytes, const void *in_pBuffer)
 
    // Obtain a current pointer, and do the copy
    void* pCurrent = (void*)((U8*)m_pBufferBase + m_currentPosition);
-   dMemcpy(pCurrent, in_pBuffer, actualBytes);
+   memcpy(pCurrent, in_pBuffer, actualBytes);
 
    // Advance the stream position
    m_currentPosition += actualBytes;

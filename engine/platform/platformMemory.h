@@ -28,18 +28,6 @@
 
 //------------------------------------------------------------------------------
 
-#define placenew(x) new(x)
-#define dMalloc(x) dMalloc_r(x, __FILE__, __LINE__)
-#define dRealloc(x, y) dRealloc_r(x, y, __FILE__, __LINE__)
-
-//------------------------------------------------------------------------------
-
-#if defined(TORQUE_OS_WIN32)
-extern void* FN_CDECL operator new(dsize_t size, void* ptr);
-#endif
-
-//------------------------------------------------------------------------------
-
 template <class T, class... Args>
 inline T* constructInPlace(T* p, Args&&... args)
 {
@@ -66,20 +54,5 @@ template <class T> inline void destructInPlace(T* p)
 {
    p->~T();
 }
-
-//------------------------------------------------------------------------------
-
-
-extern void  setBreakAlloc(dsize_t);
-extern void  setMinimumAllocUnit(U32);
-
-extern void* dMalloc_r(dsize_t in_size, const char*, const dsize_t);
-extern void  dFree(void* in_pFree);
-extern void* dRealloc_r(void* in_pResize, dsize_t in_size, const char*, const dsize_t);
-
-inline void* dMemcpy(void *dst, const void *src, dsize_t size) { return memcpy(dst, src, size); }
-inline void* dMemmove(void *dst, const void *src, dsize_t size) { return memmove(dst, src, size); }
-inline void* dMemset(void *dst, int c, dsize_t size) { return memset(dst, c, size); }
-inline int   dMemcmp(const void *ptr1, const void *ptr2, dsize_t size) { return memcmp(ptr1, ptr2, size); }
 
 #endif // _PLATFORM_MEMORY_H_

@@ -106,13 +106,6 @@ char *stristr(char *szStringToBeSearched, const char *szSubstringToSearchFor)
    return pPos;
 } // stristr(...)
 
-char *dStrdup_r(const char *src, const char *fileName, U32 lineNumber)
-{
-   char *buffer = (char *) dMalloc_r(dStrlen(src) + 1, fileName, lineNumber);
-   dStrcpy(buffer, src);
-   return buffer;
-}
-
 char* dStrcat(char *dst, const char *src)
 {
    return strcat(dst,src);

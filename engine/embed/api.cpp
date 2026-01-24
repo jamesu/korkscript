@@ -1757,7 +1757,7 @@ bool Vm::dumpFiberStateToBlob(U32 numFibers, KorkApi::FiberId* fibers, U32* outB
 {
    VmAllocTLS::Scope memScope(mInternal);
    const U32 maxBlobSize = 1024*1024*16;
-   U8* buffer = (U8*)dMalloc(maxBlobSize);
+   U8* buffer = mInternal->NewArray<U8>(maxBlobSize);
    *outBlob = NULL;
    *outBlobSize = 0;
    
@@ -1776,7 +1776,7 @@ bool Vm::dumpFiberStateToBlob(U32 numFibers, KorkApi::FiberId* fibers, U32* outB
    
    if (fiberList.size() == 0)
    {
-      dFree(buffer);
+      mInternal->DeleteArray(buffer);
       return false;
    }
    
@@ -1788,7 +1788,7 @@ bool Vm::dumpFiberStateToBlob(U32 numFibers, KorkApi::FiberId* fibers, U32* outB
    }
    else
    {
-      dFree(buffer);
+      mInternal->DeleteArray(buffer);
    }
    
    serializer.reset(false);

@@ -92,10 +92,10 @@ struct NetAddress
       switch (type)
       {
          case NetAddress::IPAddress:
-            return (dMemcmp(other.address.ipv4.netNum, address.ipv4.netNum, 4) == 0);
+            return (memcmp(other.address.ipv4.netNum, address.ipv4.netNum, 4) == 0);
             break;
          case NetAddress::IPV6Address:
-            return (dMemcmp(other.address.ipv6.netNum, address.ipv6.netNum, 16) == 0);
+            return (memcmp(other.address.ipv6.netNum, address.ipv6.netNum, 16) == 0);
             break;
          case NetAddress::IPBroadcastAddress:
             return true;
@@ -116,10 +116,10 @@ struct NetAddress
       switch (type)
       {
          case NetAddress::IPAddress:
-            return (dMemcmp(other.address.ipv4.netNum, address.ipv4.netNum, 4) == 0) && other.port == port;
+            return (memcmp(other.address.ipv4.netNum, address.ipv4.netNum, 4) == 0) && other.port == port;
             break;
          case NetAddress::IPV6Address:
-            return (dMemcmp(other.address.ipv6.netNum, address.ipv6.netNum, 16) == 0) && other.port == port;
+            return (memcmp(other.address.ipv6.netNum, address.ipv6.netNum, 16) == 0) && other.port == port;
             break;
          case NetAddress::IPBroadcastAddress:
             return true;
@@ -140,10 +140,10 @@ struct NetAddress
       switch (type)
       {
          case NetAddress::IPAddress:
-            return other.port == port && (dMemcmp(other.address.ipv4.netNum, address.ipv4.netNum, 4) == 0);
+            return other.port == port && (memcmp(other.address.ipv4.netNum, address.ipv4.netNum, 4) == 0);
             break;
          case NetAddress::IPV6Address:
-            return other.port == port && other.address.ipv6.netFlow == address.ipv6.netFlow && other.address.ipv6.netScope == address.ipv6.netScope && (dMemcmp(other.address.ipv6.netNum, address.ipv6.netNum, 16) == 0);
+            return other.port == port && other.address.ipv6.netFlow == address.ipv6.netFlow && other.address.ipv6.netScope == address.ipv6.netScope && (memcmp(other.address.ipv6.netNum, address.ipv6.netNum, 16) == 0);
             break;
          case NetAddress::IPBroadcastAddress:
             return other.port == port;

@@ -20,10 +20,9 @@ class Namespace
    Namespace *mNext;
    //AbstractClassRep *mClassRep;
    U32 mRefCountToParent;
+   
    const char* mUsage;
-   // Script defined usage strings need to be cleaned up. This
-   // field indicates whether or not the usage was set from script.
-   bool mCleanUpUsage;
+   KorkApi::String mDynamicUsage;
 
    struct Entry
    {
@@ -47,6 +46,7 @@ class Namespace
       S32 mMinArgs;
       S32 mMaxArgs;
       const char *mUsage;
+      KorkApi::String mDynamicUsage;
       StringTableEntry mPackage;
       void* mUserPtr;
 
@@ -65,6 +65,11 @@ class Namespace
       void clear();
 
       KorkApi::ConsoleValue execute(S32 argc, KorkApi::ConsoleValue* argv, ExprEvalState *state, KorkApi::VMObject* resolvedThis, bool startSuspended=false);
+      
+      const char* getUsage()
+      {
+         return mUsage ? mUsage : mDynamicUsage.c_str();
+      }
    };
    Entry *mEntryList;
 
@@ -91,7 +96,12 @@ class Namespace
    char * lastUsage;
 
    void getEntryList(KorkApi::Vector<Entry *> *);
-
+   
+   const char* getUsage()
+   {
+      return mUsage ? mUsage : mDynamicUsage.c_str();
+   }
+   
    Entry *lookup(StringTableEntry name);
    Entry *lookupRecursive(StringTableEntry name);
    Entry *createLocalEntry(StringTableEntry name);

@@ -524,7 +524,7 @@ void CodeStream::emitCodeStream(U32 *size, U32 **stream, U32 **lineBreaks, U32* 
    // Alloc stream
    U32 numLineBreaks = getNumLineBreaks();
    *stream = KorkApi::VMem::NewArray<U32>(mCodePos + (numLineBreaks * 2));
-   dMemset(*stream, '\0', mCodePos + (numLineBreaks * 2));
+   memset(*stream, '\0', mCodePos + (numLineBreaks * 2));
    *size = mCodePos;
    
    // Dump chunks & line breaks
@@ -533,7 +533,7 @@ void CodeStream::emitCodeStream(U32 *size, U32 **stream, U32 **lineBreaks, U32* 
    for (CodeData *itr = mCode; itr != NULL; itr = itr->next)
    {
       U32 bytesToCopy = itr->size > outBytes ? outBytes : itr->size;
-      dMemcpy(outPtr, itr->data, bytesToCopy);
+      memcpy(outPtr, itr->data, bytesToCopy);
       outPtr += bytesToCopy;
       outBytes -= bytesToCopy;
    }
@@ -544,7 +544,7 @@ void CodeStream::emitCodeStream(U32 *size, U32 **stream, U32 **lineBreaks, U32* 
    // Dump func calls
    mNumFuncCalls++; // reserve 0
    *numFuncCalls = mNumFuncCalls;
-   *funcCallsPtr = new void*[mNumFuncCalls];
+   *funcCallsPtr = KorkApi::VMem::NewArray<void*>(mNumFuncCalls);
    memset(*funcCallsPtr, '\0', sizeof(void*) * mNumFuncCalls);
    
    // Apply patches on top

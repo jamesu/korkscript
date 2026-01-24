@@ -81,7 +81,7 @@ public:
       U32 lineNumber;
       S32 passCount;
       S32 curCount;
-      char *testExpression;
+      KorkApi::String testExpression;
       bool clearOnHit;
       Breakpoint *next;
    };

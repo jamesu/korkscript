@@ -629,7 +629,7 @@ void Net::shutdown()
 
 static void NetAddressToIPSocket(const NetAddress *address, struct sockaddr_in *sockAddr)
 {
-   dMemset(sockAddr, 0, sizeof(struct sockaddr_in));
+   memset(sockAddr, 0, sizeof(struct sockaddr_in));
    sockAddr->sin_family = AF_INET;
    sockAddr->sin_port = htons(address->port);
 #if defined(TORQUE_OS_BSD) || defined(TORQUE_OS_MAC) || defined(TORQUE_OS_OSX) || defined(TORQUE_OS_IOS)
@@ -641,7 +641,7 @@ static void NetAddressToIPSocket(const NetAddress *address, struct sockaddr_in *
    }
    else
    {
-      dMemcpy(&sockAddr->sin_addr, &address->address.ipv4.netNum[0], 4);
+      memcpy(&sockAddr->sin_addr, &address->address.ipv4.netNum[0], 4);
    }
 }
 
@@ -649,14 +649,14 @@ static void IPSocketToNetAddress(const struct sockaddr_in *sockAddr, NetAddress 
 {
    address->type = NetAddress::IPAddress;
    address->port = ntohs(sockAddr->sin_port);
-   dMemcpy(&address->address.ipv4.netNum[0], &sockAddr->sin_addr, 4);
+   memcpy(&address->address.ipv4.netNum[0], &sockAddr->sin_addr, 4);
 }
 
 // ipv6 version of name routines
 
 static void NetAddressToIPSocket6(const NetAddress *address, struct sockaddr_in6 *sockAddr)
 {
-   dMemset(sockAddr, 0, sizeof(struct sockaddr_in6));
+   memset(sockAddr, 0, sizeof(struct sockaddr_in6));
 #ifdef SIN6_LEN
    sockAddr->sin6_len = sizeof(struct sockaddr_in6);
 #endif
@@ -672,7 +672,7 @@ static void NetAddressToIPSocket6(const NetAddress *address, struct sockaddr_in6
    {
       sockAddr->sin6_flowinfo = address->address.ipv6.netFlow;
       sockAddr->sin6_scope_id = address->address.ipv6.netScope;
-      dMemcpy(&sockAddr->sin6_addr, address->address.ipv6.netNum, sizeof(address->address.ipv6.netNum));
+      memcpy(&sockAddr->sin6_addr, address->address.ipv6.netNum, sizeof(address->address.ipv6.netNum));
    }
 }
 
@@ -680,7 +680,7 @@ static void IPSocket6ToNetAddress(const struct sockaddr_in6 *sockAddr, NetAddres
 {
    address->type = NetAddress::IPV6Address;
    address->port = ntohs(sockAddr->sin6_port);
-   dMemcpy(address->address.ipv6.netNum, &sockAddr->sin6_addr, sizeof(address->address.ipv6.netNum));
+   memcpy(address->address.ipv6.netNum, &sockAddr->sin6_addr, sizeof(address->address.ipv6.netNum));
    address->address.ipv6.netFlow = sockAddr->sin6_flowinfo;
    address->address.ipv6.netScope = sockAddr->sin6_scope_id;
 }
@@ -1548,7 +1548,7 @@ Net::Error Net::bindAddress(const NetAddress &address, NetSocket handleFd, bool 
    int error = 0;
    sockaddr_storage socketAddress;
    
-   dMemset(&socketAddress, '\0', sizeof(socketAddress));
+   memset(&socketAddress, '\0', sizeof(socketAddress));
    
    SOCKET socketFd = PlatformNetState::smReservedSocketList.resolve(handleFd);
    if (socketFd == InvalidSocketHandle)
@@ -1645,7 +1645,7 @@ Net::Error Net::getListenAddress(const NetAddress::Type type, NetAddress *addres
       if (!serverIP6 || serverIP6[0] == '\0')
       {
          sockaddr_in6 addr;
-         dMemset(&addr, '\0', sizeof(addr));
+         memset(&addr, '\0', sizeof(addr));
          
          addr.sin6_port = 0;
          addr.sin6_addr = in6addr_any;
@@ -1676,7 +1676,7 @@ Net::Error Net::getListenAddress(const NetAddress::Type type, NetAddress *addres
 
 void Net::getIdealListenAddress(NetAddress *address)
 {
-   dMemset(address, '\0', sizeof(NetAddress));
+   memset(address, '\0', sizeof(NetAddress));
    
    if (Net::smIpv6Enabled)
    {
@@ -1773,7 +1773,7 @@ Net::Error Net::stringToAddress(const char *addressString, NetAddress  *address,
    }
    
    addressString = addr;
-   dMemset(address, '\0', sizeof(NetAddress));
+   memset(address, '\0', sizeof(NetAddress));
    
    if (!dStricmp(addressString, "broadcast"))
    {
@@ -1804,8 +1804,8 @@ Net::Error Net::stringToAddress(const char *addressString, NetAddress  *address,
       sockaddr_in ipAddr;
       sockaddr_in6 ipAddr6;
       
-      dMemset(&ipAddr, 0, sizeof(ipAddr));
-      dMemset(&ipAddr6, 0, sizeof(ipAddr6));
+      memset(&ipAddr, 0, sizeof(ipAddr));
+      memset(&ipAddr6, 0, sizeof(ipAddr6));
       
       bool hasInterface = dStrchr(addressString, '%') != NULL; // if we have an interface, best use getaddrinfo to parse
       
@@ -1845,7 +1845,7 @@ Net::Error Net::stringToAddress(const char *addressString, NetAddress  *address,
             return NeedHostLookup;
          
          struct addrinfo hint, *res = NULL;
-         dMemset(&hint, 0, sizeof(hint));
+         memset(&hint, 0, sizeof(hint));
          hint.ai_family = NetAddressTypeToIpType(actualType);
          hint.ai_flags = hostLookup ? 0 : AI_NUMERICHOST;
          
@@ -1977,9 +1977,9 @@ void Net::enableMulticast()
          
          if (error == NoError)
          {
-            dMemset(&PlatformNetState::multicast6Group, '\0', sizeof(&PlatformNetState::multicast6Group));
+            memset(&PlatformNetState::multicast6Group, '\0', sizeof(&PlatformNetState::multicast6Group));
             NetAddressToIPSocket6(&multicastAddress, &multicastSocketAddress);
-            dMemcpy(&PlatformNetState::multicast6Group.ipv6mr_multiaddr, &multicastSocketAddress.sin6_addr, sizeof(PlatformNetState::multicast6Group.ipv6mr_multiaddr));
+            memcpy(&PlatformNetState::multicast6Group.ipv6mr_multiaddr, &multicastSocketAddress.sin6_addr, sizeof(PlatformNetState::multicast6Group.ipv6mr_multiaddr));
          }
          
          // Setup group
@@ -2527,7 +2527,7 @@ Net::Error Net::getListenAddress(const NetAddress::Type type, NetAddress *addres
 
 void Net::getIdealListenAddress(NetAddress *address)
 {
-   dMemset(address, '\0', sizeof(NetAddress));
+   memset(address, '\0', sizeof(NetAddress));
    if (Net::getListenAddress(NetAddress::IPAddress, address) == NeedHostLookup)
    {
       Net::getListenAddress(NetAddress::IPAddress, address, true);
@@ -2573,7 +2573,7 @@ Net::Error Net::stringToAddress(const char *addressString, NetAddress  *address,
    }
    
    addressString = addr;
-   dMemset(address, '\0', sizeof(NetAddress));
+   memset(address, '\0', sizeof(NetAddress));
    
    if (!dStricmp(addressString, "broadcast"))
    {

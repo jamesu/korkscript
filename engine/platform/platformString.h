@@ -104,8 +104,4 @@ extern int dVsprintf(char *buffer, dsize_t bufferSize, const char *format, va_li
 #define dT(s)    s
 #endif
 
-#define dStrdup(x) dStrdup_r(x, __FILE__, __LINE__)
-
-extern char* dStrdup_r(const char *src, const char*, U32);
-
 #endif  // _PLATFORM_STRING_H_

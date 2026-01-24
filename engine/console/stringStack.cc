@@ -168,7 +168,7 @@ void StringStack::setConsoleValue(KorkApi::VmInternal* vmInternal, KorkApi::Cons
    {
       // TOFIX: needs to use storage api (mLen issues)
       valueBase = v.evaluatePtr(*mAllocBase);
-      if (valueBase != (mBuffer + mStart)) // account for setting same head
+      if (valueBase != (mBuffer.data() + mStart)) // account for setting same head
       {
          if (v.typeId == KorkApi::ConsoleValue::TypeInternalString)
          {
@@ -181,7 +181,7 @@ void StringStack::setConsoleValue(KorkApi::VmInternal* vmInternal, KorkApi::Cons
             if (info.valueSize != UINT_MAX)
             {
                mLen = (U32)info.valueSize;
-               memmove(mBuffer + mStart, valueBase, mLen);
+               memmove(mBuffer.data() + mStart, valueBase, mLen);
                mValue = mStart;
             }
             else

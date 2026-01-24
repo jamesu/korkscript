@@ -572,7 +572,7 @@ KorkApi::ConsoleValue Namespace::Entry::execute(S32 argc, KorkApi::ConsoleValue*
    if((mMinArgs && argc < mMinArgs) || (mMaxArgs && argc > mMaxArgs))
    {
       state->vmInternal->printf(0, "%s::%s - wrong number of arguments.", mNamespace->mName, mFunctionName);
-      state->vmInternal->printf(0, "usage: %s", mUsage);
+      state->vmInternal->printf(0, "usage: %s", getUsage());
       return KorkApi::ConsoleValue();
    }
 

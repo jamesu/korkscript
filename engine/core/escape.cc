@@ -155,7 +155,7 @@ bool collapseEscape(char *buf)
             if(dig2 == -1)
                return false;
             buf[i] = dig1 * 16 + dig2;
-            dMemmove(buf + i + 1, buf + i + 4, len - i - 3);
+            memmove(buf + i + 1, buf + i + 4, len - i - 3);
             len -= 3;
             i++;
          }
@@ -191,12 +191,12 @@ bool collapseEscape(char *buf)
             {
                buf[i] = 0x2;
                buf[i+1] = 0x1;
-               dMemmove(buf + i + 2, buf + i + 3, len - i - 1);
+               memmove(buf + i + 2, buf + i + 3, len - i - 1);
                len -= 1;
             }
             else
             {
-               dMemmove(buf + i + 1, buf + i + 3, len - i - 2);
+               memmove(buf + i + 1, buf + i + 3, len - i - 2);
                len -= 2;
             }
             i++;
@@ -204,7 +204,7 @@ bool collapseEscape(char *buf)
          else
          {
             buf[i] = charConv(buf[i+1]);
-            dMemmove(buf + i + 1, buf + i + 2, len - i - 1);
+            memmove(buf + i + 1, buf + i + 2, len - i - 1);
             len--;
             i++;
          }

@@ -231,7 +231,7 @@ UTF16* convertUTF8toUTF16( const UTF8* unistring)
    
    // allocate the return buffer, copy over, and return it.
    UTF16 *ret = KorkApi::VMem::NewArray<UTF16>(nCodepoints);
-   dMemcpy(ret, buf, nCodepoints * sizeof(UTF16));
+   memcpy(ret, buf, nCodepoints * sizeof(UTF16));
    
    PROFILE_END();
    return ret;
@@ -253,7 +253,7 @@ UTF32* convertUTF8toUTF32( const UTF8* unistring)
    
    // allocate the return buffer, copy over, and return it.
    UTF32 *ret = KorkApi::VMem::NewArray<UTF32>(nCodepoints);
-   dMemcpy(ret, buf, nCodepoints * sizeof(UTF32));
+   memcpy(ret, buf, nCodepoints * sizeof(UTF32));
    
    PROFILE_END();
    return ret;
@@ -276,7 +276,7 @@ UTF8*  convertUTF16toUTF8( const UTF16* unistring)
    
    // allocate the return buffer, copy over, and return it.
    UTF8 *ret = KorkApi::VMem::NewArray<UTF8>(nCodeunits);
-   dMemcpy(ret, buf, nCodeunits * sizeof(UTF8));
+   memcpy(ret, buf, nCodeunits * sizeof(UTF8));
 
    PROFILE_END();
    return ret;
@@ -298,7 +298,7 @@ UTF32* convertUTF16toUTF32(const UTF16* unistring)
    
    // allocate the return buffer, copy over, and return it.
    UTF32 *ret = KorkApi::VMem::NewArray<UTF32>(nCodepoints);
-   dMemcpy(ret, buf, nCodepoints * sizeof(UTF32));
+   memcpy(ret, buf, nCodepoints * sizeof(UTF32));
 
    PROFILE_END();
    return ret;
@@ -320,7 +320,7 @@ UTF8*  convertUTF32toUTF8( const UTF32* unistring)
    
    // allocate the return buffer, copy over, and return it.
    UTF8 *ret = KorkApi::VMem::NewArray<UTF8>(nCodeunits);
-   dMemcpy(ret, buf, nCodeunits * sizeof(UTF8));
+   memcpy(ret, buf, nCodeunits * sizeof(UTF8));
 
    PROFILE_END();
    return ret;
@@ -342,7 +342,7 @@ UTF16* convertUTF32toUTF16(const UTF32* unistring)
    
    // allocate the return buffer, copy over, and return it.
    UTF16 *ret = KorkApi::VMem::NewArray<UTF16>(nCodepoints);
-   dMemcpy(ret, buf, nCodepoints * sizeof(UTF16));
+   memcpy(ret, buf, nCodepoints * sizeof(UTF16));
 
    PROFILE_END();
    return ret;
@@ -629,7 +629,7 @@ bool chompUTF8BOM( const char *inString, char **outStringPtr )
    *outStringPtr = const_cast<char *>( inString );
 
    U8 bom[4];
-   dMemcpy( bom, inString, 4 );
+   memcpy( bom, inString, 4 );
 
    bool valid = isValidUTF8BOM( bom );
 

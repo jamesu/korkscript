@@ -161,14 +161,14 @@ static CharVector gPlatformDirectoryExcludeList;
 
 void addExcludedDirectory(const char *pDir)
 {
-   gPlatformDirectoryExcludeList.push_back(dStrdup(pDir));
+   gPlatformDirectoryExcludeList.push_back(strdup(pDir));
 }
 
 void clearExcludedDirectories()
 {
    while(gPlatformDirectoryExcludeList.size())
    {
-      dFree(gPlatformDirectoryExcludeList.back());
+      free(gPlatformDirectoryExcludeList.back());
       gPlatformDirectoryExcludeList.pop_back();
    }
 }
@@ -214,7 +214,7 @@ static inline void _resolveLeadingSlash(char* buf, U32 size)
       return;
    
    AssertFatal(dStrlen(buf) + 2 < size, "Expanded path would be too long");
-   dMemmove(buf + 2, buf, dStrlen(buf));
+   memmove(buf + 2, buf, dStrlen(buf));
    buf[0] = 'c';
    buf[1] = ':';
 }

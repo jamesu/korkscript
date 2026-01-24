@@ -60,7 +60,7 @@ static const char * prependDollar ( const char * name )
       S32   len = dStrlen(name);
       AssertFatal(len < sizeof(scratchBuffer)-2, "CONSOLE: name too long");
       scratchBuffer[0] = '$';
-      dMemcpy(scratchBuffer + 1, name, len + 1);
+      memcpy(scratchBuffer + 1, name, len + 1);
       name = scratchBuffer;
    }
    return name;
@@ -73,7 +73,7 @@ static const char * prependPercent ( const char * name )
       S32   len = dStrlen(name);
       AssertFatal(len < sizeof(scratchBuffer)-2, "CONSOLE: name too long");
       scratchBuffer[0] = '%';
-      dMemcpy(scratchBuffer + 1, name, len + 1);
+      memcpy(scratchBuffer + 1, name, len + 1);
       name = scratchBuffer;
    }
    return name;
@@ -233,10 +233,10 @@ void init()
 
 
    config.mallocFn = [](size_t size, void*){
-      return dMalloc(size);
+      return malloc(size);
    };
    config.freeFn = [](void* addr, void*){
-      dFree(addr);
+      free(addr);
    };
    config.logFn = [](U32 level, const char *consoleLine, void* userPtr){
       Con::printf("%s", consoleLine);
@@ -650,8 +650,8 @@ public:
       mType = type;
       if(buf)
       {
-         mBuf = (char*)dMalloc(dStrlen(buf)+1);
-         dMemcpy((void*)mBuf, (void*)buf, dStrlen(buf));
+         mBuf = (char*)malloc(dStrlen(buf)+1);
+         memcpy((void*)mBuf, (void*)buf, dStrlen(buf));
          mBuf[dStrlen(buf)] = 0;
       }
       else
@@ -840,7 +840,7 @@ const char *getVariable(const char *name)
    {
       S32 len = dStrlen(name);
       AssertFatal(len < sizeof(scratchBuffer)-1, "Sim::getVariable - name too long");
-      dMemcpy(scratchBuffer, name, len+1);
+      memcpy(scratchBuffer, name, len+1);
 
       char * token = dStrtok(scratchBuffer, ".");
       SimObject * obj = Sim::findObject(token);
@@ -955,7 +955,7 @@ KorkApi::ConsoleValue getStringArg( const char *arg )
    U32 len = dStrlen( arg ) + 1;
    KorkApi::ConsoleValue retV = sVM->getStringFuncBuffer( len );
    char *ret = (char*)retV.evaluatePtr(sVM->getAllocBase());
-   dMemcpy( ret, arg, len );
+   memcpy( ret, arg, len );
    return retV;
 }
 

@@ -147,6 +147,8 @@ TelnetDebugger::Breakpoint **TelnetDebugger::findBreakpoint(StringTableEntry fil
 
 TelnetDebugger::~TelnetDebugger()
 {
+   removeAllBreakpoints();
+   
    if (mVMInternal->mConfig.extraConsumers[1].cbUser == this)
    {
       mVMInternal->mConfig.extraConsumers[1].cbFunc = NULL;
@@ -270,7 +272,7 @@ void TelnetDebugger::checkDebugRecv()
          while ( mCurPos > 0 && ( mLineBuffer[0] == 0 || mLineBuffer[0] == '\r' || mLineBuffer[0] == '\n' ) )
          {
             mCurPos--;
-            dMemmove(mLineBuffer, mLineBuffer + 1, mCurPos);
+            memmove(mLineBuffer, mLineBuffer + 1, mCurPos);
          }
          
          // Look for a complete command.
@@ -288,7 +290,7 @@ void TelnetDebugger::checkDebugRecv()
                
                // Remove the command from the buffer.
                mCurPos -= i + 1;
-               dMemmove(mLineBuffer, mLineBuffer + i + 1, mCurPos);
+               memmove(mLineBuffer, mLineBuffer + i + 1, mCurPos);
                
                gotCmd = true;
                break;
@@ -343,7 +345,7 @@ void TelnetDebugger::executionStopped(CodeBlock *code, U32 lineNumber)
    mProgramPaused = true;
 
    char buf[256];
-   snprintf(buf, 256, "$Debug::result = %s;", brk->testExpression);
+   snprintf(buf, 256, "$Debug::result = %s;", brk->testExpression.c_str());
    mVMInternal->mVM->evalCode(buf, "");
 
    KorkApi::ConsoleValue cv = mVMInternal->mVM->getGlobalVariable("$Debug::result");
@@ -685,8 +687,7 @@ void TelnetDebugger::addBreakpoint(const char *fileName, S32 line, bool clear, S
    {
       // trying to add the same breakpoint...
       Breakpoint *brk = *bp;
-      dFree(brk->testExpression);
-      brk->testExpression = dStrdup(evalString);
+      brk->testExpression = evalString;
       brk->passCount = passCount;
       brk->clearOnHit = clear;
       brk->curCount = 0;
@@ -740,7 +741,7 @@ void TelnetDebugger::addBreakpoint(const char *fileName, S32 line, bool clear, S
       brk->passCount = passCount;
       brk->clearOnHit = clear;
       brk->curCount = 0;
-      brk->testExpression = dStrdup(evalString);
+      brk->testExpression = evalString;
       brk->next = mBreakpoints;
       mBreakpoints = brk;
    }
@@ -754,7 +755,6 @@ void TelnetDebugger::removeBreakpointsFromCode(CodeBlock *code)
    {
       if(cur->code == code)
       {
-         dFree(cur->testExpression);
          *walk = cur->next;
          delete walk;
       }
@@ -773,7 +773,6 @@ void TelnetDebugger::removeBreakpoint(const char *fileName, S32 line)
       *bp = brk->next;
       if ( brk->code )
          brk->code->clearBreakpoint(brk->lineNumber);
-      dFree(brk->testExpression);
       delete brk;
    }
 }
@@ -785,8 +784,9 @@ void TelnetDebugger::removeAllBreakpoints()
    {
       Breakpoint *temp = walk->next;
       if ( walk->code )
+      {
          walk->code->clearBreakpoint(walk->lineNumber);
-      dFree(walk->testExpression);
+      }
       delete walk;
       walk = temp;
    }

@@ -82,7 +82,7 @@ SimFieldDictionary::~SimFieldDictionary()
          Entry *temp = walk;
          walk = temp->next;
 
-         dFree(temp->value);
+         free(temp->value);
          freeEntry(temp);
       }
    }
@@ -102,7 +102,7 @@ void SimFieldDictionary::setFieldValue(StringTableEntry slotName, const char *va
       {
          mVersion++;
 
-         dFree(field->value);
+         free(field->value);
          *walk = field->next;
          freeEntry(field);
       }
@@ -111,8 +111,8 @@ void SimFieldDictionary::setFieldValue(StringTableEntry slotName, const char *va
    {
       if(field)
       {
-         dFree(field->value);
-         field->value = dStrdup(value);
+         free(field->value);
+         field->value = strdup(value);
          if (typeId != UINT_MAX)
          {
             field->enforcedTypeId = typeId;
@@ -123,7 +123,7 @@ void SimFieldDictionary::setFieldValue(StringTableEntry slotName, const char *va
          mVersion++;
 
          field = allocEntry();
-         field->value = dStrdup(value);
+         field->value = strdup(value);
          field->slotName = slotName;
          field->next = NULL;
          if (typeId != UINT_MAX)
@@ -388,8 +388,8 @@ void SimObject::assignFieldsFrom(SimObject *parent)
                TempAlloc<char> bufferSecure(2048); // This buffer is used to make a copy of the data 
                ConsoleBaseType *cbt = ConsoleBaseType::getType( f->type );
                const char* szBuffer = cbt->prepData( fieldVal, buffer, 2048 );
-               dMemset( bufferSecure, 0, 2048 );
-               dMemcpy( bufferSecure, szBuffer, dStrlen( szBuffer ) );
+               memset( bufferSecure, 0, 2048 );
+               memcpy( bufferSecure, szBuffer, dStrlen( szBuffer ) );
 
                if((*f->setDataFn)( this, bufferSecure ) )
                   Con::setData(f->type, (void *) (((const char *)this) + f->offset), j, 1, &fieldVal, f->table);
@@ -1429,7 +1429,7 @@ void SimObject::dump()
       ns->getEntryList(&vec);
 
    for(Vector<Namespace::Entry *>::iterator j = vec.begin(); j != vec.end(); j++)
-      Con::printf("  %s() - %s", (*j)->mFunctionName, (*j)->mUsage ? (*j)->mUsage : "");
+      Con::printf("  %s() - %s", (*j)->mFunctionName, (*j)->getUsage() ? (*j)->getUsage() : "");
    
 #endif
 }
@@ -1609,8 +1609,8 @@ void SimObject::setDataField(StringTableEntry slotName, const char *array, const
             AssertFatal( cbt != NULL, "Could not resolve Type Id." );
             
             const char* szBuffer = cbt->prepData( value, buffer, 2048 );
-            dMemset( bufferSecure, 0, 2048 );
-            dMemcpy( bufferSecure, szBuffer, dStrlen( szBuffer ) );
+            memset( bufferSecure, 0, 2048 );
+            memcpy( bufferSecure, szBuffer, dStrlen( szBuffer ) );
             
             if( (*fld->setDataFn)( this, bufferSecure ) )
                Con::setData(fld->type, (void *) (((const char *)this) + fld->offset), array1, 1, &value, fld->table);
@@ -3657,7 +3657,7 @@ SimConsoleEvent::SimConsoleEvent(S32 argc, const char **argv, bool onObject)
       totalSize += dStrlen(argv[i]) + 1;
    totalSize += sizeof(char *) * argc;
 
-   mArgv = (char **) dMalloc(totalSize);
+   mArgv = (char **) malloc(totalSize);
    char *argBase = (char *) &mArgv[argc];
 
    for(i = 0; i < argc; i++)
@@ -3670,7 +3670,7 @@ SimConsoleEvent::SimConsoleEvent(S32 argc, const char **argv, bool onObject)
 
 SimConsoleEvent::~SimConsoleEvent()
 {
-   dFree(mArgv);
+   free(mArgv);
 }
 
 void SimConsoleEvent::process(SimObject* object)

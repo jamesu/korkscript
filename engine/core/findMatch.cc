@@ -68,7 +68,7 @@ void FindMatch::setExpression( const char *_expression )
 {
    delete [] expression;
    
-   expression = new char[dStrlen(_expression) + 1];
+   expression = KorkApi::VMem::NewArray<char>(dStrlen(_expression) + 1);
    dStrcpy(expression, _expression);
    dStrupr(expression);
 }
@@ -139,23 +139,22 @@ bool FindMatch::isMatchMultipleExprs( const char *exps, const char *str, bool ca
    char *tok = 0;
    S32 len = dStrlen(exps);
 
-   char *e = new char[len+1];
-   strncpy(e,exps,len+1);
+   KorkApi::Vector<char> e;
+   e.resize(len+1);
+   memcpy(e.data(), exps, len+1);
 
    // [tom, 12/18/2006] This no longer supports space separated expressions as
    // they don't work when the paths have spaces in.
 
    // search for each expression. return true soon as we see one.
-   for( tok = dStrtok(e,"\t"); tok != NULL; tok = dStrtok(NULL,"\t"))
+   for( tok = dStrtok(e.data(),"\t"); tok != NULL; tok = dStrtok(NULL,"\t"))
    {
       if( isMatch( tok, str, caseSensitive) )
       {
-         delete []e;
          return true;
       }
    }
 
-   delete []e;
    return false;
 }
 

@@ -64,7 +64,7 @@
 /// @param a Pointer to memory to free
 /// @see #SAFE_DELETE_ARRAY(), #SAFE_DELETE_OBJECT(), #SAFE_DELETE(), #SAFE_FREE_REFERENCE()
 //-----------------------------------------------------------------------------
-#define SAFE_FREE(a) { if( (a) != NULL ) dFree ((void *)a); (a) = NULL; }
+#define SAFE_FREE(a) { if( (a) != NULL ) free ((void *)a); (a) = NULL; }
 
 // CodeReview: Is the NULL conditional needed? [5/14/2007 Pat]
 
