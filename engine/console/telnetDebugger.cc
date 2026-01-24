@@ -27,7 +27,6 @@
 #include "console/consoleInternal.h"
 #include "console/consoleNamespace.h"
 #include "console/compiler.h"
-#include "core/tempAlloc.h"
 #include "console/telnetDebugger.h"
 
 
@@ -582,11 +581,12 @@ void TelnetDebugger::processLineBuffer(S32 cmdLen)
       else
       {
          S32 errorLen = dStrlen(mLineBuffer) + 32; // ~25 in error message, plus buffer
-         TempAlloc<char> errorBuffer(errorLen);
+         KorkApi::Vector<char> errorBuffer(errorLen);
+         char* usageStr = errorBuffer.data();
          
-         dSprintf( errorBuffer, errorLen, "DBGERR Invalid command(%s)!\r\n", mLineBuffer );
+         dSprintf( errorBuffer.data(), errorLen, "DBGERR Invalid command(%s)!\r\n", mLineBuffer );
          // invalid stuff.
-         send( errorBuffer );
+         send( errorBuffer.data() );
       }
 
       if (mVMInternal->mCurrentFiberState != existingEvalState)

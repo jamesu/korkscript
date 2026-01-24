@@ -25,7 +25,6 @@
 #include "core/stringTable.h"
 #include "console/console.h"
 #include "core/fileStream.h"
-#include "core/tempAlloc.h"
 #include "core/memStream.h"
 
 #include "console/typeValidators.h"
@@ -236,7 +235,8 @@ void SimFieldDictionary::writeFields(SimObject *obj, Stream &stream, U32 tabStop
    for(std::vector<Entry *>::iterator itr = flist.begin(); itr != flist.end(); itr++)
    {
       U32 nBufferSize = (dStrlen( (*itr)->value ) * 2) + dStrlen( (*itr)->slotName ) + 16;
-      TempAlloc<char> expandedBuffer( nBufferSize );
+      std::vector<char> expandedBufferV( nBufferSize );
+      char* expandedBuffer = expandedBufferV.data();
 
       stream.writeTabs(tabStop+1);
 
@@ -509,13 +509,13 @@ bool SimObject::save(const char* pcFileName, bool bOnlySelected)
    static const char *endMessage = "//--- OBJECT WRITE END ---";
    FileStream stream;
    MemStream f(0, NULL, false, false);
-   TempAlloc<char> w;
+   std::vector<char> w;
 
    if (stream.open(pcFileName, FileStream::Read))
    {
-      w = TempAlloc<char>(stream.getStreamSize());
-      f = MemStream(stream.getStreamSize(), w.ptr, true, false);
-      stream.read(stream.getStreamSize(), w.ptr);
+      w.resize(stream.getStreamSize());
+      f = MemStream(stream.getStreamSize(), w.data(), true, false);
+      stream.read(stream.getStreamSize(), w.data());
       stream.close();
    }
 

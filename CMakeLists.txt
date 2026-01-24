@@ -17,14 +17,12 @@ include_directories(
 )
 
 set(KS_SRCS
-	./engine/core/idGenerator.cc
 	./engine/core/findMatch.cc
 	./engine/core/hashFunction.cc
 	./engine/core/memStream.cc
 	./engine/core/stringTable.cc
 	./engine/core/nStream.cc
 	./engine/core/unicode.cc
-	./engine/core/stringUnit.cc
 	./engine/core/escape.cc
 
 	./engine/platform/platform.cc
@@ -55,7 +53,11 @@ set(KS_SRCS
 )
 
 set(TORQUESIM_SRCS
+	./torqueSim/core/idGenerator.cc
 	./torqueSim/core/fileStream.cc
+	./torqueSim/core/stringUnit.cc
+	./torqueSim/core/unicode.cc
+	./torqueSim/core/unicode.h
 	./torqueSim/console/console.cc
 	./torqueSim/console/console.h
 	./torqueSim/console/consoleFunctions.cc

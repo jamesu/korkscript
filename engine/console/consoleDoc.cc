@@ -26,8 +26,6 @@
 #include "embed/internalApi.h"
 #include "console/consoleNamespace.h"
 
-#include "core/tempAlloc.h"
-
 
 #include "console/consoleInternal.h"
 #include "console/compiler.h"
@@ -61,7 +59,8 @@ void printClassHeader(const char* usage, const char * className, const char * su
    {
       // Copy Usage Document
       S32 usageLen = dStrlen( usage );
-      TempAlloc<char> usageStr( usageLen );
+      KorkApi::Vector<char> usageStrV( usageLen );
+      char* usageStr = usageStrV.data();
       dStrcpy( usageStr, usage );
 
       // Print Header

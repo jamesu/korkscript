@@ -23,7 +23,6 @@
 #include "platform/platform.h"
 #include "platform/platformAssert.h"
 #include "core/unicode.h"
-#include "core/tempAlloc.h"
 #include "console/stlTypes.h"
 #include <stdio.h>
 
@@ -222,7 +221,7 @@ UTF16* convertUTF8toUTF16( const UTF8* unistring)
    PROFILE_START(convertUTF8toUTF16_create);
    // allocate plenty of memory.
    U32 nCodepoints, len = dStrlen(unistring) + 1;
-   TempAlloc<UTF16> buf(len);
+   std::vector<UTF16> bufV(len); UTF16* buf = bufV.data();
    
    // perform conversion
    nCodepoints = convertUTF8toUTF16( unistring, buf, len);
@@ -244,7 +243,7 @@ UTF32* convertUTF8toUTF32( const UTF8* unistring)
    PROFILE_START(convertUTF8toUTF32_create);
    // allocate plenty of memory.
    U32 nCodepoints, len = dStrlen(unistring) + 1;
-   TempAlloc<UTF32> buf(len);
+   std::vector<UTF32> bufV(len); UTF32* buf = bufV.data();
    
    // perform conversion
    nCodepoints = convertUTF8toUTF32( unistring, buf, len);
@@ -267,7 +266,7 @@ UTF8*  convertUTF16toUTF8( const UTF16* unistring)
    PROFILE_START(convertUTF16toUTF8_create);
    // allocate plenty of memory.
    U32 nCodeunits, len = dStrlen(unistring) * 3 + 1;
-   TempAlloc<UTF8> buf(len);
+   std::vector<UTF8> bufV(len); UTF8* buf = bufV.data();
    
    // perform conversion
    nCodeunits = convertUTF16toUTF8( unistring, buf, len);
@@ -289,7 +288,7 @@ UTF32* convertUTF16toUTF32(const UTF16* unistring)
    PROFILE_START(convertUTF16toUTF32_create);
    // allocate plenty of memory.
    U32 nCodepoints, len = dStrlen(unistring) + 1;
-   TempAlloc<UTF32> buf(len);
+   std::vector<UTF32> bufV(len); UTF32* buf = bufV.data();
    
    // perform conversion
    nCodepoints = convertUTF16toUTF32( unistring, buf, len);
@@ -311,7 +310,7 @@ UTF8*  convertUTF32toUTF8( const UTF32* unistring)
    PROFILE_START(convertUTF32toUTF8_create);
    // allocate plenty of memory.
    U32 nCodeunits, len = dStrlen(unistring) * 3 + 1;
-   TempAlloc<UTF8> buf(len);
+   std::vector<UTF8> bufV(len); UTF8* buf = bufV.data();
    
    // perform conversion
    nCodeunits = convertUTF32toUTF8( unistring, buf, len);
@@ -333,7 +332,7 @@ UTF16* convertUTF32toUTF16(const UTF32* unistring)
    PROFILE_START(convertUTF32toUTF16_create);
    // allocate plenty of memory.
    U32 nCodepoints, len = dStrlen(unistring) + 1;
-   TempAlloc<UTF16> buf(len);
+   std::vector<UTF16> bufV(len); UTF16* buf = bufV.data();;
    
    // perform conversion
    nCodepoints = convertUTF32toUTF16( unistring, buf, len);
