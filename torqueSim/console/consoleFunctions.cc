@@ -2,7 +2,6 @@
 #include "platform/platformProcess.h"
 #include "platform/platformString.h"
 #include "console/console.h"
-#include "core/stringTable.h"
 
 #include "core/fileStream.h"
 
@@ -831,7 +830,7 @@ ConsoleFunction(exec, bool, 2, 4, "exec(fileName [, nocalls [,journalScript]])")
       return false;
    }
 
-   StringTableEntry scriptFileName = StringTable->insert(scriptFilenameBuffer);
+   StringTableEntry scriptFileName = vmPtr->internString(scriptFilenameBuffer);
    StringTableEntry compiledScriptFileName = NULL;
 
    // Is this a file we should compile?
@@ -853,7 +852,7 @@ ConsoleFunction(exec, bool, 2, 4, "exec(fileName [, nocalls [,journalScript]])")
    if(compiled)
    {
       dStrcpyl(nameBuffer, sizeof(nameBuffer), scriptFileName, ".dso", NULL);
-      compiledScriptFileName = StringTable->insert(nameBuffer);
+      compiledScriptFileName = vmPtr->internString(nameBuffer);
       compiledScriptExists = Platform::isFile(compiledScriptFileName);
 
       if(compiledScriptExists)
@@ -1029,7 +1028,7 @@ ConsoleFunction(export, void, 2, 4, "export(searchString [, fileName [,append]])
 ConsoleFunction(deleteVariables, void, 2, 2, "deleteVariables(wildCard)")
 {
    argc;
-   vmPtr->removeGlobalVariable(StringTable->insert((const char*)argv[1]));
+   vmPtr->removeGlobalVariable(vmPtr->internString((const char*)argv[1]));
 }
 
 //----------------------------------------------------------------

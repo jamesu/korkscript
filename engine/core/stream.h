@@ -28,6 +28,8 @@
 #include "platform/platform.h"
 #endif
 
+class _StringTable;
+
 
 // This should ideally be done with templates...
 //
@@ -120,9 +122,6 @@ class Stream {
    /// writes a line to the stream
    void writeLine(U8 *buffer);
 
-   /// Reads a string and inserts it into the StringTable
-   /// @see StringTable
-   const char *readSTString(bool casesens = false);
    /// Reads a string of maximum 255 characters long
    virtual void readString(char stringBuf[256]);
    /// Reads a string that could potentially be more than 255 characters long.
@@ -138,11 +137,7 @@ class Stream {
 
    /// Writes a string to the stream.
    virtual void writeString(const char *stringBuf, S32 maxLen=255);
-
-   /// Writes a formatted buffer to the stream.
-   /// NOTE: A maximum string length of 4K is allowed.
-   bool writeFormattedBuffer(const char *format, ...);
-
+   
    /// Writes a NULL terminated string buffer.
    bool writeStringBuffer(const char* buffer) { return write( dStrlen(buffer), buffer ); }
 

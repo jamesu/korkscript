@@ -10,6 +10,8 @@
 #include "console/compiler.h"
 #include "console/codeBlock.h"
 
+#include "core/simpleIntern.h"
+
 #include <cinttypes>
 
 namespace KorkApi
@@ -276,7 +278,7 @@ ClassId Vm::registerClass(ClassInfo& info)
 
 ClassId Vm::getClassId(const char* name)
 {
-   StringTableEntry klassST = StringTable->insert(name);
+   StringTableEntry klassST = mInternal->internString(name, false);
    for (U32 i=0; i<mInternal->mClassList.size(); i++)
    {
       if (mInternal->mClassList[i].name == klassST)
@@ -630,14 +632,14 @@ ConsoleValue Vm::evalCode(const char* code, const char* filename, S32 setFrame)
 ConsoleValue Vm::call(int argc, ConsoleValue* argv, bool startSuspended)
 {
    ConsoleValue retValue = ConsoleValue();
-   callNamespaceFunction(getGlobalNamespace(), StringTable->insert(mInternal->valueAsString(argv[1])), argc, argv, retValue, startSuspended);
+   callNamespaceFunction(getGlobalNamespace(), mInternal->internString(mInternal->valueAsString(argv[1]), false), argc, argv, retValue, startSuspended);
    return retValue;
 }
 
 ConsoleValue Vm::callObject(VMObject* h, int argc, ConsoleValue* argv, bool startSuspended)
 {
    ConsoleValue retValue = ConsoleValue();
-   callObjectFunction(h, StringTable->insert(mInternal->valueAsString(argv[1])), argc, argv, retValue, startSuspended);
+   callObjectFunction(h, mInternal->internString(mInternal->valueAsString(argv[1]), false), argc, argv, retValue, startSuspended);
    return retValue;
 }
 
@@ -874,6 +876,7 @@ void destroyVM(Vm* vm)
 VmInternal::VmInternal(Vm* vm, Config* cfg) : mGlobalVars(this)
 {
    mVM = vm;
+   mLocalIntern = NULL;
    mConfig = *cfg;
    mCodeBlockList = NULL;
    mCurrentCodeBlock = NULL;
@@ -899,6 +902,45 @@ VmInternal::VmInternal(Vm* vm, Config* cfg) : mGlobalVars(this)
       mTelConsole = NULL;
    }
    
+   // Use inbuilt string interner
+
+   if (mConfig.iIntern.intern == NULL) 
+   {
+      mLocalIntern = new SimpleStringInterner();
+      mConfig.iIntern.intern = [](void* user, const char* value, bool caseSens){
+         SimpleStringInterner* localIntern = (SimpleStringInterner*)user;
+         if (value == NULL)
+         {
+            return localIntern->empty();
+         }
+         return (StringTableEntry)localIntern->internSV(std::string_view(value), caseSens);
+      };
+      mConfig.iIntern.internN = [](void* user, const char* value, size_t len, bool caseSens){
+         SimpleStringInterner* localIntern = (SimpleStringInterner*)user;
+         if (value == NULL)
+         {
+            return localIntern->empty();
+         }
+         return (StringTableEntry)localIntern->internSV(std::string_view(value, len), caseSens);
+      };
+      mConfig.iIntern.lookup = [](void* user, const char* value, bool caseSens){
+         SimpleStringInterner* localIntern = (SimpleStringInterner*)user;
+         if (value == NULL)
+         {
+            return localIntern->empty();
+         }
+         return (StringTableEntry)localIntern->lookupSV(std::string_view(value), caseSens);
+      };
+      mConfig.iIntern.lookupN = [](void* user, const char* value, size_t len, bool caseSens){
+         SimpleStringInterner* localIntern = (SimpleStringInterner*)user;
+         if (value == NULL)
+         {
+            return localIntern->empty();
+         }
+         return (StringTableEntry)localIntern->lookupSV(std::string_view(value, len), caseSens);
+      };
+      mConfig.internUser = mLocalIntern;
+   }
    mHeapAllocs = NULL;
    mConvIndex = 0;
    mCVConvIndex = 0;
@@ -915,6 +957,8 @@ VmInternal::VmInternal(Vm* vm, Config* cfg) : mGlobalVars(this)
       mOwnsResources = true;
    }
 
+   mCompilerResources->emptyString = internString("", false);
+
    mCompilerResources->allowExceptions = cfg->enableExceptions;
    mCompilerResources->allowTuples = cfg->enableTuples;
    mCompilerResources->allowTypes = cfg->enableTypes;
@@ -923,7 +967,7 @@ VmInternal::VmInternal(Vm* vm, Config* cfg) : mGlobalVars(this)
    
    TypeInfo typeInfo = {};
    
-   typeInfo.name = StringTable->insert("string");
+   typeInfo.name = internString("string", false);
    typeInfo.inspectorFieldType = NULL;
    typeInfo.userPtr = NULL;
    typeInfo.fieldsize = sizeof(const char*);
@@ -973,7 +1017,7 @@ VmInternal::VmInternal(Vm* vm, Config* cfg) : mGlobalVars(this)
    
    mTypes.push_back(typeInfo);
    
-   typeInfo.name = StringTable->insert("float");
+   typeInfo.name = internString("float", false);
    typeInfo.inspectorFieldType = NULL;
    typeInfo.userPtr = NULL;
    typeInfo.fieldsize = typeInfo.valueSize = sizeof(F64);
@@ -981,7 +1025,7 @@ VmInternal::VmInternal(Vm* vm, Config* cfg) : mGlobalVars(this)
    
    mTypes.push_back(typeInfo);
    
-   typeInfo.name = StringTable->insert("uint");
+   typeInfo.name = internString("uint", false);
    typeInfo.inspectorFieldType = NULL;
    typeInfo.userPtr = NULL;
    typeInfo.fieldsize = typeInfo.valueSize = sizeof(U64);
@@ -1024,13 +1068,13 @@ VmInternal::VmInternal(Vm* vm, Config* cfg) : mGlobalVars(this)
          return (VMObject*)NULL;
        };
    }
+
+   // Init empty string
+
+   mEmptyString = internString("", false);
    
-   if (mConfig.iFind.FindDatablockGroup == NULL) {
-      mConfig.iFind.FindDatablockGroup = [](void* userPtr){
-         return (VMObject*)NULL;
-      };
-   }
-   
+   // Setup base fiber
+
    FiberId baseFiber = createFiber(NULL);
    mCurrentFiberState = mFiberStates.mItems[0];
    if (mTelDebugger)
@@ -1071,6 +1115,11 @@ VmInternal::~VmInternal()
       mConfig.freeFn(alloc, mConfig.allocUser);
    }
    mHeapAllocs = NULL;
+
+   if (mLocalIntern)
+   {
+      Delete(mLocalIntern);
+   }
 }
 
 
@@ -1853,6 +1902,30 @@ const char* Vm::getExceptionFileLine(ExceptionInfo* info)
    }
 
    return info->cb->getFileLine(info->ip);
+}
+
+StringTableEntry Vm::internString(const char* str, bool caseSens)
+{
+   VmAllocTLS::Scope memScope(mInternal);
+   return mInternal->internString(str, caseSens);
+}
+
+StringTableEntry Vm::internStringN(const char* str, U32 len, bool caseSens)
+{
+   VmAllocTLS::Scope memScope(mInternal);
+   return mInternal->internStringN(str, len, caseSens);
+}
+
+StringTableEntry Vm::lookupString(const char* str, bool caseSens)
+{
+   VmAllocTLS::Scope memScope(mInternal);
+   return mInternal->lookupString(str, caseSens);
+}
+
+StringTableEntry Vm::lookupStringN(const char* str, U32 len, bool caseSens)
+{
+   VmAllocTLS::Scope memScope(mInternal);
+   return mInternal->lookupStringN(str, len, caseSens);
 }
 
 const char* FiberRunResult::stateAsString(State inState)

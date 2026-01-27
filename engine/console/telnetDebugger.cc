@@ -680,7 +680,7 @@ void TelnetDebugger::addAllBreakpoints(CodeBlock *code)
 
 void TelnetDebugger::addBreakpoint(const char *fileName, S32 line, bool clear, S32 passCount, const char *evalString)
 {
-   fileName = StringTable->insert(fileName);
+   fileName = mVMInternal->internString(fileName, false);
    Breakpoint **bp = findBreakpoint(fileName, line);
    
    if(bp)
@@ -765,7 +765,7 @@ void TelnetDebugger::removeBreakpointsFromCode(CodeBlock *code)
 
 void TelnetDebugger::removeBreakpoint(const char *fileName, S32 line)
 {
-   fileName = StringTable->insert(fileName);
+   fileName = mVMInternal->internString(fileName, false);
    Breakpoint **bp = findBreakpoint(fileName, line);
    if(bp)
    {
@@ -962,7 +962,7 @@ void TelnetDebugger::dumpFileList()
 
 void TelnetDebugger::dumpBreakableList(const char *fileName)
 {
-   fileName = StringTable->insert(fileName);
+   fileName = mVMInternal->internString(fileName, false);
    CodeBlock *file = mVMInternal->findCodeBlock(fileName);
    char buffer[MaxCommandSize];
    if(file)

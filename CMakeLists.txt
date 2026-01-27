@@ -20,7 +20,6 @@ set(KS_SRCS
 	./engine/core/findMatch.cc
 	./engine/core/hashFunction.cc
 	./engine/core/memStream.cc
-	./engine/core/stringTable.cc
 	./engine/core/nStream.cc
 	./engine/core/escape.cc
 

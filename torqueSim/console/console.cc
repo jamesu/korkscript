@@ -275,6 +275,40 @@ void init()
       return obj ? obj->getVMObject() : (KorkApi::VMObject*)NULL;
    };
    
+   config.iIntern.intern = [](void* user, const char* value, bool caseSens){
+      _StringTable* localIntern = (_StringTable*)user;
+      if (value == NULL)
+      {
+         return localIntern->EmptyString;
+      }
+      return (StringTableEntry)localIntern->insert(value, caseSens);
+   };
+   config.iIntern.internN = [](void* user, const char* value, size_t len, bool caseSens){
+      _StringTable* localIntern = (_StringTable*)user;
+      if (value == NULL)
+      {
+         return localIntern->EmptyString;
+      }
+      return (StringTableEntry)localIntern->insertn(value, len, caseSens);
+   };
+   config.iIntern.lookup = [](void* user, const char* value, bool caseSens){
+      _StringTable* localIntern = (_StringTable*)user;
+      if (value == NULL)
+      {
+         return localIntern->EmptyString;
+      }
+      return (StringTableEntry)localIntern->lookup(value, caseSens);
+   };
+   config.iIntern.lookupN = [](void* user, const char* value, size_t len, bool caseSens){
+      _StringTable* localIntern = (_StringTable*)user;
+      if (value == NULL)
+      {
+         return localIntern->EmptyString;
+      }
+      return (StringTableEntry)localIntern->lookupn(value, len, caseSens);
+   };
+   config.internUser = StringTable;
+
    sVM = KorkApi::createVM(&config);
 
    AssertFatal(active == false, "Con::init should only be called once.");
@@ -757,13 +791,13 @@ void errorf(const char* fmt,...)
 void setVariable(const char *name, const char *value)
 {
    name = prependDollar(name);
-   sVM->setGlobalVariable(StringTable->insert(name), KorkApi::ConsoleValue::makeString(value));
+   sVM->setGlobalVariable(sVM->internString(name), KorkApi::ConsoleValue::makeString(value));
 }
 
 void setLocalVariable(const char *name, const char *value)
 {
    name = prependPercent(name);
-   sVM->setLocalVariable(StringTable->insert(name), KorkApi::ConsoleValue::makeString(value));
+   sVM->setLocalVariable(sVM->internString(name), KorkApi::ConsoleValue::makeString(value));
 }
 
 void setBoolVariable(const char *varName, bool value)
@@ -854,7 +888,7 @@ const char *getVariable(const char *name)
 
       while(token != NULL)
       {
-         const char * val = obj->getDataField(StringTable->insert(token), 0);
+         const char * val = obj->getDataField(sVM->internString(token), 0);
          if(!val)
             return("");
 
@@ -871,14 +905,14 @@ const char *getVariable(const char *name)
    }
 
    name = prependDollar(name);
-   return (const char*)sVM->getGlobalVariable(StringTable->insert(name)).evaluatePtr(sVM->getAllocBase());
+   return (const char*)sVM->getGlobalVariable(sVM->internString(name)).evaluatePtr(sVM->getAllocBase());
 }
 
 const char *getLocalVariable(const char *name)
 {
    name = prependPercent(name);
 
-   return (const char*)sVM->getLocalVariable(StringTable->insert(name)).evaluatePtr(sVM->getAllocBase());
+   return (const char*)sVM->getLocalVariable(sVM->internString(name)).evaluatePtr(sVM->getAllocBase());
 }
 
 bool getBoolVariable(const char *varName, bool def)
@@ -911,7 +945,7 @@ bool addVariable(const char *name,
 
 bool removeVariable(const char *name)
 {
-   name = StringTable->lookup(prependDollar(name));
+   name = sVM->lookupString(prependDollar(name));
    return name!=0 && sVM->removeGlobalVariable(name);
 }
 
@@ -964,27 +998,27 @@ KorkApi::ConsoleValue getStringArg( const char *arg )
 
 void addCommand(const char *nsName, const char *name,StringCallback cb, const char *usage, S32 minArgs, S32 maxArgs)
 {
-   sVM->addNamespaceFunction(lookupNamespace(StringTable->insert(nsName)), StringTable->insert(name), (KorkApi::StringFuncCallback)cb, sVM, usage, minArgs, maxArgs);
+   sVM->addNamespaceFunction(lookupNamespace(sVM->internString(nsName)), sVM->internString(name), (KorkApi::StringFuncCallback)cb, sVM, usage, minArgs, maxArgs);
 }
 
 void addCommand(const char *nsName, const char *name,VoidCallback cb, const char *usage, S32 minArgs, S32 maxArgs)
 {
-   sVM->addNamespaceFunction(lookupNamespace(StringTable->insert(nsName)), StringTable->insert(name), (KorkApi::VoidFuncCallback)cb, sVM, usage, minArgs, maxArgs);
+   sVM->addNamespaceFunction(lookupNamespace(sVM->internString(nsName)), sVM->internString(name), (KorkApi::VoidFuncCallback)cb, sVM, usage, minArgs, maxArgs);
 }
 
 void addCommand(const char *nsName, const char *name,IntCallback cb, const char *usage, S32 minArgs, S32 maxArgs)
 {
-   sVM->addNamespaceFunction(lookupNamespace(StringTable->insert(nsName)), StringTable->insert(name), (KorkApi::IntFuncCallback)cb, sVM, usage, minArgs, maxArgs);
+   sVM->addNamespaceFunction(lookupNamespace(sVM->internString(nsName)), sVM->internString(name), (KorkApi::IntFuncCallback)cb, sVM, usage, minArgs, maxArgs);
 }
 
 void addCommand(const char *nsName, const char *name,FloatCallback cb, const char *usage, S32 minArgs, S32 maxArgs)
 {
-   sVM->addNamespaceFunction(lookupNamespace(StringTable->insert(nsName)), StringTable->insert(name), (KorkApi::FloatFuncCallback)cb, sVM, usage, minArgs, maxArgs);
+   sVM->addNamespaceFunction(lookupNamespace(sVM->internString(nsName)), sVM->internString(name), (KorkApi::FloatFuncCallback)cb, sVM, usage, minArgs, maxArgs);
 }
 
 void addCommand(const char *nsName, const char *name,BoolCallback cb, const char *usage, S32 minArgs, S32 maxArgs)
 {
-   sVM->addNamespaceFunction(lookupNamespace(StringTable->insert(nsName)), StringTable->insert(name), (KorkApi::BoolFuncCallback)cb, sVM, usage, minArgs, maxArgs);
+   sVM->addNamespaceFunction(lookupNamespace(sVM->internString(nsName)), sVM->internString(name), (KorkApi::BoolFuncCallback)cb, sVM, usage, minArgs, maxArgs);
 }
 
 void markCommandGroup(const char * nsName, const char *name, const char* usage)
@@ -1013,27 +1047,27 @@ void addOverload(const char * nsName, const char * name, const char * altUsage)
 
 void addCommand(const char *name,StringCallback cb,const char *usage, S32 minArgs, S32 maxArgs)
 {
-   sVM->addNamespaceFunction(sVM->getGlobalNamespace(), StringTable->insert(name), (KorkApi::StringFuncCallback)cb, sVM, usage, minArgs, maxArgs);
+   sVM->addNamespaceFunction(sVM->getGlobalNamespace(), sVM->internString(name), (KorkApi::StringFuncCallback)cb, sVM, usage, minArgs, maxArgs);
 }
 
 void addCommand(const char *name,VoidCallback cb,const char *usage, S32 minArgs, S32 maxArgs)
 {
-   sVM->addNamespaceFunction(sVM->getGlobalNamespace(), StringTable->insert(name), (KorkApi::VoidFuncCallback)cb, sVM, usage, minArgs, maxArgs);
+   sVM->addNamespaceFunction(sVM->getGlobalNamespace(), sVM->internString(name), (KorkApi::VoidFuncCallback)cb, sVM, usage, minArgs, maxArgs);
 }
 
 void addCommand(const char *name,IntCallback cb,const char *usage, S32 minArgs, S32 maxArgs)
 {
-   sVM->addNamespaceFunction(sVM->getGlobalNamespace(), StringTable->insert(name), (KorkApi::IntFuncCallback)cb, sVM, usage, minArgs, maxArgs);
+   sVM->addNamespaceFunction(sVM->getGlobalNamespace(), sVM->internString(name), (KorkApi::IntFuncCallback)cb, sVM, usage, minArgs, maxArgs);
 }
 
 void addCommand(const char *name,FloatCallback cb,const char *usage, S32 minArgs, S32 maxArgs)
 {
-   sVM->addNamespaceFunction(sVM->getGlobalNamespace(), StringTable->insert(name), (KorkApi::FloatFuncCallback)cb, sVM, usage, minArgs, maxArgs);
+   sVM->addNamespaceFunction(sVM->getGlobalNamespace(), sVM->internString(name), (KorkApi::FloatFuncCallback)cb, sVM, usage, minArgs, maxArgs);
 }
 
 void addCommand(const char *name,BoolCallback cb,const char *usage, S32 minArgs, S32 maxArgs)
 {
-   sVM->addNamespaceFunction(sVM->getGlobalNamespace(), StringTable->insert(name), (KorkApi::BoolFuncCallback)cb, sVM, usage, minArgs, maxArgs);
+   sVM->addNamespaceFunction(sVM->getGlobalNamespace(), sVM->internString(name), (KorkApi::BoolFuncCallback)cb, sVM, usage, minArgs, maxArgs);
 }
 
 // Known as expandOldScriptFilename in T3D
@@ -1093,7 +1127,7 @@ const char *evaluate(const char* string, bool echo, const char *fileName)
       Con::printf("%s%s", getVariable( "$Con::Prompt" ), string);
 
    if(fileName)
-      fileName = StringTable->insert(fileName);
+      fileName = sVM->internString(fileName);
 
    KorkApi::ConsoleValue retValue = sVM->evalCode(string, fileName);
    return sVM->valueAsString(retValue);
@@ -1126,7 +1160,7 @@ const char *execute(S32 argc, const char *argv[])
    if(isMainThread())
    {
 #endif
-      StringTableEntry funcName = StringTable->insert(argv[0]);
+      StringTableEntry funcName = sVM->internString(argv[0]);
       
       KorkApi::ConsoleValue retValue = KorkApi::ConsoleValue();
 
@@ -1159,7 +1193,7 @@ const char *execute(SimObject *object, S32 argc, const char *argv[],bool thisCal
    
    if(object->getNamespace())
    {
-      StringTableEntry funcName = StringTable->insert(argv[0]);
+      StringTableEntry funcName = sVM->internString(argv[0]);
 
       KorkApi::ConsoleValue retValue = KorkApi::ConsoleValue();
       // TOFIX KorkApi::ConsoleValue localArgv[StringStack::MaxArgs];
@@ -1206,7 +1240,7 @@ const char *executef(S32 argc, ...)
 //------------------------------------------------------------------------------
 bool isFunction(const char *fn)
 {
-   const char *string = StringTable->lookup(fn);
+   StringTableEntry string = sVM->lookupString(fn);
    if(!string)
       return false;
    else
@@ -1242,7 +1276,7 @@ KorkApi::NamespaceId lookupNamespace(const char *ns)
 {
    if(!ns || ns[0] == '\0')
       return sVM->getGlobalNamespace();
-   return sVM->findNamespace(StringTable->insert(ns));
+   return sVM->findNamespace(sVM->internString(ns));
 }
 
 bool linkNamespaces(const char *parent, const char *child)
@@ -1315,7 +1349,7 @@ StringTableEntry getModNameFromPath(const char *path)
          return NULL;
    }
 
-   return StringTable->insert(buf);
+   return sVM->internString(buf);
 }
 
 //-----------------------------------------------------------------------------

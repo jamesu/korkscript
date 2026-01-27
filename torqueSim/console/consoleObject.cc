@@ -177,7 +177,7 @@ void AbstractClassRep::registerClassWithVm(KorkApi::Vm* vm)
 {
    if (mClassInfo.name == NULL)
    {
-      mClassInfo.name = StringTable->insert(mClassName);
+      mClassInfo.name = vm->internString(mClassName);
       mClassInfo.userPtr = this;
       mClassInfo.numFields = mFieldList.size();
       mClassInfo.fields = &mFieldList[0];

@@ -74,8 +74,8 @@ void ConsoleBaseType::registerTypeWithVm(KorkApi::Vm* vm)
    KorkApi::TypeInfo info;
    info.fieldsize = mTypeSize;
    info.valueSize = mValueSize;
-   info.name = StringTable->insert(mTypeName);
-   info.inspectorFieldType = StringTable->insert(mInspectorFieldType);
+   info.name = vm->internString(mTypeName);
+   info.inspectorFieldType = vm->internString(mInspectorFieldType);
    info.userPtr = this;
    info.iFuncs.CastValueFn = [](void* userPtr,
                               KorkApi::Vm* vm,

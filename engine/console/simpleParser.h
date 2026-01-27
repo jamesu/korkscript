@@ -3,7 +3,6 @@
 #include <stdexcept>
 #include <string>
 #include <sstream>
-#include "core/stringTable.h"
 
 namespace Compiler
 {
@@ -36,11 +35,11 @@ private:
    TT mExpected;
 };
 
-class ASTGen
+template<class I> class ASTGen
 {
 public:
    
-   ASTGen(SimpleLexer::Tokenizer* tok, Compiler::Resources* res)
+   ASTGen(SimpleLexer::Tokenizer<I>* tok, Compiler::Resources* res)
    : mTokenizer(tok), mTokenPos(0), mResources(res)
    {
       res->currentASTGen = this;
@@ -104,7 +103,7 @@ public:
    
 private:
    
-   SimpleLexer::Tokenizer* mTokenizer;
+   SimpleLexer::Tokenizer<I>* mTokenizer;
    Vector<TOK> mTokens;
    U64 mTokenPos;
    Compiler::Resources* mResources;
@@ -687,7 +686,7 @@ private:
       TOK startToken = expectEither(K::rwDATABLOCK, K::IDENT, "ident or 'datablock' expected");
       if (startToken.kind == K::rwDATABLOCK)
       {
-         slotName = StringTable->insert("datablock");
+         slotName = mTokenizer->mStringIntern.intern("datablock");
       }
       else
       {

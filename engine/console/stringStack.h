@@ -24,7 +24,6 @@
 #define _STRINGSTACK_H_
 
 #include "platform/platform.h"
-#include "core/stringTable.h"
 #include "console/consoleValue.h"
 #include "console/stlTypes.h"
 
@@ -223,14 +222,6 @@ struct StringStack
       char shortBuf[16];
       dSprintf(shortBuf, sizeof(shortBuf), "%g", value);
       setStringValue(shortBuf);
-   }
-   
-   /// Get the top of the stack, as a StringTableEntry.
-   ///
-   /// @note Don't free this memory!
-   inline StringTableEntry getSTValue()
-   {
-      return StringTable->insert(mBuffer.data() + mStart);
    }
 
    /// Get an integer representation of the top of the stack.

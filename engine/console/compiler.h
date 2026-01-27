@@ -38,12 +38,12 @@ class Stream;
 #include "core/dataChunker.h"
 #include "embed/compilerOpcodes.h"
 
+struct StmtNode;
+
 namespace SimpleParser
 {
-class ASTGen;
+template<class T> class ASTGen;
 }
-
-struct StmtNode;
 
 namespace Compiler
 {
@@ -204,7 +204,7 @@ namespace Compiler
       VarTypeTable localVarTypes[VarTypeStackSize];
       U32 curLocalVarStackPos;
 
-      SimpleParser::ASTGen* currentASTGen;
+      SimpleParser::ASTGen<KorkApi::VMStringTable>* currentASTGen;
 
       bool syntaxError;
       bool allowExceptions;
@@ -242,6 +242,8 @@ namespace Compiler
       void pushLocalVarContext(); 
       void popLocalVarContext();
       VarTypeTableEntry* getVarInfo(StringTableEntry varName, StringTableEntry typeName = NULL);
+      
+      StringTableEntry emptyString;
 
       Resources() : globalStringTable(this), functionStringTable(this), globalFloatTable(this), functionFloatTable(this), identTable(this), typeTable(this)
       {
@@ -252,6 +254,7 @@ namespace Compiler
          allowTuples = false;
          allowTypes = false;
          currentASTGen = NULL;
+         emptyString = NULL;
          
          globalVarTypes.res = this;
          for (U32 i=0; i<VarTypeStackSize; i++)

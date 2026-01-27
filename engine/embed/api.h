@@ -255,6 +255,14 @@ struct FindObjectsInterface
    VMObject* (*FindDatablockGroup)(void* userPtr);
 };
 
+struct InternStringInterface
+{
+   StringTableEntry (*intern)(void* user, const char* str, bool caseSens);
+   StringTableEntry (*internN)(void* user, const char* str, size_t len, bool caseSens);
+   StringTableEntry (*lookup)(void* user, const char* str, bool caseSens);
+   StringTableEntry (*lookupN)(void* user, const char* str, size_t len, bool caseSens);
+};
+
 
 //
 // VM Config
@@ -308,6 +316,9 @@ struct Config {
 
   FindObjectsInterface iFind;
    void* findUser;
+
+   InternStringInterface iIntern;
+   void* internUser;
 
    AddTaggedStringCallback addTagFn;
    void* addTagUser;
@@ -526,6 +537,14 @@ public:
    
    bool dumpFiberStateToBlob(U32 numFibers, FiberId* fibers, U32* outBlobSize, U8** outBlob);
    bool restoreFiberStateFromBlob(U32* outNumFibers, FiberId** outFibers, U32 blobSize, U8* blob);
+
+   // String intern functions
+   // These just redirect to iIntern interface; they are provided here for ease of use.
+
+  StringTableEntry internString(const char* str, bool caseSens=false);
+  StringTableEntry internStringN(const char* str, U32 len, bool caseSens=false);
+  StringTableEntry lookupString(const char* str, bool caseSens=false);
+  StringTableEntry lookupStringN(const char* str, U32 len, bool caseSens=false);
 };
 
 Vm* createVM(Config* cfg);

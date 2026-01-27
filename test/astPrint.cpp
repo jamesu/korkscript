@@ -525,9 +525,9 @@ bool printAST(const char* buf, const char* filename)
    KorkApi::Vm* vm = KorkApi::createVM(&cfg);
    {
       KorkApi::VmAllocTLS::Scope memScope(vm->mInternal);
-      
-      SimpleLexer::Tokenizer lex(StringTable, theBuf, filename, gEnableExtensions);
-      SimpleParser::ASTGen astGen(&lex, &res);
+
+      SimpleLexer::Tokenizer<KorkApi::VMStringTable> lex(KorkApi::VMStringTable(vm->mInternal), theBuf, filename, gEnableExtensions);
+      SimpleParser::ASTGen<KorkApi::VMStringTable> astGen(&lex, &res);
       
       res.allowExceptions = gEnableExtensions;
       res.allowTuples = gEnableExtensions;

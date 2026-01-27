@@ -4,7 +4,6 @@
 #include <string_view>
 #include "core/tVector.h"
 #include <cctype>
-#include "core/stringTable.h"
 #include <cinttypes>
 
 // NOTE: needs Vector and String type set in SimpleLexer namespace
@@ -160,11 +159,11 @@ struct Token
    }
 };
 
-class Tokenizer
+template<class I> class Tokenizer
 {
 public:
-   explicit Tokenizer(_StringTable* st, std::string_view src, String filename, bool enableInterpolation)
-   : mStringTable(st), mFilename(std::move(filename))
+   explicit Tokenizer(I it, std::string_view src, String filename, bool enableInterpolation)
+   : mStringIntern(it), mFilename(std::move(filename))
    {
       mPos = {};
       mBytePos = 0;
@@ -555,7 +554,7 @@ private:
    InterpolationState mInterpState;
    
 public:
-   _StringTable* mStringTable;
+   I mStringIntern;
 private:
    
    // --- utilities
@@ -1272,7 +1271,7 @@ private:
          
          // Default to IDENT
          t.kind = TokenType::IDENT;
-         t.stString = mStringTable->insertn(&mSource[t.stringValue.offset], (U32)(mBytePos - t.stringValue.offset));
+         t.stString = mStringIntern.internN(&mSource[t.stringValue.offset], (U32)(mBytePos - t.stringValue.offset));
       }
       
       return t;
@@ -1317,7 +1316,7 @@ private:
       // TODO: TYPEID match
       
       // Build token as a view into the source
-      t.stString = mStringTable->insertn(&mSource[t.stringValue.offset], (U32)(mBytePos - t.stringValue.offset));
+      t.stString = mStringIntern.internN(&mSource[t.stringValue.offset], (U32)(mBytePos - t.stringValue.offset));
       return t;
    }
 };

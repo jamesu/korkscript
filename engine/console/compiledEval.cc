@@ -833,7 +833,7 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
                   const char* baseDocStr = frame.nsDocBlockClassLocation == 1 ? frame.codeBlock->globalStrings : frame.codeBlock->functionStrings;
                   const char* classText = baseDocStr + frame.nsDocBlockClassOffset;
 
-                  if (tmpFnNamespace == StringTable->lookupn(classText, frame.nsDocBlockClassNameLength))
+                  if (tmpFnNamespace == vmInternal->lookupStringN(classText, frame.nsDocBlockClassNameLength, false))
                   {
                      const char *usageStr = baseDocStr + frame.nsDocBlockOffset;
                      tmpNs->mUsage = NULL;
@@ -938,7 +938,7 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
             if(!frame.currentNewObject.isValid())
             {
                // Well, looks like we have to create a new object.
-               KorkApi::ClassInfo* klassInfo = vmInternal->getClassInfoByName(StringTable->insert(callArgvS[1]));
+               KorkApi::ClassInfo* klassInfo = vmInternal->getClassInfoByName(vmInternal->internString(callArgvS[1], false));
                KorkApi::VMObject *object = NULL;
 
                if (klassInfo)
@@ -1317,7 +1317,7 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
             break;
             
          case OP_SETCURVAR_ARRAY:
-            tmpVar = evalState.mSTR.getSTValue();
+            tmpVar = vmInternal->internString(evalState.mSTR.getStringValue(), false);
             
             // See OP_SETCURVAR
             frame.prevField = NULL;
@@ -1331,7 +1331,7 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
             break;
             
          case OP_SETCURVAR_ARRAY_CREATE:
-            tmpVar = evalState.mSTR.getSTValue();
+            tmpVar = vmInternal->internString(evalState.mSTR.getStringValue(), false);
             
             // See OP_SETCURVAR
             frame.prevField = NULL;
@@ -1412,7 +1412,7 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
             ++ip; // To skip the recurse flag if the object wasnt found
             if (frame.curObject)
             {
-               StringTableEntry intName = StringTable->insert(evalState.mSTR.getStringValue());
+               StringTableEntry intName = vmInternal->internString(evalState.mSTR.getStringValue(), false);
                bool recurse = code[ip-1];
                KorkApi::VMObject* obj = vmInternal->mConfig.iFind.FindObjectByInternalNameFn(vmInternal->mConfig.findUser, intName, recurse, frame.curObject);
                evalState.intStack[frame._UINT+1] = obj ? obj->klass->iCreate.GetIdFn(obj) : 0;
@@ -2232,8 +2232,8 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
          
          case OP_SETCURFIELD_NONE:
             frame.prevField = frame.curField;
-            dStrcpy( frame.prevFieldArray, frame.curFieldArray );
-            frame.curField = StringTable->EmptyString;
+            strcpy( frame.prevFieldArray, frame.curFieldArray );
+            frame.curField = vmInternal->mEmptyString;
             frame.curFieldArray[0] = 0;
             break;
             
@@ -2994,8 +2994,8 @@ ExprEvalState* ConsoleSerializer::loadEvalState()
    readStringStack(state->mSTR);
 
    // Names
-   state->mCurrentFile = mStream->readSTString();
-   state->mCurrentRoot = mStream->readSTString();
+   state->mCurrentFile = readSTString(mStream);
+   state->mCurrentRoot = readSTString(mStream);
    
    // State
    U8 val = 0;
@@ -3240,7 +3240,7 @@ bool ConsoleSerializer::readVarRef(ConsoleVarRef& ref)
       return false;
    }
    
-   StringTableEntry steName = mStream->readSTString();
+   StringTableEntry steName = readSTString(mStream);
    
    Dictionary::HashTableData* data = getReferencedDictionary(dictId);
    if (!data || data->owner == NULL)
@@ -3274,7 +3274,7 @@ KorkApi::VMObject* ConsoleSerializer::loadObject()
    // By name?
    if ((refType & BIT(1)) != 0)
    {
-      StringTableEntry steName = mStream->readSTString();
+      StringTableEntry steName = readSTString(mStream);
       foundObject = mTarget->mVM->findObjectByName(steName);
    }
 
@@ -3427,9 +3427,9 @@ ConsoleFrame* ConsoleSerializer::loadFrame(ExprEvalState* state)
    mStream->read(&frame->lastCallType);
 
    // Dictionary state
-   frame->scopeName = mStream->readSTString();
-   frame->scopePackage = mStream->readSTString();
-   StringTableEntry nsName = mStream->readSTString();
+   frame->scopeName = readSTString(mStream);
+   frame->scopePackage = readSTString(mStream);
+   StringTableEntry nsName = readSTString(mStream);
    frame->scopeNamespace = mTarget->mNSState.find(nsName, frame->scopePackage); // TOFIX: is this correct?
    
    // References
@@ -3742,7 +3742,7 @@ Dictionary::HashTableData* ConsoleSerializer::loadHashTable()
          return NULL;
       }
       
-      StringTableEntry name = mStream->readSTString();
+      StringTableEntry name = readSTString(mStream);
       if (name == NULL)
       {
          return NULL;
@@ -3864,7 +3864,7 @@ bool ConsoleSerializer::loadRelatedObjects()
                continue;
             }
             
-            StringTableEntry steFilename = mStream->readSTString();
+            StringTableEntry steFilename = readSTString(mStream);
             CodeBlock* block = mTarget->New<CodeBlock>(mTarget, true);
             if (!block->read(steFilename[0] == '\0' ? NULL : steFilename, *mStream, 0))
             {
@@ -3998,6 +3998,13 @@ bool ConsoleSerializer::saveFibers()
    writeBlock.ident = EOLB_MAGIC;
    writeBlock.setSize(0);
    return mStream->write(sizeof(IFFBlock), &writeBlock);
+}
+
+const char* ConsoleSerializer::readSTString(Stream* s, bool casesens)
+{
+   char buf[256];
+   s->readString(buf);
+   return mTarget->internString(buf, casesens);
 }
 
 bool KorkApi::VmInternal::getCurrentFiberFileLine(StringTableEntry* outFile, U32* outLine)

@@ -1,6 +1,5 @@
 #include "console/console.h"
 #include "console/consoleTypes.h"
-#include "core/stringTable.h"
 #include "platform/platformString.h"
 #include "sim/simBase.h"
 #include "core/stringUnit.h"
@@ -86,7 +85,7 @@ ConsoleGetType( TypeString )
    if (outputStorage->isField)
    {
       StringTableEntry* dst = (StringTableEntry*)ConsoleGetOutputStoragePtr();
-      *dst = StringTable->insert(value);
+      *dst = vmPtr->internString(value);
    }
    else
    {
@@ -99,7 +98,7 @@ ConsoleGetType( TypeString )
       if (!dst)
          return false;
 
-      memcpy(dst, StringTable->insert(value), len);
+      memcpy(dst, vmPtr->internString(value), len);
 
       // If a storage register exists, mirror the storageAddress into it (as you did before).
       if (outputStorage->data.storageRegister)
@@ -149,7 +148,7 @@ ConsoleGetType( TypeStringTableEntryVector )
          {
             for (U32 i=0; i<inputStorage->data.argc; i++)
             {
-               vec->push_back( StringTable->insert( vmPtr->valueAsString(inputStorage->data.storageRegister[i] ) ) );
+               vec->push_back( vmPtr->internString( vmPtr->valueAsString(inputStorage->data.storageRegister[i] ) ) );
             }
          }
          else if (inputStorage->data.argc > 0)
@@ -158,7 +157,7 @@ ConsoleGetType( TypeStringTableEntryVector )
             const U32 unitCount = StringUnit::getUnitCount(arg, ",");
             for( U32 unitIndex = 0; unitIndex < unitCount; ++unitIndex )
             {
-               vec->push_back( StringTable->insert( StringUnit::getUnit(arg, unitIndex, ",") ) );
+               vec->push_back( vmPtr->internString( StringUnit::getUnit(arg, unitIndex, ",") ) );
             }
          }
       }
@@ -274,7 +273,7 @@ ConsoleGetType( TypeCaseString )
    if (!outputStorage->isField)
    {
       StringTableEntry* dst = (StringTableEntry*)ConsoleGetOutputStoragePtr();
-      *dst = StringTable->insert(value, true);
+      *dst = vmPtr->internString(value, true);
    }
    else
    {
@@ -310,7 +309,7 @@ ConsoleSetType( TypeFilename )
       char buffer[1024];
       const char* strArg = vmPtr->valueAsString(argv[0]);
       if (Con::expandScriptFilename(buffer, 1024, strArg))
-         *((const char **) ConsoleGetStoragePtr()) = StringTable->insert(buffer);
+         *((const char **) ConsoleGetStoragePtr()) = vmPtr->internString(buffer);
       else
          Con::warnf("(TypeFilename) illegal filename detected: %s", argv[0]);
    }

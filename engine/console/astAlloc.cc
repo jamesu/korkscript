@@ -444,7 +444,7 @@ ObjectDeclNode *ObjectDeclNode::alloc( Compiler::Resources* res, S32 lineNumber,
    if(parentObject)
       ret->parentObject = parentObject;
    else
-      ret->parentObject = StringTable->insert("");
+      ret->parentObject = res->emptyString;
    return ret;
 }
 

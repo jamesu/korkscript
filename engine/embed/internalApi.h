@@ -18,6 +18,8 @@ namespace Compiler
    struct Resources;
 }
 
+class SimpleStringInterner;
+
 namespace KorkApi
 {
 
@@ -92,6 +94,9 @@ struct VmInternal
 
    ConsoleValue mTempValue;
 
+   SimpleStringInterner* mLocalIntern;
+   StringTableEntry mEmptyString;
+
    VmInternal(KorkApi::Vm* vm, Config* cfg);
    ~VmInternal();
 
@@ -110,7 +115,29 @@ struct VmInternal
       }
    }
 
+   inline StringTableEntry getEmptyString() const { return mEmptyString; }
+
    ConsoleValue* getTempValuePtr();
+   
+   inline StringTableEntry internString(const char* str, bool caseSens)
+   {
+      return mConfig.iIntern.intern(mConfig.internUser, str, caseSens);
+   }
+
+   inline StringTableEntry internStringN(const char* str, size_t len, bool caseSens)
+   {
+      return mConfig.iIntern.internN(mConfig.internUser, str, len, caseSens);
+   }
+   
+   inline StringTableEntry lookupString(const char* str, bool caseSens)
+   {
+      return mConfig.iIntern.lookup(mConfig.internUser, str, caseSens);
+   }
+
+   inline StringTableEntry lookupStringN(const char* str, size_t len, bool caseSens)
+   {
+      return mConfig.iIntern.lookupN(mConfig.internUser, str, len, caseSens);
+   }
 
    
    // Fiber API
@@ -202,5 +229,27 @@ struct VmInternal
       return static_cast<T*>(mem);
    }
 };
+
+
+class VMStringTable
+{
+private:
+   KorkApi::VmInternal* vm;
+ 
+public:  
+   VMStringTable(KorkApi::VmInternal* _vm) : vm(_vm) {;}
+   
+   
+   inline StringTableEntry intern(const char* s, bool caseSensitive=false)
+   {
+      return vm->internString(s, caseSensitive);
+   }
+   
+   inline StringTableEntry internN(const char* s, size_t len, bool caseSensitive=false)
+   {
+      return vm->internStringN(s, len, caseSensitive);
+   }
+};
+
 
 }

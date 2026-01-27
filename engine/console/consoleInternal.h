@@ -23,9 +23,6 @@
 #ifndef _CONSOLEINTERNAL_H_
 #define _CONSOLEINTERNAL_H_
 
-#ifndef _STRINGTABLE_H_
-#include "core/stringTable.h"
-#endif
 #ifndef _DATACHUNKER_H_
 #include "core/dataChunker.h"
 #endif
@@ -508,6 +505,8 @@ struct ConsoleSerializer
    
    bool loadFibers();
    bool saveFibers();
+   
+   const char *readSTString(Stream* s, bool casesens=false);
    
    void fixupConsoleValues();
 

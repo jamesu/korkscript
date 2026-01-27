@@ -520,7 +520,7 @@ void Namespace::addOverload(const char * name, const char *altUsage)
    dSprintf(lilBuffer, 32, "_%d", mVmInternal->mNSCounter++);
    dStrcat(buffer, lilBuffer);
 
-   Entry *ent = createLocalEntry(StringTable->insert( buffer ));
+   Entry *ent = createLocalEntry(mVmInternal->internString(buffer, false));
    mVmInternal->mNSState.trashCache();
 
    ent->mUsage = altUsage;
@@ -539,7 +539,7 @@ void Namespace::markGroup(const char* name, const char* usage)
    dSprintf(lilBuffer, 32, "_%d", mVmInternal->mNSCounter++);
    dStrcat(buffer, lilBuffer);
 
-   Entry *ent = createLocalEntry(StringTable->insert( buffer ));
+   Entry *ent = createLocalEntry(mVmInternal->internString(buffer, false));
    mVmInternal->mNSState.trashCache();
 
    if(usage != NULL)
@@ -564,9 +564,14 @@ KorkApi::ConsoleValue Namespace::Entry::execute(S32 argc, KorkApi::ConsoleValue*
    if(mType == ScriptFunctionType)
    {
       if(mFunctionOffset)
-         return mCode->exec(mFunctionOffset, StringTable->insert(mNamespace->mVmInternal->valueAsString(argv[0])), mNamespace, argc, argv, false, true, mPackage, -1, startSuspended);
+      {
+         const char* strV = mNamespace->mVmInternal->valueAsString(argv[0]);
+         return mCode->exec(mFunctionOffset, state->vmInternal->internString(strV, false), mNamespace, argc, argv, false, true, mPackage, -1, startSuspended);
+      }
       else
+      {
          return KorkApi::ConsoleValue();
+      }
    }
 
    if((mMinArgs && argc < mMinArgs) || (mMaxArgs && argc > mMaxArgs))

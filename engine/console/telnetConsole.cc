@@ -213,7 +213,7 @@ void TelnetConsole::process()
                }
                
                // note - send prompt next
-               KorkApi::ConsoleValue promptV = mVMInternal->mVM->getGlobalVariable(StringTable->insert("Con::Prompt"));
+               KorkApi::ConsoleValue promptV = mVMInternal->mVM->getGlobalVariable(mVMInternal->internString("Con::Prompt", false));
                const char* prompt = mVMInternal->valueAsString(promptV);
 
                if (client->socket != 0)

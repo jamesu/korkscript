@@ -550,7 +550,7 @@ Dictionary::Entry* Dictionary::addVariable(  const char *name,
       name = scratchBuffer;
    }
    
-   Entry *ent = add(StringTable->insert(name));
+   Entry *ent = add(mVm->internString(name, false));
    clearEntry(ent);
    ent->mConsoleValue = KorkApi::ConsoleValue::makeTyped(dataPtr, type);
    ent->mUsage = usage;
@@ -652,21 +652,21 @@ ConsoleFunctionGroupBegin( Packages, "Functions relating to the control of packa
 ConsoleFunction(isPackage,bool,2,2,"isPackage(packageName)")
 {
    argc;
-   StringTableEntry packageName = StringTable->insert(argv[1]);
+   StringTableEntry packageName = vmPtr->internString(argv[1]);
    return Namespace::isPackage(packageName);
 }
 
 ConsoleFunction(activatePackage, void,2,2,"activatePackage(packageName)")
 {
    argc;
-   StringTableEntry packageName = StringTable->insert(argv[1]);
+   StringTableEntry packageName = vmPtr->internString(argv[1]);
    Namespace::activatePackage(packageName);
 }
 
 ConsoleFunction(deactivatePackage, void,2,2,"deactivatePackage(packageName)")
 {
    argc;
-   StringTableEntry packageName = StringTable->insert(argv[1]);
+   StringTableEntry packageName = vmPtr->internString(argv[1]);
    Namespace::deactivatePackage(packageName);
 }
 

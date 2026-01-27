@@ -31,8 +31,6 @@
 #include "console/telnetDebugger.h"
 
 #include "core/stream.h"
-#include "core/stringTable.h"
-#include "core/unicode.h"
 
 using namespace Compiler;
 
@@ -70,7 +68,7 @@ CodeBlock::CodeBlock(KorkApi::VmInternal* vm, bool _isExecBlock)
    name = NULL;
    fullPath = NULL;
    modPath = NULL;
-   mRoot = StringTable->EmptyString;
+   mRoot = vm->internString("", false);
    mVM = vm;
    mVMPublic = vm->mVM;
 }
@@ -391,8 +389,8 @@ void CodeBlock::flushNSEntries()
 
 bool CodeBlock::read(StringTableEntry fileName, Stream &st, U32 readVersion)
 {
-   const StringTableEntry exePath = StringTable->EmptyString;// TOFIX Platform::getMainDotCsDir();
-   const StringTableEntry cwd = StringTable->EmptyString;// TOFIX Platform::getCurrentDirectory();
+   const StringTableEntry exePath = mVM->internString("", false);// TOFIX Platform::getMainDotCsDir();
+   const StringTableEntry cwd = mVM->internString("", false);// TOFIX Platform::getCurrentDirectory();
 
    if (readVersion == 0)
    {
@@ -418,15 +416,15 @@ bool CodeBlock::read(StringTableEntry fileName, Stream &st, U32 readVersion)
       if(true)// TOFIX Platform::isFullPath(fileName))
          fullPath = fileName;
       
-      if(dStrnicmp(exePath, fileName, dStrlen(exePath)) == 0)
-         name = StringTable->insert(fileName + dStrlen(exePath) + 1, true);
-      else if(dStrnicmp(cwd, fileName, dStrlen(cwd)) == 0)
-         name = StringTable->insert(fileName + dStrlen(cwd) + 1, true);
+      if(strncasecmp(exePath, fileName, strlen(exePath)) == 0)
+         name = mVM->internString(fileName + strlen(exePath) + 1, true);
+      else if(strncasecmp(cwd, fileName, strlen(cwd)) == 0)
+         name = mVM->internString(fileName + strlen(cwd) + 1, true);
       
       if(fullPath == NULL)
       {
          char buf[1024];
-         fullPath = StringTable->EmptyString;// TOFIX StringTable->insert(Platform::makeFullPathName(fileName, buf, sizeof(buf)), true);
+         fullPath = mVM->internString("", false);// TOFIX mVM->internString(Platform::makeFullPathName(fileName, buf, sizeof(buf)), true);
       }
       
       modPath = "";// TOFIX Con::getModNameFromPath(fileName);
@@ -440,7 +438,7 @@ bool CodeBlock::read(StringTableEntry fileName, Stream &st, U32 readVersion)
          char root[512];
          dStrncpy(root, this->name, slash-this->name);
          root[slash-this->name] = 0;
-         mRoot = StringTable->insert(root);
+         mRoot = mVM->internString(root, false);
       }
    }
    
@@ -519,9 +517,9 @@ bool CodeBlock::read(StringTableEntry fileName, Stream &st, U32 readVersion)
       st.read(&offset);
       StringTableEntry ste;
       if(offset < globalStringsMaxLen)
-         ste = StringTable->insert(globalStrings + offset);
+         ste = mVM->internString(globalStrings + offset, false);
       else
-         ste = StringTable->EmptyString;
+         ste = mVM->internString("", false);
       
       identStrings[i] = ste;
       identStringOffsets[i] = offset;
@@ -704,10 +702,6 @@ bool CodeBlock::write(Stream &st)
 
 bool CodeBlock::compileToStream(Stream &st, StringTableEntry fileName, const char *inScript)
 {
-   // Check for a UTF8 script file
-   char *script;
-   chompUTF8BOM( inScript, &script );
-   
    mVM->mCompilerResources->syntaxError = false;
    
    mVM->mCompilerResources->consoleAllocReset();
@@ -716,8 +710,8 @@ bool CodeBlock::compileToStream(Stream &st, StringTableEntry fileName, const cha
    
    StmtNode* rootNode = NULL;
    
-   SimpleLexer::Tokenizer lex(StringTable, inScript, fileName, mVM->mCompilerResources->allowStringInterpolation);
-   SimpleParser::ASTGen astGen(&lex, mVM->mCompilerResources);
+   SimpleLexer::Tokenizer<KorkApi::VMStringTable> lex(KorkApi::VMStringTable(mVM), inScript, fileName, mVM->mCompilerResources->allowStringInterpolation);
+   SimpleParser::ASTGen<KorkApi::VMStringTable> astGen(&lex, mVM->mCompilerResources);
    
    // Reset all our value tables...
    mVM->mCompilerResources->resetTables();
@@ -825,10 +819,6 @@ bool CodeBlock::compileToStream(Stream &st, StringTableEntry fileName, const cha
 
  KorkApi::ConsoleValue CodeBlock::compileExec(StringTableEntry fileName, const char *inString, bool noCalls, bool isNativeFrame, int setFrame)
 {
-   // Check for a UTF8 script file
-   char *string;
-   chompUTF8BOM( inString, &string );
-
    mVM->mCompilerResources->STEtoCode = &Compiler::compileSTEtoCode;
    mVM->mCompilerResources->consoleAllocReset();
    
@@ -836,23 +826,23 @@ bool CodeBlock::compileToStream(Stream &st, StringTableEntry fileName, const cha
    
    if(fileName)
    {
-      const StringTableEntry exePath = StringTable->EmptyString;// TOFIXPlatform::getMainDotCsDir();
-      const StringTableEntry cwd = StringTable->EmptyString;// TOFIXPlatform::getCurrentDirectory();
+      const StringTableEntry exePath = mVM->internString("", false);// TOFIXPlatform::getMainDotCsDir();
+      const StringTableEntry cwd = mVM->internString("", false);;// TOFIXPlatform::getCurrentDirectory();
       
       fullPath = NULL;
       
       if(true)// TOFIX Platform::isFullPath(fileName))
          fullPath = fileName;
       
-      if(exePath && dStrnicmp(exePath, fileName, dStrlen(exePath)) == 0)
-         name = StringTable->insert(fileName + dStrlen(exePath) + 1, true);
-      else if(cwd && dStrnicmp(cwd, fileName, dStrlen(cwd)) == 0)
-         name = StringTable->insert(fileName + dStrlen(cwd) + 1, true);
+      if(exePath && strncasecmp(exePath, fileName, strlen(exePath)) == 0)
+         name = mVM->internString(fileName + strlen(exePath) + 1, true);
+      else if(cwd && strncasecmp(cwd, fileName, strlen(cwd)) == 0)
+         name = mVM->internString(fileName + strlen(cwd) + 1, true);
       
       if(fullPath == NULL)
       {
          char buf[1024];
-         fullPath = StringTable->EmptyString; // TOFIX StringTable->insert(Platform::makeFullPathName(fileName, buf, sizeof(buf)), true);
+         fullPath = mVM->internString("", false);; // TOFIX mVM->internString(Platform::makeFullPathName(fileName, buf, sizeof(buf)), true);
       }
       
       modPath = ""; // TOFIX Con::getModNameFromPath(fileName);
@@ -865,8 +855,8 @@ bool CodeBlock::compileToStream(Stream &st, StringTableEntry fileName, const cha
    
    StmtNode* rootNode = NULL;
    
-   SimpleLexer::Tokenizer lex(StringTable, inString, fileName ? fileName : "", mVM->mCompilerResources->allowStringInterpolation);
-   SimpleParser::ASTGen astGen(&lex, mVM->mCompilerResources);
+   SimpleLexer::Tokenizer<KorkApi::VMStringTable> lex(KorkApi::VMStringTable(mVM), inString, fileName ? fileName : "", mVM->mCompilerResources->allowStringInterpolation);
+   SimpleParser::ASTGen<KorkApi::VMStringTable> astGen(&lex, mVM->mCompilerResources);
     
     // Need to do this here as ast node gen stores stuff in tables
     mVM->mCompilerResources->resetTables();
@@ -965,21 +955,21 @@ void CodeBlock::dumpInstructions( U32 startIp, bool upToReturn, bool downcaseStr
    U32 ip = startIp;
    U32 endFuncIp = 0;
    bool inFunction = false;
+   char buf[4096];
 
-   auto codeToSte = [downcaseStrings, this](Resources* res, U32 *code, U32 ip) {
+   auto codeToSte = [downcaseStrings, &buf, this](Resources* res, U32 *code, U32 ip) {
       StringTableEntry ste = Compiler::CodeToSTE(res, identStrings, code,  ip);
       if (!ste || !downcaseStrings)
          return ste;
 
       const char *src = ste;
-      static char buf[4096];
       U32 i = 0;
 
       for (; src[i] && i < sizeof(buf) - 1; ++i)
          buf[i] = dTolower(src[i]);
 
       buf[i] = '\0';
-      return StringTable->insert(buf, true);
+      return mVM->internString(buf, true);
    };
 
    U32 lastLine = 0;

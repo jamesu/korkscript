@@ -22,7 +22,6 @@
 
 #include "platform/platform.h"
 #include "core/stream.h"
-#include "core/stringTable.h"
 
 
 Stream::Stream()
@@ -68,32 +67,12 @@ void Stream::writeString(const char *string, S32 maxLen)
       write(len, string);
 }
 
-bool Stream::writeFormattedBuffer(const char *format, ...)
-{
-   char buffer[4096];
-   va_list args;
-   va_start(args, format);
-   const S32 length = dVsprintf(buffer, 4096, format, args);
-
-   // Sanity!
-   AssertFatal(length <= sizeof(buffer), "writeFormattedBuffer - String format exceeded buffer size.  This will cause corruption.");
-
-   return write( length, buffer );
-}
-
 void Stream::readString(char buf[256])
 {
    U8 len;
    read(&len);
    read(S32(len), buf);
    buf[len] = 0;
-}
-
-const char *Stream::readSTString(bool casesens)
-{
-   char buf[256];
-   readString(buf);
-   return StringTable->insert(buf, casesens);
 }
 
 void Stream::readLongString(U32 maxStringLen, char *stringBuf)
