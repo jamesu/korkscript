@@ -499,7 +499,7 @@ void AbstractClassRep::destroyFieldValidators( AbstractClassRep::FieldList &mFie
 {
    for(S32 i = mFieldList.size()-1; i>=0; i-- )
    {
-      TypeValidator **p = &mFieldList[i].validator;
+      TypeValidator **p = (TypeValidator**)&mFieldList[i].userPtr;
       if( *p )
       {
          delete *p;
@@ -546,7 +546,7 @@ void ConsoleObject::addGroup(const char* in_pGroupname, const char* in_pGroupDoc
    f.type         = AbstractClassRep::StartGroupFieldType;
    f.elementCount = 0;
    f.groupExpand  = false;
-   f.validator    = NULL;
+   f.userPtr    = NULL;
    f.ovrCastValue = NULL;
    f.writeDataFn  = &defaultProtectedWriteFn;
 
@@ -569,7 +569,7 @@ void ConsoleObject::endGroup(const char*  in_pGroupname)
    f.pFieldDocs   = NULL;
    f.type         = AbstractClassRep::EndGroupFieldType;
    f.groupExpand  = false;
-   f.validator    = NULL;
+   f.userPtr    = NULL;
    f.ovrCastValue = NULL;
    f.writeDataFn  = &defaultProtectedWriteFn;
    f.elementCount = 0;
@@ -648,7 +648,7 @@ void ConsoleObject::addField(const char*  in_pFieldname,
    f.offset       = in_fieldOffset;
    f.elementCount = in_elementCount;
    f.table        = in_table;
-   f.validator    = NULL;
+   f.userPtr    = NULL;
    
    f.ovrCastValue = NULL;
    f.writeDataFn  = in_writeDataFn;
@@ -732,7 +732,7 @@ void ConsoleObject::addProtectedField(const char*  in_pFieldname,
    f.offset       = in_fieldOffset;
    f.elementCount = in_elementCount;
    f.table        = in_table;
-   f.validator    = NULL;
+   f.userPtr    = NULL;
 
    f.ovrCastValue    = in_getDataFn;
    f.writeDataFn  = in_writeDataFn;
@@ -759,7 +759,7 @@ void ConsoleObject::addFieldV(const char*  in_pFieldname,
    f.table        = NULL;
    f.ovrCastValue = NULL;
    f.writeDataFn  = &defaultProtectedWriteFn;
-   f.validator    = v;
+   f.userPtr    = v;
    v->fieldIndex  = sg_tempFieldList.size();
 
    sg_tempFieldList.push_back(f);
@@ -775,7 +775,7 @@ void ConsoleObject::addDepricatedField(const char *fieldName)
    f.offset       = 0;
    f.elementCount = 0;
    f.table        = NULL;
-   f.validator    = NULL;
+   f.userPtr    = NULL;
    f.ovrCastValue = NULL;
    f.writeDataFn  = &defaultProtectedWriteFn;
 

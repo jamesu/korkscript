@@ -5,7 +5,6 @@
 #include "console/consoleValue.h"
 #include "core/bitSet.h"
 
-class TypeValidator; // TODO: change to interface
 class Namespace;
 struct EnumTable;
 class CodeBlock;
@@ -134,7 +133,7 @@ struct FieldInfo {
    
    EnumTable *     table;
    const char*     pFieldDocs;
-   TypeValidator*  validator;
+   void*           userPtr; // for validator etc
    CastValueFnType   ovrCastValue;
    WriteDataNotifyFn writeDataFn;
    S32             elementCount;

@@ -26,7 +26,6 @@ set(KS_SRCS
 	./engine/platform/platform.cc
 	./engine/platform/platformAssert.cc
 
-	./engine/console/typeValidators.cc
 	./engine/console/compiledEval.cc
 	./engine/console/codeBlock.cc
 	./engine/console/consoleDoc.cc
@@ -63,6 +62,7 @@ set(TORQUESIM_SRCS
 	./torqueSim/console/consoleObject.h
 	./torqueSim/console/consoleTypes.cc
 	./torqueSim/console/consoleTypes.h
+	./torqueSim/console/typeValidators.cc
 	./torqueSim/sim/dynamicTypes.cc
 	./torqueSim/sim/scriptObject.cc
 	./torqueSim/sim/simBase.cc
