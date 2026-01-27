@@ -16,6 +16,8 @@
 #endif
 
 #include <algorithm>
+#include <cstddef>
+#include <memory>
 #include <stdint.h>
 #include "core/alignedBufferAllocator.h"
 
