@@ -1,6 +1,7 @@
 #include "console/console.h"
 #include "console/consoleTypes.h"
 #include "core/stringTable.h"
+#include "platform/platformString.h"
 #include "sim/simBase.h"
 #include "core/stringUnit.h"
 

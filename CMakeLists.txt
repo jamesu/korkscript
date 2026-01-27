@@ -26,7 +26,6 @@ set(KS_SRCS
 
 	./engine/platform/platform.cc
 	./engine/platform/platformAssert.cc
-	./engine/platform/platformStrings.cc
 
 	./engine/console/typeValidators.cc
 	./engine/console/compiledEval.cc
@@ -75,6 +74,7 @@ set(TORQUESIM_SRCS
 	./torqueSim/sim/simManager.cc
 	./torqueSim/platform/basicPlatformProcess.cc
 	./torqueSim/platform/platformFileIO.cc
+	./torqueSim/platform/platformStrings.cc
 	./torqueSim/platform/platformThread.cc
 	./torqueSim/platform/platformNetAsync.cc
 	./torqueSim/platform/platformNetwork.cc

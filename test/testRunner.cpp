@@ -1,4 +1,5 @@
 #include "platform/platform.h"
+#include "platform/platformString.h"
 #include "console/console.h"
 #include <stdio.h>
 #include "sim/simBase.h"

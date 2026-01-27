@@ -1,5 +1,6 @@
 #include "platform/platform.h"
 #include "platform/platformProcess.h"
+#include "platform/platformString.h"
 #include "console/console.h"
 #include "core/stringTable.h"
 

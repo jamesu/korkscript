@@ -21,6 +21,7 @@
 //-----------------------------------------------------------------------------
 
 #include "platform/platform.h"
+#include "platform/platformString.h"
 
 #include "console/console.h"
 #include "console/consoleObject.h"

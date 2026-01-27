@@ -21,6 +21,7 @@
 //-----------------------------------------------------------------------------
 
 #include "platform/platform.h"
+#include "platform/platformString.h"
 #include "platform/threads/mutex.h"
 #include "sim/simBase.h"
 #include "core/stringTable.h"

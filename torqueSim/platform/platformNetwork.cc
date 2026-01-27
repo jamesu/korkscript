@@ -22,6 +22,7 @@
 
 #include "core/torqueConfig.h"
 #include "platform/platformNetwork.h"
+#include "platform/platformString.h"
 #include "platform/threads/mutex.h"
 //#include "platform/event.h"
 #include "core/hashFunction.h"

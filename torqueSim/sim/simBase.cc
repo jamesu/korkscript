@@ -21,6 +21,7 @@
 //-----------------------------------------------------------------------------
 
 #include "platform/platform.h"
+#include "platform/platformString.h"
 #include "sim/simBase.h"
 #include "core/stringTable.h"
 #include "console/console.h"

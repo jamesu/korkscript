@@ -22,6 +22,7 @@
 
 #include "platform/platform.h"
 #include "platform/platformProcess.h"
+#include "platform/platformString.h"
 #include "platform/threads/thread.h"
 
 #include "embed/api.h"

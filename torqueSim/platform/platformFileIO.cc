@@ -22,6 +22,7 @@
 
 #include "platform/platform.h"
 #include "platform/platformProcess.h"
+#include "platform/platformString.h"
 #include "platform/platformFileIO.h"
 #include "core/stringTable.h"
 

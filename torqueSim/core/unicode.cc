@@ -21,6 +21,7 @@
 //-----------------------------------------------------------------------------
 
 #include "platform/platform.h"
+#include "platform/platformString.h"
 #include "platform/platformAssert.h"
 #include "core/unicode.h"
 #include "console/stlTypes.h"

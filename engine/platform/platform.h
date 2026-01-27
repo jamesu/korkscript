@@ -39,10 +39,6 @@
 #include "platform/platformEndian.h"
 #endif
 
-#ifndef _PLATFORM_STRING_H_
-#include "platform/platformString.h"
-#endif
-
 #ifndef _PLATFORM_MEMORY_H_
 #include "platform/platformMemory.h"
 #endif

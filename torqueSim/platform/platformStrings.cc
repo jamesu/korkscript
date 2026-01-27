@@ -297,13 +297,7 @@ S32 dAtoi(const char *str)
 F32 dAtof(const char *str)
 {
    return atof(str);   
-}   
-
-bool dAtob(const char *str)
-{
-   return !dStricmp(str, "true") || dAtof(str);
-}   
-
+}
 
 bool dIsalnum(const char c)
 {
