@@ -618,7 +618,7 @@ ConsoleGetType( TypeS32Vector )
       U32* vecCount = (U32*)ConsoleGetOutputStoragePtr();
       *vecCount++ = vec->size();
       
-      std::copy(vec->begin(), vec->end(), vecCount);
+      std::copy(vec->begin(), vec->end(), (S32*)vecCount);
       
       if (outputStorage->data.storageRegister)
       {
@@ -784,7 +784,7 @@ ConsoleGetType( TypeF32Vector )
       outputStorage->FinalizeStorage(outputStorage, (vec->size() * sizeof(F32)) + sizeof(U32));
       U32* vecCount = (U32*)ConsoleGetOutputStoragePtr();
       *vecCount++ = vec->size();
-      std::copy(vec->begin(), vec->end(), vecCount);
+      std::copy(vec->begin(), vec->end(), (F32*)vecCount);
       
       if (outputStorage->data.storageRegister)
       {
@@ -950,7 +950,7 @@ ConsoleGetType( TypeBoolVector )
       outputStorage->FinalizeStorage(outputStorage, (vec->size() * sizeof(S32)) + sizeof(U32));
       U32* vecCount = (U32*)ConsoleGetOutputStoragePtr();
       *vecCount++ = vec->size();
-      std::copy(vec->begin(), vec->end(), vecCount);
+      std::copy(vec->begin(), vec->end(), (bool*)vecCount);
       
       if (outputStorage->data.storageRegister)
       {
