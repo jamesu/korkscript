@@ -49,17 +49,17 @@ bool hasExtension(const char* pFilename, const char* pExtension)
    AssertFatal( pExtension != NULL, "Extension cannot be NULL." );
    
    // Find filename length.
-   const U32 filenameLength = dStrlen( pFilename );
+   const U32 filenameLength = strlen( pFilename );
    
    // Find extension length.
-   const U32 extensionLength = dStrlen( pExtension );
+   const U32 extensionLength = strlen( pExtension );
    
    // Skip if extension is longer than filename.
    if ( extensionLength >= filenameLength )
       return false;
    
    // Check if extension exists.
-   return dStricmp( pFilename + filenameLength - extensionLength, pExtension ) == 0;
+   return strcasecmp( pFilename + filenameLength - extensionLength, pExtension ) == 0;
 }
 
 }

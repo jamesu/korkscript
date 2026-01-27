@@ -58,7 +58,7 @@ const char* Stream::getStatusString(const Status in_status)
 
 void Stream::writeString(const char *string, S32 maxLen)
 {
-   S32 len = string ? dStrlen(string) : 0;
+   S32 len = string ? strlen(string) : 0;
    if(len > maxLen)
       len = maxLen;
 
@@ -90,7 +90,7 @@ void Stream::readLongString(U32 maxStringLen, char *stringBuf)
 
 void Stream::writeLongString(U32 maxStringLen, const char *string)
 {
-   U32 len = dStrlen(string);
+   U32 len = strlen(string);
    if(len > maxStringLen)
       len = maxStringLen;
    write(len);
@@ -137,7 +137,7 @@ void Stream::readLine(U8 *buffer, U32 bufferSize)
 
 void Stream::writeLine(U8 *buffer)
 {
-   write(dStrlen((const char*)buffer), buffer);
+   write(strlen((const char*)buffer), buffer);
    write(2, "\r\n");
 }
 

@@ -69,7 +69,7 @@ static bool askToEnterDebugger(const char* message )
    if(!haveAsked )
    {
       static char tempBuff[1024];
-      dSprintf( tempBuff, 1024, "Torque has encountered an assertion with message\n\n"
+      snprintf( tempBuff, 1024, "Torque has encountered an assertion with message\n\n"
          "%s\n\n"
          "Would you like to use the debugger? If you cancel, you won't be asked"
          " again until you restart Torque.", message);
@@ -112,7 +112,7 @@ bool PlatformAssert::processAssert(Type        assertType,
    if (platformAssert)
       return platformAssert->process(assertType, filename, lineNumber, message);
    else // when platAssert NULL (during _start/_exit) try direct output...
-      dPrintf("\n%s: (%s @ %ld) %s\n", typeName[assertType], filename, lineNumber, message);
+      printf("\n%s: (%s @ %ld) %s\n", typeName[assertType], filename, lineNumber, message);
 
    // this could also be platform-specific: OutputDebugString on PC, DebugStr on Mac.
    // Will raw printfs do the job?  In the worst case, it's a break-pointable line of code.
@@ -128,7 +128,7 @@ const char* avar(const char *message, ...)
    static char buffer[4096];
    va_list args;
    va_start(args, message);
-   dVsprintf(buffer, sizeof(buffer), message, args);
+   vsnprintf(buffer, sizeof(buffer), message, args);
    va_end(args);
    return( buffer );
 }

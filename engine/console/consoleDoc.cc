@@ -58,10 +58,10 @@ void printClassHeader(const char* usage, const char * className, const char * su
    if( usage != NULL )
    {
       // Copy Usage Document
-      S32 usageLen = dStrlen( usage );
+      S32 usageLen = strlen( usage );
       KorkApi::Vector<char> usageStrV( usageLen );
       char* usageStr = usageStrV.data();
-      dStrcpy( usageStr, usage );
+      strcpy( usageStr, usage );
 
       // Print Header
       printf( "/*!" );
@@ -69,7 +69,7 @@ void printClassHeader(const char* usage, const char * className, const char * su
       // Print line by line, skipping the @field lines.
       //
       // fetch first line end
-      char *newLine = dStrchr( usageStr, '\n' );
+      char *newLine = strchr( usageStr, '\n' );
       char *usagePtr = usageStr;
       do 
       {
@@ -88,30 +88,30 @@ void printClassHeader(const char* usage, const char * className, const char * su
          }
          
          // Copy line and update usagePtr
-         dStrcpy( lineStr, usagePtr );
+         strcpy( lineStr, usagePtr );
          usagePtr = (newLine != NULL ) ? newLine : usagePtr;
-         lineLen = dStrlen( lineStr );
+         lineLen = strlen( lineStr );
 
          // Get the keyword. This is the first word after an '@' or '\'.
-         const char* tempkw = dStrchr( lineStr, '@' );
+         const char* tempkw = strchr( lineStr, '@' );
          if( !tempkw )
-            tempkw = dStrchr( lineStr, '\\' );
+            tempkw = strchr( lineStr, '\\' );
 
          // If we found a new keyword, set it, otherwise, keep using the
          // most recently found.
          if( tempkw )
          {
-            dStrncpy( keyword, tempkw + 1, 5 );
+            strncpy( keyword, tempkw + 1, 5 );
             keyword[5] = '\0';
          }
 
          // Print all fields that aren't associated with the 'field' keyword.
-         if( dStrcmp( keyword, "field" ) )
+         if( strcmp( keyword, "field" ) )
             printf( lineStr );
 
 
          // Fetch next line ending
-         newLine = dStrchr( usagePtr, '\n' );
+         newLine = strchr( usagePtr, '\n' );
       } while( newLine != NULL );
 
       // DocBlock Footer
@@ -213,7 +213,7 @@ void NamespaceState::printNamespaceEntries(Namespace * g, bool dumpScript, bool 
             eType = 8;
             for(Namespace::Entry *eseek = g->mEntryList; eseek; eseek = eseek->mNext)
             {
-               if(!dStrcmp(eseek->mFunctionName, ewalk->cb.mGroupName))
+               if(!strcmp(eseek->mFunctionName, ewalk->cb.mGroupName))
                {
                   eType = eseek->mType;
                   break;
@@ -231,9 +231,9 @@ void NamespaceState::printNamespaceEntries(Namespace * g, bool dumpScript, bool 
          // then we will also extract parameters.
 
          const char *use = ewalk->getUsage();
-         const char *bgn = dStrchr(use, '(');
-         const char *end = dStrchr(use, ')');
-         const char *dot = dStrchr(use, '.');
+         const char *bgn = strchr(use, '(');
+         const char *end = strchr(use, ')');
+         const char *dot = strchr(use, '.');
 
          while( *use == ' ' )
             use++;
@@ -246,7 +246,7 @@ void NamespaceState::printNamespaceEntries(Namespace * g, bool dumpScript, bool 
             use++;
             
             U32 len = (U32)(end - use);
-            dStrncpy(buffer, use, len);
+            strncpy(buffer, use, len);
             buffer[len] = 0;
 
             printClassMethod(true, typeNames[eType], funcName, buffer, end+1);
@@ -260,7 +260,7 @@ void NamespaceState::printNamespaceEntries(Namespace * g, bool dumpScript, bool 
          {
             use++;
             U32 len = (U32)(end - bgn - 1);
-            dStrncpy(buffer, bgn+1, len);
+            strncpy(buffer, bgn+1, len);
             buffer[len] = 0;
 
             // Then let's do the heuristic-trick
@@ -269,11 +269,11 @@ void NamespaceState::printNamespaceEntries(Namespace * g, bool dumpScript, bool 
          }
 
          // Finally, see if they did it foo(*) style.
-         const char* func_pos = dStrstr(use, funcName);
+         const char* func_pos = strstr(use, funcName);
          if((func_pos) && (func_pos < bgn) && (end > bgn))
          {
             U32 len = (U32)(end - bgn - 1);
-            dStrncpy(buffer, bgn+1, len);
+            strncpy(buffer, bgn+1, len);
             buffer[len] = 0;
 
             printClassMethod(true, typeNames[eType], funcName, buffer, end+1);
@@ -480,9 +480,9 @@ void NamespaceState::dumpClasses( bool dumpScript, bool dumpEngine )
          while( field )
          {
             // Find the first field keyword.
-            const char* tempField = dStrstr( field, "@field" );
+            const char* tempField = strstr( field, "@field" );
             if( !tempField )
-               tempField = dStrstr( field, "\\field" );
+               tempField = strstr( field, "\\field" );
 
             field = tempField;
 
@@ -521,12 +521,12 @@ void NamespaceState::dumpClasses( bool dumpScript, bool dumpEngine )
             fieldName[index] = '\0';
 
             // Now copy from field to the next keyword.
-            const char* nextKeyword = dStrchr( field, '@' );
+            const char* nextKeyword = strchr( field, '@' );
             if( !nextKeyword )
-               nextKeyword = dStrchr( field, '\\' );
+               nextKeyword = strchr( field, '\\' );
 
             // Grab the length of the doc string.
-            S32 docLen = dStrlen( field );
+            S32 docLen = strlen( field );
             if( nextKeyword )
                docLen = (U32)(nextKeyword - field);
 
@@ -535,7 +535,7 @@ void NamespaceState::dumpClasses( bool dumpScript, bool dumpEngine )
                docLen = 1023;
 
             // Copy.
-            dStrncpy( fieldDoc, field, docLen );
+            strncpy( fieldDoc, field, docLen );
             fieldDoc[docLen] = '\0';
             field += docLen;
 

@@ -99,4 +99,8 @@ inline U32 getBinLog2(U32 io_num)
    return U32(shiftCount - 1);
 }
 
+inline char dToupper(const char c) { if (c >= char('a') && c <= char('z')) return char(c + 'A' - 'a'); else return c; }
+inline char dTolower(const char c) { if (c >= char('A') && c <= char('Z')) return char(c - 'A' + 'a'); else return c; }
+inline bool dAtob(const char *str){ return !strcasecmp(str, "true") || atof(str); } 
+
 #endif // _PLATFORM_H_

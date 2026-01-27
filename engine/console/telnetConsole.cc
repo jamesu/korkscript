@@ -86,8 +86,8 @@ void TelnetConsole::setTelnetParameters(S32 port, const char *telnetPassword, co
       mAcceptPort = -1;
    }
 
-   dStrncpy(mTelnetPassword, telnetPassword, PasswordMaxLength);
-   dStrncpy(mListenPassword, listenPassword, PasswordMaxLength);
+   strncpy(mTelnetPassword, telnetPassword, PasswordMaxLength);
+   strncpy(mListenPassword, listenPassword, PasswordMaxLength);
 }
 
 void TelnetConsole::processConsoleLine(const char *consoleLine)
@@ -95,7 +95,7 @@ void TelnetConsole::processConsoleLine(const char *consoleLine)
    if (mClientList==NULL || !mValid) return;  // just escape early.  don't even do another step...
 
    // ok, spew this line out to all our subscribers...
-   S32 len = dStrlen(consoleLine)+1;
+   S32 len = strlen(consoleLine)+1;
    for(TelnetClient *walk = mClientList; walk; walk = walk->nextClient)
    {
       if (walk->state == FullAccessConnected || walk->state == ReadOnlyConnected)
@@ -146,13 +146,13 @@ void TelnetConsole::process()
          KorkApi::ConsoleValue promptV = mVMInternal->mVM->getGlobalVariable("Con::Prompt");
          const char *prompt = (const char*)promptV.evaluatePtr(mVMInternal->mAllocBase);
          char connectMessage[1024];
-         dSprintf(connectMessage, sizeof(connectMessage),
+         snprintf(connectMessage, sizeof(connectMessage),
                   "Torque Telnet Remote Console\r\n\r\n%s",
                   cl->state == FullAccessConnected ? prompt : "Enter Password:");
          
          if (cl->socket != 0)
          {
-            tel.SendDataFn(cfg.telnetUser, cl->socket, dStrlen(connectMessage)+1, (const unsigned char*)connectMessage);
+            tel.SendDataFn(cfg.telnetUser, cl->socket, strlen(connectMessage)+1, (const unsigned char*)connectMessage);
          }
 
          cl->nextClient = mClientList;
@@ -218,7 +218,7 @@ void TelnetConsole::process()
 
                if (client->socket != 0)
                {
-                  tel.SendDataFn(cfg.telnetUser, client->socket, dStrlen(prompt), (const unsigned char*)prompt);
+                  tel.SendDataFn(cfg.telnetUser, client->socket, strlen(prompt), (const unsigned char*)prompt);
                }
             }
             else if(client->state == ReadOnlyConnected)
@@ -232,7 +232,7 @@ void TelnetConsole::process()
             else
             {
                client->state++;
-               if(!dStrncmp(client->curLine, mTelnetPassword, PasswordMaxLength))
+               if(!strncmp(client->curLine, mTelnetPassword, PasswordMaxLength))
                {
                   if (client->socket != 0)
                   {
@@ -245,11 +245,11 @@ void TelnetConsole::process()
                   const char *prompt = (const char*)promptV.evaluatePtr(mVMInternal->mAllocBase);
                   if (client->socket != 0)
                   {
-                     tel.SendDataFn(cfg.telnetUser, client->socket, dStrlen(prompt), (const unsigned char*)prompt);
+                     tel.SendDataFn(cfg.telnetUser, client->socket, strlen(prompt), (const unsigned char*)prompt);
                   }
                   client->state = FullAccessConnected;
                }
-               else if(!dStrncmp(client->curLine, mListenPassword, PasswordMaxLength))
+               else if(!strncmp(client->curLine, mListenPassword, PasswordMaxLength))
                {
                   if (client->socket != 0)
                   {
@@ -261,7 +261,7 @@ void TelnetConsole::process()
                   const char *listenConnected = "Connected.\r\n";
                   if (client->socket != 0)
                   {
-                     tel.SendDataFn(cfg.telnetUser, client->socket, dStrlen(listenConnected), (const unsigned char*)listenConnected);
+                     tel.SendDataFn(cfg.telnetUser, client->socket, strlen(listenConnected), (const unsigned char*)listenConnected);
                   }
                   client->state = ReadOnlyConnected;
                }
@@ -275,7 +275,7 @@ void TelnetConsole::process()
                   
                   if (client->socket != 0)
                   {
-                     tel.SendDataFn(cfg.telnetUser, client->socket, dStrlen(sendStr), (const unsigned char*)sendStr);
+                     tel.SendDataFn(cfg.telnetUser, client->socket, strlen(sendStr), (const unsigned char*)sendStr);
                   }
 
                   if (client->state == DisconnectThisDude)

@@ -108,7 +108,7 @@ static bool MyPoint3F_CastValue(void*,
          const char* s = vm->valueAsString(argv[0]);
          if (!s) s = "";
 
-         dSscanf(s, "%g %g %g", &v.x, &v.y, &v.z);
+         sscanf(s, "%g %g %g", &v.x, &v.y, &v.z);
       }
       else
       {
@@ -143,7 +143,7 @@ static bool MyPoint3F_CastValue(void*,
       char* out = (char*)outputStorage->data.storageAddress.evaluatePtr(vm->getAllocBase());
       if (!out) return false;
 
-      dSprintf(out, bufLen, "%.9g %.9g %.9g", v.x, v.y, v.z);
+      snprintf(out, bufLen, "%.9g %.9g %.9g", v.x, v.y, v.z);
 
       if (outputStorage->data.storageRegister)
          *outputStorage->data.storageRegister = outputStorage->data.storageAddress;

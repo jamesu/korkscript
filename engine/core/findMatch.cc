@@ -45,14 +45,12 @@
 
 FindMatch::FindMatch( U32 _maxMatches )
 {
-   expression = NULL;
    maxMatches = _maxMatches;
    matchList.reserve( maxMatches );
 }
 
 FindMatch::FindMatch( const char *_expression, U32 _maxMatches )
 {
-   expression = NULL;
    setExpression( _expression );
    maxMatches = _maxMatches;
    matchList.reserve( maxMatches );
@@ -60,17 +58,15 @@ FindMatch::FindMatch( const char *_expression, U32 _maxMatches )
 
 FindMatch::~FindMatch()
 {
-   delete [] expression;
    matchList.clear();
 }
 
 void FindMatch::setExpression( const char *_expression )
 {
-   delete [] expression;
-   
-   expression = KorkApi::VMem::NewArray<char>(dStrlen(_expression) + 1);
-   dStrcpy(expression, _expression);
-   dStrupr(expression);
+   size_t len = strlen(_expression);
+   expression.resize(len+1);
+   memcpy(expression.data(), _expression, len+1);
+   std::transform(expression.begin(), expression.begin()+len+1, expression.begin(), dToupper);
 }
 
 bool FindMatch::findMatch( const char *str, bool caseSensitive )
@@ -78,10 +74,16 @@ bool FindMatch::findMatch( const char *str, bool caseSensitive )
    if ( isFull() )
       return false;
    
-   char nstr[512];
-   dStrcpy( nstr,str );
-   dStrupr(nstr);
-   if ( isMatch( expression, nstr, caseSensitive ) )
+   std::array<char, 512> nstr;
+   size_t len = strlen(str);
+   if (len > 511)
+   {
+      len = 511;
+   }
+   memcpy( nstr.data(), str, len );
+   std::transform(nstr.begin(), nstr.begin()+len+1, nstr.begin(), dToupper);
+
+   if ( isMatch( expression.data(), nstr.data(), caseSensitive ) )
    {
       matchList.push_back( (char*)str );
       return true;
@@ -137,7 +139,7 @@ bool FindMatch::isMatch( const char *exp, const char *str, bool caseSensitive )
 bool FindMatch::isMatchMultipleExprs( const char *exps, const char *str, bool caseSensitive )
 {
    char *tok = 0;
-   S32 len = dStrlen(exps);
+   S32 len = strlen(exps);
 
    KorkApi::Vector<char> e;
    e.resize(len+1);
@@ -147,7 +149,7 @@ bool FindMatch::isMatchMultipleExprs( const char *exps, const char *str, bool ca
    // they don't work when the paths have spaces in.
 
    // search for each expression. return true soon as we see one.
-   for( tok = dStrtok(e.data(),"\t"); tok != NULL; tok = dStrtok(NULL,"\t"))
+   for( tok = strtok(e.data(),"\t"); tok != NULL; tok = strtok(NULL,"\t"))
    {
       if( isMatch( tok, str, caseSensitive) )
       {

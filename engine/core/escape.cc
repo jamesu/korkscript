@@ -140,7 +140,7 @@ void expandEscape(char *dest, const char *src)
 
 bool collapseEscape(char *buf)
 {
-   S32 len = dStrlen(buf) + 1;
+   S32 len = strlen(buf) + 1;
    for(S32 i = 0; i < len;)
    {
       if(buf[i] == '\\')

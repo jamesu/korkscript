@@ -990,7 +990,7 @@ VmInternal::VmInternal(Vm* vm, Config* cfg) : mGlobalVars(this)
      {
         case KorkApi::ConsoleValue::TypeInternalString: {
            const char* strValue = vm->valueAsString(inputStorage->data.storageRegister ? *inputStorage->data.storageRegister : inputStorage->data.storageAddress);
-           U32 strLen = dStrlen(strValue)+1;
+           U32 strLen = strlen(strValue)+1;
            outputStorage->ResizeStorage(outputStorage, strLen);
            memcpy(outputStorage->data.storageAddress.evaluatePtr(vm->getAllocBase()), strValue, strLen);
            *(outputStorage->data.storageRegister) = outputStorage->data.storageAddress;
@@ -1338,7 +1338,7 @@ bool VmInternal::setObjectFieldTuple(VMObject* obj, StringTableEntry fieldName, 
          if (f.pFieldname != fieldName)
             continue;
          
-         U32 idx = dAtoi(arrayIndex);
+         U32 idx = atoi(arrayIndex);
          U32 elemCount = f.elementCount > 0 ? (U32)f.elementCount : 1;
          if (idx >= elemCount)
             break;
@@ -1392,7 +1392,7 @@ ConsoleValue VmInternal::getObjectField(VMObject* obj, StringTableEntry name, co
       if (f.pFieldname != name)
          continue;
       
-      U32 idx = dAtoi(array);
+      U32 idx = atoi(array);
       U32 elemCount = f.elementCount > 0 ? (U32)f.elementCount : 1;
       if (idx >= elemCount)
          break;

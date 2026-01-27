@@ -260,7 +260,7 @@ const char *CodeBlock::getFileLine(U32 ip)
    U32 line, inst;
    findBreakLine(ip, line, inst);
    
-   dSprintf(nameBuffer, KorkApi::VmInternal::FileLineBufferSize, "%s (%d)", name ? name : "<input>", line);
+   snprintf(nameBuffer, KorkApi::VmInternal::FileLineBufferSize, "%s (%d)", name ? name : "<input>", line);
    return nameBuffer;
 }
 
@@ -433,10 +433,10 @@ bool CodeBlock::read(StringTableEntry fileName, Stream &st, U32 readVersion)
    //
    if (name)
    {
-      if (const char *slash = dStrchr(this->name, '/'))
+      if (const char *slash = strchr(this->name, '/'))
       {
          char root[512];
-         dStrncpy(root, this->name, slash-this->name);
+         strncpy(root, this->name, slash-this->name);
          root[slash-this->name] = 0;
          mRoot = mVM->internString(root, false);
       }

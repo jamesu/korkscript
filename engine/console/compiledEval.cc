@@ -249,14 +249,14 @@ const char *ExprEvalState::getNamespaceList(Namespace *ns)
    U32 size = 1;
    Namespace * walk;
    for(walk = ns; walk; walk = walk->mParent)
-      size += dStrlen(walk->mName) + 4;
+      size += strlen(walk->mName) + 4;
    char *ret = (char*)mSTR.getFuncBuffer(KorkApi::ConsoleValue::TypeInternalString, size).evaluatePtr(vmInternal->mAllocBase);
    ret[0] = 0;
    for(walk = ns; walk; walk = walk->mParent)
    {
-      dStrcat(ret, walk->mName);
+      strcat(ret, walk->mName);
       if(walk->mParent)
-         dStrcat(ret, " -> ");
+         strcat(ret, " -> ");
    }
    return ret;
 }
@@ -266,12 +266,12 @@ const char *ExprEvalState::getNamespaceList(Namespace *ns)
 
 F64 consoleStringToNumber(const char *str, StringTableEntry file, U32 line)
 {
-   F64 val = dAtof(str);
+   F64 val = atof(str);
    if(val != 0)
       return val;
-   else if(!dStricmp(str, "true"))
+   else if(!strcasecmp(str, "true"))
       return 1;
-   else if(!dStricmp(str, "false"))
+   else if(!strcasecmp(str, "false"))
       return 0;
    else if(file)
    {
@@ -421,15 +421,15 @@ void CodeBlock::getFunctionArgs(char buffer[1024], U32 ip)
       
       // Add a comma so it looks nice!
       if(i != 0)
-         dStrcat(buffer, ", ");
+         strcat(buffer, ", ");
       
-      dStrcat(buffer, "var ");
+      strcat(buffer, "var ");
       
       // Try to capture junked parameters
       if(var[0])
-         dStrcat(buffer, var+1);
+         strcat(buffer, var+1);
       else
-         dStrcat(buffer, "JUNK");
+         strcat(buffer, "JUNK");
    }
 }
 
@@ -537,39 +537,39 @@ ConsoleFrame& CodeBlock::setupExecFrame(
       if (eval.traceOn)
       {
          eval.traceBuffer[0] = 0;
-         dStrcat(eval.traceBuffer, "Entering ");
+         strcat(eval.traceBuffer, "Entering ");
          if (packageName)
          {
-            dStrcat(eval.traceBuffer, "[");
-            dStrcat(eval.traceBuffer, packageName);
-            dStrcat(eval.traceBuffer, "]");
+            strcat(eval.traceBuffer, "[");
+            strcat(eval.traceBuffer, packageName);
+            strcat(eval.traceBuffer, "]");
          }
 
          if (thisNamespace && thisNamespace->mName)
          {
-            dSprintf(
-               eval.traceBuffer + dStrlen(eval.traceBuffer),
-               ExprEvalState::TraceBufferSize - dStrlen(eval.traceBuffer),
+            snprintf(
+               eval.traceBuffer + strlen(eval.traceBuffer),
+               ExprEvalState::TraceBufferSize - strlen(eval.traceBuffer),
                "%s::%s(", thisNamespace->mName, fnName);
          }
          else
          {
-            dSprintf(
-               eval.traceBuffer + dStrlen(eval.traceBuffer),
-               ExprEvalState::TraceBufferSize - dStrlen(eval.traceBuffer),
+            snprintf(
+               eval.traceBuffer + strlen(eval.traceBuffer),
+               ExprEvalState::TraceBufferSize - strlen(eval.traceBuffer),
                "%s(", fnName);
          }
 
          for (U32 i = 0; i < wantedArgc; i++)
          {
-            dStrcat(eval.traceBuffer, mVM->valueAsString(argv[i + 1]));
+            strcat(eval.traceBuffer, mVM->valueAsString(argv[i + 1]));
             if (i != wantedArgc - 1)
-               dStrcat(eval.traceBuffer, ", ");
+               strcat(eval.traceBuffer, ", ");
          }
-         dStrcat(eval.traceBuffer, ")");
-         dSprintf(
-            eval.traceBuffer + dStrlen(eval.traceBuffer),
-            ExprEvalState::TraceBufferSize - dStrlen(eval.traceBuffer),
+         strcat(eval.traceBuffer, ")");
+         snprintf(
+            eval.traceBuffer + strlen(eval.traceBuffer),
+            ExprEvalState::TraceBufferSize - strlen(eval.traceBuffer),
             " [f=%i,ss=%i,sf=%i]", eval.vmFrames.size(), eval.mSTR.mNumFrames, eval.mSTR.mStartStackSize);
          mVM->printf(0, "%s", eval.traceBuffer);
       }
@@ -896,7 +896,7 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
                KorkApi::VMObject *db = vmInternal->mConfig.iFind.FindDatablockGroup(vmInternal->mConfig.findUser);
                
                // Make sure we're not changing types on ourselves...
-               if(db && dStricmp(db->klass->name, callArgvS[1]))
+               if(db && strcasecmp(db->klass->name, callArgvS[1]))
                {
                   vmInternal->printf(0, "Cannot re-declare data block %s with a different class.", callArgv[2]);
                   ip = frame.failJump;
@@ -1431,14 +1431,14 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
          case OP_SETCURFIELD:
             // Save the previous field for parsing vector fields.
             frame.prevField = frame.curField;
-            dStrcpy( frame.prevFieldArray, frame.curFieldArray );
+            strcpy( frame.prevFieldArray, frame.curFieldArray );
             frame.curField = Compiler::CodeToSTE(NULL, identStrings, code, ip);
             frame.curFieldArray[0] = 0;
             ip += 2;
             break;
             
          case OP_SETCURFIELD_ARRAY:
-            dStrcpy(frame.curFieldArray, evalState.mSTR.getStringValue());
+            strcpy(frame.curFieldArray, evalState.mSTR.getStringValue());
             break;
 
          case OP_SETCURFIELD_TYPE:
@@ -1466,7 +1466,7 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
                // a special accessor?
                
                //getFieldComponent( prevObject, prevField, prevFieldArray, curField, valBuffer, VAL_BUFFER_SIZE );
-               evalState.intStack[frame._UINT+1] = 0;//dAtoi( valBuffer );
+               evalState.intStack[frame._UINT+1] = 0;//atoi( valBuffer );
             }
             frame._UINT++;
             break;
@@ -1482,7 +1482,7 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
                // The field is not being retrieved from an object. Maybe it's
                // a special accessor?
                //getFieldComponent( prevObject, prevField, prevFieldArray, curField, valBuffer, VAL_BUFFER_SIZE );
-               evalState.floatStack[frame._FLT+1] = 0.0f;//dAtof( valBuffer );
+               evalState.floatStack[frame._FLT+1] = 0.0f;//atof( valBuffer );
             }
             frame._FLT++;
             break;
@@ -1613,7 +1613,7 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
             if(U8(frame.curStringTable[code[ip]]) != KorkApi::StringTagPrefixByte)
             {
                U32 id = vmInternal->mConfig.addTagFn(frame.curStringTable + code[ip], vmInternal->mConfig.addTagUser);
-               dSprintf(frame.curStringTable + code[ip] + 1, 7, "%d", id);
+               snprintf(frame.curStringTable + code[ip] + 1, 7, "%d", id);
                *(frame.curStringTable + code[ip]) = KorkApi::StringTagPrefixByte;
             }
          case OP_LOADIMMED_STR:
@@ -1626,9 +1626,9 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
             // is a namespace doc block, otherwise it is a function doc block.
             const char* docblock = frame.curStringTable + code[ip++];
             
-            const char* sansClass = dStrstr( docblock, "@class" );
+            const char* sansClass = strstr( docblock, "@class" );
             if (!sansClass)
-               sansClass = dStrstr( docblock, "\\class" );
+               sansClass = strstr( docblock, "\\class" );
             
             if (sansClass)
             {
@@ -2095,9 +2095,9 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
 
                // Find right end of current component.
                
-               if( !dIsspace( str[ endIndex ] ) )
+               if( !isspace( str[ endIndex ] ) )
                   do ++ endIndex;
-                  while( str[ endIndex ] && !dIsspace( str[ endIndex ] ) );
+                  while( str[ endIndex ] && !isspace( str[ endIndex ] ) );
                   
                // Extract component.
                   
@@ -2687,22 +2687,22 @@ void ExprEvalState::popFrame()
       if(traceOn)
       {
          traceBuffer[0] = 0;
-         dStrcat(traceBuffer, "Leaving ");
+         strcat(traceBuffer, "Leaving ");
          
          if(last->scopePackage)
          {
-            dStrcat(traceBuffer, "[");
-            dStrcat(traceBuffer, last->scopePackage);
-            dStrcat(traceBuffer, "]");
+            strcat(traceBuffer, "[");
+            strcat(traceBuffer, last->scopePackage);
+            strcat(traceBuffer, "]");
          }
          if(last->scopeNamespace && last->scopeNamespace->mName)
          {
-            dSprintf(traceBuffer + dStrlen(traceBuffer), ExprEvalState::TraceBufferSize - dStrlen(traceBuffer),
+            snprintf(traceBuffer + strlen(traceBuffer), ExprEvalState::TraceBufferSize - strlen(traceBuffer),
                      "%s::%s() - return %s", last->scopeNamespace->mName, last->thisFunctionName, mSTR.getStringValue());
          }
          else
          {
-            dSprintf(traceBuffer + dStrlen(traceBuffer), ExprEvalState::TraceBufferSize - dStrlen(traceBuffer),
+            snprintf(traceBuffer + strlen(traceBuffer), ExprEvalState::TraceBufferSize - strlen(traceBuffer),
                      "%s() - return %s", last->thisFunctionName, mSTR.getStringValue());
          }
          vmInternal->printf(0, "%s [f=%i,ss=%i,sf=%i]", traceBuffer, vmFrames.size(), mSTR.mNumFrames, mSTR.mStartStackSize);

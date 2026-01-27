@@ -248,7 +248,7 @@ StrConstNode *StrConstNode::alloc( Compiler::Resources* res, S32 lineNumber, cha
    StrConstNode *ret = (StrConstNode *) res->consoleAlloc(sizeof(StrConstNode));
    constructInPlace(ret);
    ret->dbgLineNumber = lineNumber;
-   ret->str = (char *) res->consoleAlloc((U32)dAlignSize(forceLen >= 0 ? forceLen+1 : dStrlen(str) + 1, 8));
+   ret->str = (char *) res->consoleAlloc((U32)dAlignSize(forceLen >= 0 ? forceLen+1 : strlen(str) + 1, 8));
    ret->tag = tag;
    ret->doc = doc;
    
@@ -259,7 +259,7 @@ StrConstNode *StrConstNode::alloc( Compiler::Resources* res, S32 lineNumber, cha
    }
    else
    {
-      dStrcpy(ret->str, str);
+      strcpy(ret->str, str);
    }
    
    return ret;
@@ -349,7 +349,7 @@ FuncCallExprNode *FuncCallExprNode::alloc( Compiler::Resources* res, S32 lineNum
       ret->callType = MethodCall;
    else
    {
-      if(nameSpace && !dStricmp(nameSpace, "Parent"))
+      if(nameSpace && !strcasecmp(nameSpace, "Parent"))
          ret->callType = ParentCall;
       else
          ret->callType = FunctionCall;

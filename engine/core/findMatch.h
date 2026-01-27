@@ -27,7 +27,7 @@
 
 class   FindMatch
 {
-   char*  expression;
+   KorkApi::Vector<char>  expression;
    U32 maxMatches;
    
 public:

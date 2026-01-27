@@ -53,12 +53,12 @@ namespace Compiler
 
    F64 consoleStringToNumber(const char *str, StringTableEntry file, U32 line)
    {
-      F64 val = dAtof(str);
+      F64 val = atof(str);
       if(val != 0)
          return val;
-      else if(!dStricmp(str, "true"))
+      else if(!strcasecmp(str, "true"))
          return 1;
-      else if(!dStricmp(str, "false"))
+      else if(!strcasecmp(str, "false"))
          return 0;
       else if(file)
       {
@@ -200,12 +200,12 @@ U32 CompilerStringTable::add(const char *str, bool caseSens, bool tag)
 
       if(caseSens)
       {
-         if(!dStrcmp((*walk)->string, str))
+         if(!strcmp((*walk)->string, str))
             return (*walk)->start;
       }
       else
       {
-         if(!dStricmp((*walk)->string, str))
+         if(!strcasecmp((*walk)->string, str))
             return (*walk)->start;
       }
    }
@@ -215,7 +215,7 @@ U32 CompilerStringTable::add(const char *str, bool caseSens, bool tag)
    *walk = newStr;
    newStr->next = NULL;
    newStr->start = totalLen;
-   U32 len = dStrlen(str) + 1;
+   U32 len = strlen(str) + 1;
    if(tag && len < 7) // alloc space for the numeric tag 1 for tag, 5 for # and 1 for nul
       len = 7;
    totalLen += len;
@@ -228,13 +228,13 @@ U32 CompilerStringTable::add(const char *str, bool caseSens, bool tag)
 
 U32 CompilerStringTable::addIntString(U32 value)
 {
-   dSprintf(buf, sizeof(buf), "%d", value);
+   snprintf(buf, sizeof(buf), "%d", value);
    return add(buf);
 }
 
 U32 CompilerStringTable::addFloatString(F64 value)
 {
-   dSprintf(buf, sizeof(buf), "%g", value);
+   snprintf(buf, sizeof(buf), "%g", value);
    return add(buf);
 }
 
@@ -248,7 +248,7 @@ char *CompilerStringTable::build()
 {
    char *ret = KorkApi::VMem::NewArray<char>(totalLen);
    for(Entry *walk = list; walk; walk = walk->next)
-      dStrcpy(ret + walk->start, walk->string);
+      strcpy(ret + walk->start, walk->string);
    return ret;
 }
 

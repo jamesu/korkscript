@@ -181,7 +181,7 @@ struct StringStack
          mBuffer[mStart] = 0;
          return;
       }
-      mLen = dStrlen(s);
+      mLen = strlen(s);
       mType = KorkApi::ConsoleValue::TypeInternalString;
       
       if ((mBuffer.data() + mStart) != s)
@@ -213,27 +213,27 @@ struct StringStack
    void setStringIntValue(U32 value)
    {
       char shortBuf[16];
-      dSprintf(shortBuf, sizeof(shortBuf), "%i", value);
+      snprintf(shortBuf, sizeof(shortBuf), "%i", value);
       setStringValue(shortBuf);
    }
 
    void setStringFloatValue(F64 value)
    {
       char shortBuf[16];
-      dSprintf(shortBuf, sizeof(shortBuf), "%g", value);
+      snprintf(shortBuf, sizeof(shortBuf), "%g", value);
       setStringValue(shortBuf);
    }
 
    /// Get an integer representation of the top of the stack.
    inline U32 getIntValue()
    {
-      return dAtoi(mBuffer.data() + mStart);
+      return atoi(mBuffer.data() + mStart);
    }
 
    /// Get a float representation of the top of the stack.
    inline F64 getFloatValue()
    {
-      return dAtof(mBuffer.data() + mStart);
+      return atof(mBuffer.data() + mStart);
    }
 
    /// Get a string representation of the top of the stack.
@@ -353,7 +353,7 @@ struct StringStack
    {
       if (mType == KorkApi::ConsoleValue::TypeInternalString)
       {
-         return dStrlen(mBuffer.data() + mStart);
+         return strlen(mBuffer.data() + mStart);
       }
       else if (mType < KorkApi::ConsoleValue::TypeBeginCustom)
       {
@@ -377,7 +377,7 @@ struct StringStack
       mValue = mStartValues[mStartStackSize];
 
       // Compare current and previous strings.
-      U32 ret = mType == oldType ? !dStricmp(mBuffer.data() + mStart, mBuffer.data() + oldStart) : 0;
+      U32 ret = mType == oldType ? !strcasecmp(mBuffer.data() + mStart, mBuffer.data() + oldStart) : 0;
 
       // Put an empty string on the top of the stack.
       mLen = 0;

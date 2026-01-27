@@ -37,34 +37,34 @@ bool NamespaceState::canTabComplete(const char *prevText, const char *bestMatch,
                                const char *newText, S32 baseLen, bool fForward)
 {
    // test if it matches the first baseLen chars:
-   if(dStrnicmp(newText, prevText, baseLen))
+   if(strncasecmp(newText, prevText, baseLen))
       return false;
    
    if (fForward)
    {
       if(!bestMatch)
-         return dStricmp(newText, prevText) > 0;
+         return strcasecmp(newText, prevText) > 0;
       else
-         return (dStricmp(newText, prevText) > 0) &&
-         (dStricmp(newText, bestMatch) < 0);
+         return (strcasecmp(newText, prevText) > 0) &&
+         (strcasecmp(newText, bestMatch) < 0);
    }
    else
    {
-      if (dStrlen(prevText) == (U32) baseLen)
+      if (strlen(prevText) == (U32) baseLen)
       {
          // look for the 'worst match'
          if(!bestMatch)
-            return dStricmp(newText, prevText) > 0;
+            return strcasecmp(newText, prevText) > 0;
          else
-            return dStricmp(newText, bestMatch) > 0;
+            return strcasecmp(newText, bestMatch) > 0;
       }
       else
       {
          if (!bestMatch)
-            return (dStricmp(newText, prevText)  < 0);
+            return (strcasecmp(newText, prevText)  < 0);
          else
-            return (dStricmp(newText, prevText)  < 0) &&
-            (dStricmp(newText, bestMatch) > 0);
+            return (strcasecmp(newText, prevText)  < 0) &&
+            (strcasecmp(newText, bestMatch) > 0);
       }
    }
 }
@@ -379,7 +379,7 @@ Namespace::Entry *Namespace::lookup(StringTableEntry name)
 
 bool compareEntries(const Namespace::Entry* a, const Namespace::Entry* b)
 {
-    return dStricmp(a->mFunctionName, b->mFunctionName) < 0;
+    return strcasecmp(a->mFunctionName, b->mFunctionName) < 0;
 }
 
 void Namespace::getEntryList(KorkApi::Vector<Entry *> *vec)
@@ -516,9 +516,9 @@ void Namespace::addOverload(const char * name, const char *altUsage)
 {
    char buffer[1024];
    char lilBuffer[32];
-   dStrcpy(buffer, name);
-   dSprintf(lilBuffer, 32, "_%d", mVmInternal->mNSCounter++);
-   dStrcat(buffer, lilBuffer);
+   strcpy(buffer, name);
+   snprintf(lilBuffer, 32, "_%d", mVmInternal->mNSCounter++);
+   strcat(buffer, lilBuffer);
 
    Entry *ent = createLocalEntry(mVmInternal->internString(buffer, false));
    mVmInternal->mNSState.trashCache();
@@ -535,9 +535,9 @@ void Namespace::markGroup(const char* name, const char* usage)
 {
    char buffer[1024];
    char lilBuffer[32];
-   dStrcpy(buffer, name);
-   dSprintf(lilBuffer, 32, "_%d", mVmInternal->mNSCounter++);
-   dStrcat(buffer, lilBuffer);
+   strcpy(buffer, name);
+   snprintf(lilBuffer, 32, "_%d", mVmInternal->mNSCounter++);
+   strcat(buffer, lilBuffer);
 
    Entry *ent = createLocalEntry(mVmInternal->internString(buffer, false));
    mVmInternal->mNSState.trashCache();
@@ -597,18 +597,18 @@ KorkApi::ConsoleValue Namespace::Entry::execute(S32 argc, KorkApi::ConsoleValue*
       case StringCallbackType:
          return KorkApi::ConsoleValue::makeString(cb.mStringCallbackFunc(safeObjectUserPtr(resolvedThis), mUserPtr, argc, localArgv));
       case IntCallbackType:
-         dSprintf(returnBuffer, KorkApi::VmInternal::ExecReturnBufferSize, "%d",
+         snprintf(returnBuffer, KorkApi::VmInternal::ExecReturnBufferSize, "%d",
             cb.mIntCallbackFunc(safeObjectUserPtr(resolvedThis), mUserPtr, argc, localArgv));
          return KorkApi::ConsoleValue::makeString(returnBuffer);
       case FloatCallbackType:
-         dSprintf(returnBuffer, KorkApi::VmInternal::ExecReturnBufferSize, "%g",
+         snprintf(returnBuffer, KorkApi::VmInternal::ExecReturnBufferSize, "%g",
             cb.mFloatCallbackFunc(safeObjectUserPtr(resolvedThis), mUserPtr, argc, localArgv));
          return KorkApi::ConsoleValue::makeString(returnBuffer);
       case VoidCallbackType:
          cb.mVoidCallbackFunc(safeObjectUserPtr(resolvedThis), mUserPtr, argc, localArgv);
          break;
       case BoolCallbackType:
-         dSprintf(returnBuffer, KorkApi::VmInternal::ExecReturnBufferSize, "%d",
+         snprintf(returnBuffer, KorkApi::VmInternal::ExecReturnBufferSize, "%d",
             (U32)cb.mBoolCallbackFunc(safeObjectUserPtr(resolvedThis), mUserPtr, argc, localArgv));
          return KorkApi::ConsoleValue::makeString(returnBuffer);
       default:

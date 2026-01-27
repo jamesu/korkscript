@@ -44,7 +44,7 @@
 
 bool varCompare(const Dictionary::Entry* a, const Dictionary::Entry* b)
 {
-    return dStricmp(a->name, b->name) < 0;
+    return strcasecmp(a->name, b->name) < 0;
 }
 
 void Dictionary::exportVariables(const char *varString, const char *fileName, bool append)
@@ -93,19 +93,19 @@ void Dictionary::exportVariables(const char *varString, const char *fileName, bo
       switch((*s)->mConsoleValue.typeId)
       {
          case KorkApi::ConsoleValue::TypeInternalUnsigned:
-            dSprintf(buffer, sizeof(buffer), "%s = %d;%s", (*s)->name, (*s)->mConsoleValue.getInt(), cat);
+            snprintf(buffer, sizeof(buffer), "%s = %d;%s", (*s)->name, (*s)->mConsoleValue.getInt(), cat);
             break;
          case KorkApi::ConsoleValue::TypeInternalNumber:
-            dSprintf(buffer, sizeof(buffer), "%s = %g;%s", (*s)->name, (*s)->mConsoleValue.getFloat(), cat);
+            snprintf(buffer, sizeof(buffer), "%s = %g;%s", (*s)->name, (*s)->mConsoleValue.getFloat(), cat);
             break;
          default:
             expandEscape(expandBuffer, (const char*)(*s)->mConsoleValue.evaluatePtr(mVm->mAllocBase));
-            dSprintf(buffer, sizeof(buffer), "%s = \"%s\";%s", (*s)->name, expandBuffer, cat);
+            snprintf(buffer, sizeof(buffer), "%s = \"%s\";%s", (*s)->name, expandBuffer, cat);
             break;
       }
       if(fileName)
       {
-         strm.write(dStrlen(buffer), buffer);
+         strm.write(strlen(buffer), buffer);
       }
       else
       {
@@ -546,7 +546,7 @@ Dictionary::Entry* Dictionary::addVariable(  const char *name,
    if(name[0] != '$')
    {
       scratchBuffer[0] = '$';
-      dStrcpy(scratchBuffer + 1, name);
+      strcpy(scratchBuffer + 1, name);
       name = scratchBuffer;
    }
    
@@ -625,22 +625,22 @@ ConsoleFunction(backtrace, void, 1, 1, "Print the call stack.")
 
    for(U32 i = 0; i < gEvalState.stack.size(); i++)
    {
-      totalSize += dStrlen(gEvalState.vmFrames[i]->scopeName) + 3;
+      totalSize += strlen(gEvalState.vmFrames[i]->scopeName) + 3;
       if(gEvalState.vmFrames[i]->scopeNamespace && gEvalState.vmFrames[i]->scopeNamespace->mName)
-         totalSize += dStrlen(gEvalState.vmFrames[i]->scopeNamespace->mName) + 2;
+         totalSize += strlen(gEvalState.vmFrames[i]->scopeNamespace->mName) + 2;
    }
 
    char *buf = Con::getReturnBuffer(totalSize);
    buf[0] = 0;
    for(U32 i = 0; i < gEvalState.stack.size(); i++)
    {
-      dStrcat(buf, "->");
+      strcat(buf, "->");
       if(gEvalState.vmFrames[i]->scopeNamespace && gEvalState.vmFramesi]->scopeNamespace->mName)
       {
-         dStrcat(buf, gEvalState.vmFramesi]->scopeNamespace->mName);
-         dStrcat(buf, "::");
+         strcat(buf, gEvalState.vmFramesi]->scopeNamespace->mName);
+         strcat(buf, "::");
       }
-      dStrcat(buf, gEvalState.vmFramesi]->scopeName);
+      strcat(buf, gEvalState.vmFramesi]->scopeName);
    }
    Con::printf("BackTrace: %s", buf);
 
