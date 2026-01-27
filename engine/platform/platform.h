@@ -43,6 +43,9 @@
 #include "platform/platformMemory.h"
 #endif
 
+#include <stdio.h>
+#include <stdarg.h>
+
 #define PROFILE_START(a)
 #define PROFILE_END()
 #define PROFILE_SCOPE(a)
