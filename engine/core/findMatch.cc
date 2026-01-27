@@ -24,6 +24,7 @@
 #include "embed/api.h"
 #include "embed/internalApi.h"
 #include "core/findMatch.h"
+#include <array>
 
 //--------------------------------------------------------------------------------
 // NAME
