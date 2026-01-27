@@ -51,6 +51,7 @@ set(TORQUESIM_SRCS
 	./torqueSim/core/idGenerator.cc
 	./torqueSim/core/fileStream.cc
 	./torqueSim/core/stringUnit.cc
+	./torqueSim/core/stringTable.cc
 	./torqueSim/core/unicode.cc
 	./torqueSim/core/unicode.h
 	./torqueSim/console/console.cc
