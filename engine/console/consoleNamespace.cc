@@ -585,7 +585,10 @@ KorkApi::ConsoleValue Namespace::Entry::execute(S32 argc, KorkApi::ConsoleValue*
 
    if (mType != ValueCallbackType)
    {
-      StringStack::convertArgs(mNamespace->mVmInternal, argc, argv, localArgv);
+      KorkApi::ConsoleValue::convertArgs(mNamespace->mVmInternal->mAllocBase, argc, argv, localArgv,
+                                         [this](KorkApi::ConsoleValue v){
+         return mNamespace->mVmInternal->valueAsString(v);
+      });
    }
 
    char* returnBuffer = state->vmInternal->mExecReturnBuffer;

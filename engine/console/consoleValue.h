@@ -227,6 +227,29 @@ struct ConsoleValue
       return typeId == TypeInternalUnsigned || 
              typeId == TypeInternalNumber;
    }
+
+   template<class T> static void convertArgs(ConsoleValue::AllocBase allocBase, U32 numArgs, KorkApi::ConsoleValue* args, const char **outArgs, T&& convertDelegate)
+   {
+      for(U32 i = 0; i < numArgs; i++)
+      {
+         if (!args[i].isString())
+         {
+            outArgs[i] = (const char*)args[i].evaluatePtr(allocBase);
+         }
+         else
+         {
+            outArgs[i] = convertDelegate(args[i]); // i.e. vm->valueAsString(args[i]);
+         }
+      }
+   }
+
+   static void convertArgsReverse(U32 numArgs, const char **args, KorkApi::ConsoleValue* outArgs)
+   {
+      for(U32 i = 0; i < numArgs; i++)
+      {
+         outArgs[i] = KorkApi::ConsoleValue::makeString(args[i]);
+      }
+   }
 };
 #pragma pack(pop)
 

@@ -1164,9 +1164,9 @@ const char *execute(S32 argc, const char *argv[])
       
       KorkApi::ConsoleValue retValue = KorkApi::ConsoleValue();
 
-      ///KorkApi::ConsoleValue localArgv[StringStack::MaxArgs];
-      // TOFIX StringStack::convertArgsReverse(sVM->mInternal, argc, argv, localArgv);
-      //sVM->callNamespaceFunction(sVM->getGlobalNamespace(), funcName, argc, localArgv, retValue);
+      KorkApi::ConsoleValue localArgv[20];// TOFIX StringStack::MaxArgs];
+      KorkApi::ConsoleValue::convertArgsReverse(argc, argv, localArgv);
+      sVM->callNamespaceFunction(sVM->getGlobalNamespace(), funcName, argc, localArgv, retValue);
       sVM->clearCurrentFiberError();
 
       return sVM->valueAsString(retValue);
@@ -1196,12 +1196,12 @@ const char *execute(SimObject *object, S32 argc, const char *argv[],bool thisCal
       StringTableEntry funcName = sVM->internString(argv[0]);
 
       KorkApi::ConsoleValue retValue = KorkApi::ConsoleValue();
-      // TOFIX KorkApi::ConsoleValue localArgv[StringStack::MaxArgs];
+      KorkApi::ConsoleValue localArgv[20];// TOFIX StringStack::MaxArgs];
 
       object->pushScriptCallbackGuard();
-      //StringStack::convertArgsReverse(sVM->mInternal, argc, argv, localArgv);
-      //localArgv[1] = KorkApi::ConsoleValue::makeUnsigned(object->getId());
-      //sVM->callObjectFunction(object->getVMObject(), funcName, argc, localArgv, retValue);
+      KorkApi::ConsoleValue::convertArgsReverse(argc, argv, localArgv);
+      localArgv[1] = KorkApi::ConsoleValue::makeUnsigned(object->getId());
+      sVM->callObjectFunction(object->getVMObject(), funcName, argc, localArgv, retValue);
       object->popScriptCallbackGuard();
 
       return sVM->valueAsString(retValue);

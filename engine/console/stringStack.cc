@@ -64,31 +64,6 @@ void StringStack::convertArgv(KorkApi::VmInternal* vm, U32 argc, const char*** i
    }
 }
 
-void StringStack::convertArgs(KorkApi::VmInternal* vm, U32 numArgs, KorkApi::ConsoleValue* args, const char **outArgs)
-{
-   for(U32 i = 0; i < numArgs; i++)
-   {
-      if (!args[i].isString())
-      {
-         outArgs[i] = (const char*)args[i].evaluatePtr(vm->mAllocBase);
-      }
-      else
-      {
-         outArgs[i] = vm->valueAsString(args[i]);
-      }
-   }
-
-}
-
-void StringStack::convertArgsReverse(KorkApi::VmInternal* vm, U32 numArgs, const char **args, KorkApi::ConsoleValue* outArgs)
-{
-   for(U32 i = 0; i < numArgs; i++)
-   {
-      outArgs[i] = KorkApi::ConsoleValue::makeString(args[i]);
-   }
-}
-
-
 void StringStack::performOp(U32 op, KorkApi::Vm* vm, KorkApi::TypeInfo* typeInfo)
 {
    KorkApi::ConsoleValue rhs = getStackConsoleValue(mStartStackSize-1);
