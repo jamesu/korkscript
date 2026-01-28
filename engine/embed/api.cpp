@@ -606,14 +606,16 @@ bool Vm::compileCodeBlock(const char* code, const char* filename, U32* outCodeSi
    return true;
 }
 
-ConsoleValue Vm::execCodeBlock(U32 codeSize, U8* code, const char* filename, bool noCalls, int setFrame)
+ConsoleValue Vm::execCodeBlock(U32 codeSize, U8* code, const char* filename, const char* modPath, bool noCalls, int setFrame)
 {
    VmAllocTLS::Scope memScope(mInternal);
    CodeBlock* block = mInternal->New<CodeBlock>(mInternal, (filename == NULL || *filename == '\0') ? true : false);
    
    MemStream stream(codeSize, code, true, false);
    
-   if (!block->read(filename, stream, 0))
+   if (!block->read(mInternal->internString(filename, false),
+                    mInternal->internString(modPath, false),
+                    stream, 0))
    {
       mInternal->Delete(block);
       return ConsoleValue();
@@ -622,11 +624,13 @@ ConsoleValue Vm::execCodeBlock(U32 codeSize, U8* code, const char* filename, boo
    return block->exec(0, filename, NULL, 0, 0, noCalls, true, NULL, setFrame);
 }
 
-ConsoleValue Vm::evalCode(const char* code, const char* filename, S32 setFrame)
+ConsoleValue Vm::evalCode(const char* code, const char* filename, const char* modPath, S32 setFrame)
 {
    VmAllocTLS::Scope memScope(mInternal);
    CodeBlock *newCodeBlock = mInternal->New<CodeBlock>(mInternal, (filename == NULL || *filename == '\0') ? true : false);
-   return newCodeBlock->compileExec(filename, code, false, true, (!filename || setFrame < 0) ? -1 : setFrame);
+   return newCodeBlock->compileExec(mInternal->internString(filename, false),
+                                    mInternal->internString(modPath, false),
+                                    code, false, true, (!filename || setFrame < 0) ? -1 : setFrame);
 }
 
 ConsoleValue Vm::call(int argc, ConsoleValue* argv, bool startSuspended)
@@ -1927,6 +1931,7 @@ StringTableEntry Vm::lookupStringN(const char* str, U32 len, bool caseSens)
    VmAllocTLS::Scope memScope(mInternal);
    return mInternal->lookupStringN(str, len, caseSens);
 }
+
 
 const char* FiberRunResult::stateAsString(State inState)
 {

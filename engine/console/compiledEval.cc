@@ -261,26 +261,6 @@ const char *ExprEvalState::getNamespaceList(Namespace *ns)
    return ret;
 }
 
-
-//------------------------------------------------------------
-
-F64 consoleStringToNumber(const char *str, StringTableEntry file, U32 line)
-{
-   F64 val = atof(str);
-   if(val != 0)
-      return val;
-   else if(!strcasecmp(str, "true"))
-      return 1;
-   else if(!strcasecmp(str, "false"))
-      return 0;
-   else if(file)
-   {
-      // TOFIX mVM->printf(0, "%s (%d): string always evaluates to 0.", file, line);
-      return 0;
-   }
-   return 0;
-}
-
 //------------------------------------------------------------
 
 inline void ConsoleFrame::copyFrom(ConsoleFrame* other, bool includeScope)
@@ -1028,7 +1008,9 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
             if(!frame.currentNewObject->klass->iCreate.AddObjectFn(vmPublic, frame.currentNewObject, placeAtRoot, groupAddId))
             {
                // This error is usually caused by failing to call Parent::initPersistFields in the class' initPersistFields().
-               /* TOFIX vmInternal->printf(0, "%s: Register object failed for object %s of class %s.", getFileLine(ip-2), currentNewObject->getName(), currentNewObject->getClassName());*/
+               vmInternal->printf(0, "%s: Register object failed for object %s of class %s.", frame.codeBlock->getFileLine(ip-2),
+                                  frame.currentNewObject->klass->iCreate.GetNameFn(frame.currentNewObject),
+                                  frame.currentNewObject->klass->name);
 
                // NOTE: AddObject may have "unregistered" the object, but since we refcount our objects this is still safe.
                frame.currentNewObject->klass->iCreate.DestroyClassFn(frame.currentNewObject->klass->userPtr, vmPublic, frame.currentNewObject->userPtr);
@@ -3865,8 +3847,11 @@ bool ConsoleSerializer::loadRelatedObjects()
             }
             
             StringTableEntry steFilename = readSTString(mStream);
+            StringTableEntry steModPath = readSTString(mStream);
             CodeBlock* block = mTarget->New<CodeBlock>(mTarget, true);
-            if (!block->read(steFilename[0] == '\0' ? NULL : steFilename, *mStream, 0))
+            if (!block->read(steFilename[0] == '\0' ? NULL : steFilename,
+                             steModPath[0] == '\0' ? NULL : steModPath,
+                             *mStream, 0))
             {
                delete block;
                return false;
@@ -3918,6 +3903,7 @@ bool ConsoleSerializer::saveRelatedObjects()
       }
       
       mStream->writeString(block->name);
+      mStream->writeString(block->modPath);
       if (!block->write(*mStream))
       {
          return false;
@@ -4023,6 +4009,24 @@ bool KorkApi::VmInternal::getCurrentFiberFileLine(StringTableEntry* outFile, U32
    
    *outFile = block->name;
    *outLine = line;
+}
+
+
+void KorkApi::Vm::enumGlobals(const char* expr, void* userPtr, EnumFuncCallback& callback)
+{
+   mInternal->mGlobalVars.exportVariables(expr, userPtr, callback);
+}
+
+bool KorkApi::Vm::enumLocals(void* userPtr, EnumFuncCallback& callback, S32 frame)
+{
+   U32 frameIdx = frame < 0 ? (U32)(mInternal->mCurrentFiberState->vmFrames.size()-1) : (U32)frame;
+   if (frameIdx >= mInternal->mCurrentFiberState->vmFrames.size())
+   {
+      return false;
+   }
+
+   mInternal->mCurrentFiberState->vmFrames[frameIdx]->dictionary.exportVariables(NULL, userPtr, callback);
+   return true;
 }
 
 

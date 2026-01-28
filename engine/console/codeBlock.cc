@@ -387,7 +387,7 @@ void CodeBlock::flushNSEntries()
    didFlushFunctions = true;
 }
 
-bool CodeBlock::read(StringTableEntry fileName, Stream &st, U32 readVersion)
+bool CodeBlock::read(StringTableEntry fileName, StringTableEntry inModPath, Stream &st, U32 readVersion)
 {
    const StringTableEntry exePath = mVM->internString("", false);// TOFIX Platform::getMainDotCsDir();
    const StringTableEntry cwd = mVM->internString("", false);// TOFIX Platform::getCurrentDirectory();
@@ -407,27 +407,28 @@ bool CodeBlock::read(StringTableEntry fileName, Stream &st, U32 readVersion)
       return false;
    }
    
-   name = fileName;
-   
-   if(fileName && fileName[0])
+   if(fileName)
    {
-      fullPath = NULL;
+      // Important things here are:
+      // fullPath should be the fileName
+      // name should be file name
+      // modPath should be mod path
       
-      if(true)// TOFIX Platform::isFullPath(fileName))
-         fullPath = fileName;
-      
-      if(strncasecmp(exePath, fileName, strlen(exePath)) == 0)
-         name = mVM->internString(fileName + strlen(exePath) + 1, true);
-      else if(strncasecmp(cwd, fileName, strlen(cwd)) == 0)
-         name = mVM->internString(fileName + strlen(cwd) + 1, true);
-      
-      if(fullPath == NULL)
+      fullPath = fileName;
+      modPath = inModPath ? inModPath : mVM->internString("", false);
+      name = strrchr(fullPath, '/');
+      if (name == NULL)
       {
-         char buf[1024];
-         fullPath = mVM->internString("", false);// TOFIX mVM->internString(Platform::makeFullPathName(fileName, buf, sizeof(buf)), true);
+         name = fileName;
       }
-      
-      modPath = "";// TOFIX Con::getModNameFromPath(fileName);
+      else
+      {
+         name = mVM->internString(name, false);
+      }
+   }
+   else
+   {
+      modPath = fullPath = name = mVM->internString("", false);
    }
    
    //
@@ -817,35 +818,33 @@ bool CodeBlock::compileToStream(Stream &st, StringTableEntry fileName, const cha
    return true;
 }
 
- KorkApi::ConsoleValue CodeBlock::compileExec(StringTableEntry fileName, const char *inString, bool noCalls, bool isNativeFrame, int setFrame)
+ KorkApi::ConsoleValue CodeBlock::compileExec(StringTableEntry fileName, StringTableEntry inModPath, const char *inString, bool noCalls, bool isNativeFrame, int setFrame)
 {
    mVM->mCompilerResources->STEtoCode = &Compiler::compileSTEtoCode;
    mVM->mCompilerResources->consoleAllocReset();
    
-   name = fileName;
-   
    if(fileName)
    {
-      const StringTableEntry exePath = mVM->internString("", false);// TOFIXPlatform::getMainDotCsDir();
-      const StringTableEntry cwd = mVM->internString("", false);;// TOFIXPlatform::getCurrentDirectory();
+      // Important things here are:
+      // fullPath should be the fileName
+      // name should be file name
+      // modPath should be mod path
       
-      fullPath = NULL;
-      
-      if(true)// TOFIX Platform::isFullPath(fileName))
-         fullPath = fileName;
-      
-      if(exePath && strncasecmp(exePath, fileName, strlen(exePath)) == 0)
-         name = mVM->internString(fileName + strlen(exePath) + 1, true);
-      else if(cwd && strncasecmp(cwd, fileName, strlen(cwd)) == 0)
-         name = mVM->internString(fileName + strlen(cwd) + 1, true);
-      
-      if(fullPath == NULL)
+      fullPath = fileName;
+      modPath = inModPath ? inModPath : mVM->internString("", false);
+      name = strrchr(fullPath, '/');
+      if (name == NULL)
       {
-         char buf[1024];
-         fullPath = mVM->internString("", false);; // TOFIX mVM->internString(Platform::makeFullPathName(fileName, buf, sizeof(buf)), true);
+         name = fileName;
       }
-      
-      modPath = ""; // TOFIX Con::getModNameFromPath(fileName);
+      else
+      {
+         name = mVM->internString(name, false);
+      }
+   }
+   else
+   {
+      modPath = fullPath = name = mVM->internString("", false);
    }
    
    if (isExecBlock || (name && name[0]))

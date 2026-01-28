@@ -27,6 +27,7 @@ typedef F32           (*FloatFuncCallback)(void *obj, void* userPtr, S32 argc, c
 typedef void           (*VoidFuncCallback)(void *obj, void* userPtr, S32 argc, const char *argv[]); // We have it return a value so things don't break..
 typedef bool           (*BoolFuncCallback)(void *obj, void* userPtr, S32 argc, const char *argv[]);
 typedef ConsoleValue   (*ValueFuncCallback)(void *obj, void* userPtr, S32 argc, ConsoleValue argv[]);
+typedef ConsoleValue   (*EnumFuncCallback)(void* userPtr, const char* name, ConsoleValue arg);
 
 template <typename C, auto ThunkFn> struct APIThunk;
 
@@ -464,9 +465,9 @@ public:
    bool isNamespaceFunction(NamespaceId nsId, StringTableEntry name);
    
    bool compileCodeBlock(const char* code, const char* filename, U32* outCodeSize, U8** outCode);
-   ConsoleValue execCodeBlock(U32 codeSize, U8* code, const char* filename, bool noCalls, int setFrame);
+   ConsoleValue execCodeBlock(U32 codeSize, U8* code, const char* filename, const char* modPath, bool noCalls, int setFrame);
 
-   ConsoleValue evalCode(const char* code, const char* filename, S32 setFrame=-1);
+   ConsoleValue evalCode(const char* code, const char* filename, const char* modPath, S32 setFrame=-1);
    ConsoleValue call(int argc, ConsoleValue* argv, bool startSuspended=false);
    ConsoleValue callObject(VMObject* h, int argc, ConsoleValue* argv, bool startSuspended=false);
 
@@ -544,6 +545,10 @@ public:
   StringTableEntry internStringN(const char* str, U32 len, bool caseSens=false);
   StringTableEntry lookupString(const char* str, bool caseSens=false);
   StringTableEntry lookupStringN(const char* str, U32 len, bool caseSens=false);
+
+  // Enum dict API
+  void enumGlobals(const char* expr, void* userPtr, EnumFuncCallback& callback);
+  bool enumLocals(void* userPtr, EnumFuncCallback& callback, S32 frame=-1);
 };
 
 Vm* createVM(Config* cfg);

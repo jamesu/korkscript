@@ -124,7 +124,7 @@ public:
    void setNSEntry(U32 index, void* entry);
    void flushNSEntries();
    
-   bool read(StringTableEntry fileName, Stream &st, U32 readVersion);
+   bool read(StringTableEntry fileName, StringTableEntry modPath, Stream &st, U32 readVersion);
    bool linkTypes();
    StringTableEntry getTypeName(U32 typeID);
    U32 getRealTypeID(U32 typeID);
@@ -150,7 +150,8 @@ public:
    /// with, zero being the top of the stack. If the the index is
    /// -1 a new frame is created. If the index is out of range the
    /// top stack frame is used.
-    KorkApi::ConsoleValue compileExec(StringTableEntry fileName, const char *script,
+    KorkApi::ConsoleValue compileExec(StringTableEntry fileName, StringTableEntry inModPath,
+                           const char *script,
                            bool noCalls, bool isNativeFrame=true, int setFrame = -1 );
    
    ConsoleFrame& setupExecFrame(ExprEvalState& eval,

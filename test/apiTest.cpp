@@ -369,7 +369,7 @@ int testScript(char* script, const char* filename)
    
    vm->addNamespaceFunction(vm->getGlobalNamespace(), vm->internString("echo"), cEcho, NULL, "", 1, 32);
    vm->addNamespaceFunction(playerNS, vm->internString("jump"), (KorkApi::VoidFuncCallback)cPlayerJump, NULL, "()", 2, 2);
-   vm->evalCode(script, filename);
+   vm->evalCode(script, filename, "");
    
    VMObject* found = cfg.iFind.FindObjectByNameFn(cfg.findUser, "player1", NULL);
    AssertFatal(found, "player1 should be registered in iFind");

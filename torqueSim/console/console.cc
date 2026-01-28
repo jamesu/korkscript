@@ -1129,7 +1129,7 @@ const char *evaluate(const char* string, bool echo, const char *fileName)
    if(fileName)
       fileName = sVM->internString(fileName);
 
-   KorkApi::ConsoleValue retValue = sVM->evalCode(string, fileName);
+   KorkApi::ConsoleValue retValue = sVM->evalCode(string, fileName, "");
    return sVM->valueAsString(retValue);
 }
 //------------------------------------------------------------------------------
@@ -1144,7 +1144,7 @@ const char *evaluatef(const char* string, ...)
       dVsprintf(buffer, 4096, string, args);
       va_end (args);
 
-      KorkApi::ConsoleValue retValue = sVM->evalCode(buffer, NULL);
+      KorkApi::ConsoleValue retValue = sVM->evalCode(buffer, NULL, NULL);
       result = sVM->valueAsString(retValue);
 
       delete [] buffer;

@@ -125,7 +125,7 @@ TelnetDebugger::TelnetDebugger(KorkApi::VmInternal* vm)
    // "enhanced" debugger features.
    char buf[32];
    snprintf(buf, 32, "$dbgVersion = %d;", Version );
-   mVMInternal->mVM->evalCode(buf, "");
+   mVMInternal->mVM->evalCode(buf, "", "");
 }
 
 TelnetDebugger::Breakpoint **TelnetDebugger::findBreakpoint(StringTableEntry fileName, S32 lineNumber)
@@ -345,7 +345,7 @@ void TelnetDebugger::executionStopped(CodeBlock *code, U32 lineNumber)
 
    char buf[256];
    snprintf(buf, 256, "$Debug::result = %s;", brk->testExpression.c_str());
-   mVMInternal->mVM->evalCode(buf, "");
+   mVMInternal->mVM->evalCode(buf, "", "");
 
    KorkApi::ConsoleValue cv = mVMInternal->mVM->getGlobalVariable("$Debug::result");
 
@@ -912,7 +912,7 @@ void TelnetDebugger::evaluateExpression(const char *tag, S32 frame, const char *
    snprintf( buffer, len, format, evalBuffer );
    
    // Execute the eval.
-   KorkApi::ConsoleValue res = mVMInternal->mVM->evalCode(evalBuffer, NULL, frame);
+   KorkApi::ConsoleValue res = mVMInternal->mVM->evalCode(evalBuffer, NULL, NULL, frame);
    const char* result = mVMInternal->valueAsString(res);
    delete [] buffer;
    

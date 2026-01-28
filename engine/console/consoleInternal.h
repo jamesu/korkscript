@@ -230,7 +230,7 @@ public:
    void remove(Entry *);
    void reset();
    
-   void exportVariables( const char *varString, const char *fileName, bool append );
+   void exportVariables( const char *varString, void* userPtr, KorkApi::EnumFuncCallback outFunc );
    void deleteVariables( const char *varString );
    
    void setVariable(StringTableEntry name, const char *value);

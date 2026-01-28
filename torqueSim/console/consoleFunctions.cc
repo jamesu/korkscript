@@ -956,7 +956,7 @@ ConsoleFunction(exec, bool, 2, 4, "exec(fileName [, nocalls [,journalScript]])")
 
       // We're all compiled, so let's run it.
       Con::printf("Loading compiled script %s.", scriptFileName);
-      vmPtr->execCodeBlock(blockSize, blockBytes, scriptFileName, noCalls, 0);
+      vmPtr->execCodeBlock(blockSize, blockBytes, scriptFileName, "", noCalls, 0);
       vmPtr->clearCurrentFiberError();
 
       free(blockBytes);
@@ -971,7 +971,7 @@ ConsoleFunction(exec, bool, 2, 4, "exec(fileName [, nocalls [,journalScript]])")
 
       if (vmPtr->compileCodeBlock(script, scriptFileName, &blockSize, &blockBytes))
       {
-         vmPtr->execCodeBlock(blockSize, blockBytes, scriptFileName, noCalls, 0);
+         vmPtr->execCodeBlock(blockSize, blockBytes, scriptFileName, "", noCalls, 0);
          vmPtr->clearCurrentFiberError();
          free(blockBytes);
          ret = true;

@@ -47,9 +47,8 @@ bool varCompare(const Dictionary::Entry* a, const Dictionary::Entry* b)
     return strcasecmp(a->name, b->name) < 0;
 }
 
-void Dictionary::exportVariables(const char *varString, const char *fileName, bool append)
+void Dictionary::exportVariables(const char *varString, void* userPtr, KorkApi::EnumFuncCallback callback)
 {
-#ifdef TOFIX
    const char *searchStr = varString;
    KorkApi::Vector<Entry *> sortList;
    
@@ -58,8 +57,10 @@ void Dictionary::exportVariables(const char *varString, const char *fileName, bo
       Entry *walk = mHashTable->data[i];
       while(walk)
       {
-         if(FindMatch::isMatch((char *) searchStr, (char *) walk->name))
+         if (varString == NULL || FindMatch::isMatch((char *) searchStr, (char *) walk->name))
+         {
             sortList.push_back(walk);
+         }
          
          walk = walk->nextEntry;
       }
@@ -70,51 +71,10 @@ void Dictionary::exportVariables(const char *varString, const char *fileName, bo
    
    std::sort(sortList.begin(), sortList.end(), varCompare);
    
-   KorkApi::Vector<Entry *>::iterator s;
-   char expandBuffer[1024];
-   FileStream strm;
-   
-   if(fileName)
+   for(Entry* s : sortList)
    {
-      if(!strm.open(fileName, append ? FileStream::ReadWrite : FileStream::Write))
-      {
-         mVm->printf(0, "Unable to open file '%s for writing.", fileName);
-         return;
-      }
-      if(append)
-         strm.setPosition(strm.getStreamSize());
+      callback(userPtr, s->name, s->mConsoleValue);
    }
-   
-   char buffer[1024];
-   const char *cat = fileName ? "\r\n" : "";
-   
-   for(s = sortList.begin(); s != sortList.end(); s++)
-   {
-      switch((*s)->mConsoleValue.typeId)
-      {
-         case KorkApi::ConsoleValue::TypeInternalUnsigned:
-            snprintf(buffer, sizeof(buffer), "%s = %d;%s", (*s)->name, (*s)->mConsoleValue.getInt(), cat);
-            break;
-         case KorkApi::ConsoleValue::TypeInternalNumber:
-            snprintf(buffer, sizeof(buffer), "%s = %g;%s", (*s)->name, (*s)->mConsoleValue.getFloat(), cat);
-            break;
-         default:
-            expandEscape(expandBuffer, (const char*)(*s)->mConsoleValue.evaluatePtr(mVm->mAllocBase));
-            snprintf(buffer, sizeof(buffer), "%s = \"%s\";%s", (*s)->name, expandBuffer, cat);
-            break;
-      }
-      if(fileName)
-      {
-         strm.write(strlen(buffer), buffer);
-      }
-      else
-      {
-         mVm->printf(0, "%s", buffer);
-      }
-   }
-   if(fileName)
-      strm.close();
-#endif
 }
 
 void Dictionary::deleteVariables(const char *varString)

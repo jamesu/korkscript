@@ -141,7 +141,6 @@ void StringStack::setConsoleValue(KorkApi::VmInternal* vmInternal, KorkApi::Cons
    }
    else
    {
-      // TOFIX: needs to use storage api (mLen issues)
       valueBase = v.evaluatePtr(*mAllocBase);
       if (valueBase != (mBuffer.data() + mStart)) // account for setting same head
       {
