@@ -9,7 +9,19 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 #set(CMAKE_C_FLAGS "-g -fsanitize=address,undefined")
 #set(CMAKE_CXX_FLAGS "-g -fsanitize=address,undefined")
 
+
+#set(CMAKE_C_FLAGS "-g -gdwarf-4 -Os")
+#set(CMAKE_CXX_FLAGS "-g -gdwarf-4 -Os")
+
 add_definitions(-DUNICODE -D_UNICODE -DINITGUIDE)
+
+set(KS_BUILD_MODE "exe" CACHE STRING "Build mode for KS_SRCS: exe|static|shared")
+set_property(CACHE KS_BUILD_MODE PROPERTY STRINGS exe static shared)
+
+if (EMSCRIPTEN)
+  set(KS_BUILD_MODE "exe" CACHE STRING "" FORCE)
+endif()
+
 
 include_directories(
 	.
@@ -80,26 +92,48 @@ set(TORQUESIM_SRCS
 	./torqueSim/platform/platformNetwork.cc
 )
 
+if (KS_BUILD_MODE STREQUAL "static")
+  add_library(korkscript_ks STATIC ${KS_SRCS})
+  set(KS_LINK_LIBS korkscript_ks)
+  set(KS_OBJ_SRCS)
+
+elseif (KS_BUILD_MODE STREQUAL "shared")
+  add_library(korkscript_ks SHARED ${KS_SRCS})
+  set(KS_LINK_LIBS korkscript_ks)
+  set(KS_OBJ_SRCS)
+
+elseif (KS_BUILD_MODE STREQUAL "exe")
+  add_library(korkscript_ks OBJECT ${KS_SRCS})
+  set(KS_LINK_LIBS)
+  set(KS_OBJ_SRCS $<TARGET_OBJECTS:korkscript_ks>)
+
+else()
+  message(FATAL_ERROR "Invalid KS_BUILD_MODE='${KS_BUILD_MODE}' (use exe|static|shared)")
+endif()
+
+target_include_directories(korkscript_ks PUBLIC . ./engine)
+
+
 set(KS_WASM_SRCS
-	${KS_SRCS}
+	${KS_OBJ_SRCS}
 	wasm/wasmModule.cpp
 )
 
 set(KS_TEST_SRCS
-	${KS_SRCS}
+	${KS_OBJ_SRCS}
 	test/main.cpp
 )
 
 set(KS_API_TEST_SRCS
-	${KS_SRCS}
+	${KS_OBJ_SRCS}
 	test/apiTest.cpp
 )
 set(KS_AST_PRINT_SRCS
-	${KS_SRCS}
+	${KS_OBJ_SRCS}
 	test/astPrint.cpp
 )
 set(TEST_RUNNER_SRCS
-	${KS_SRCS}
+	${KS_OBJ_SRCS}
 	${TORQUESIM_SRCS}
 	test/testRunner.cpp
 )
@@ -146,7 +180,7 @@ if (ENABLE_WASMTIME_BRIDGE)
 endif()
 
 set(KS_TORQUE_TEST_SRCS
-	${KS_SRCS}
+	${KS_OBJ_SRCS}
 	${TORQUESIM_SRCS}
 	${TORQUESIM_BRIDGE_SRCS}
 	test/torqueTest.cpp
@@ -175,10 +209,15 @@ target_link_options(korkscript PRIVATE
 
 else()
 #add_executable(cstest ${KS_TEST_SRCS})
+#target_link_libraries(cstest PRIVATE ${KS_LINK_LIBS})
 add_executable(csprintast ${KS_AST_PRINT_SRCS})
+target_link_libraries(csprintast PRIVATE ${KS_LINK_LIBS})
 add_executable(csapitest ${KS_API_TEST_SRCS})
+target_link_libraries(csapitest PRIVATE ${KS_LINK_LIBS})
 add_executable(torquetest ${KS_TORQUE_TEST_SRCS})
+target_link_libraries(torquetest PRIVATE ${KS_LINK_LIBS})
 add_executable(testrunner ${TEST_RUNNER_SRCS})
+target_link_libraries(testrunner PRIVATE ${KS_LINK_LIBS})
 
 if (ENABLE_WASM3_BRIDGE)
 	target_link_libraries(torquetest wasm3)
