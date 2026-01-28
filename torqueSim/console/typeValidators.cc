@@ -23,17 +23,13 @@
 #include "platform/platform.h"
 class SimObject;
 #include "console/typeValidators.h"
+#include "console/console.h"
+#include "console/consoleObject.h"
+#include "sim/simBase.h"
 #include <stdarg.h>
 
-void TypeValidator::consoleError(SimObject *object, const char *format, ...)
+void TypeValidator::printWarning(SimObject *object)
 {
-#if TOFIX
-   char buffer[1024];
-   va_list argptr;
-   va_start(argptr, format);
-   dVsprintf(buffer, sizeof(buffer), format, argptr);
-   va_end(argptr);
-
    AbstractClassRep *rep = object->getClassRep();
    AbstractClassRep::Field &fld = rep->mFieldList[fieldIndex];
    const char *objectName = object->getName();
@@ -41,53 +37,49 @@ void TypeValidator::consoleError(SimObject *object, const char *format, ...)
       objectName = "unnamed";
 
 
-   Con::warnf("%s - %s(%d) - invalid value for %s: %s",
-      rep->getClassName(), objectName, object->getId(), fld.pFieldname, buffer);
-#endif
+   Con::warnf("%s - %s(%d) - invalid value for %s: ",
+      rep->getClassName(), objectName, object->getId(), fld.pFieldname);
 }
 
 void FRangeValidator::validateType(SimObject *object, void *typePtr)
 {
-#if TOFIX
     F32 *v = (F32 *) typePtr;
     if(*v < minV || *v > maxV)
     {
-        consoleError(object, "Must be between %g and %g", minV, maxV);
+        printWarning(object);
+        Con::errorf("Must be between %g and %g", minV, maxV);
         if(*v < minV)
             *v = minV;
         else if(*v > maxV)
             *v = maxV;
     }
-#endif
 }
 
 void IRangeValidator::validateType(SimObject *object, void *typePtr)
 {
-#if TOFIX
     S32 *v = (S32 *) typePtr;
     if(*v < minV || *v > maxV)
     {
-        consoleError(object, "Must be between %d and %d", minV, maxV);
+        printWarning(object);
+        Con::errorf("Must be between %d and %d", minV, maxV);
         if(*v < minV)
             *v = minV;
         else if(*v > maxV)
             *v = maxV;
     }
-#endif
 }
 
 void IRangeValidatorScaled::validateType(SimObject *object, void *typePtr)
 {
-#if TOFIX
     S32 *v = (S32 *) typePtr;
     *v /= factor;
     if(*v < minV || *v > maxV)
     {
-        consoleError(object, "Scaled value must be between %d and %d", minV, maxV);
+        printWarning(object);
+        Con::errorf("Scaled value must be between %d and %d", minV, maxV);
         if(*v < minV)
             *v = minV;
         else if(*v > maxV)
             *v = maxV;
     }
-#endif
 }

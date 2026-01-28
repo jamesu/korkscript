@@ -23,6 +23,8 @@
 #ifndef _CONSOLE_TYPE_VALIDATORS_H_
 #define _CONSOLE_TYPE_VALIDATORS_H_
 
+class SimObject;
+
 class TypeValidator
 {
    public:
@@ -31,14 +33,8 @@ class TypeValidator
    virtual ~TypeValidator() {}
    
    S32 fieldIndex;
-
-   /// Prints a console error message for the validator.
-   ///
-   /// The message is prefaced with with:
-   /// @code
-   /// className objectName (objectId) - invalid value for fieldName: msg
-   /// @endcode
-   void consoleError(SimObject *object, const char *format, ...);
+   
+   void printWarning(SimObject* object);
 
    /// validateType is called for each assigned value on the field this
    /// validator is attached to.
