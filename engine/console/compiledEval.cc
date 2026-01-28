@@ -4029,6 +4029,11 @@ bool KorkApi::Vm::enumLocals(void* userPtr, EnumFuncCallback& callback, S32 fram
    return true;
 }
 
+StringTableEntry KorkApi::Vm::getCurrentFiberFrameScope()
+{
+   return mInternal->mCurrentFiberState && !mInternal->mCurrentFiberState->vmFrames.empty() ? mInternal->mCurrentFiberState->vmFrames.back()->scopeName : NULL;
+}
+
 
 //------------------------------------------------------------
 

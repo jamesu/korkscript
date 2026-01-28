@@ -532,6 +532,8 @@ public:
    void throwFiber(U32 mask);
    bool getCurrentFiberFileLine(StringTableEntry* outFile, U32* outLine);
    FiberRunResult resumeCurrentFiber(ConsoleValue value);
+   StringTableEntry getCurrentFiberFrameScope();
+   S32 getCurrentFiberFrameDepth();
 
    const char* getExceptionFileLine(ExceptionInfo* info);
    

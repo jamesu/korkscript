@@ -608,25 +608,26 @@ ConsoleFunction(NextToken,const char *,4,4,"nextToken(str,token,delim)")
       // no need for special '\0' check since it can never be in delim
       while (isInSet(*str, delim))
          str++;
-
+      
       // skip over any characters that are NOT a member of delim
       const char *tmp = str;
-
+      
       while (*str && !isInSet(*str, delim))
          str++;
-
+      
       // terminate the token
       if (*str)
          *str++ = 0;
-
-#if TOFIX
+      
       // set local variable if inside a function
-      if (gEvalState.stack.size() && 
-         gEvalState.stack.back()->scopeName)
-         Con::setLocalVariable(token,tmp);
+      if (vmPtr->getCurrentFiberFrameScope())
+      {
+         vmPtr->setLocalVariable(vmPtr->internString(token), KorkApi::ConsoleValue::makeString(tmp));
+      }
       else
-         Con::setVariable(token,tmp);
-#endif
+      {
+         vmPtr->setGlobalVariable(vmPtr->internString(token), KorkApi::ConsoleValue::makeString(tmp));
+      }
 
       // advance str past the 'delim space'
       while (isInSet(*str, delim))

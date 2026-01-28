@@ -1213,6 +1213,11 @@ void VmInternal::throwFiber(U32 mask)
    mCurrentFiberState->throwMask(mask);
 }
 
+S32 Vm::getCurrentFiberFrameDepth()
+{
+   return mInternal->mCurrentFiberState ? mInternal->mCurrentFiberState->vmFrames.size()-1 : -1;
+}
+
 bool Vm::getCurrentFiberFileLine(StringTableEntry* outFile, U32* outLine)
 {
    return mInternal->getCurrentFiberFileLine(outFile, outLine);
