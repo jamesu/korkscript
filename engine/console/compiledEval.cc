@@ -4012,12 +4012,12 @@ bool KorkApi::VmInternal::getCurrentFiberFileLine(StringTableEntry* outFile, U32
 }
 
 
-void KorkApi::Vm::enumGlobals(const char* expr, void* userPtr, EnumFuncCallback& callback)
+void KorkApi::Vm::enumGlobals(const char* expr, void* userPtr, EnumFuncCallback callback)
 {
    mInternal->mGlobalVars.exportVariables(expr, userPtr, callback);
 }
 
-bool KorkApi::Vm::enumLocals(void* userPtr, EnumFuncCallback& callback, S32 frame)
+bool KorkApi::Vm::enumLocals(void* userPtr, EnumFuncCallback callback, S32 frame)
 {
    U32 frameIdx = frame < 0 ? (U32)(mInternal->mCurrentFiberState->vmFrames.size()-1) : (U32)frame;
    if (frameIdx >= mInternal->mCurrentFiberState->vmFrames.size())

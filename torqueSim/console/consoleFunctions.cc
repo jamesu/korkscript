@@ -1023,7 +1023,49 @@ ConsoleFunction(export, void, 2, 4, "export(searchString [, fileName [,append]])
       }
    }
    
-   // TOFIX gEvalState.globalVars.exportVariables(argv[1]), filename, append);
+   if (filename)
+   {
+      FileStream fs;
+      if (fs.open(filename, append ? FileStream::WriteAppend : FileStream::Write))
+      {
+         if(append)
+            fs.setPosition(fs.getStreamSize());
+         
+         vmPtr->enumGlobals(argv[1], &fs, [](KorkApi::Vm* vmPtr, void* streamPtr, const char* name, KorkApi::ConsoleValue value){
+            FileStream* stream = (FileStream*)streamPtr;
+            
+            char buffer[1024];
+            char expandBuffer[1024];
+            
+            if (value.isFloat() || value.isUnsigned())
+            {
+               dSprintf(buffer, sizeof(buffer), "%s = %s;\r\n", name, vmPtr->valueAsString(value));
+            }
+            else
+            {
+               expandEscape(expandBuffer, vmPtr->valueAsString(value));
+               dSprintf(buffer, sizeof(buffer), "%s = \"%s\";\r\n", name, expandBuffer);
+            }
+         });
+      }
+   }
+   else
+   {
+      vmPtr->enumGlobals(argv[1], NULL, [](KorkApi::Vm* vmPtr, void* streamPtr, const char* name, KorkApi::ConsoleValue value){
+         
+         char expandBuffer[1024];
+         
+         if (value.isFloat() || value.isUnsigned())
+         {
+            Con::printf("%s = %s;", name, vmPtr->valueAsString(value));
+         }
+         else
+         {
+            expandEscape(expandBuffer, vmPtr->valueAsString(value));
+            Con::printf("%s = \"%s\";", name, expandBuffer);
+         }
+      });
+   }
 }
 
 ConsoleFunction(deleteVariables, void, 2, 2, "deleteVariables(wildCard)")

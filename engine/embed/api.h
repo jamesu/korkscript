@@ -27,7 +27,7 @@ typedef F32           (*FloatFuncCallback)(void *obj, void* userPtr, S32 argc, c
 typedef void           (*VoidFuncCallback)(void *obj, void* userPtr, S32 argc, const char *argv[]); // We have it return a value so things don't break..
 typedef bool           (*BoolFuncCallback)(void *obj, void* userPtr, S32 argc, const char *argv[]);
 typedef ConsoleValue   (*ValueFuncCallback)(void *obj, void* userPtr, S32 argc, ConsoleValue argv[]);
-typedef ConsoleValue   (*EnumFuncCallback)(void* userPtr, const char* name, ConsoleValue arg);
+typedef void           (*EnumFuncCallback)(KorkApi::Vm* vmPtr, void* userPtr, const char* name, ConsoleValue arg);
 
 template <typename C, auto ThunkFn> struct APIThunk;
 
@@ -549,8 +549,8 @@ public:
   StringTableEntry lookupStringN(const char* str, U32 len, bool caseSens=false);
 
   // Enum dict API
-  void enumGlobals(const char* expr, void* userPtr, EnumFuncCallback& callback);
-  bool enumLocals(void* userPtr, EnumFuncCallback& callback, S32 frame=-1);
+  void enumGlobals(const char* expr, void* userPtr, EnumFuncCallback callback);
+  bool enumLocals(void* userPtr, EnumFuncCallback callback, S32 frame=-1);
 };
 
 Vm* createVM(Config* cfg);

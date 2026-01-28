@@ -73,7 +73,7 @@ void Dictionary::exportVariables(const char *varString, void* userPtr, KorkApi::
    
    for(Entry* s : sortList)
    {
-      callback(userPtr, s->name, s->mConsoleValue);
+      callback(mVm->mVM, userPtr, s->name, s->mConsoleValue);
    }
 }
 
