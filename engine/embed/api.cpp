@@ -35,6 +35,12 @@ void Vm::setNamespaceUsage(NamespaceId nsId, const char* usage)
    ns->mUsage = usage;
 }
 
+void Vm::setNamespaceUserPtr(NamespaceId nsId, void* userPtr)
+{
+   Namespace* ns = (Namespace*)nsId;
+   ns->mUserPtr = userPtr;
+}
+
 NamespaceId Vm::getGlobalNamespace()
 {
     return mInternal->mNSState.mGlobalNamespace;

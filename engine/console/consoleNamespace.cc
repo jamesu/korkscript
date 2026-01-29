@@ -216,7 +216,7 @@ Namespace::Namespace()
    mHashTable = 0;
    mHashSequence = 0;
    mRefCountToParent = 0;
-   //mClassRep = 0;
+   mUserPtr = NULL;
    mVmInternal = NULL;
 }
 

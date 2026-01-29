@@ -307,8 +307,7 @@ void NamespaceState::printNamespaceEntries(Namespace * g, bool dumpScript, bool 
 
 void NamespaceState::dumpClasses( bool dumpScript, bool dumpEngine )
 {
-   #if TOFIX
-   VectorPtr<Namespace*> vec;
+   KorkApi::Vector<Namespace*> vec;
    trashCache();
    vec.reserve( 1024 );
 
@@ -319,7 +318,7 @@ void NamespaceState::dumpClasses( bool dumpScript, bool dumpEngine )
 
    for(Namespace *walk = mNamespaceList; walk; walk = walk->mNext)
    {
-      VectorPtr<Namespace*> stack;
+      KorkApi::Vector<Namespace*> stack;
       stack.reserve( 1024 );
 
       // Get all the parents of this namespace... (and mark them as we go)
@@ -388,8 +387,8 @@ void NamespaceState::dumpClasses( bool dumpScript, bool dumpEngine )
             continue;
       }
 
-      // If we hit a class with no members and no classRep, do clever filtering.
-      if(vec[i]->mEntryList == NULL && vec[i]->mClassRep == NULL)
+      // Filter useless namespaces
+      if(vec[i]->mEntryList == NULL)// && vec[i]->mClassRep == NULL)
       {
          // Print out a short stub so we get a proper class hierarchy.
          if(superClassName) { // Filter hack; we don't want non-inheriting classes...
@@ -405,58 +404,51 @@ void NamespaceState::dumpClasses( bool dumpScript, bool dumpEngine )
       // Deal with entries.
       printNamespaceEntries(vec[i], dumpScript, dumpEngine);
 
-      // Deal with the classRep (to get members)...
-      AbstractClassRep *rep = vec[i]->mClassRep;
-      AbstractClassRep::FieldList emptyList;
-      AbstractClassRep::FieldList *parentList = &emptyList;
-      AbstractClassRep::FieldList *fieldList = &emptyList;
+      KorkApi::ClassInfo* classInfo = mVmInternal->getClassInfoByName(vec[i]->mName);
 
       // Since all fields are defined in the engine, if we're not dumping
       // engine stuff, than we shouldn't dump the fields.
-      if(dumpEngine && rep)
+      if(dumpEngine && classInfo)
       {
          // Get information about the parent's fields...
-         AbstractClassRep *parentRep = vec[i]->mParent ? vec[i]->mParent->mClassRep : NULL;
-         if(parentRep)
-            parentList = &(parentRep->mFieldList);
-
-         // Get information about our fields
-         fieldList = &(rep->mFieldList);
+         KorkApi::ClassInfo* parentClassInfo = vec[i]->mParent ? mVmInternal->getClassInfoByName(vec[i]->mName) : NULL;
 
          // Go through all our fields...
-         for(U32 j = 0; j < (U32)fieldList->size(); j++)
+         for(U32 j = 0; j < (U32)classInfo->numFields; j++)
          {
-            switch((*fieldList)[j].type)
+            KorkApi::FieldInfo& info = classInfo->fields[j];
+            
+            switch(info.type)
             {
-            case AbstractClassRep::StartGroupFieldType:
-               printGroupStart((*fieldList)[j].pGroupname, (*fieldList)[j].pFieldDocs);
+            case KorkApi::StartGroupFieldType:
+               printGroupStart(info.pGroupname, info.pFieldDocs);
                break;
-            case AbstractClassRep::EndGroupFieldType:
+            case KorkApi::EndGroupFieldType:
                printGroupEnd();
                break;
             default:
-            case AbstractClassRep::DepricatedFieldType:
+            case KorkApi::DepricatedFieldType:
                {
-                  bool isDeprecated = ((*fieldList)[j].type == AbstractClassRep::DepricatedFieldType);
+                  bool isDeprecated = false;//(info.type == AbstractClassRep::DepricatedFieldType);
 
                   if(isDeprecated)
                   {
                      printClassMember(
                         true,
                         "<deprecated>",
-                        (*fieldList)[j].pFieldname,
-                        (*fieldList)[j].pFieldDocs
+                        info.pFieldname,
+                        info.pFieldDocs
                         );
                   }
                   else
                   {
-                     ConsoleBaseType *cbt = ConsoleBaseType::getType((*fieldList)[j].type);
+                     KorkApi::TypeInfo* typeInfo = info.type >= 0 ? &mVmInternal->mTypes[info.type] : NULL;
 
                      printClassMember(
                         false,
-                        cbt ? cbt->getTypeClassName() : "<unknown>",
-                        (*fieldList)[j].pFieldname,
-                        (*fieldList)[j].pFieldDocs
+                        typeInfo ? typeInfo->name : "<unknown>",
+                        info.pFieldname,
+                        info.pFieldDocs
                         );
                   }
                }
@@ -550,7 +542,6 @@ void NamespaceState::dumpClasses( bool dumpScript, bool dumpEngine )
       // Close the class/namespace.
       printClassFooter();
    }
-   #endif
 }
 
 void NamespaceState::dumpFunctions( bool dumpScript, bool dumpEngine )

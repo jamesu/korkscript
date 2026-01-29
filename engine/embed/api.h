@@ -237,6 +237,7 @@ struct ClassInfo {
 	StringTableEntry name;
 	void* userPtr;
 	U32 numFields;
+   ClassId parentKlassId;
    FieldInfo* fields;
    CreateObjectInterface iCreate;
 	EnumerateObjectInterface iEnum;
@@ -398,6 +399,14 @@ enum
 StringTagPrefixByte = 0x01
 };
 
+
+enum ACRFieldTypes : U16
+{
+   StartGroupFieldType = 0xFFFD,  // 65533
+   EndGroupFieldType   = 0xFFFE,  // 65534
+   DepricatedFieldType = 0xFFFF   // 65535
+};
+
 class Vm
 {
 public:
@@ -408,6 +417,7 @@ public:
 	NamespaceId findNamespace(StringTableEntry name, StringTableEntry package = NULL);
    NamespaceId getGlobalNamespace();
    void setNamespaceUsage(NamespaceId ns, const char* usage);
+   void setNamespaceUserPtr(NamespaceId ns, void* userPtr);
 	void activatePackage(StringTableEntry pkgName);
 	void deactivatePackage(StringTableEntry pkgName);
    bool linkNamespace(StringTableEntry parent, StringTableEntry child);

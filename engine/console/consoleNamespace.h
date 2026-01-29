@@ -18,7 +18,7 @@ class Namespace
 
    Namespace *mParent;
    Namespace *mNext;
-   //AbstractClassRep *mClassRep;
+   void* mUserPtr;
    U32 mRefCountToParent;
    
    const char* mUsage;

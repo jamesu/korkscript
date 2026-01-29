@@ -632,7 +632,7 @@ bool chompUTF8BOM( const char *inString, char **outStringPtr )
    U8 bom[4];
    memcpy( bom, inString, 4 );
 
-   bool valid = isValidUTF8BOM( bom );
+   bool valid = isValidUTF8BOM( bom, NULL );
 
    // This is hackey, but I am not sure the best way to do it at the present.
    // The only valid BOM is a UTF8 BOM, which is 3 bytes, even though we read
@@ -646,7 +646,7 @@ bool chompUTF8BOM( const char *inString, char **outStringPtr )
    return valid;
 }
 
-bool isValidUTF8BOM( U8 bom[4] )
+bool isValidUTF8BOM( U8 bom[4], const char** outName )
 {
    // Is it a BOM?
    if( bom[0] == 0 )
@@ -654,7 +654,10 @@ bool isValidUTF8BOM( U8 bom[4] )
       // Could be UTF32BE
       if( bom[1] == 0 && bom[2] == 0xFE && bom[3] == 0xFF )
       {
-         // TOFIX Con::warnf( "Encountered a UTF32 BE BOM in this file; Torque does NOT support this file encoding. Use UTF8!" );
+         if (outName)
+         {
+            *outName = "UTF32";
+         }
          return false;
       }
 
@@ -665,27 +668,35 @@ bool isValidUTF8BOM( U8 bom[4] )
       // It's little endian, either UTF16 or UTF32
       if( bom[1] == 0xFE )
       {
-         /* TOFIX
-          if( bom[2] == 0 && bom[3] == 0 )
-            Con::warnf( "Encountered a UTF32 LE BOM in this file; Torque does NOT support this file encoding. Use UTF8!" );
-         else
-            Con::warnf( "Encountered a UTF16 LE BOM in this file; Torque does NOT support this file encoding. Use UTF8!" );
-          */
+         if (outName)
+         {
+            if( bom[2] == 0 && bom[3] == 0 )
+               *outName = "UTF32";
+            else
+               *outName = "UTF16";
+         }
       }
 
       return false;
    }
    else if( bom[0] == 0xFE && bom[1] == 0xFF )
    {
-      // TOFIX Con::warnf( "Encountered a UTF16 BE BOM in this file; Torque does NOT support this file encoding. Use UTF8!" );
+      if (outName)
+      {
+         *outName = "UTF16";
+      }
       return false;
    }
    else if( bom[0] == 0xEF && bom[1] == 0xBB && bom[2] == 0xBF )
    {
-      // Can enable this if you want -pw
-      //Con::printf("Encountered a UTF8 BOM. Torque supports this.");
+      if (outName)
+      {
+         *outName = "UTF8";
+      }
       return true;
    }
+   
+   *outName = NULL;
 
    // Don't print out an error message here, because it will try this with
    // every script. -pw

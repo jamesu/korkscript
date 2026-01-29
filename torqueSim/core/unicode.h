@@ -126,6 +126,6 @@ const UTF8* getNthCodepoint(const UTF8 *unistring, const U32 n);
 /// Functions to read and validate UTF BOMs (Byte Order Marker)
 /// For reference: http://en.wikipedia.org/wiki/Byte_Order_Mark
 bool chompUTF8BOM( const char *inString, char **outStringPtr );
-bool isValidUTF8BOM( U8 bom[4] );
+bool isValidUTF8BOM( U8 bom[4], const char** outName );
 
 #endif // _UNICODE_H_

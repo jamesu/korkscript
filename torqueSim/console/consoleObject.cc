@@ -177,6 +177,17 @@ void AbstractClassRep::registerClassWithVm(KorkApi::Vm* vm)
 {
    if (mClassInfo.name == NULL)
    {
+      AbstractClassRep* parentKlass = getParentClass();
+      
+      if (parentKlass)
+      {
+         mClassInfo.parentKlassId = vm->getClassId(parentKlass->getClassName());
+      }
+      else
+      {
+         mClassInfo.parentKlassId = -1;
+      }
+      
       mClassInfo.name = vm->internString(mClassName);
       mClassInfo.userPtr = this;
       mClassInfo.numFields = mFieldList.size();
