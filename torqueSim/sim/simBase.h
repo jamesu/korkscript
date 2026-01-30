@@ -649,16 +649,6 @@ public:
     void setDataField(StringTableEntry slotName, const char *array, const char *value);
     void setDataFieldDynamic(StringTableEntry slotName, const char *array, const char *value, U32 typeId);
 
-    const char *getPrefixedDataField(StringTableEntry fieldName, const char *array);
-
-    void setPrefixedDataField(StringTableEntry fieldName, const char *array, const char *value);
-
-    const char *getPrefixedDynamicDataField(StringTableEntry fieldName, const char *array, const S32 fieldType = -1);
-
-    void setPrefixedDynamicDataField(StringTableEntry fieldName, const char *array, const char *value, const S32 fieldType = -1);
-
-    StringTableEntry getDataFieldPrefix( StringTableEntry fieldName );
-
     /// Get the type of a field on the object.
     ///
     /// @param   slotName    Field to access.

@@ -389,9 +389,6 @@ void CodeBlock::flushNSEntries()
 
 bool CodeBlock::read(StringTableEntry fileName, StringTableEntry inModPath, Stream &st, U32 readVersion)
 {
-   const StringTableEntry exePath = mVM->internString("", false);// TOFIX Platform::getMainDotCsDir();
-   const StringTableEntry cwd = mVM->internString("", false);// TOFIX Platform::getCurrentDirectory();
-
    if (readVersion == 0)
    {
       st.read(&readVersion);

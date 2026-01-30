@@ -415,37 +415,6 @@ void CodeBlock::getFunctionArgs(char buffer[1024], U32 ip)
 
 //-----------------------------------------------------------------------------
 
-
-static U32 castValueToU32(KorkApi::ConsoleValue retValue, KorkApi::ConsoleValue::AllocBase& allocBase)
-{
-   switch (retValue.typeId)
-   {
-      case KorkApi::ConsoleValue::TypeInternalUnsigned:
-         return (U32)retValue.getInt();
-      case KorkApi::ConsoleValue::TypeInternalNumber:
-         return (F32)retValue.getFloat();
-      case KorkApi::ConsoleValue::TypeInternalString:
-         return (U32)atoll((const char*)retValue.evaluatePtr(allocBase));
-      default:
-         return 0; // TOFIX: use type api
-   }
-}
-
-static F32 castValueToF32(KorkApi::ConsoleValue retValue, KorkApi::ConsoleValue::AllocBase& allocBase)
-{
-   switch (retValue.typeId)
-   {
-      case KorkApi::ConsoleValue::TypeInternalUnsigned:
-         return (U32)retValue.getInt();
-      case KorkApi::ConsoleValue::TypeInternalNumber:
-         return (F32)retValue.getFloat();
-      case KorkApi::ConsoleValue::TypeInternalString:
-         return atoll((const char*)retValue.evaluatePtr(allocBase));
-      default:
-         return 0.0f; // TOFIX: use type api
-   }
-}
-
 inline void* safeObjectUserPtr(KorkApi::VMObject* obj)
 {
    return obj ? obj->userPtr : NULL;
@@ -1440,7 +1409,7 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
             if (frame.curObject)
             {
                KorkApi::ConsoleValue retValue = vmInternal->getObjectField(frame.curObject, frame.curField, frame.curFieldArray, KorkApi::ConsoleValue::TypeInternalUnsigned, KorkApi::ConsoleValue::ZoneExternal);
-               evalState.intStack[frame._UINT+1] = castValueToU32(retValue, vmInternal->mAllocBase);
+               evalState.intStack[frame._UINT+1] = vmInternal->valueAsInt(retValue);
             }
             else
             {
@@ -1457,7 +1426,7 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
             if (frame.curObject)
             {
                KorkApi::ConsoleValue retValue =  vmInternal->getObjectField(frame.curObject, frame.curField, frame.curFieldArray, KorkApi::ConsoleValue::TypeInternalNumber, KorkApi::ConsoleValue::ZoneExternal);
-               evalState.floatStack[frame._FLT+1] = castValueToF32(retValue, vmInternal->mAllocBase);
+               evalState.floatStack[frame._FLT+1] = vmInternal->valueAsFloat(retValue);
             }
             else
             {
