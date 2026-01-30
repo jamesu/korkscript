@@ -37,6 +37,12 @@
 // jamesu - debug DNS
 //#define TORQUE_DEBUG_LOOKUPS
 
+Net::PacketReceiveCallback        gPacketReceiveCB;
+Net::ConnectedNotifyCallback      gConnectedNotifyCB;
+Net::ConnectedAcceptCallback      gConnectedAcceptCB;
+Net::ConnectedReceiveCallback     gConnectedReceiveCB;
+
+
 namespace PlatformNetState
 {
 
@@ -689,16 +695,7 @@ static void IPSocket6ToNetAddress(const struct sockaddr_in6 *sockAddr, NetAddres
 //
 
 NetSocket Net::openListenPort(U16 port, NetAddress::Type addressType)
-{
-#ifdef TORQUE_ALLOW_JOURNALING
-   if(Game->isJournalReading())
-   {
-      U32 ret;
-      Game->journalRead(&ret);
-      return NetSocket::fromHandle(ret);
-   }
-#endif
-   
+{  
    Net::Error error = NoError;
    NetAddress address;
    if (Net::getListenAddress(addressType, &address) != Net::NoError)
@@ -749,23 +746,11 @@ NetSocket Net::openListenPort(U16 port, NetAddress::Type addressType)
       addPolledSocket(handleFd, sockId, PolledSocket::Listening);
    }
    
-#ifdef TORQUE_ALLOW_JOURNALING
-   if(Game->isJournalWriting())
-      Game->journalWrite(U32(handleFd.getHandle()));
-#endif
    return handleFd;
 }
 
 NetSocket Net::openConnectTo(const char *addressString)
 {
-#ifdef TORQUE_ALLOW_JOURNALING
-   if (Game->isJournalReading())
-   {
-      U32 ret;
-      Game->journalRead(&ret);
-      return NetSocket::fromHandle(ret);
-   }
-#endif
    NetAddress address;
    NetSocket handleFd = NetSocket::INVALID;
    Net::Error error = NoError;
@@ -872,19 +857,11 @@ NetSocket Net::openConnectTo(const char *addressString)
       closeSocket(handleFd);
       handleFd = NetSocket::INVALID;
    }
-#ifdef TORQUE_ALLOW_JOURNALING
-   if (Game->isJournalWriting())
-      Game->journalWrite(U32(handleFd.getHandle()));
-#endif
    return handleFd;
 }
 
 void Net::closeConnectTo(NetSocket handleFd)
 {
-#ifdef TORQUE_ALLOW_JOURNALING
-   if(Game->isJournalReading())
-      return;
-#endif
    // if this socket is in the list of polled sockets, remove it
    for (S32 i = 0; i < gPolledSockets.size(); ++i)
    {
@@ -901,28 +878,8 @@ void Net::closeConnectTo(NetSocket handleFd)
 
 Net::Error Net::sendtoSocket(NetSocket handleFd, const U8 *buffer, S32  bufferSize, S32 *outBufferWritten)
 {
-#ifdef TORQUE_ALLOW_JOURNALING
-   if(Game->isJournalReading())
-   {
-      U32 e;
-      U32 outBytes;
-      Game->journalRead(&e);
-      Game->journalRead(&outBytes);
-      if (outBufferWritten)
-         *outBufferWritten = outBytes;
-      
-      return (Net::Error) e;
-   }
-#endif
    S32 outBytes = 0;
    Net::Error e = send(handleFd, buffer, bufferSize, &outBytes);
-#ifdef TORQUE_ALLOW_JOURNALING
-   if (Game->isJournalWriting())
-   {
-      Game->journalWrite(U32(e));
-      Game->journalWrite(outBytes);
-   }
-#endif
    if (outBufferWritten)
       *outBufferWritten = outBytes;
    
@@ -1086,10 +1043,6 @@ void Net::closePort()
 
 Net::Error Net::sendto(const NetAddress *address, const U8 *buffer, S32  bufferSize)
 {
-#ifdef TORQUE_ALLOW_JOURNALING
-   if(Game->isJournalReading())
-      return NoError;
-#endif
    SOCKET socketFd;
    
    if(address->type == NetAddress::IPAddress || address->type == NetAddress::IPBroadcastAddress)
@@ -1136,7 +1089,6 @@ Net::Error Net::sendto(const NetAddress *address, const U8 *buffer, S32  bufferS
 
 void Net::process()
 {
-#if TOFIX
    // Process listening sockets
    processListenSocket(PlatformNetState::udpSocket);
    processListenSocket(PlatformNetState::udp6Socket);
@@ -1146,10 +1098,6 @@ void Net::process()
    
    if (gPolledSockets.size() == 0)
       return;
-   
-   static ConnectedNotifyEvent notifyEvent;
-   static ConnectedAcceptEvent acceptEvent;
-   static ConnectedReceiveEvent cReceiveEvent;
    
    S32 optval;
    socklen_t optlen = sizeof(S32);
@@ -1171,7 +1119,7 @@ void Net::process()
       // Cleanup if we've removed it
       if (currentSock == NULL)
       {
-         gPolledSockets.erase(i);
+         gPolledSockets.erase(gPolledSockets.begin()+i);
          continue;
       }
       
@@ -1190,9 +1138,10 @@ void Net::process()
                removeSock = true;
                removeSockHandle = currentSock->handleFd;
                
-               notifyEvent.state = Net::ConnectFailed;
-               notifyEvent.tag = currentSock->handleFd.getHandle();
-               Game->postEvent(notifyEvent);
+               if (gConnectedNotifyCB)
+               {
+                  gConnectedNotifyCB(currentSock->handleFd, Net::ConnectFailed);
+               }
             }
             else
             {
@@ -1208,9 +1157,10 @@ void Net::process()
                      break;
                   
                   currentSock->state = PolledSocket::Connected;
-                  notifyEvent.state = Net::Connected;
-                  notifyEvent.tag = currentSock->handleFd.getHandle();
-                  Game->postEvent(notifyEvent);
+                  if (gConnectedNotifyCB)
+                  {
+                     gConnectedNotifyCB(currentSock->handleFd, Net::Connected);
+                  }
                }
                else
                {
@@ -1219,10 +1169,11 @@ void Net::process()
                   
                   removeSock = true;
                   removeSockHandle = currentSock->handleFd;
-                  
-                  notifyEvent.state = Net::ConnectFailed;
-                  notifyEvent.tag = currentSock->handleFd.getHandle();
-                  Game->postEvent(notifyEvent);
+
+                  if (gConnectedNotifyCB)
+                  {
+                     gConnectedNotifyCB(currentSock->handleFd, Net::ConnectFailed);
+                  }
                }
             }
             break;
@@ -1230,45 +1181,40 @@ void Net::process()
             
             // try to get some data
             bytesRead = 0;
-            err = Net::recv(currentSock->handleFd, (U8*)cReceiveEvent.data, MaxPacketDataSize, &bytesRead);
-            if(err == Net::NoError)
+
+            U8 recvBuf[MaxPacketDataSize];
+            bytesRead = 0;
+            err = Net::recv(currentSock->handleFd, recvBuf, MaxPacketDataSize, &bytesRead);
+
+            if (err == Net::NoError)
             {
                if (bytesRead > 0)
                {
-                  // got some data, post it
-                  cReceiveEvent.size = ConnectedReceiveEventHeaderSize +
-                  bytesRead;
-                  cReceiveEvent.tag = currentSock->handleFd.getHandle();
-                  Game->postEvent(cReceiveEvent);
+                  if (gConnectedReceiveCB)
+                  {
+                     gConnectedReceiveCB(currentSock->handleFd, recvBuf, bytesRead);
+                  }
                }
                else
                {
-                  // ack! this shouldn't happen
-                  if (bytesRead < 0)
-                  {
-                     Con::errorf("Unexpected error on socket: %s", strerror(errno));
-                  }
-                  
                   removeSock = true;
                   removeSockHandle = currentSock->handleFd;
-                  
-                  // zero bytes read means EOF
-                  notifyEvent.tag = currentSock->handleFd.getHandle();
-                  notifyEvent.state = Net::Disconnected;
-                  notifyEvent.tag = currentSock->handleFd.getHandle();
-                  Game->postEvent(notifyEvent);
+
+                  if (gConnectedNotifyCB)
+                  {
+                     gConnectedNotifyCB(currentSock->handleFd, Net::Disconnected);
+                  }
                }
             }
-            else if (err != Net::NoError && err != Net::WouldBlock)
+            else if (err != Net::WouldBlock)
             {
-               Con::errorf("Error reading from socket: %s",  strerror(errno));
-               
                removeSock = true;
                removeSockHandle = currentSock->handleFd;
-               
-               notifyEvent.state = Net::Disconnected;
-               notifyEvent.tag = currentSock->handleFd.getHandle();
-               Game->postEvent(notifyEvent);
+
+               if (gConnectedNotifyCB)
+               {
+                  gConnectedNotifyCB(currentSock->handleFd, Net::Disconnected);
+               }
             }
             break;
          case PolledSocket::NameLookupRequired:
@@ -1283,7 +1229,6 @@ void Net::process()
             if (out_h_length == -1)
             {
                Con::errorf("DNS lookup failed: %s", currentSock->remoteAddr);
-               notifyEvent.state = Net::DNSFailed;
                newState = Net::DNSFailed;
                removeSock = true;
                removeSockHandle = currentSock->handleFd;
@@ -1335,7 +1280,6 @@ void Net::process()
                {
                   Con::errorf("Error connecting to %s: Invalid Protocol",
                               currentSock->remoteAddr);
-                  notifyEvent.state = Net::ConnectFailed;
                   newState = Net::ConnectFailed;
                   removeSock = true;
                   removeSockHandle = currentSock->handleFd;
@@ -1351,40 +1295,46 @@ void Net::process()
                      {
                         Con::errorf("Error connecting to %s: %u",
                                     currentSock->remoteAddr, err);
-                        notifyEvent.state = Net::ConnectFailed;
                         newState = Net::ConnectFailed;
                         removeSock = true;
                         removeSockHandle = currentSock->handleFd;
                      }
                      else
                      {
-                        notifyEvent.state = Net::DNSResolved;
                         newState = Net::DNSResolved;
                         currentSock->state = PolledSocket::ConnectionPending;
                      }
                   }
                   else
                   {
-                     notifyEvent.state = Net::Connected;
                      newState = Net::Connected;
                      currentSock->state = Connected;
                   }
                }
             }
-            notifyEvent.tag = currentSock->handleFd.getHandle();
-            Game->postEvent(notifyEvent);
+            if (gConnectedNotifyCB)
+            {
+               gConnectedNotifyCB(currentSock->handleFd, (Net::ConnectionState)newState);
+            }
             break;
          case PolledSocket::Listening:
-            
-            incomingHandleFd = Net::accept(currentSock->handleFd, &acceptEvent.address);
-            if(incomingHandleFd != NetSocket::INVALID)
+         {
+            NetAddress fromAddr;
+            incomingHandleFd = Net::accept(currentSock->handleFd, &fromAddr);
+
+            if (incomingHandleFd != NetSocket::INVALID)
             {
                setBlocking(incomingHandleFd, false);
-               addPolledSocket(incomingHandleFd, PlatformNetState::smReservedSocketList.resolve(incomingHandleFd), Connected);
-               acceptEvent.portTag = currentSock->handleFd.getHandle();
-               acceptEvent.connectionTag = incomingHandleFd.getHandle();
-               Game->postEvent(acceptEvent);
+               addPolledSocket(incomingHandleFd,
+                               PlatformNetState::smReservedSocketList.resolve(incomingHandleFd),
+                               Connected);
+
+               if (gConnectedAcceptCB)
+               {
+                  gConnectedAcceptCB(currentSock->handleFd, incomingHandleFd, fromAddr);
+               }
             }
+         }
             break;
       }
       
@@ -1395,15 +1345,14 @@ void Net::process()
       else
          i++;
    }
-   #endif
 }
 
 void Net::processListenSocket(NetSocket socketHandle)
 {
-   #if TOFIX
    if (socketHandle == NetSocket::INVALID)
       return;
-   PacketReceiveEvent receiveEvent;
+   U8 recvBuf[MaxPacketDataSize];
+   NetAddress from;
    
    sockaddr_storage sa;
    sa.ss_family = AF_UNSPEC;
@@ -1416,33 +1365,37 @@ void Net::processListenSocket(NetSocket socketHandle)
       S32 bytesRead = -1;
       
       if (socketHandle != NetSocket::INVALID)
-         bytesRead = ::recvfrom(socketFd, (char *)receiveEvent.data, MaxPacketDataSize, 0, (struct sockaddr*)&sa, &addrLen);
+      {
+         bytesRead = ::recvfrom(socketFd, (char*)recvBuf, MaxPacketDataSize, 0,
+                       (struct sockaddr*)&sa, &addrLen);
+      }
       
       if (bytesRead == -1)
          break;
       
       if (sa.ss_family == AF_INET)
-         IPSocketToNetAddress((sockaddr_in *)&sa, &receiveEvent.sourceAddress);
+         IPSocketToNetAddress((sockaddr_in *)&sa, &from);
       else if (sa.ss_family == AF_INET6)
-         IPSocket6ToNetAddress((sockaddr_in6 *)&sa, &receiveEvent.sourceAddress);
+         IPSocket6ToNetAddress((sockaddr_in6 *)&sa, &from);
       else
          continue;
       
       if (bytesRead <= 0)
          continue;
       
-      if (receiveEvent.sourceAddress.type == NetAddress::IPAddress &&
-          receiveEvent.sourceAddress.address.ipv4.netNum[0] == 127 &&
-          receiveEvent.sourceAddress.address.ipv4.netNum[1] == 0 &&
-          receiveEvent.sourceAddress.address.ipv4.netNum[2] == 0 &&
-          receiveEvent.sourceAddress.address.ipv4.netNum[3] == 1 &&
-          receiveEvent.sourceAddress.port == PlatformNetState::netPort)
+      if (from.type == NetAddress::IPAddress &&
+          from.address.ipv4.netNum[0] == 127 &&
+          from.address.ipv4.netNum[1] == 0 &&
+          from.address.ipv4.netNum[2] == 0 &&
+          from.address.ipv4.netNum[3] == 1 &&
+          from.port == PlatformNetState::netPort)
          continue;
       
-      receiveEvent.size = PacketReceiveEventHeaderSize + bytesRead;
-      Game->postEvent(receiveEvent);
+      if (gPacketReceiveCB)
+      {
+         gPacketReceiveCB(from, recvBuf, bytesRead);
+      }
    }
-   #endif
 }
 
 NetSocket Net::openSocket()
@@ -2082,6 +2035,26 @@ bool Net::isAddressTypeAvailable(NetAddress::Type addressType)
    }
 }
 
+// Setters
+void Net::setPacketReceiveCallback(PacketReceiveCallback cb)
+{
+   gPacketReceiveCB = std::move(cb);
+}
+
+void Net::setConnectedNotifyCallback(ConnectedNotifyCallback cb)
+{
+   gConnectedNotifyCB = std::move(cb);
+}
+
+void Net::setConnectedAcceptCallback(ConnectedAcceptCallback cb)
+{
+   gConnectedAcceptCB = std::move(cb);
+}
+
+void Net::setConnectedReceiveCallback(ConnectedReceiveCallback cb)
+{
+   gConnectedReceiveCB = std::move(cb);
+}
 
 
 
@@ -2393,10 +2366,10 @@ void Net::process()
 
 void Net::processListenSocket(NetSocket socketHandle)
 {
-   #if TOFIX
    if (socketHandle == NetSocket::INVALID)
       return;
-   PacketReceiveEvent receiveEvent;
+   U8 recvBuf[MaxPacketDataSize];
+   NetAddress from;
 
    for (;;)
    {
@@ -2412,18 +2385,19 @@ void Net::processListenSocket(NetSocket socketHandle)
       if (bytesRead == 0)
          break;
       
-      if (receiveEvent.sourceAddress.type == NetAddress::IPAddress &&
-          receiveEvent.sourceAddress.address.ipv4.netNum[0] == 127 &&
-          receiveEvent.sourceAddress.address.ipv4.netNum[1] == 0 &&
-          receiveEvent.sourceAddress.address.ipv4.netNum[2] == 0 &&
-          receiveEvent.sourceAddress.address.ipv4.netNum[3] == 1 &&
-          receiveEvent.sourceAddress.port == PlatformNetState::netPort)
+      if (from.type == NetAddress::IPAddress &&
+          from.address.ipv4.netNum[0] == 127 &&
+          from.address.ipv4.netNum[1] == 0 &&
+          from.address.ipv4.netNum[2] == 0 &&
+          from.address.ipv4.netNum[3] == 1 &&
+          from.port == PlatformNetState::netPort)
          continue;
-      
-      receiveEvent.size = PacketReceiveEventHeaderSize + bytesRead;
-      Game->postEvent(receiveEvent);
+         
+      if (gPacketReceiveCB)
+      {
+         gPacketReceiveCB(from, recvBuf, bytesRead);
+      }
    }
-   #endif
 }
 
 // TCP socket handler; not needed

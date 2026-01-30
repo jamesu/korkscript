@@ -31,6 +31,8 @@
 #include "platform/platformMemory.h"
 #endif
 
+#include <functional>
+
 #ifndef TORQUE_NET_DEFAULT_MULTICAST_ADDRESS
 #define TORQUE_NET_DEFAULT_MULTICAST_ADDRESS "ff04::7467::656E::6574::776C"
 #endif
@@ -208,6 +210,11 @@ struct Net
       Disconnected
    };
 
+   enum
+   {
+      MaxPacketDataSize = 1500
+   };
+
    static bool smMulticastEnabled;
    static bool smIpv4Enabled;
    static bool smIpv6Enabled;
@@ -215,6 +222,21 @@ struct Net
    static bool init();
    static void shutdown();
    static void process();
+
+   using PacketReceiveCallback = std::function<void(const NetAddress& from, const U8* data, S32 size)>;
+
+   using ConnectedNotifyCallback  = std::function<void(NetSocket sock, Net::ConnectionState state)>;
+
+   using ConnectedAcceptCallback  = std::function<void(NetSocket listenSock,
+                                                      NetSocket newSock,
+                                                      const NetAddress& from)>;
+
+   using ConnectedReceiveCallback = std::function<void(NetSocket sock, const U8* data, S32 size)>;
+
+   static void setPacketReceiveCallback(PacketReceiveCallback cb);
+   static void setConnectedNotifyCallback(ConnectedNotifyCallback cb);
+   static void setConnectedAcceptCallback(ConnectedAcceptCallback cb);
+   static void setConnectedReceiveCallback(ConnectedReceiveCallback cb);
 
    // Unreliable net functions (UDP)
    // sendto is for sending data
