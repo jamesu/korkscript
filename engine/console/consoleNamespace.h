@@ -90,8 +90,6 @@ class Namespace
    void addCommand(StringTableEntry name, KorkApi::BoolFuncCallback, void* userPtr, const char* usage, S32 minArgs, S32 maxArgs);
    void addCommand(StringTableEntry name, KorkApi::ValueFuncCallback, void* userPtr, const char* usage, S32 minArgs, S32 maxArgs);
 
-   void addOverload(const char *name, const char* altUsage);
-
    void markGroup(const char* name, const char* usage);
    char * lastUsage;
 

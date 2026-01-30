@@ -113,7 +113,9 @@ void ConsoleConstructor::setup()
       else if(walk->group)
          Con::markCommandGroup(walk->className, walk->funcName, walk->usage);
       else if(walk->overload)
-         Con::addOverload(walk->className, walk->funcName, walk->usage);
+      {
+         // ignore; legacy
+      }
       else if(walk->ns)
       {
          sVM->setNamespaceUsage(sVM->findNamespace(walk->className), walk->usage);
@@ -1042,10 +1044,9 @@ void addCommand(const char *nsName, const char *name,ValueCallback cvc, const ch
 
 void markCommandGroup(const char * nsName, const char *name, const char* usage)
 {
-   #if TOFIX
-   Namespace *ns = lookupNamespace(nsName);
-   ns->markGroup(name,usage);
-   #endif
+   sVM->markNamespaceGroup(nsName ? sVM->findNamespace(sVM->internString(nsName)) : sVM->getGlobalNamespace(), 
+                           sVM->internString(name),
+                           usage ? sVM->internString(usage, true) : NULL);
 }
 
 void beginCommandGroup(const char * nsName, const char *name, const char* usage)
@@ -1056,12 +1057,6 @@ void beginCommandGroup(const char * nsName, const char *name, const char* usage)
 void endCommandGroup(const char * nsName, const char *name)
 {
    markCommandGroup(nsName, name, NULL);
-}
-
-void addOverload(const char * nsName, const char * name, const char * altUsage)
-{
-   Namespace *ns = lookupNamespace(nsName);
-   // TOFIX ns->addOverload(name,altUsage);
 }
 
 void addCommand(const char *name,StringCallback cb,const char *usage, S32 minArgs, S32 maxArgs)

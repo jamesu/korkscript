@@ -472,10 +472,7 @@ namespace Con
    void markCommandGroup (const char * nsName, const char *name, const char* usage=NULL);
    void beginCommandGroup(const char * nsName, const char *name, const char* usage);
    void endCommandGroup  (const char * nsName, const char *name);
-
-   /// @deprecated
-   void addOverload      (const char * nsName, const char *name, const char *altUsage);
-
+   
    /// @}
 
    /// @name Console Output

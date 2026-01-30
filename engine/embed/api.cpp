@@ -598,6 +598,13 @@ bool Vm::isNamespaceFunction(NamespaceId nsId, StringTableEntry name)
    return ns->lookup(name) != NULL;
 }
 
+void Vm::markNamespaceGroup(NamespaceId nsId, StringTableEntry groupName, StringTableEntry usage)
+{
+   VmAllocTLS::Scope memScope(mInternal);
+   Namespace* ns = (Namespace*)nsId;
+   return ns->markGroup(groupName, usage);
+}
+
 bool Vm::compileCodeBlock(const char* code, const char* filename, U32* outCodeSize, U8** outCode)
 {
    VmAllocTLS::Scope memScope(mInternal);

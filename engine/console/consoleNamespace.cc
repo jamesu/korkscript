@@ -512,25 +512,6 @@ void Namespace::addCommand(StringTableEntry name, KorkApi::ValueFuncCallback cb,
    ent->cb.mValueCallbackFunc = cb;
 }
 
-void Namespace::addOverload(const char * name, const char *altUsage)
-{
-   char buffer[1024];
-   char lilBuffer[32];
-   strcpy(buffer, name);
-   snprintf(lilBuffer, 32, "_%d", mVmInternal->mNSCounter++);
-   strcat(buffer, lilBuffer);
-
-   Entry *ent = createLocalEntry(mVmInternal->internString(buffer, false));
-   mVmInternal->mNSState.trashCache();
-
-   ent->mUsage = altUsage;
-   ent->mMinArgs = -1;
-   ent->mMaxArgs = -2;
-
-   ent->mType = Entry::OverloadMarker;
-   ent->cb.mGroupName = name;
-}
-
 void Namespace::markGroup(const char* name, const char* usage)
 {
    char buffer[1024];
