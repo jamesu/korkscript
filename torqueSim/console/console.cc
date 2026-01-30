@@ -108,6 +108,8 @@ void ConsoleConstructor::setup()
          Con::addCommand(walk->className, walk->funcName, walk->vc, walk->usage, walk->mina, walk->maxa);
       else if(walk->bc)
          Con::addCommand(walk->className, walk->funcName, walk->bc, walk->usage, walk->mina, walk->maxa);
+      else if(walk->cvc)
+         Con::addCommand(walk->className, walk->funcName, walk->cvc, walk->usage, walk->mina, walk->maxa);
       else if(walk->group)
          Con::markCommandGroup(walk->className, walk->funcName, walk->usage);
       else if(walk->overload)
@@ -149,6 +151,12 @@ ConsoleConstructor::ConsoleConstructor(const char *className, const char *funcNa
 {
    init(className, funcName, usage, minArgs, maxArgs);
    bc = bfunc;
+}
+
+ConsoleConstructor::ConsoleConstructor(const char *className, const char *funcName, ValueCallback cvcfunc, const char *usage, S32 minArgs, S32 maxArgs)
+{
+   init(className, funcName, usage, minArgs, maxArgs);
+   cvc = cvcfunc;
 }
 
 ConsoleConstructor::ConsoleConstructor(const char* className, const char* groupName, const char* aUsage)
@@ -1020,6 +1028,12 @@ void addCommand(const char *nsName, const char *name,BoolCallback cb, const char
 {
    sVM->addNamespaceFunction(lookupNamespace(sVM->internString(nsName)), sVM->internString(name), (KorkApi::BoolFuncCallback)cb, sVM, usage, minArgs, maxArgs);
 }
+
+void addCommand(const char *nsName, const char *name,ValueCallback cvc, const char *usage, S32 minArgs, S32 maxArgs)
+{
+   sVM->addNamespaceFunction(lookupNamespace(sVM->internString(nsName)), sVM->internString(name), (KorkApi::ValueFuncCallback)cvc, sVM, usage, minArgs, maxArgs);
+}
+
 
 void markCommandGroup(const char * nsName, const char *name, const char* usage)
 {
