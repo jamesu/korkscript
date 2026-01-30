@@ -166,6 +166,7 @@ public:
    : mStringIntern(it), mFilename(std::move(filename))
    {
       mPos = {};
+      mPos.line = 1; // start from line 1
       mBytePos = 0;
       
       U32 strSize = (U32)src.size()+1;

@@ -43,6 +43,7 @@ public:
    : mTokenizer(tok), mTokenPos(0), mResources(res)
    {
       res->currentASTGen = this;
+      mErrorToken = TOK();
    }
 
    ~ASTGen()
@@ -63,6 +64,7 @@ public:
       
       if (t.isIllegal() || t.isNone())
       {
+         mErrorToken = t;
          mTokens.clear();
          return false;
       }
@@ -100,6 +102,9 @@ public:
       mResources->popLocalVarContext();
       return list;
    }
+   
+public:
+   TOK mErrorToken;
    
 private:
    

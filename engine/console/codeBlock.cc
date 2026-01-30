@@ -859,7 +859,10 @@ bool CodeBlock::compileToStream(Stream &st, StringTableEntry fileName, const cha
    
    try
    {
-      astGen.processTokens();
+      if (!astGen.processTokens())
+      {
+         mVM->printf(0, "Invalid token (%s) at %i:%i", lex.toString(astGen.mErrorToken).c_str(), astGen.mErrorToken.pos.line, astGen.mErrorToken.pos.col);
+      }
       rootNode = astGen.parseProgram();
    }
    catch (SimpleParser::TokenError& e)
