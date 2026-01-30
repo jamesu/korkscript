@@ -704,22 +704,13 @@ bool Vm::callObjectFunction(VMObject* self, StringTableEntry funcName, int argc,
    KorkApi::ConsoleValue oldArg1 = argv[1];
    SimObjectId cv = self->klass->iCreate.GetIdFn(self);
    argv[1] = KorkApi::ConsoleValue::makeUnsigned(cv);
-
-   if (ent->mType == Namespace::Entry::ScriptFunctionType)
-   {
-      // TODO: need a better way of dealing with this
-      // TOFIX
-      //object->pushScriptCallbackGuard();
-   }
-
+   
+   // NOTE: previously it was possible to destroy vm objects during execute, however VMObject itself is now
+   // refCounted. Any further checks regarding this should be done at a higher level.
+   
    KorkApi::ConsoleValue ret = ent->execute(argc, argv, mInternal->mCurrentFiberState, self, startSuspended);
    
    retValue = ret;
-
-   if (ent->mType == Namespace::Entry::ScriptFunctionType)
-   {
-      //object->popScriptCallbackGuard();
-   }
 
    // Twiddle it back
    argv[1] = oldArg1;

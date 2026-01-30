@@ -1177,7 +1177,7 @@ const char *execute(S32 argc, const char *argv[])
       
       KorkApi::ConsoleValue retValue = KorkApi::ConsoleValue();
 
-      KorkApi::ConsoleValue localArgv[20];// TOFIX StringStack::MaxArgs];
+      KorkApi::ConsoleValue localArgv[KorkApi::MaxArgs];
       KorkApi::ConsoleValue::convertArgsReverse(argc, argv, localArgv);
       sVM->callNamespaceFunction(sVM->getGlobalNamespace(), funcName, argc, localArgv, retValue);
       sVM->clearCurrentFiberError();
@@ -1209,7 +1209,7 @@ const char *execute(SimObject *object, S32 argc, const char *argv[],bool thisCal
       StringTableEntry funcName = sVM->internString(argv[0]);
 
       KorkApi::ConsoleValue retValue = KorkApi::ConsoleValue();
-      KorkApi::ConsoleValue localArgv[20];// TOFIX StringStack::MaxArgs];
+      KorkApi::ConsoleValue localArgv[KorkApi::MaxArgs];
 
       object->pushScriptCallbackGuard();
       KorkApi::ConsoleValue::convertArgsReverse(argc, argv, localArgv);
@@ -1621,7 +1621,7 @@ bool expandPath( char* pDstPath, U32 size, const char* pSrcPath, const char* pWo
    if ( leadingToken == '.' )
    {
       // Fetch the code-block file-path.
-      const StringTableEntry codeblockFullPath = NULL; // TOFIX CodeBlock::getCurrentCodeBlockFullPath();
+      const StringTableEntry codeblockFullPath = sVM->getCurrentFiberFrameInfo().fullPath;
       
       // Do we have a code block full path?
       if( codeblockFullPath == NULL )

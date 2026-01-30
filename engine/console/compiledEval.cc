@@ -621,7 +621,7 @@ ConsoleFrame* CodeBlock::beginExec(ExprEvalState& evalState, U32 ip, const char 
    frame.stackStart = evalState.mSTR.mStartStackSize;
    frame.noCalls = noCalls;
    
-   // TOFIX: this needs to push frame info too
+   // TODO: this needs to push frame info too
    // Grab the state of the telenet debugger here once
    // so that the push and pop frames are always balanced.
    const bool telDebuggerOn = mVM->mTelDebugger && mVM->mTelDebugger->isConnected();
@@ -3403,7 +3403,7 @@ ConsoleFrame* ConsoleSerializer::loadFrame(ExprEvalState* state)
    frame->scopeName = readSTString(mStream);
    frame->scopePackage = readSTString(mStream);
    StringTableEntry nsName = readSTString(mStream);
-   frame->scopeNamespace = mTarget->mNSState.find(nsName, frame->scopePackage); // TOFIX: is this correct?
+   frame->scopeNamespace = mTarget->mNSState.find(nsName, frame->scopePackage); // TODO: is this correct?
    
    // References
    readObjectRef(frame->currentNewObject);

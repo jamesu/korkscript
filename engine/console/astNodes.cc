@@ -977,7 +977,7 @@ U32 StrConstNode::compile(CodeStream &codeStream, U32 ip, TypeReq type)
    }
    else if (type != TypeReqNone)
    {
-      fVal = consoleStringToNumber(str, codeStream.getFilename(), dbgLineNumber);
+      fVal = consoleStringToNumber(codeStream.mResources, str, codeStream.getFilename(), dbgLineNumber);
       if(type == TypeReqFloat)
       {
          index = codeStream.mResources->getCurrentFloatTable()->add(fVal);
@@ -1030,7 +1030,7 @@ U32 ConstantNode::compile(CodeStream &codeStream, U32 ip, TypeReq type)
    }
    else if (type != TypeReqNone)
    {
-      fVal = consoleStringToNumber(value, codeStream.getFilename(), dbgLineNumber);
+      fVal = consoleStringToNumber(codeStream.mResources, value, codeStream.getFilename(), dbgLineNumber);
       if(type == TypeReqFloat)
          index = codeStream.mResources->getCurrentFloatTable()->add(fVal);
    }

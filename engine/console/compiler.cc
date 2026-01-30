@@ -51,7 +51,7 @@ namespace Compiler
       *(ptr+1) = 0;
    }
 
-   F64 consoleStringToNumber(const char *str, StringTableEntry file, U32 line)
+   F64 consoleStringToNumber(Resources* res, const char *str, StringTableEntry file, U32 line)
    {
       F64 val = atof(str);
       if(val != 0)

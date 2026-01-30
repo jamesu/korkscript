@@ -399,7 +399,8 @@ enum Constants
   MinDSOVersion = 77,
   MaxDSOVersion = 78,
   MaxLineLength = 512,
-  MaxDataTypes = 256
+  MaxDataTypes = 256,
+  MaxArgs = 20 // Should match StringStack
 };
 
 enum ACRFieldTypes : U16
