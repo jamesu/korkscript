@@ -380,7 +380,7 @@ static void printNode(const StmtNode* n, int pad) {
    if (auto x = dynamic_cast<const SlotAssignNode*>(n)) {
       open("SlotAssignNode", pad);
       indent(pad + 2); printf("slotName = \"%s\"\n", show(x->slotName));
-      indent(pad + 2); printf("typeID = %i\n", -1); // TOFIX
+      indent(pad + 2); printf("typeID = %i\n", -1); // NOTE: uses integer for compat for the moment.
       printChild("objectExpr", x->objectExpr, pad + 2);
       printChild("arrayExpr",  x->arrayExpr,  pad + 2);
       printChild("valueExpr",  x->rhsExpr,  pad + 2);

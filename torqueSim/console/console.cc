@@ -941,6 +941,11 @@ F32 getFloatVariable(const char *varName, F32 def)
    return *value ? dAtof(value) : def;
 }
 
+StringTableEntry getCurrentCodeBlockFullPath()
+{
+   return sVM->getCurrentFiberFrameInfo().fullPath;
+}
+
 //---------------------------------------------------------------------------
 
 bool addVariable(const char *name,
@@ -1085,9 +1090,8 @@ void addCommand(const char *name,BoolCallback cb,const char *usage, S32 minArgs,
 }
 
 // Known as expandOldScriptFilename in T3D
-bool expandScriptFilename(char *filename, U32 size, const char *src)
+bool expandScriptFilename(char *filename, U32 size, const char *src, const char* cbName)
 {
-   const StringTableEntry cbName = NULL; // TOFIX CodeBlock::getCurrentCodeBlockName();
    if (!cbName)
    {
       dStrcpy(filename, src);
@@ -1304,8 +1308,8 @@ bool linkNamespaces(const char *parent, const char *child)
 
 bool unlinkNamespaces(const char *parent, const char *child)
 {
-   Namespace *pns = lookupNamespace(parent);
-   Namespace *cns = lookupNamespace(child);
+   KorkApi::NamespaceId pns = lookupNamespace(parent);
+   KorkApi::NamespaceId cns = lookupNamespace(child);
    if(pns && cns)
       return sVM->unlinkNamespaceById(pns, cns);
    return false;

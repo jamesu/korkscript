@@ -181,7 +181,7 @@ struct StringStack
          mBuffer[mStart] = 0;
          return;
       }
-      mLen = strlen(s);
+      mLen = (U32)strlen(s);
       mType = KorkApi::ConsoleValue::TypeInternalString;
       
       if ((mBuffer.data() + mStart) != s)

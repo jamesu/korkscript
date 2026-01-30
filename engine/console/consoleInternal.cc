@@ -575,64 +575,6 @@ void ExprEvalState::reset()
    mSTR.reset();
 }
 
-// !!!!! FOLLOWING NOT CHECKED YET !!!!!
-
-#if TOFIX
-ConsoleFunction(backtrace, void, 1, 1, "Print the call stack.")
-{
-   argc; argv;
-   U32 totalSize = 1;
-
-   for(U32 i = 0; i < gEvalState.stack.size(); i++)
-   {
-      totalSize += strlen(gEvalState.vmFrames[i]->scopeName) + 3;
-      if(gEvalState.vmFrames[i]->scopeNamespace && gEvalState.vmFrames[i]->scopeNamespace->mName)
-         totalSize += strlen(gEvalState.vmFrames[i]->scopeNamespace->mName) + 2;
-   }
-
-   char *buf = Con::getReturnBuffer(totalSize);
-   buf[0] = 0;
-   for(U32 i = 0; i < gEvalState.stack.size(); i++)
-   {
-      strcat(buf, "->");
-      if(gEvalState.vmFrames[i]->scopeNamespace && gEvalState.vmFramesi]->scopeNamespace->mName)
-      {
-         strcat(buf, gEvalState.vmFramesi]->scopeNamespace->mName);
-         strcat(buf, "::");
-      }
-      strcat(buf, gEvalState.vmFramesi]->scopeName);
-   }
-   Con::printf("BackTrace: %s", buf);
-
-}
-
-
-ConsoleFunctionGroupBegin( Packages, "Functions relating to the control of packages.");
-
-ConsoleFunction(isPackage,bool,2,2,"isPackage(packageName)")
-{
-   argc;
-   StringTableEntry packageName = vmPtr->internString(argv[1]);
-   return Namespace::isPackage(packageName);
-}
-
-ConsoleFunction(activatePackage, void,2,2,"activatePackage(packageName)")
-{
-   argc;
-   StringTableEntry packageName = vmPtr->internString(argv[1]);
-   Namespace::activatePackage(packageName);
-}
-
-ConsoleFunction(deactivatePackage, void,2,2,"deactivatePackage(packageName)")
-{
-   argc;
-   StringTableEntry packageName = vmPtr->internString(argv[1]);
-   Namespace::deactivatePackage(packageName);
-}
-
-ConsoleFunctionGroupEnd( Packages );
-#endif
-
 namespace KorkApi
 {
 

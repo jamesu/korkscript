@@ -179,7 +179,7 @@ SimObject::SimObject( const U8 namespaceLinkMask ) : mNSLinkMask( namespaceLinkM
    mCanSaveFieldDictionary    = true;
    mClassName               = NULL;
    mSuperClassName          = NULL;
-   mProgenitorFile          = ""; // TOFIX CodeBlock::getCurrentCodeBlockFullPath();
+   mProgenitorFile          = Con::getCurrentCodeBlockFullPath();
    mPeriodicTimerID         = 0;
    mSimFlags = 0;
    vmObject = NULL;
@@ -2215,14 +2215,17 @@ void SimObject::linkNamespaces()
 
    // ObjectName -> ClassName
    StringTableEntry objectName = getName();
-   /* TOFIX if( objectName && objectName[0] && objectName != getClassRep()->getNameSpace()->mName )
+   if( objectName && objectName[0] && 
+       strcasecmp(objectName, getClassRep()->getClassName()) != 0 )
    {
-      if( Con::linkNamespaces( parent, objectName ) )
+      if( sVM->linkNamespace( parent, objectName ) )
+      {
          parent = objectName;
-   }*/
+      }
+   }
 
    // Store our namespace.
-   mVMNameSpace = Con::lookupNamespace( parent );
+   mVMNameSpace = sVM->findNamespace(parent);
    getVM()->setObjectNamespace(getVMObject(), mVMNameSpace);
 }
 
@@ -2407,15 +2410,10 @@ ConsoleMethod(SimObject, getProgenitorFile, const char*, 2, 2, "")
 */
 ConsoleMethod(SimObject, getFieldType, const char*, 3, 3, "fieldName")
 {
-#if TOFIX
    const char *fieldName = StringTable->insert( argv[2] );
    U32 typeID = object->getDataFieldType( fieldName, NULL );
-   ConsoleBaseType* type = ConsoleBaseType::getType( typeID );
-   
-   if( type )
-      return type->getTypeClassName();
-#endif
-   return "";
+   KorkApi::TypeInfo* type = vmPtr->getTypeInfo(typeID);
+   return type ? type->name : "";
 }
 
 /*! Clones the object.

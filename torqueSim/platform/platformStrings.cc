@@ -235,7 +235,7 @@ char* dStrncpy(char *dst, const char *src, dsize_t len)
 
 U32 dStrlen(const char *str)
 {
-   return strlen(str);
+   return (U32)strlen(str);
 }   
 
 

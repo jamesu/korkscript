@@ -32,7 +32,6 @@
 #include "console/typeValidators.h"
 #include "sim/simBase.h"
 
-// TOFIX: add back in if networking needed
 #define INITIAL_CRC_VALUE 0
 
 
@@ -177,16 +176,6 @@ void AbstractClassRep::registerClassWithVm(KorkApi::Vm* vm)
 {
    if (mClassInfo.name == NULL)
    {
-      AbstractClassRep* parentKlass = getParentClass();
-      
-      if (parentKlass)
-      {
-         mClassInfo.parentKlassId = vm->getClassId(parentKlass->getClassName());
-      }
-      else
-      {
-         mClassInfo.parentKlassId = -1;
-      }
       
       mClassInfo.name = vm->internString(mClassName);
       mClassInfo.userPtr = this;
@@ -231,7 +220,7 @@ void AbstractClassRep::registerClassWithVm(KorkApi::Vm* vm)
                //currentNewObject->setOriginalName( objectName );
             }
             
-            /* TOFIX: TGE seems to set these flags in Datablock regardless!
+            /* NOTE: TGE seems to set these flags in Datablock regardless!
             if (!isDatablock)
             {
                vmObject->flags |= KorkApi::ModStaticFields | KorkApi::ModDynamicFields;
@@ -414,6 +403,18 @@ void AbstractClassRep::registerClassWithVm(KorkApi::Vm* vm)
    mLastRegisteredVmId = vm->registerClass(mClassInfo);
 }
 
+void AbstractClassRep::linkClassWithParent(KorkApi::Vm* vm)
+{
+   AbstractClassRep* parentKlass = getParentClass();
+
+   // Link namespace
+   if (parentKlass)
+   {
+      vm->linkNamespace(parentKlass->mClassInfo.name,
+                        mClassInfo.name);
+   }
+}
+
 //--------------------------------------
 
 bool ACRCompare(const AbstractClassRep* a, const AbstractClassRep* b)
@@ -434,7 +435,7 @@ void AbstractClassRep::initialize()
    // Initialize namespace references...
    for (walk = classLinkList; walk; walk = walk->nextClass)
    {
-      walk->mNamespace = Con::lookupNamespace(StringTable->insert(walk->getClassName()));
+      //walk->mNamespace = Con::lookupNamespace(StringTable->insert(walk->getClassName()));
       //walk->mNamespace->mClassRep = walk;
    }
 
@@ -832,6 +833,12 @@ void AbstractClassRep::registerWithVM(KorkApi::Vm* vm)
    for (AbstractClassRep* walk = classLinkList; walk; walk = walk->nextClass)
    {
       walk->registerClassWithVm(vm);
+   }
+
+   // Link parent classes
+   for (AbstractClassRep* walk = classLinkList; walk; walk = walk->nextClass)
+   {
+      walk->linkClassWithParent(vm);
    }
 }
 

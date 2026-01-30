@@ -295,6 +295,7 @@ struct TelnetInterface
     void (*GetSocketAddressFn)(void* user, U32 socket, char* buffer); // callback to get socket address; 256 byte buffer
 
     void (*QueueEvaluateFn)(void* user, const char* evaluateStr); // callback to eval command next frame
+    void (*YieldExecFn)(void* user); // callback to eval command next frame
 };
 
 struct LogConfig
@@ -385,7 +386,14 @@ struct FiberRunResult
    static const char* getExceptionLineIp();
 };
 
-enum Constants 
+struct FiberFrameInfo
+{
+   StringTableEntry fullPath;
+   StringTableEntry scopeName;
+   StringTableEntry scopeNamespace;
+};
+
+enum Constants
 {
   DSOVersion = 78,
   MinDSOVersion = 77,
@@ -393,12 +401,6 @@ enum Constants
   MaxLineLength = 512,
   MaxDataTypes = 256
 };
-
-enum
-{
-StringTagPrefixByte = 0x01
-};
-
 
 enum ACRFieldTypes : U16
 {
@@ -420,6 +422,7 @@ public:
    void setNamespaceUserPtr(NamespaceId ns, void* userPtr);
 	void activatePackage(StringTableEntry pkgName);
 	void deactivatePackage(StringTableEntry pkgName);
+    bool isPackage(StringTableEntry pkgName);
    bool linkNamespace(StringTableEntry parent, StringTableEntry child);
    bool unlinkNamespace(StringTableEntry parent, StringTableEntry child);
    bool linkNamespaceById(NamespaceId parent, NamespaceId child);
@@ -542,8 +545,8 @@ public:
    void throwFiber(U32 mask);
    bool getCurrentFiberFileLine(StringTableEntry* outFile, U32* outLine);
    FiberRunResult resumeCurrentFiber(ConsoleValue value);
-   StringTableEntry getCurrentFiberFrameScope();
    S32 getCurrentFiberFrameDepth();
+   FiberFrameInfo getCurrentFiberFrameInfo(S32 frame=-1);
 
    const char* getExceptionFileLine(ExceptionInfo* info);
    

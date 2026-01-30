@@ -620,7 +620,8 @@ ConsoleFunction(NextToken,const char *,4,4,"nextToken(str,token,delim)")
          *str++ = 0;
       
       // set local variable if inside a function
-      if (vmPtr->getCurrentFiberFrameScope())
+      KorkApi::FiberFrameInfo info = vmPtr->getCurrentFiberFrameInfo();
+      if (info.scopeName && info.scopeName[0] != '\0')
       {
          vmPtr->setLocalVariable(vmPtr->internString(token), KorkApi::ConsoleValue::makeString(tmp));
       }
@@ -642,45 +643,16 @@ ConsoleFunctionGroupEnd( FieldManipulators )
 
 ConsoleFunctionGroupBegin( TaggedStrings, "Functions dealing with tagging/detagging strings.");
 
-ConsoleFunction(detag, const char *, 2, 2, "detag(textTagString)")
+ConsoleFunctionValue(detag, 2, 2, "detag(textTagString)")
 {
-   argc;
-   if(argv[1][0] == KorkApi::StringTagPrefixByte)
-   {
-      const char *word = dStrchr(argv[1], ' ');
-      if(word == NULL)
-         return "";
-      KorkApi::ConsoleValue retV = Con::getReturnBuffer(dStrlen(word + 1) + 1);
-      char *ret = (char*)retV.evaluatePtr(vmPtr->getAllocBase());
-      dStrcpy(ret, word + 1);
-      return ret;
-   }
-   else
-      return argv[1];
+   // NOTE: assumes tag type returns original string when cast to string
+   return KorkApi::ConsoleValue::makeString(vmPtr->valueAsString(argv[1]));
 }
 
-ConsoleFunction(getTag, const char *, 2, 2, "getTag(textTagString)")
+ConsoleFunctionValue(getTag, 2, 2, "getTag(textTagString)")
 {
-   argc;
-   if(argv[1][0] == KorkApi::StringTagPrefixByte)
-   {
-      const char * space = dStrchr(argv[1], ' ');
-
-      U32 len;
-      if(space)
-         len = space - argv[1];
-      else
-         len = dStrlen(argv[1]) + 1;
-
-      KorkApi::ConsoleValue retV = Con::getReturnBuffer(len);
-      char *ret = (char*)retV.evaluatePtr(vmPtr->getAllocBase());
-      dStrncpy(ret, argv[1] + 1, len - 1);
-      ret[len - 1] = 0;
-
-      return(ret);
-   }
-   else
-      return(argv[1]);
+   // NOTE: assumes tag type returns tag id as int
+   return KorkApi::ConsoleValue::makeUnsigned((U32)vmPtr->valueAsInt(argv[1]));
 }
 
 ConsoleFunctionGroupEnd( TaggedStrings );
@@ -1340,4 +1312,66 @@ ConsoleFunction( telnetSetParameters, void, 4, 5, "(int port, string consolePass
 {
    sVM->telnetSetParameters(dAtoi(argv[1]), argv[2], argv[3], argc == 5 ? dAtob( argv[4] ) : false);
 }
+
+
+ConsoleFunction(backtrace, void, 1, 1, "Print the call stack.")
+{
+   argc; argv;
+   U32 totalSize = 1;
+
+   S32 stackCount = vmPtr->getCurrentFiberFrameDepth();
+   std::vector<KorkApi::FiberFrameInfo> frames;
+   for (S32 i=0; i<stackCount; i++)
+   {
+      frames.push_back(vmPtr->getCurrentFiberFrameInfo(i));
+   }
+
+   for(S32 i = 0; i < stackCount; i++)
+   {
+      totalSize += strlen(frames[i].scopeName) + 3;
+      if (frames[i].scopeNamespace)
+      {
+         totalSize += strlen(frames[i].scopeNamespace) + 2;
+      }
+   }
+
+   KorkApi::ConsoleValue bufV = Con::getReturnBuffer(totalSize);
+   char* buf = (char*)bufV.evaluatePtr(vmPtr->getAllocBase());
+   buf[0] = 0;
+   for(U32 i = 0; i < stackCount; i++)
+   {
+      strcat(buf, "->");
+      if(frames[i].scopeNamespace)
+      {
+         strcat(buf, frames[i].scopeNamespace);
+         strcat(buf, "::");
+      }
+      strcat(buf, frames[i].scopeName);
+   }
+
+   Con::printf("BackTrace: %s", buf);
+}
+
+ConsoleFunctionGroupBegin( Packages, "Functions relating to the control of packages.");
+
+ConsoleFunction(isPackage,bool,2,2,"isPackage(packageName)")
+{
+   StringTableEntry packageName = vmPtr->internString(argv[1]);
+   return sVM->isPackage(packageName);
+}
+
+ConsoleFunction(activatePackage, void,2,2,"activatePackage(packageName)")
+{
+   StringTableEntry packageName = vmPtr->internString(argv[1]);
+   return sVM->activatePackage(packageName);
+}
+
+ConsoleFunction(deactivatePackage, void,2,2,"deactivatePackage(packageName)")
+{
+   StringTableEntry packageName = vmPtr->internString(argv[1]);
+   return sVM->deactivatePackage(packageName);
+}
+
+ConsoleFunctionGroupEnd( Packages );
+
 

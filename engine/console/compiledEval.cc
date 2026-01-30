@@ -32,7 +32,6 @@
 #include "console/consoleNamespace.h"
 #include "console/compiler.h"
 
-// TOFIX #include "sim/netStringTable.h"
 #include "console/stringStack.h"
 
 #include "console/telnetDebugger.h"
@@ -1559,14 +1558,35 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
             frame._FLT++;
             break;
          case OP_TAG_TO_STR:
-            code[ip-1] = OP_LOADIMMED_STR;
-            // it's possible the string has already been converted
-            if(U8(frame.curStringTable[code[ip]]) != KorkApi::StringTagPrefixByte)
+         {
+            // NOTE: before the string in the codeblock was modified. Instead we pay the lookup cost again and change it to
+            // a typed value.
+            
+            S32 typeId = vmInternal->lookupTypeId(vmInternal->internString("TypeTaggedString", false));
+            if (typeId != -1)
             {
                U32 id = vmInternal->mConfig.addTagFn(frame.curStringTable + code[ip], vmInternal->mConfig.addTagUser);
-               snprintf(frame.curStringTable + code[ip] + 1, 7, "%d", id);
-               *(frame.curStringTable + code[ip]) = KorkApi::StringTagPrefixByte;
+               KorkApi::ConsoleValue values[2];
+               values[0] = KorkApi::ConsoleValue::makeUnsigned(id);
+               values[1] = KorkApi::ConsoleValue::makeString(frame.curStringTable + code[ip]);
+               
+               KorkApi::TypeStorageInterface inputStorage = KorkApi::CreateRegisterStorageFromArgs(vmInternal, 2, values);
+               KorkApi::TypeStorageInterface outputStorage = KorkApi::CreateExprStringStackStorage(vmInternal, mSTR, strlen(frame.curStringTable + code[ip])+9, typeId);
+               
+               vmInternal->mTypes[typeId].iFuncs.CastValueFn(vmInternal->mTypes[typeId].userPtr,
+                                                             vmPublic,
+                                                             &inputStorage,
+                                                             &outputStorage,
+                                                             NULL,
+                                                             0,
+                                                             typeId);
             }
+            else
+            {
+               evalState.mSTR.setStringValue(frame.curStringTable + code[ip]);
+            }
+         }
+            break;
          case OP_LOADIMMED_STR:
             evalState.mSTR.setStringValue(frame.curStringTable + code[ip++]);
             break;
@@ -1727,9 +1747,11 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
                   vmInternal->printf(0,"%s: Unknown command %s.", frame.codeBlock->getFileLine(ip-4), tmpFnName);
                   if(frame.lastCallType == FuncCallExprNode::MethodCall)
                   {
-                     /* TOFIXvmInternal->printf(0, "  Object %s(%d) %s",
-                                frame.thisObject->getName() ? frame.thisObject->getName() : "",
-                                frame.thisObject->getId(), getNamespaceList(ns) ); */
+                     const char* objName = frame.thisObject.obj->klass->iCreate.GetNameFn(frame.thisObject.obj);
+                     KorkApi::SimObjectId ident = frame.thisObject.obj->klass->iCreate.GetIdFn(frame.thisObject.obj);
+                     vmInternal->printf(0, "  Object %s(%d) %s",
+                                        objName ? objName : "",
+                                        ident, getNamespaceList(frame.thisObject->ns) );
                   }
                }
                evalState.mSTR.popFrame();
@@ -3980,6 +4002,36 @@ bool KorkApi::VmInternal::getCurrentFiberFileLine(StringTableEntry* outFile, U32
    *outLine = line;
 }
 
+KorkApi::FiberFrameInfo KorkApi::Vm::getCurrentFiberFrameInfo(S32 frameId)
+{
+   KorkApi::FiberFrameInfo outInfo = {};
+   
+   if (!mInternal->mCurrentFiberState)
+   {
+      return outInfo;
+   }
+   
+   if (frameId < 0)
+   {
+      frameId = (S32)(mInternal->mCurrentFiberState->vmFrames.size() + frameId);
+   }
+   
+   if (!mInternal->mCurrentFiberState ||
+       frameId < 0 ||
+       frameId >= mInternal->mCurrentFiberState->vmFrames.size())
+   {
+      return outInfo;
+   }
+   
+   ConsoleFrame* curFrame = mInternal->mCurrentFiberState->vmFrames[frameId];
+   outInfo.fullPath = curFrame->codeBlock->fullPath;
+   outInfo.scopeName = curFrame->scopeName;
+   outInfo.scopeNamespace = curFrame->scopeNamespace->mName;
+   
+   return outInfo;
+}
+
+
 
 void KorkApi::Vm::enumGlobals(const char* expr, void* userPtr, EnumFuncCallback callback)
 {
@@ -3997,12 +4049,6 @@ bool KorkApi::Vm::enumLocals(void* userPtr, EnumFuncCallback callback, S32 frame
    mInternal->mCurrentFiberState->vmFrames[frameIdx]->dictionary.exportVariables(NULL, userPtr, callback);
    return true;
 }
-
-StringTableEntry KorkApi::Vm::getCurrentFiberFrameScope()
-{
-   return mInternal->mCurrentFiberState && !mInternal->mCurrentFiberState->vmFrames.empty() ? mInternal->mCurrentFiberState->vmFrames.back()->scopeName : NULL;
-}
-
 
 //------------------------------------------------------------
 

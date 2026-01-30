@@ -159,7 +159,7 @@ public:
       
       singleton()->poolLock.lock();
       std::vector<Thread*> &pool = singleton()->threadPool;
-      for( S32 i = pool.size() - 1; i >= 0; i--)
+      for( size_t i = pool.size() - 1; i >= 0; i--)
       {
          Thread* p = pool[i];
          if(compare(p->getId(), threadid))

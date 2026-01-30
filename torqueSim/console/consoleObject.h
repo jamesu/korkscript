@@ -191,10 +191,9 @@ public:
    static void registerWithVM(KorkApi::Vm* vm);
 
 protected:
-   const char *       mClassName;
+const char *       mClassName;
    AbstractClassRep * nextClass;
    AbstractClassRep * parentClass;
-   Namespace *        mNamespace;
 
    static AbstractClassRep ** classTable[NetClassGroupsCount][NetClassTypesCount];
    static AbstractClassRep *  classLinkList;
@@ -247,7 +246,6 @@ public:
    static U32                   getClassCRC (U32 netClassGroup);
    const char*                  getClassName() const;
    static AbstractClassRep*     getClassList();
-   Namespace*                   getNameSpace();
    AbstractClassRep*            getNextClass();
    AbstractClassRep*            getParentClass();
    virtual AbstractClassRep*    getContainerChildClass( const bool recurse ) = 0;
@@ -275,6 +273,7 @@ public:
    AbstractClassRep* findContainerChildRoot( AbstractClassRep* pChild );
    
    void registerClassWithVm(KorkApi::Vm* vm);
+   void linkClassWithParent(KorkApi::Vm* vm);
 
 protected:
    virtual void init() const = 0;
@@ -324,13 +323,6 @@ inline const char* AbstractClassRep::getClassName() const
 
 //-----------------------------------------------------------------------------
 
-inline Namespace *AbstractClassRep::getNameSpace()
-{
-   return mNamespace;
-}
-
-//-----------------------------------------------------------------------------
-
 template <class T>
 class ConcreteClassRep : public AbstractClassRep
 {
@@ -375,15 +367,6 @@ public:
    /// Link namespaces, call initPersistFields() and consoleInit().
    void init() const
    {
-      // Get handle to our parent class, if any, and ourselves (we are our parent's child).
-      AbstractClassRep *parent      = T::getParentStaticClassRep();
-      AbstractClassRep *child       = T::getStaticClassRep();
-
-      // If we got reps, then link those namespaces! (To get proper inheritance.)
-      if(parent && child)
-         Con::classLinkNamespaces(parent->getNameSpace(), child->getNameSpace());
-
-      // Finally, do any class specific initialization...
       T::initPersistFields();
       T::consoleInit();
    }

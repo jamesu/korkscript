@@ -139,7 +139,7 @@ class Stream {
    virtual void writeString(const char *stringBuf, S32 maxLen=255);
    
    /// Writes a NULL terminated string buffer.
-   bool writeStringBuffer(const char* buffer) { return write( strlen(buffer), buffer ); }
+   bool writeStringBuffer(const char* buffer) { return write( (U32)strlen(buffer), buffer ); }
 
    // Overloaded write and read ops..
   public:

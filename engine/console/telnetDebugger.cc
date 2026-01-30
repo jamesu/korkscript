@@ -202,7 +202,7 @@ void TelnetDebugger::setDebugParameters(S32 port, const char *password, bool wai
    // Wait for the client to fully connect.
    while ( mState != Connected  )
    {
-      // TOFIX Platform::sleep(10);
+      mVMInternal->mConfig.iTelnet.YieldExecFn(mVMInternal->mConfig.telnetUser);
       process();
    }
    
@@ -406,7 +406,7 @@ void TelnetDebugger::breakProcess()
    mProgramPaused = true;
    while (mProgramPaused)
    {
-      // TOFIX Platform::sleep(10);
+      mVMInternal->mConfig.iTelnet.YieldExecFn(mVMInternal->mConfig.telnetUser);
       checkDebugRecv();
       if(mDebugSocket == 0)
       {

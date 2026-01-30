@@ -58,12 +58,20 @@ void Vm::deactivatePackage(StringTableEntry pkgName)
    mInternal->mNSState.deactivatePackage(pkgName);
 }
 
+bool Vm::isPackage(StringTableEntry pkgName)
+{
+   VmAllocTLS::Scope memScope(mInternal);
+   return mInternal->mNSState.isPackage(pkgName);
+}
+
 bool Vm::linkNamespace(StringTableEntry parent, StringTableEntry child)
 {
    NamespaceId pns = mInternal->mNSState.find(parent);
    NamespaceId cns = mInternal->mNSState.find(child);
    if(pns && cns)
+   {
       return cns->classLinkTo(pns);
+   }
    return false;
 }
 
@@ -1529,7 +1537,7 @@ F64 VmInternal::valueAsFloat(ConsoleValue v)
       case KorkApi::ConsoleValue::TypeInternalString:
       {
          const char* ptr = (const char*)v.evaluatePtr(mAllocBase);
-         return ptr ? atof(ptr) : 0.0;
+         return ptr ? strtoll(ptr, NULL, 10) : 0.0;
       }
       break;
       default:
@@ -1608,7 +1616,7 @@ S64 VmInternal::valueAsInt(ConsoleValue v)
       case KorkApi::ConsoleValue::TypeInternalString:
       {
          const char* ptr = (const char*)v.evaluatePtr(mAllocBase);
-         return ptr ? atoi(ptr) : 0;
+         return ptr ? strtoimax(ptr, NULL, 10) : 0;
       }
       break;
       default:

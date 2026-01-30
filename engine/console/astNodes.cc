@@ -1372,7 +1372,7 @@ U32 AssignOpExprNode::compile(CodeStream &codeStream, U32 ip, TypeReq type)
 TypeReq AssignOpExprNode::getPreferredType()
 {
    getAssignOpTypeOp(op, subType, operand);
-   return subType;// TOFIX assignTypeName != NULL && assignTypeName[0] != '\0' ? TypeReqTypedString : subType;
+   return subType; // NOTE: getReturnLoadType can be used to fine-tune values
 }
 
 TypeReq AssignOpExprNode::getReturnLoadType()
