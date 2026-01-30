@@ -346,13 +346,14 @@ void init()
    addVariable("Con::logBufferEnabled", TypeBool, &logBufferEnabled);
    addVariable("Con::printLevel", TypeS32, &printLevel);
    
-   // TOFIX addVariable("Con::warnUndefinedVariables", TypeBool, &config.gWarnUndefinedScriptVariables);
+   /* 
+   NOTE: not currently exposed since these are internal state values.
+   addVariable("Con::warnUndefinedVariables", TypeBool, &config.gWarnUndefinedScriptVariables);
 
    // Current script file name and root
-#if TOFIX
    Con::addVariable( "Con::File", TypeString, &gCurrentFile );
    Con::addVariable( "Con::Root", TypeString, &gCurrentRoot );
-#endif
+   */
 
    // And finally, the ACR...
    AbstractClassRep::initialize();

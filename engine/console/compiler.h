@@ -205,6 +205,8 @@ namespace Compiler
       U32 curLocalVarStackPos;
 
       SimpleParser::ASTGen<KorkApi::VMStringTable>* currentASTGen;
+      KorkApi::ConsumerCallback logFn;
+      void* logUser;
 
       bool syntaxError;
       bool allowExceptions;
@@ -242,6 +244,8 @@ namespace Compiler
       void pushLocalVarContext(); 
       void popLocalVarContext();
       VarTypeTableEntry* getVarInfo(StringTableEntry varName, StringTableEntry typeName = NULL);
+
+      void printf(U32 level, const char *_format, ...);
       
       StringTableEntry emptyString;
 
@@ -255,6 +259,8 @@ namespace Compiler
          allowTypes = false;
          currentASTGen = NULL;
          emptyString = NULL;
+         logFn = NULL;
+         logUser = NULL;
          
          globalVarTypes.res = this;
          for (U32 i=0; i<VarTypeStackSize; i++)

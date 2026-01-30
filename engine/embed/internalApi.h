@@ -186,6 +186,7 @@ struct VmInternal
    bool setObjectFieldTuple(VMObject* object, StringTableEntry fieldName, const char* arrayIndex, U32 argc, ConsoleValue* argv);
    ConsoleValue getObjectField(VMObject* object, StringTableEntry name, const char* array, U32 requestedType, U32 requestedZone);
    U16 getObjectFieldType(VMObject* object, StringTableEntry name, const char* array);
+   void assignFieldsFromTo(VMObject* from, VMObject* to);
 
    void printf(int level, const char* fmt, ...);
    void print(int level, const char* buf);
@@ -195,8 +196,6 @@ struct VmInternal
    S64 valueAsInt(ConsoleValue v);
    S64 valueAsBool(ConsoleValue v);
    const char* valueAsString(ConsoleValue v);
-
-   void assignFieldsFromTo(VMObject* from, VMObject* to);
    
    // memory helpers
    

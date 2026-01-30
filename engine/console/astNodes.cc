@@ -687,7 +687,7 @@ U32 CommaCatExprNode::compile(CodeStream &codeStream, U32 ip, TypeReq type)
    // But we're paranoid, so accept (but whine) if we get an oddity...
    if(type == TypeReqUInt || type == TypeReqFloat)
    {
-      // TOFIX Con::warnf(ConsoleLogEntry::General, "%s (%d): converting comma string to a number... probably wrong.", codeStream.getFilename(), dbgLineNumber);
+      codeStream.mResources->printf(0, "%s (%d): converting comma string to a number... probably wrong.", codeStream.getFilename(), dbgLineNumber);
    }
    if(type == TypeReqUInt)
       codeStream.emit(OP_STR_TO_UINT);
@@ -1774,7 +1774,7 @@ U32 SlotAssignNode::compile(CodeStream &codeStream, U32 ip, TypeReq type)
       // Normal value assign
       // (in this case rhsExpr is on top of the stack)
       // NOTE: this is technically incorrect as any transformations made by 
-      // the field will not be applied. TOFIX!!
+      // the field will not be applied. TODO: better solution!!
       if (usingStringStack)
       {
          codeStream.emit(OP_TERMINATE_REWIND_STR);

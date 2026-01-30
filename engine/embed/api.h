@@ -500,6 +500,7 @@ public:
    bool setObjectFieldString(VMObject* object, StringTableEntry fieldName, const char* stringValue, const char* arrayIndex);
    ConsoleValue getObjectField(VMObject* object, StringTableEntry fieldName, ConsoleValue nativeValue, const char* arrayIndex);
    const char* getObjectFieldString(VMObject* object, StringTableEntry fieldName, const char** stringValue, const char* arrayIndex);
+   void assignFieldsFromTo(VMObject* from, VMObject* to);
 
    void setGlobalVariable(StringTableEntry name, ConsoleValue value);
    void setLocalVariable(StringTableEntry name, ConsoleValue value);

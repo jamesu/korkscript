@@ -58,6 +58,8 @@ struct MyPoint3F
    F32 x,y,z;
 };
 
+S32 gMyPoint3FTypeID = -1;
+
 // Hack until we define these properly in the API
 namespace KorkApi
 {
@@ -119,7 +121,7 @@ static bool MyPoint3F_CastValue(void*,
 
    // -> output
 
-   if (typeId == 3) // TOFIX
+   if (typeId == gMyPoint3FTypeID)
    {
       MyPoint3F* dstPtr = (MyPoint3F*)outputStorage->data.storageAddress.evaluatePtr(vm->getAllocBase());
       if (!dstPtr)
@@ -328,7 +330,9 @@ int testScript(char* script, const char* filename)
       &MyPoint3F_GetTypeClassName,
       NULL
    };
+   
    TypeId typeMyPoint3F = vm->registerType(tInfo);
+   gMyPoint3FTypeID = typeMyPoint3F;
    
    // 3) Register MyBase
    ClassInfo myBase{};

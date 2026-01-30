@@ -365,42 +365,7 @@ void SimObject::assignDynamicFieldsFrom(SimObject* parent)
 
 void SimObject::assignFieldsFrom(SimObject *parent)
 {
-#if TOFIX
-   // only allow field assigns from objects of the same class:
-   if(getClassRep() == parent->getClassRep())
-   {
-      const AbstractClassRep::FieldList &list = getFieldList();
-
-      // copy out all the fields:
-      for(U32 i = 0; i < (U32)list.size(); i++)
-      {
-         const AbstractClassRep::Field* f = &list[i];
-         S32 lastField = f->elementCount - 1;
-         for(S32 j = 0; j <= lastField; j++)
-         {
-             const char* fieldVal = (*f->getDataFn)( this,  Con::getData(f->type, (void *) (((const char *)parent) + f->offset), j, f->table, f->flag));
-            //if(fieldVal)
-            //   Con::setData(f->type, (void *) (((const char *)this) + f->offset), j, 1, &fieldVal, f->table);
-            if(fieldVal)
-            {
-               // code copied from SimObject::setDataField().
-               // TODO: paxorr: abstract this into a better setData / getData that considers prot fields.
-               TempAlloc<char> buffer(2048);
-               TempAlloc<char> bufferSecure(2048); // This buffer is used to make a copy of the data 
-               ConsoleBaseType *cbt = ConsoleBaseType::getType( f->type );
-               const char* szBuffer = cbt->prepData( fieldVal, buffer, 2048 );
-               memset( bufferSecure, 0, 2048 );
-               memcpy( bufferSecure, szBuffer, dStrlen( szBuffer ) );
-
-               if((*f->setDataFn)( this, bufferSecure ) )
-                  Con::setData(f->type, (void *) (((const char *)this) + f->offset), j, 1, &fieldVal, f->table);
-            }
-         }
-      }
-   }
-
-   assignDynamicFieldsFrom(parent);
-#endif
+   getVM()->assignFieldsFromTo(parent->getVMObject(), getVMObject());
 }
 
 bool SimObject::writeField(StringTableEntry fieldname, const char* value)
@@ -1581,65 +1546,7 @@ const char *SimObject::tabComplete(const char *prevText, S32 baseLen, bool fForw
 
 void SimObject::setDataField(StringTableEntry slotName, const char *array, const char *value)
 {
-#if TOFIX
-   // first search the static fields if enabled
-   if (canModStaticFields())
-   {
-      const AbstractClassRep::Field *fld = findField(slotName);
-      if(fld)
-      {
-         if( fld->type == AbstractClassRep::DepricatedFieldType ||
-            fld->type == AbstractClassRep::StartGroupFieldType ||
-            fld->type == AbstractClassRep::EndGroupFieldType)
-            return;
-         
-         S32 array1 = array ? dAtoi(array) : 0;
-         
-         if(array1 >= 0 && array1 < fld->elementCount && fld->elementCount >= 1)
-         {
-            // If the set data notify callback returns true, then go ahead and
-            // set the data, otherwise, assume the set notify callback has either
-            // already set the data, or has deemed that the data should not
-            // be set at all.
-            TempAlloc<char> buffer(2048);
-            TempAlloc<char> bufferSecure(2048); // This buffer is used to make a copy of the data
-            // so that if the prep functions or any other functions use the string stack, the data
-            // is not corrupted.
-            
-            ConsoleBaseType *cbt = ConsoleBaseType::getType( fld->type );
-            AssertFatal( cbt != NULL, "Could not resolve Type Id." );
-            
-            const char* szBuffer = cbt->prepData( value, buffer, 2048 );
-            memset( bufferSecure, 0, 2048 );
-            memcpy( bufferSecure, szBuffer, dStrlen( szBuffer ) );
-            
-            if( (*fld->setDataFn)( this, bufferSecure ) )
-               Con::setData(fld->type, (void *) (((const char *)this) + fld->offset), array1, 1, &value, fld->table);
-            
-            if(fld->validator)
-            {
-               fld->validator->validateType(this, (void *) (((const char *)this) + fld->offset));
-            }
-            
-            onStaticModified( slotName, value );
-            
-            return;
-         }
-         
-         if(fld->validator)
-         {
-            fld->validator->validateType(this, (void *) (((const char *)this) + fld->offset));
-         }
-         
-         onStaticModified( slotName, value );
-         return;
-      }
-   }
-   if (canModDynamicFields())
-   {
-      setDataFieldDynamic(slotName, array, value);
-   }
-#endif
+   getVM()->setObjectField(getVMObject(),slotName, KorkApi::ConsoleValue::makeString(value), array);
 }
 
 void SimObject::setDataFieldDynamic(StringTableEntry slotName, const char *array, const char *value, U32 typeId)

@@ -62,7 +62,7 @@ namespace Compiler
          return 0;
       else if(file)
       {
-       // TOFIX  Con::warnf(ConsoleLogEntry::General, "%s (%d): string always evaluates to 0.", file, line);
+         res->printf(0, "%s (%d): string always evaluates to 0.", file, line);
          return 0;
       }
       return 0;
@@ -153,6 +153,16 @@ namespace Compiler
       }
 
       return tt;
+   }
+
+   void Resources::printf(U32 level, const char *fmt, ...)
+   {
+      va_list argptr;
+      va_start(argptr, fmt);
+      char buf[8192];
+      snprintf(buf, sizeof(buf), fmt, argptr);
+      logFn(level, buf, logUser);
+      va_end(argptr);
    }
 
    VarTypeTableEntry* VarTypeTable::lookupVar(StringTableEntry name)

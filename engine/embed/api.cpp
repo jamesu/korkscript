@@ -1487,6 +1487,11 @@ U16 VmInternal::getObjectFieldType(VMObject* obj, StringTableEntry name, const c
    return 0;
 }
 
+void Vm::assignFieldsFromTo(VMObject* from, VMObject* to)
+{
+   return mInternal->assignFieldsFromTo(from, to);
+}
+
 F64 Vm::valueAsFloat(ConsoleValue v)
 {
    VmAllocTLS::Scope memScope(mInternal);
