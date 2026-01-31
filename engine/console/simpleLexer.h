@@ -9,7 +9,6 @@
 #include "platform/types.h"
 #include <string>
 #include <string_view>
-#include "core/tVector.h"
 #include <cctype>
 #include <cinttypes>
 
@@ -181,7 +180,7 @@ public:
       {
          strSize = 1;
       }
-      mSource.setSize(strSize);
+      mSource.resize(strSize);
       memcpy(&mSource[0], &src[0], strSize);
       mSource[strSize-1] = '\0';
       mInterpState = {};
