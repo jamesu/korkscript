@@ -1567,7 +1567,7 @@ F64 VmInternal::valueAsFloat(ConsoleValue v)
       case KorkApi::ConsoleValue::TypeInternalString:
       {
          const char* ptr = (const char*)v.evaluatePtr(mAllocBase);
-         return ptr ? strtoll(ptr, NULL, 10) : 0.0;
+         return ptr ? strtod(ptr, NULL) : 0.0;
       }
       break;
       default:
@@ -1646,7 +1646,7 @@ S64 VmInternal::valueAsInt(ConsoleValue v)
       case KorkApi::ConsoleValue::TypeInternalString:
       {
          const char* ptr = (const char*)v.evaluatePtr(mAllocBase);
-         return ptr ? strtoimax(ptr, NULL, 10) : 0;
+         return ptr ? strtoll(ptr, NULL, 10) : 0;
       }
       break;
       default:
