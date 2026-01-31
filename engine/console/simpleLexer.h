@@ -135,6 +135,7 @@ public:
    : mStringTable(st), mFilename(std::move(filename))
    {
       mPos = {};
+      mPos.line = 1;
       mBytePos = 0;
       mSource.resize(src.size()+1);
       memcpy(&mSource[0], &src[0], src.size());
