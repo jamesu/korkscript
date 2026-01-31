@@ -90,6 +90,7 @@ set(TORQUESIM_SRCS
 	./torqueSim/platform/platformThread.cc
 	./torqueSim/platform/platformNetAsync.cc
 	./torqueSim/platform/platformNetwork.cc
+	./torqueSim/platform/platformTelnet.cc
 )
 
 if (KS_BUILD_MODE STREQUAL "static")
