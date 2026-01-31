@@ -132,6 +132,7 @@ struct NamespaceState
    void trashCache();
    
    Namespace *find(StringTableEntry name, StringTableEntry package=NULL);
+   Namespace *lookup(StringTableEntry name, StringTableEntry package=NULL);
    bool canTabComplete(const char *prevText, const char *bestMatch, const char *newText, S32 baseLen, bool fForward);
 
    // Packages

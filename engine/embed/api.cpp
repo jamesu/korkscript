@@ -24,6 +24,12 @@ NamespaceId Vm::findNamespace(StringTableEntry name, StringTableEntry package)
    return (NamespaceId)mInternal->mNSState.find(name, package);
 }
 
+NamespaceId Vm::lookupNamespace(StringTableEntry name, StringTableEntry package)
+{
+   VmAllocTLS::Scope memScope(mInternal);
+   return (NamespaceId)mInternal->mNSState.lookup(name, package);
+}
+
 NamespaceId Vm::getObjectNamespace(VMObject* object)
 {
    return (NamespaceId)object->ns;
@@ -66,6 +72,7 @@ bool Vm::isPackage(StringTableEntry pkgName)
 
 bool Vm::linkNamespace(StringTableEntry parent, StringTableEntry child)
 {
+   VmAllocTLS::Scope memScope(mInternal);
    NamespaceId pns = mInternal->mNSState.find(parent);
    NamespaceId cns = mInternal->mNSState.find(child);
    if(pns && cns)
@@ -77,6 +84,7 @@ bool Vm::linkNamespace(StringTableEntry parent, StringTableEntry child)
 
 bool Vm::unlinkNamespace(StringTableEntry parent, StringTableEntry child)
 {
+   VmAllocTLS::Scope memScope(mInternal);
    NamespaceId pns = mInternal->mNSState.find(parent);
    NamespaceId cns = mInternal->mNSState.find(child);
    if(pns && cns)
@@ -84,8 +92,22 @@ bool Vm::unlinkNamespace(StringTableEntry parent, StringTableEntry child)
    return false;
 }
 
+void Vm::enumerateNamespace(NamespaceId nsId, void* userPtr, NamespaceEnumerationCallback funcPtr)
+{
+   VmAllocTLS::Scope memScope(mInternal);
+   KorkApi::Vector<Namespace::Entry*> vec;
+   Namespace* ns = (Namespace*)nsId;
+   ns->getEntryList(&vec);
+
+   for (Namespace::Entry* ent : vec)
+   {
+      funcPtr(userPtr, ent->mFunctionName, ent->getUsage() ? ent->getUsage() : "");
+   }
+}
+
 bool Vm::linkNamespaceById(NamespaceId parent, NamespaceId child)
 {
+   VmAllocTLS::Scope memScope(mInternal);
    Namespace* pns = (Namespace*)parent;
    Namespace* cns = (Namespace*)child;
    if(pns && cns)
@@ -95,6 +117,7 @@ bool Vm::linkNamespaceById(NamespaceId parent, NamespaceId child)
 
 bool Vm::unlinkNamespaceById(NamespaceId parent, NamespaceId child)
 {
+   VmAllocTLS::Scope memScope(mInternal);
    Namespace* pns = (Namespace*)parent;
    Namespace* cns = (Namespace*)child;
    if(pns && cns)
@@ -780,13 +803,13 @@ bool Vm::setObjectFieldString(VMObject* object, StringTableEntry fieldName, cons
    return mInternal->setObjectField(object, fieldName, arrayIndex, val);
 }
 
-ConsoleValue Vm::getObjectField(VMObject* object, StringTableEntry fieldName, ConsoleValue nativeValue, const char* arrayIndex)
+ConsoleValue Vm::getObjectField(VMObject* object, StringTableEntry fieldName, const char* arrayIndex)
 {
    VmAllocTLS::Scope memScope(mInternal);
    return mInternal->getObjectField(object, fieldName, arrayIndex, KorkApi::TypeDirectCopy, KorkApi::ConsoleValue::ZoneExternal);
 }
 
-const char* Vm::getObjectFieldString(VMObject* object, StringTableEntry fieldName, const char** stringValue, const char* arrayIndex)
+const char* Vm::getObjectFieldString(VMObject* object, StringTableEntry fieldName, const char* arrayIndex)
 {
    VmAllocTLS::Scope memScope(mInternal);
    ConsoleValue foundValue = mInternal->getObjectField(object, fieldName, arrayIndex, KorkApi::TypeDirectCopy, KorkApi::ConsoleValue::ZoneFunc);

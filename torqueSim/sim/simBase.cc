@@ -204,7 +204,6 @@ bool compareEntries(const SimFieldDictionary::Entry* fa,
 
 void SimFieldDictionary::writeFields(SimObject *obj, Stream &stream, U32 tabStop)
 {
-
    const AbstractClassRep::FieldList &list = obj->getFieldList();
    std::vector<Entry *> flist;
 
@@ -220,7 +219,6 @@ void SimFieldDictionary::writeFields(SimObject *obj, Stream &stream, U32 tabStop
 
          if(i != list.size())
             continue;
-
 
          if (!obj->writeField(walk->slotName, walk->value))
             continue;
@@ -384,9 +382,10 @@ bool SimObject::writeField(StringTableEntry fieldname, const char* value)
 
 void SimObject::writeFields(Stream &stream, U32 tabStop)
 {
-#if TOFIX
    const AbstractClassRep::FieldList &list = getFieldList();
-
+   std::string valCopy;
+   std::vector<char> expandedBuffer;
+   
    for(U32 i = 0; i < (U32)list.size(); i++)
    {
       const AbstractClassRep::Field* f = &list[i];
@@ -418,40 +417,42 @@ void SimObject::writeFields(Stream &stream, U32 tabStop)
          if (!val)
             continue;
 
-         U32 nBufferSize = dStrlen( val ) + 1;
-         TempAlloc<char> valCopy( nBufferSize );
-         dStrcpy( (char *)valCopy, val );
+         valCopy = val;
 
-         if (!writeField(fieldName, valCopy))
+         if (!writeField(fieldName, valCopy.c_str()))
             continue;
 
-         val = valCopy;
-
-         U32 expandedBufferSize = ( nBufferSize  * 2 ) + 32;
-         TempAlloc<char> expandedBuffer( expandedBufferSize );
+         size_t expandedBufferSize = ( (valCopy.size() + 1)  * 2 ) + 32;
+         expandedBuffer.resize(expandedBufferSize);
+         
          if(f->elementCount == 1)
-            dSprintf(expandedBuffer, expandedBufferSize, "%s = \"", f->pFieldname);
+         {
+            dSprintf(expandedBuffer.data(), expandedBufferSize, "%s = \"", f->pFieldname);
+         }
          else
-            dSprintf(expandedBuffer, expandedBufferSize, "%s[%d] = \"", f->pFieldname, j);
-
+         {
+            dSprintf(expandedBuffer.data(), expandedBufferSize, "%s[%d] = \"", f->pFieldname, j);
+         }
+         
          // detect and collapse relative path information
-         char fnBuf[1024];
+         /*char fnBuf[1024]; // Not implemented YET
          if (f->type == TypeFilename)
          {
             Con::collapsePath(fnBuf, 1024, val);
             val = fnBuf;
-         }
+         }*/
 
-         expandEscape((char*)expandedBuffer + dStrlen(expandedBuffer), val);
-         dStrcat(expandedBuffer, "\";\r\n");
+         expandEscape(expandedBuffer.data() + strlen(expandedBuffer.data()), val);
+         dStrcat(expandedBuffer.data(), "\";\r\n");
 
          stream.writeTabs(tabStop);
-         stream.write(dStrlen(expandedBuffer),expandedBuffer);
+         stream.write((U32)strlen(expandedBuffer.data()), expandedBuffer.data());
       }
    }    
    if(mFieldDictionary && mCanSaveFieldDictionary)
+   {
       mFieldDictionary->writeFields(this, stream, tabStop);
-#endif
+   }
 }
 
 void SimObject::write(Stream &stream, U32 tabStop, U32 flags)
@@ -1346,38 +1347,43 @@ ConsoleMethod(SimObject,dump, void, 2, 2, "")
 
 void SimObject::dump()
 {
-#if TOFIX
    const AbstractClassRep::FieldList &list = getFieldList();
    char expandedBuffer[4096];
 
    Con::printf("Static Fields:");
-   Vector<const AbstractClassRep::Field *> flist(__FILE__, __LINE__);
-
+   std::vector<const AbstractClassRep::Field *> flist;
+   
    for(U32 i = 0; i < (U32)list.size(); i++)
       flist.push_back(&list[i]);
 
    std::sort(flist.begin(),flist.end(),compareFields);
 
-   for(Vector<const AbstractClassRep::Field *>::iterator itr = flist.begin(); itr != flist.end(); itr++)
+   for(std::vector<const AbstractClassRep::Field *>::iterator itr = flist.begin(); itr != flist.end(); itr++)
    {
       const AbstractClassRep::Field* f = *itr;
       if( f->type == AbstractClassRep::DepricatedFieldType ||
           f->type == AbstractClassRep::StartGroupFieldType ||
           f->type == AbstractClassRep::EndGroupFieldType) continue;
 
+      StringTableEntry steField = getVM()->internString(f->pFieldname);
       for(U32 j = 0; S32(j) < f->elementCount; j++)
       {
-         // [neo, 07/05/2007 - #3000]
-         // Some objects use dummy vars and projected fields so make sure we call the get functions 
-         //const char *val = Con::getData(f->type, (void *) (((const char *)object) + f->offset), j, f->table, f->flag);                          
-         const char *val = (*f->getDataFn)( this, Con::getData(f->type, (void *) (((const char *)this) + f->offset), j, f->table, f->flag) );// + typeSizes[fld.type] * array1));
+         char arrayValue[32];
+         snprintf(arrayValue, sizeof(arrayValue), "%u", j);
+         KorkApi::ConsoleValue fieldValue = getVM()->getObjectField(getVMObject(), steField, arrayValue);
+         const char* val = getVM()->valueAsString(fieldValue);
 
          if(!val /*|| !*val*/)
             continue;
          if(f->elementCount == 1)
+         {
             dSprintf(expandedBuffer, sizeof(expandedBuffer), "  %s = \"", f->pFieldname);
+         }
          else
+         {
             dSprintf(expandedBuffer, sizeof(expandedBuffer), "  %s[%d] = \"", f->pFieldname, j);
+         }
+         
          expandEscape(expandedBuffer + dStrlen(expandedBuffer), val);
          Con::printf("%s\"", expandedBuffer);
       }
@@ -1385,19 +1391,16 @@ void SimObject::dump()
 
    Con::printf("Dynamic Fields:");
    if(getFieldDictionary())
+   {
       getFieldDictionary()->printFields(this);
+   }
 
    Con::printf("Methods:");
-   Namespace *ns = getNamespace();
-   Vector<Namespace::Entry *> vec(__FILE__, __LINE__);
+   KorkApi::NamespaceId nsId = getNamespace();
 
-   if(ns)
-      ns->getEntryList(&vec);
-
-   for(Vector<Namespace::Entry *>::iterator j = vec.begin(); j != vec.end(); j++)
-      Con::printf("  %s() - %s", (*j)->mFunctionName, (*j)->getUsage() ? (*j)->getUsage() : "");
-   
-#endif
+   getVM()->enumerateNamespace(nsId, getVM(), [](void* userPtr, StringTableEntry funcName, const char* usage){
+      Con::printf("  %s() - %s", funcName, usage);
+   });
 }
 
 /*! Use the getType method to get the type for this object.
@@ -1583,28 +1586,7 @@ void  SimObject::dumpClassHierarchy()
 
 const char *SimObject::getDataField(StringTableEntry slotName, const char *array)
 {
-#if TOFIX
-   if (canModStaticFields())
-   {
-      S32 array1 = array ? dAtoi(array) : -1;
-      const AbstractClassRep::Field *fld = findField(slotName);
-   
-      if(fld)
-      {
-         if(array1 == -1 && fld->elementCount == 1)
-            return (*fld->getDataFn)( this, Con::getData(fld->type, (void *) (((const char *)this) + fld->offset), 0, fld->table, fld->flag) );
-         if(array1 >= 0 && array1 < fld->elementCount)
-            return (*fld->getDataFn)( this, Con::getData(fld->type, (void *) (((const char *)this) + fld->offset), array1, fld->table, fld->flag) );// + typeSizes[fld.type] * array1));
-         return "";
-      }
-   }
-
-   if (canModDynamicFields())
-   {
-      return getDataFieldDynamic(slotName, array);
-   }
-#endif
-   return "";
+   return getVM()->valueAsString(getVM()->getObjectField(getVMObject(), slotName, array));
 }
 
 
@@ -3390,22 +3372,25 @@ void SimConsoleEvent::process(SimObject* object)
 
          // Move the pointer forward to the function name.
          func += 2;
-
-#if TOFIX
-         // Lookup the namespace and function entry.
-         NamespaceId ns = sCon  Namespace::find( StringTable->insert( mArgv[0] ) );
-         if( ns )
+         
+         KorkApi::NamespaceId nsId = sVM->findNamespace(sVM->internString(mArgv[0]));
+         if (nsId != 0)
          {
-            Namespace::Entry* nse = ns->lookup( StringTable->insert( func ) );
-            if( nse )
-               // Execute.
-               nse->execute( mArgc, (const char**)mArgv, &gEvalState );
+            KorkApi::ConsoleValue localArgv[KorkApi::MaxArgs];
+            KorkApi::ConsoleValue::convertArgsReverse(mArgc, (const char**)mArgv, localArgv);
+            
+            KorkApi::ConsoleValue retV = KorkApi::ConsoleValue();
+            sVM->callNamespaceFunction(nsId, sVM->internString(func), mArgc, localArgv, retV);
          }
-#endif
       }
-
       else
+      {
+         KorkApi::ConsoleValue localArgv[KorkApi::MaxArgs];
+         KorkApi::ConsoleValue::convertArgsReverse(mArgc, (const char**)mArgv, localArgv);
+         KorkApi::ConsoleValue retV = KorkApi::ConsoleValue();
+         sVM->callNamespaceFunction(sVM->getGlobalNamespace(), sVM->internString(func), mArgc, localArgv, retV);
          Con::execute(mArgc, const_cast<const char**>( mArgv ));
+      }
    }
 }
 

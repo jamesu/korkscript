@@ -188,6 +188,7 @@ typedef S32 ClassId;
 typedef void (*ConsumerCallback)(U32 level, const char *consoleLine, void* userPtr);
 typedef U32 (*AddTaggedStringCallback)(const char* vmString, void* userPtr);
 
+typedef void(*NamespaceEnumerationCallback)(void* userPtr, StringTableEntry funcName, const char* usage);
 
 struct Vm;
 
@@ -419,6 +420,7 @@ public:
 public:
    
 	NamespaceId findNamespace(StringTableEntry name, StringTableEntry package = NULL);
+   NamespaceId lookupNamespace(StringTableEntry name, StringTableEntry package = NULL);
    NamespaceId getGlobalNamespace();
    void setNamespaceUsage(NamespaceId ns, const char* usage);
    void setNamespaceUserPtr(NamespaceId ns, void* userPtr);
@@ -429,6 +431,7 @@ public:
    bool unlinkNamespace(StringTableEntry parent, StringTableEntry child);
    bool linkNamespaceById(NamespaceId parent, NamespaceId child);
    bool unlinkNamespaceById(NamespaceId parent, NamespaceId child);
+   void enumerateNamespace(NamespaceId nsId, void* userPtr, NamespaceEnumerationCallback funcPtr);
    
 
     const char* tabCompleteNamespace(NamespaceId nsId, const char *prevText, S32 baseLen, bool fForward);
@@ -499,8 +502,8 @@ public:
    bool setObjectField(VMObject* object, StringTableEntry fieldName, ConsoleValue nativeValue, const char* arrayIndex);
    bool setObjectFieldTuple(VMObject* object, StringTableEntry fieldName, U32 argc, ConsoleValue* argv, const char* arrayIndex);
    bool setObjectFieldString(VMObject* object, StringTableEntry fieldName, const char* stringValue, const char* arrayIndex);
-   ConsoleValue getObjectField(VMObject* object, StringTableEntry fieldName, ConsoleValue nativeValue, const char* arrayIndex);
-   const char* getObjectFieldString(VMObject* object, StringTableEntry fieldName, const char** stringValue, const char* arrayIndex);
+   ConsoleValue getObjectField(VMObject* object, StringTableEntry fieldName, const char* arrayIndex);
+   const char* getObjectFieldString(VMObject* object, StringTableEntry fieldName, const char* arrayIndex);
    void assignFieldsFromTo(VMObject* from, VMObject* to);
 
    void setGlobalVariable(StringTableEntry name, ConsoleValue value);
