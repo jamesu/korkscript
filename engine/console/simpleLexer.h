@@ -9,6 +9,7 @@
 #include "platform/types.h"
 #include <string>
 #include <string_view>
+#include <vector>
 #include <cctype>
 #include <cinttypes>
 
@@ -174,15 +175,9 @@ public:
       mPos = {};
       mPos.line = 1; // start from line 1
       mBytePos = 0;
-      
-      U32 strSize = (U32)src.size()+1;
-      if (strSize < 1)
-      {
-         strSize = 1;
-      }
-      mSource.resize(strSize);
-      memcpy(&mSource[0], &src[0], strSize);
-      mSource[strSize-1] = '\0';
+      mSource.resize(src.size()+1);
+      memcpy(&mSource[0], &src[0], src.size());
+      mSource[src.size()] = '\0';
       mInterpState = {};
       mInterpState.doInterp = enableInterpolation;
    }
@@ -324,18 +319,14 @@ public:
          return te;
       }
       
-      S64 bp = mBytePos;
-      
       Token tok = decodeStringInPlace(&mSource[0],
                                       mSource.size(),
-                                      bp,
+                                      mBytePos,
                                       TokenType::STRATOM,
                                       '"',
                                       '{',
                                       &endQuote,
                                       true);
-      
-      mBytePos = (U32)bp;
       
       if (endQuote == '"')
       {
@@ -565,12 +556,12 @@ public:
 private:
    
    // --- utilities
-   bool eof(S32 off = 0) const
+   bool eof(S64 off = 0) const
    {
       return mBytePos + off + 1 >= mSource.size();
    }
    
-   char peek(S32 off = 0) const
+   char peek(S64 off = 0) const
    {
       return eof(off) ? '\0' : mSource[mBytePos + off];
    }
@@ -754,17 +745,17 @@ private:
       S64 write = sliceBegin;
       for (S64 read = sliceBegin; read < baseEnd; ++read)
       {
-         char c = mSource[(U32)read];
+         char c = mSource[read];
          if (c != '\0')
          {
-            mSource[(U32)(write++)] = c;
+            mSource[write++] = c;
          }
       }
       
       // 3) Zero-fill the remainder up to the base boundary
       for (S64 i = write; i < baseEnd; ++i)
       {
-         mSource[(U32)i] = '\0';
+         mSource[i] = '\0';
       }
       
       // Build token as a slice into the (now compacted) buffer
@@ -1178,16 +1169,13 @@ private:
    
    Token scanString(TokenType type, char quote)
    {
-      S64 bp = mBytePos;
-      Token t = decodeStringInPlace(&mSource[0],
+      return decodeStringInPlace(&mSource[0],
                                  mSource.size(),
-                                 bp,
+                                 mBytePos,
                                  type,
                                  quote,
                                  quote,
                                  NULL);
-      mBytePos = (U32)bp;
-      return t;
    }
    
    // --- identifiers / keywords
