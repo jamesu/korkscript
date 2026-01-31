@@ -34,23 +34,6 @@ namespace Platform
         }
     };
 
-    struct VolumeInformation
-    {
-        StringTableEntry  RootPath;
-        StringTableEntry  Name;
-        StringTableEntry  FileSystem;
-        U32               SerialNumber;
-        U32               Type;
-        bool              ReadOnly;
-    };
-
-    typedef void* FILE_HANDLE;
-    enum DFILE_STATUS
-    {
-        DFILE_OK = 1
-    };
-
-
     /// Application.
     void init();
     void process();

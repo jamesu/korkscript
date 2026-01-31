@@ -1,4 +1,11 @@
 //-----------------------------------------------------------------------------
+// Copyright (c) 2025-2026 korkscript contributors.
+// See AUTHORS file and git repository for contributor information.
+//
+// SPDX-License-Identifier: MIT
+//-----------------------------------------------------------------------------
+
+//-----------------------------------------------------------------------------
 // Copyright (c) 2013 GarageGames, LLC
 //
 // Permission is hereby granted, free of charge, to any person obtaining a copy

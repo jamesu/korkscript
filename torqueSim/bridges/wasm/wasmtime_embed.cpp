@@ -1,3 +1,10 @@
+//-----------------------------------------------------------------------------
+// Copyright (c) 2025-2026 korkscript contributors.
+// See AUTHORS file and git repository for contributor information.
+//
+// SPDX-License-Identifier: MIT
+//-----------------------------------------------------------------------------
+
 #include "console/console.h"
 #include "console/consoleTypes.h"
 #include "sim/simBase.h"
