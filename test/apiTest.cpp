@@ -323,7 +323,7 @@ int testScript(char* script, const char* filename)
    TypeInfo tInfo{};
    tInfo.name = "MyPoint3F";
    tInfo.userPtr = NULL;
-   tInfo.fieldsize = sizeof(MyPoint3F);
+   tInfo.fieldSize = sizeof(MyPoint3F);
    tInfo.valueSize = sizeof(MyPoint3F);
    tInfo.iFuncs = {
       &MyPoint3F_CastValue,

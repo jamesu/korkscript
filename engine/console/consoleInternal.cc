@@ -682,7 +682,7 @@ TypeStorageInterface CreateFixedTypeStorage(KorkApi::VmInternal* vmInternal,
    s.vmInternal = vmInternal;
    s.ResizeStorage = &Resize_Fixed;
    s.FinalizeStorage = &Finalize_Fixed;
-   s.data.size = isField ? info.fieldsize : info.valueSize;
+   s.data.size = isField ? info.fieldSize : info.valueSize;
    if (s.data.size == UINT_MAX)
    {
       s.data.size = 0;

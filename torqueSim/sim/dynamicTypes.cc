@@ -72,7 +72,7 @@ void ConsoleBaseType::registerTypeWithVm(KorkApi::Vm* vm)
 {
    //
    KorkApi::TypeInfo info;
-   info.fieldsize = mTypeSize;
+   info.fieldSize = mTypeSize;
    info.valueSize = mValueSize;
    info.name = vm->internString(mTypeName);
    info.inspectorFieldType = vm->internString(mInspectorFieldType);

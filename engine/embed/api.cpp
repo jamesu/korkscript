@@ -1016,7 +1016,7 @@ VmInternal::VmInternal(Vm* vm, Config* cfg) : mGlobalVars(this)
    typeInfo.name = internString("string", false);
    typeInfo.inspectorFieldType = NULL;
    typeInfo.userPtr = NULL;
-   typeInfo.fieldsize = sizeof(const char*);
+   typeInfo.fieldSize = sizeof(const char*);
    typeInfo.valueSize = UINT_MAX;
    
    auto noOpFunc = [](void* userPtr, Vm* vm, U32 op, ConsoleValue lhs, ConsoleValue rhs){
@@ -1066,7 +1066,7 @@ VmInternal::VmInternal(Vm* vm, Config* cfg) : mGlobalVars(this)
    typeInfo.name = internString("float", false);
    typeInfo.inspectorFieldType = NULL;
    typeInfo.userPtr = NULL;
-   typeInfo.fieldsize = typeInfo.valueSize = sizeof(F64);
+   typeInfo.fieldSize = typeInfo.valueSize = sizeof(F64);
    // TODO
    
    mTypes.push_back(typeInfo);
@@ -1074,7 +1074,7 @@ VmInternal::VmInternal(Vm* vm, Config* cfg) : mGlobalVars(this)
    typeInfo.name = internString("uint", false);
    typeInfo.inspectorFieldType = NULL;
    typeInfo.userPtr = NULL;
-   typeInfo.fieldsize = typeInfo.valueSize = sizeof(U64);
+   typeInfo.fieldSize = typeInfo.valueSize = sizeof(U64);
    // TODO
    
    mTypes.push_back(typeInfo);
@@ -1399,11 +1399,11 @@ bool VmInternal::setObjectFieldTuple(VMObject* obj, StringTableEntry fieldName, 
             break;
          
          TypeInfo& tinfo = mTypes[tid];
-         if (!tinfo.iFuncs.CastValueFn || tinfo.fieldsize == 0)
+         if (!tinfo.iFuncs.CastValueFn || tinfo.fieldSize == 0)
             break;
          
          U8* base = static_cast<U8*>(obj->userPtr);
-         U8* dptr = base + f.offset + (idx * (U32)tinfo.fieldsize);
+         U8* dptr = base + f.offset + (idx * (U32)tinfo.fieldSize);
          
          CastValueFnType castFn = f.ovrCastValue ? f.ovrCastValue : tinfo.iFuncs.CastValueFn;
 
@@ -1456,11 +1456,11 @@ ConsoleValue VmInternal::getObjectField(VMObject* obj, StringTableEntry name, co
 
       TypeInfo& tinfo = mTypes[tid];
 
-      if (!tinfo.iFuncs.CastValueFn || tinfo.fieldsize == 0)
+      if (!tinfo.iFuncs.CastValueFn || tinfo.fieldSize == 0)
          return def;
 
       U8* base = static_cast<U8*>(obj->userPtr);
-      U8* dptr = base + f.offset + (idx * (U32)tinfo.fieldsize);
+      U8* dptr = base + f.offset + (idx * (U32)tinfo.fieldSize);
       
       // Add requested type
       if ((requestedType & KorkApi::TypeDirectCopy) != 0)

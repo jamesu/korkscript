@@ -123,7 +123,7 @@ struct TypeInfo
     StringTableEntry name;
     StringTableEntry inspectorFieldType;
     void* userPtr;
-    dsize_t fieldsize;
+    dsize_t fieldSize;
     dsize_t valueSize;
     bool valueIsString;
     TypeInterface iFuncs;

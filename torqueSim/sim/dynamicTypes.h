@@ -205,7 +205,7 @@ inline void exportTypeToVm(T* self, KorkApi::Vm* vm)
    info.name = StringTable->insert(self->getTypeName());
    info.inspectorFieldType = StringTable->insert(self->getInspectorFieldType() ? self->getInspectorFieldType() : "");
    info.userPtr = self;
-   info.fieldsize = self->getFieldSize();
+   info.fieldSize = self->getFieldSize();
    info.valueSize = self->getValueSize();
    info.iFuncs = buildTypeInterface<T>();
    vm->registerType(info);
