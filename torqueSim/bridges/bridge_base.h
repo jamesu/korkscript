@@ -173,7 +173,7 @@ public:
 
 	virtual void initScratch() = 0;
 	virtual bool initRuntime() = 0;
-	virtual void cleanup() = 0;
+	virtual void cleanup() {;}
 	virtual bool load(Stream& s) = 0;
 	virtual bool linkFuncs() = 0;
 

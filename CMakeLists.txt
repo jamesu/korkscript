@@ -209,6 +209,15 @@ target_link_options(korkscript PRIVATE
   )
 
 else()
+
+if (ENABLE_WASM3_BRIDGE)
+	set(KS_LINK_LIBS ${KS_LINK_LIBS} wasm3)
+endif()
+
+if (ENABLE_WASMTIME_BRIDGE)
+	set(KS_LINK_LIBS ${KS_LINK_LIBS} Wasmtime::wasmtime)
+endif()
+
 #add_executable(cstest ${KS_TEST_SRCS})
 #target_link_libraries(cstest PRIVATE ${KS_LINK_LIBS})
 add_executable(csprintast ${KS_AST_PRINT_SRCS})
@@ -219,14 +228,6 @@ add_executable(torquetest ${KS_TORQUE_TEST_SRCS})
 target_link_libraries(torquetest PRIVATE ${KS_LINK_LIBS})
 add_executable(testrunner ${TEST_RUNNER_SRCS})
 target_link_libraries(testrunner PRIVATE ${KS_LINK_LIBS})
-
-if (ENABLE_WASM3_BRIDGE)
-	target_link_libraries(torquetest wasm3)
-endif()
-
-if (ENABLE_WASMTIME_BRIDGE)
-	target_link_libraries(torquetest Wasmtime::wasmtime)
-endif()
 
 target_include_directories(torquetest PRIVATE ./torqueSim)
 target_include_directories(testrunner PRIVATE ./torqueSim)

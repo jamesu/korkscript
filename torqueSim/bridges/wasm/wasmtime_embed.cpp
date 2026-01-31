@@ -165,8 +165,8 @@ public:
    bool load(Stream& s) override
    {
       U32 sz = s.getStreamSize();
-      Vector<uint8_t> bytes;
-      bytes.setSize(sz);
+      std::vector<uint8_t> bytes;
+      bytes.resize(sz);
       s.read(sz, &bytes[0]);
 
       wasmtime_error_t* err = wasmtime_module_new(mEngine, &bytes[0], bytes.size(), &mModule);
@@ -567,7 +567,7 @@ private:
          ++p;
       }
 
-      Vector<wasm_valtype_t*> params;
+      std::vector<wasm_valtype_t*> params;
       while (*p && *p != ')')
       {
          params.push_back(mapCh(*p++));

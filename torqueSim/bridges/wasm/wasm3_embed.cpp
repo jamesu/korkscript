@@ -102,12 +102,12 @@ public:
             M3Result r = m3_Call(mFuncs[0], 1, (const void**)wasmArgv);
             if (r)
             {
-               return NULL;
+               return;
             }
             
             if (m3_GetRetCount(mFuncs[0]) == 0)
             {
-               return NULL;
+               return;
             }
 
             void* retPtr[1] = {};
@@ -116,7 +116,7 @@ public:
             
             if (r)
             {
-               return NULL;
+               return;
             }
             
             mScratchOffset = *((U32*)&wasmArgData[0]);
