@@ -79,6 +79,7 @@ struct TypeStorageInterface
    BoxedTypeData data;
    void* userPtr1; // user code
    void* userPtr2; // user code
+   void* fieldObject; // related field object
    bool isField;
 };
 

@@ -1942,7 +1942,7 @@ void SimObject::initPersistFields()
    addGroup("SimBase");
    addField("canSaveDynamicFields",    TypeBool,      Offset(mCanSaveFieldDictionary, SimObject), &writeCanSaveDynamicFields, "");
    addField("internalName",            TypeString,       Offset(mInternalName, SimObject), &writeInternalName, "");   
-   // TOFIX addProtectedField("parentGroup",        TypeSimObjectPtr, Offset(mGroup, SimObject), &setParentGroup, NULL, &writeParentGroup, "Group hierarchy parent of the object." );
+   addProtectedField("parentGroup",    TypeSimObjectPtr, Offset(mGroup, SimObject), &setParentGroup, &writeParentGroup, "Group hierarchy parent of the object." );
    endGroup("SimBase");
 
    // Namespace Linking.
@@ -2000,16 +2000,27 @@ void SimObject::copyTo(SimObject* object)
 
 //-----------------------------------------------------------------------------
 
-bool SimObject::setParentGroup(void* obj, const char* data)
+bool SimObject::setParentGroup(void* userPtr,
+                               KorkApi::Vm* vmPtr,
+                               KorkApi::TypeStorageInterface* inputStorage,
+                               KorkApi::TypeStorageInterface* outputStorage,
+                               const EnumTable* tbl,
+                               BitSet32 flag,
+                               U32 requestedType)
 {
    SimGroup *parent = NULL;
-   SimObject *object = static_cast<SimObject*>(obj);
+   SimObject *object = static_cast<SimObject*>(outputStorage->fieldObject);
+   if (object == NULL || inputStorage->data.argc != 1)
+   {
+      return false;
+   }
 
-   if(Sim::findObject(data, parent))
+   if(Sim::findObject(vmPtr->valueAsString(*inputStorage->data.storageRegister), parent))
+   {
       parent->addObject(object);
+   }
    
-   // always return false, because we've set mGroup when we called addObject
-   return false;
+   return true;
 }
 
 

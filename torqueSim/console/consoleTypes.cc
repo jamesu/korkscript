@@ -26,8 +26,9 @@ ConsoleType( intList, TypeS32Vector, sizeof(std::vector<S32>), UINT_MAX,"" )
 ConsoleType( floatList, TypeF32Vector, sizeof(std::vector<F32>), UINT_MAX, "" )
 ConsoleType( boolList, TypeBoolVector, sizeof(std::vector<bool>), UINT_MAX, "" )
 
-#if 0
 ConsoleType( SimObjectPtr, TypeSimObjectPtr, sizeof(SimObject*), UINT_MAX, "" )
+
+#if 0
 ConsoleType( SimObjectName, TypeSimObjectName, sizeof(SimObject*), UINT_MAX, "" )
 ConsoleType( SimObjectId, TypeSimObjectId, sizeof(SimObject*), sizeof(SimObjectId), "" )
 ConsolePrepType( filename, TypeFilename, sizeof( const char* ), UINT_MAX, "" )
@@ -1083,64 +1084,65 @@ ConsoleGetType( TypeEnum )
 
 ConsoleTypeOpDefaultUnsigned( TypeEnum )
 
-#if 0
+ConsoleTypeOpDefaultUnsigned( TypeSimObjectPtr )
 
-ConsoleSetType( TypeSimObjectPtr )
+ConsoleGetType( TypeSimObjectPtr )
 {
-   if (argc == 1)
+   SimObject* valueObject = NULL;
+   SimObjectId value = 0;
+   
+   if (inputStorage->isField)
    {
-      SimObject **obj = (SimObject **)ConsoleGetStoragePtr();
-      *obj = Sim::findObject((const char*)argv[0].evaluatePtr(vmPtr->getAllocBase()));
-      
-      if (outputStorage->data.storageRegister)
+      valueObject = *((SimObject**)(ConsoleGetInputStoragePtr()));
+      if (valueObject)
       {
-         *outputStorage->data.storageRegister = KorkApi::ConsoleValue::makeUnsigned(*obj ? (*obj)->getId() : 0);
+         value = valueObject->getId();
       }
    }
    else
    {
-      Con::printf("(TypeSimObjectPtr) Cannot set multiple args to a single S32.");
-   }
-}
-
-ConsoleGetType( TypeSimObjectPtr )
-{
-   SimObject* obj = NULL;
-   
-   if (inputStorage->isField)
-   {
-      obj = *((SimObject**)(ConsoleGetInputStoragePtr()));
-   }
-   else
-   {
-      obj = Sim::findObject((const char*)ConsoleGetInputStoragePtr()));
+      value = (SimObjectId)vmPtr->valueAsInt(inputStorage->data.storageRegister[0]);
+      Sim::findObject(value, valueObject);
    }
    
    if (requestedType == KorkApi::ConsoleValue::TypeInternalString)
    {
-      outputStorage->FinalizeStorage(outputStorage, 64);
-      dSprintf((char*)ConsoleGetOutputStoragePtr(), 64, "%s", value);
-      *outputStorage->data.storageRegister = outputStorage->data.storageAddress;
+      outputStorage->FinalizeStorage(outputStorage, 6);
+      dSprintf((char*)ConsoleGetOutputStoragePtr(), 6, "%u", value);
+      
+      if (outputStorage->data.storageRegister)
+      {
+         *outputStorage->data.storageRegister = outputStorage->data.storageAddress;
+      }
+      
       return true;
    }
-   else if (requestedType == KorkApi::ConsoleValue::TypeInternalNumber)
+   else if (requestedType == TypeSimObjectPtr)
    {
-      *outputStorage->data.storageRegister = KorkApi::ConsoleValue::makeNumber(value);
+      if (outputStorage->isField)
+      {
+         SimObject** dst = (SimObject**)ConsoleGetOutputStoragePtr();
+         *dst = valueObject;
+      }
+      
+      if (outputStorage->data.storageRegister)
+      {
+         *outputStorage->data.storageRegister = KorkApi::ConsoleValue::makeNumber(value);
+      }
+      
+      return true;
    }
-   else if (requestedType == KorkApi::ConsoleValue::TypeInternalUnsigned)
+   else
    {
-      *outputStorage->data.storageRegister = KorkApi::ConsoleValue::makeUnsigned((U64)value);
+      KorkApi::ConsoleValue cv = KorkApi::ConsoleValue::makeNumber(value);
+      KorkApi::TypeStorageInterface castInput =
+         KorkApi::CreateRegisterStorageFromArgs(vmPtr->mInternal, 1, &cv);
+
+      return vmPtr->castValue(requestedType, &castInput, outputStorage, nullptr, 0);
    }
-   
-   
-   SimObject **obj = (SimObject**)ConsoleGetStoragePtr();
-   KorkApi::ConsoleValue returnBufferV = Con::getReturnBuffer(256);
-   char* returnBuffer = (char*)returnBufferV.evaluatePtr(vmPtr->getAllocBase());
-   const char* Id =  *obj ? (*obj)->getName() ? (*obj)->getName() : (*obj)->getIdString() : StringTable->EmptyString;
-   dSprintf(returnBuffer, 256, "%s", Id);
-   return returnBufferV;
 }
 
+#if 0
 ConsoleSetType( TypeSimObjectName )
 {
    if (argc == 1)

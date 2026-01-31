@@ -587,7 +587,13 @@ protected:
     static bool setSuperClass(void* obj, const char* data)                           { static_cast<SimObject*>(obj)->setSuperClassNamespace(data); return false; };
     static bool writeCanSaveDynamicFields( void* obj, StringTableEntry pFieldName )  { return static_cast<SimObject*>(obj)->mCanSaveFieldDictionary == false; }
     static bool writeInternalName( void* obj, StringTableEntry pFieldName )          { SimObject* simObject = static_cast<SimObject*>(obj); return simObject->mInternalName != NULL && simObject->mInternalName != StringTable->EmptyString; }
-    static bool setParentGroup(void* obj, const char* data);
+    static bool setParentGroup(void* userPtr,
+                               KorkApi::Vm* vm,
+                               KorkApi::TypeStorageInterface* inputStorage,
+                               KorkApi::TypeStorageInterface* outputStorage,
+                               const EnumTable* tbl,
+                               BitSet32 flag,
+                               U32 requestedType);
     static bool writeParentGroup( void* obj, StringTableEntry pFieldName )           { return static_cast<SimObject*>(obj)->mGroup != NULL; }
     static bool writeSuperclass( void* obj, StringTableEntry pFieldName )            { SimObject* simObject = static_cast<SimObject*>(obj); return simObject->mSuperClassName != NULL && simObject->mSuperClassName != StringTable->EmptyString; }
     static bool writeClass( void* obj, StringTableEntry pFieldName )                 { SimObject* simObject = static_cast<SimObject*>(obj); return simObject->mClassName != NULL && simObject->mClassName != StringTable->EmptyString; }
