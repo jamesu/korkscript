@@ -45,14 +45,14 @@ const char *typeNames[] =
       "unknown_overload"
 };
 
-void printClassHeader(const char* usage, const char * className, const char * superClassName, const bool stub)
+void printClassHeader(KorkApi::VmInternal* vmInternal, const char* usage, const char * className, const char * superClassName, const bool stub)
 {
    if(stub) 
    {
-      printf("/// Stub class");
-      printf("/// ");
-      printf("/// @note This is a stub class to ensure a proper class hierarchy. No ");
-      printf("///       information was available for this class.");
+      vmInternal->printf(0, "/// Stub class");
+      vmInternal->printf(0, "/// ");
+      vmInternal->printf(0, "/// @note This is a stub class to ensure a proper class hierarchy. No ");
+      vmInternal->printf(0, "///       information was available for this class.");
    }
 
    if( usage != NULL )
@@ -64,7 +64,7 @@ void printClassHeader(const char* usage, const char * className, const char * su
       strcpy( usageStr, usage );
 
       // Print Header
-      printf( "/*!" );
+      vmInternal->printf(0,  "/*!" );
 
       // Print line by line, skipping the @field lines.
       //
@@ -107,7 +107,7 @@ void printClassHeader(const char* usage, const char * className, const char * su
 
          // Print all fields that aren't associated with the 'field' keyword.
          if( strcmp( keyword, "field" ) )
-            printf( lineStr );
+            vmInternal->printf(0,  "$s", lineStr );
 
 
          // Fetch next line ending
@@ -115,72 +115,72 @@ void printClassHeader(const char* usage, const char * className, const char * su
       } while( newLine != NULL );
 
       // DocBlock Footer
-      printf( " */" );
+      vmInternal->printf(0,  " */" );
 
    }
 
    // Print out appropriate class header
    if(superClassName)
-      printf("class  %s : public %s {", className, superClassName ? superClassName : "");
+      vmInternal->printf(0, "class  %s : public %s {", className, superClassName ? superClassName : "");
    else if(!className)
-      printf("namespace Global {");
+      vmInternal->printf(0, "namespace Global {");
    else
-      printf("class  %s {", className);
+      vmInternal->printf(0, "class  %s {", className);
 
    if(className)
-      printf("  public:");
+      vmInternal->printf(0, "  public:");
 
 }
 
-void printClassMethod(const bool isVirtual, const char *retType, const char *methodName, const char* args, const char*usage)
+void printClassMethod(KorkApi::VmInternal* vmInternal, const bool isVirtual, const char *retType, const char *methodName, const char* args, const char*usage)
 {
    if(usage && usage[0] != ';' && usage[0] != 0)
-      printf("   /*! %s */", usage);
-   printf("   %s%s %s(%s) {}", isVirtual ? "virtual " : "", retType, methodName, args);
+      vmInternal->printf(0, "   /*! %s */", usage);
+   vmInternal->printf(0, "   %s%s %s(%s) {}", isVirtual ? "virtual " : "", retType, methodName, args);
 }
 
-void printGroupStart(const char * aName, const char * aDocs)
+void printGroupStart(KorkApi::VmInternal* vmInternal, const char * aName, const char * aDocs)
 {
-   printf("");
-   printf("   /*! @name %s", aName);
+   vmInternal->printf(0, "");
+   vmInternal->printf(0, "   /*! @name %s", aName);
 
    if(aDocs)
    {
-      printf("   ");
-      printf("   %s", aDocs);
+      vmInternal->printf(0, "   ");
+      vmInternal->printf(0, "   %s", aDocs);
    }
 
-   printf("   @{ */");
+   vmInternal->printf(0, "   @{ */");
 }
 
-void printClassMember(const bool isDeprec, const char * aType, const char * aName, const char * aDocs)
+void printClassMember(KorkApi::VmInternal* vmInternal, const bool isDeprec, const char * aType, const char * aName, const char * aDocs)
 {
-   printf("   /*!");
+   vmInternal->printf(0, "   /*!");
 
    if(aDocs)
    {
-      printf("   %s", aDocs);
-      printf("   ");
+      vmInternal->printf(0, "   %s", aDocs);
+      vmInternal->printf(0, "   ");
    }
 
    if(isDeprec)
-      printf("   @deprecated This member is deprecated, which means that its value is always undefined.");
+      vmInternal->printf(0, "   @deprecated This member is deprecated, which means that its value is always undefined.");
 
-   printf("    */");
+   vmInternal->printf(0, "    */");
 
-   printf("   %s %s;", isDeprec ? "deprecated" : aType, aName);
+   vmInternal->printf(0, "   %s %s;", isDeprec ? "deprecated" : aType, aName);
 }
 
-void printGroupEnd()
+void printGroupEnd(KorkApi::VmInternal* vmInternal)
 {
-   printf("   /// @}");
-   printf("");
+   vmInternal->printf(0, "   /// @}");
+   vmInternal->printf(0, "");
 }
 
-void printClassFooter()
+void printClassFooter(KorkApi::VmInternal* vmInternal)
 {
-   printf("};");
-   printf("");
+   vmInternal->printf(0, "};");
+   vmInternal->printf(0, "");
 }
 
 void NamespaceState::printNamespaceEntries(Namespace * g, bool dumpScript, bool dumpEngine )
@@ -249,7 +249,7 @@ void NamespaceState::printNamespaceEntries(Namespace * g, bool dumpScript, bool 
             strncpy(buffer, use, len);
             buffer[len] = 0;
 
-            printClassMethod(true, typeNames[eType], funcName, buffer, end+1);
+            printClassMethod(mVmInternal, true, typeNames[eType], funcName, buffer, end+1);
 
             continue; // Skip to next one.
          }
@@ -264,7 +264,7 @@ void NamespaceState::printNamespaceEntries(Namespace * g, bool dumpScript, bool 
             buffer[len] = 0;
 
             // Then let's do the heuristic-trick
-            printClassMethod(true, typeNames[eType], funcName, buffer, end+1);
+            printClassMethod(mVmInternal, true, typeNames[eType], funcName, buffer, end+1);
             continue; // Get to next item.
          }
 
@@ -276,30 +276,30 @@ void NamespaceState::printNamespaceEntries(Namespace * g, bool dumpScript, bool 
             strncpy(buffer, bgn+1, len);
             buffer[len] = 0;
 
-            printClassMethod(true, typeNames[eType], funcName, buffer, end+1);
+            printClassMethod(mVmInternal, true, typeNames[eType], funcName, buffer, end+1);
             continue;
          }
 
          // Default...
-         printClassMethod(true, typeNames[eType], funcName, "", ewalk->getUsage());
+         printClassMethod(mVmInternal, true, typeNames[eType], funcName, "", ewalk->getUsage());
       }
       else if(ewalk->mType == Namespace::Entry::GroupMarker)
       {
          if(!inGroup)
-            printGroupStart(ewalk->cb.mGroupName, ewalk->getUsage());
+            printGroupStart(mVmInternal, ewalk->cb.mGroupName, ewalk->getUsage());
          else
-            printGroupEnd();
+            printGroupEnd(mVmInternal);
 
          inGroup = !inGroup;
       }
       else if(ewalk->mFunctionOffset)                 // If it's a builtin function...
       {
          ewalk->mCode->getFunctionArgs(buffer, ewalk->mFunctionOffset);
-         printClassMethod(false, typeNames[ewalk->mType], ewalk->mFunctionName, buffer, "");
+         printClassMethod(mVmInternal, false, typeNames[ewalk->mType], ewalk->mFunctionName, buffer, "");
       }
       else
       {
-         printf("   // got an unknown thing?? %d", ewalk->mType );
+         mVmInternal->printf(0, "   // got an unknown thing?? %d", ewalk->mType );
       }
    }
 
@@ -392,14 +392,14 @@ void NamespaceState::dumpClasses( bool dumpScript, bool dumpEngine )
       {
          // Print out a short stub so we get a proper class hierarchy.
          if(superClassName) { // Filter hack; we don't want non-inheriting classes...
-            printClassHeader( NULL, className,superClassName, true);
-            printClassFooter();
+            printClassHeader( mVmInternal, NULL, className,superClassName, true);
+            printClassFooter(mVmInternal);
          }
          continue;
       }
 
       // Print the header for the class..
-      printClassHeader(vec[i]->getUsage(), className, superClassName, false);
+      printClassHeader(mVmInternal, vec[i]->getUsage(), className, superClassName, false);
 
       // Deal with entries.
       printNamespaceEntries(vec[i], dumpScript, dumpEngine);
@@ -421,10 +421,10 @@ void NamespaceState::dumpClasses( bool dumpScript, bool dumpEngine )
             switch(info.type)
             {
             case KorkApi::StartGroupFieldType:
-               printGroupStart(info.pGroupname, info.pFieldDocs);
+               printGroupStart(mVmInternal, info.pGroupname, info.pFieldDocs);
                break;
             case KorkApi::EndGroupFieldType:
-               printGroupEnd();
+               printGroupEnd(mVmInternal);
                break;
             default:
             case KorkApi::DepricatedFieldType:
@@ -434,6 +434,7 @@ void NamespaceState::dumpClasses( bool dumpScript, bool dumpEngine )
                   if(isDeprecated)
                   {
                      printClassMember(
+                        mVmInternal,
                         true,
                         "<deprecated>",
                         info.pFieldname,
@@ -445,6 +446,7 @@ void NamespaceState::dumpClasses( bool dumpScript, bool dumpEngine )
                      KorkApi::TypeInfo* typeInfo = info.type >= 0 ? &mVmInternal->mTypes[info.type] : NULL;
 
                      printClassMember(
+                        mVmInternal,
                         false,
                         typeInfo ? typeInfo->name : "<unknown>",
                         info.pFieldname,
@@ -532,15 +534,15 @@ void NamespaceState::dumpClasses( bool dumpScript, bool dumpEngine )
             field += docLen;
 
             // Print
-            printf( "   /*!" );
-            printf( "   %s", fieldDoc );
-            printf( "    */" );
-            printf( "   %s;", fieldName );
+            mVmInternal->printf(0,  "   /*!" );
+            mVmInternal->printf(0,  "   %s", fieldDoc );
+            mVmInternal->printf(0,  "    */" );
+            mVmInternal->printf(0,  "   %s;", fieldName );
          }
       }
 
       // Close the class/namespace.
-      printClassFooter();
+      printClassFooter(mVmInternal);
    }
 }
 
@@ -549,7 +551,7 @@ void NamespaceState::dumpFunctions( bool dumpScript, bool dumpEngine )
    // Get the global namespace.
    Namespace* g = find(NULL); //->mParent;
 
-   printClassHeader(NULL, NULL,NULL, false);
+   printClassHeader(mVmInternal, NULL, NULL,NULL, false);
 
    while(g) 
    {
@@ -557,5 +559,5 @@ void NamespaceState::dumpFunctions( bool dumpScript, bool dumpEngine )
       g = g->mParent;
    }
 
-   printClassFooter();
+   printClassFooter(mVmInternal);
 }
