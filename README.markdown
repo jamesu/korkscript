@@ -1,8 +1,10 @@
 # korkscript
 
-korkscript is a fork of tgemit, which attempts to strip out the TorqueScript interpreter.
+korkscript is am embeddable scripting language based on TorqueScript. It is intended for use in videogames and other related software written in C++.
 
-The ultimate goal is to allow for easy embedding into modern C++ libraries.
+The library aims to be a mix of "bring your own object model" with an opinionated function dispatcher. It features extensive hooks to ease embedding into your application.
+
+korkscript is forked from a related project, tgemit.
 
 This project is still WIP, so expect the api and internal code to change as things are better fleshed out.
 
@@ -38,6 +40,8 @@ This means you need to provide hooks for:
 - Creating objects
 - Manipulating dynamic object fields
 - Manipulating typed variable data
+- Interning strings
+- Debugger IO
 
 Examples of embedding are provided in the torqueTest executable as well as the apiTest executable.
 
@@ -50,10 +54,10 @@ There are a few differences, namely:
 - Lexer and parser have been rewritten in C++
 - Value management via `ConsoleValue` uses a different API
 - Sim layer entirely ripped out in favor or writing your own; though a port of the old sim layer is provided in torqueSim.
-
+- Several optional but useful extensions to the language have been added
 
 ## License
 
-All code should be considered licensed under the MIT license by their respective authors.
+All code should be considered licensed under the MIT license by their respective authors. Main license text is in LICENSE.
 
 
