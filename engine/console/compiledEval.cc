@@ -692,7 +692,7 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
    ConsoleFrame& frame = *vmFrames.back();
    ExprEvalState& evalState = *this;
    U32 ip = frame.ip;
-   U32* code = frame.codeBlock->code;
+   const U32* code = frame.codeBlock->code;
    KorkApi::Vm* vmPublic = vmInternal->mVM;
    bool loopFrameSetup = false;
    StringTableEntry* identStrings = frame.codeBlock->identStrings;
@@ -758,7 +758,7 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
       printf("LINE %s\n", frame.codeBlock->getFileLine(ip));
 #endif
       
-      U32 instruction = code[ip++];
+      const U32 instruction = code[ip++];
       
    breakContinue:
       switch(instruction)
@@ -1985,7 +1985,8 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
             evalState.vmFrames.back()->ip = ip - 1;
             
             U32 breakLine;
-            frame.codeBlock->findBreakLine(ip-1, breakLine, instruction);
+            U32 inst = 0;
+            frame.codeBlock->findBreakLine(ip-1, breakLine, inst);
             if(!breakLine)
                goto breakContinue;
             vmInternal->mTelDebugger->executionStopped(frame.codeBlock, breakLine);

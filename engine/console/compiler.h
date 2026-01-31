@@ -159,7 +159,7 @@ namespace Compiler
    void evalSTEtoCode(Resources* res, StringTableEntry ste, U32 ip, U32 *ptr);
    void compileSTEtoCode(Resources* res, StringTableEntry ste, U32 ip, U32 *ptr);
 
-   static inline StringTableEntry CodeToSTE(Resources* res, StringTableEntry* stringList, U32 *code, U32 ip)
+   static inline StringTableEntry CodeToSTE(Resources* res, StringTableEntry* stringList, const U32 *code, U32 ip)
    {
       U32 offset = *((U32*)(code+ip));
       return offset == 0 ? NULL : stringList[offset-1];
