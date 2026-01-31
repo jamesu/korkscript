@@ -32,6 +32,8 @@
 #include "console/consoleTypes.h"
 #include "sim/dynamicTypes.h"
 
+#include <string>
+
 extern KorkApi::Vm* sVM;
 
 namespace Sim
