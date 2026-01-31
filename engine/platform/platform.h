@@ -23,8 +23,14 @@
 #ifndef _PLATFORM_H_
 #define _PLATFORM_H_
 
-#ifndef _TORQUECONFIG_H_
-#include "core/torqueConfig.h"
+#ifdef HAVE_TORQUE_CONFIG_H
+   #ifndef _TORQUECONFIG_H_
+   #include "core/torqueConfig.h"
+   #endif
+#endif
+
+#ifndef TORQUE_UNUSED
+#define TORQUE_UNUSED(x)
 #endif
 
 #ifndef _TORQUE_TYPES_H_
