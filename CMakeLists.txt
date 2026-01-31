@@ -198,7 +198,6 @@ target_link_options(korkscript PRIVATE
     "-g"
     "-sENVIRONMENT=node,web"
     "-sALLOW_MEMORY_GROWTH"
-    "-sDEMANGLE_SUPPORT=1"
     "-sMODULARIZE=1"
     "-sEXPORT_ES6=1"
     "-sSTACK_SIZE=1048576"
