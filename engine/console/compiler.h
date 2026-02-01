@@ -95,8 +95,8 @@ namespace Compiler
 
       CompilerIdentTable(Resources* _res) : res(_res)
       {
-         list = NULL;
-         tail = NULL;
+         list = nullptr;
+         tail = nullptr;
          numIdentStrings = 0;
       }
    };
@@ -120,7 +120,7 @@ namespace Compiler
       CompilerStringTable(Resources* _res) : res(_res)
       {
          totalLen = 0;
-         list = NULL;
+         list = nullptr;
          memset(buf, 0, sizeof(buf));
       }
 
@@ -150,7 +150,7 @@ namespace Compiler
       CompilerFloatTable(Resources* _res) : res(_res)
       {
          count = 0;
-         list = NULL;
+         list = nullptr;
       }
 
       U32 add(F64 value);
@@ -169,7 +169,7 @@ namespace Compiler
    static inline StringTableEntry CodeToSTE(Resources* res, StringTableEntry* stringList, const U32 *code, U32 ip)
    {
       U32 offset = *((U32*)(code+ip));
-      return offset == 0 ? NULL : stringList[offset-1];
+      return offset == 0 ? nullptr : stringList[offset-1];
    }
 
    struct VarTypeTableEntry
@@ -190,7 +190,7 @@ namespace Compiler
 
       VarTypeTable()
       {
-         table = NULL;
+         table = nullptr;
       }
    };
 
@@ -250,7 +250,7 @@ namespace Compiler
 
       void pushLocalVarContext(); 
       void popLocalVarContext();
-      VarTypeTableEntry* getVarInfo(StringTableEntry varName, StringTableEntry typeName = NULL);
+      VarTypeTableEntry* getVarInfo(StringTableEntry varName, StringTableEntry typeName = nullptr);
 
       void printf(U32 level, const char *_format, ...);
       
@@ -264,10 +264,10 @@ namespace Compiler
          allowExceptions = false;
          allowTuples = false;
          allowTypes = false;
-         currentASTGen = NULL;
-         emptyString = NULL;
-         logFn = NULL;
-         logUser = NULL;
+         currentASTGen = nullptr;
+         emptyString = nullptr;
+         logFn = nullptr;
+         logUser = nullptr;
          
          globalVarTypes.res = this;
          for (U32 i=0; i<VarTypeStackSize; i++)
@@ -276,7 +276,7 @@ namespace Compiler
          }
          
          curLocalVarStackPos = 0;
-         currentASTGen = NULL;
+         currentASTGen = nullptr;
          
          resetTables();
       }
@@ -352,7 +352,7 @@ public:
    
 public:
 
-   CodeStream(Compiler::Resources* res) : mCode(0), mCodeHead(NULL), mCodePos(0), mFilename(NULL), mResources(res)
+   CodeStream(Compiler::Resources* res) : mCode(0), mCodeHead(nullptr), mCodePos(0), mFilename(nullptr), mResources(res)
    {
    }
    

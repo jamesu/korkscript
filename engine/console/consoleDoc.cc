@@ -55,7 +55,7 @@ void printClassHeader(KorkApi::VmInternal* vmInternal, const char* usage, const 
       vmInternal->printf(0, "///       information was available for this class.");
    }
 
-   if( usage != NULL )
+   if( usage != nullptr )
    {
       // Copy Usage Document
       S32 usageLen = strlen( usage );
@@ -81,7 +81,7 @@ void printClassHeader(KorkApi::VmInternal* vmInternal, const char* usage, const 
          S32 lineLen = 0;
 
          // If not the last line, increment pointer
-         if( newLine != NULL )
+         if( newLine != nullptr )
          {
             *newLine = '\0';
             newLine ++;
@@ -89,7 +89,7 @@ void printClassHeader(KorkApi::VmInternal* vmInternal, const char* usage, const 
          
          // Copy line and update usagePtr
          strcpy( lineStr, usagePtr );
-         usagePtr = (newLine != NULL ) ? newLine : usagePtr;
+         usagePtr = (newLine != nullptr ) ? newLine : usagePtr;
          lineLen = strlen( lineStr );
 
          // Get the keyword. This is the first word after an '@' or '\'.
@@ -112,7 +112,7 @@ void printClassHeader(KorkApi::VmInternal* vmInternal, const char* usage, const 
 
          // Fetch next line ending
          newLine = strchr( usagePtr, '\n' );
-      } while( newLine != NULL );
+      } while( newLine != nullptr );
 
       // DocBlock Footer
       vmInternal->printf(0,  " */" );
@@ -348,7 +348,7 @@ void NamespaceState::dumpClasses( bool dumpScript, bool dumpEngine )
    for(i = 0; i < (U32)vec.size(); i++)
    {
       const char *className = vec[i]->mName;
-      const char *superClassName = vec[i]->mParent ? vec[i]->mParent->mName : NULL;
+      const char *superClassName = vec[i]->mParent ? vec[i]->mParent->mName : nullptr;
 
       // Skip the global namespace, that gets dealt with in dumpFunctions
       if(!className) continue;
@@ -388,11 +388,11 @@ void NamespaceState::dumpClasses( bool dumpScript, bool dumpEngine )
       }
 
       // Filter useless namespaces
-      if(vec[i]->mEntryList == NULL)// && vec[i]->mClassRep == NULL)
+      if(vec[i]->mEntryList == nullptr)// && vec[i]->mClassRep == nullptr)
       {
          // Print out a short stub so we get a proper class hierarchy.
          if(superClassName) { // Filter hack; we don't want non-inheriting classes...
-            printClassHeader( mVmInternal, NULL, className,superClassName, true);
+            printClassHeader( mVmInternal, nullptr, className,superClassName, true);
             printClassFooter(mVmInternal);
          }
          continue;
@@ -411,7 +411,7 @@ void NamespaceState::dumpClasses( bool dumpScript, bool dumpEngine )
       if(dumpEngine && classInfo)
       {
          // Get information about the parent's fields...
-         KorkApi::ClassInfo* parentClassInfo = vec[i]->mParent ? mVmInternal->getClassInfoByName(vec[i]->mName) : NULL;
+         KorkApi::ClassInfo* parentClassInfo = vec[i]->mParent ? mVmInternal->getClassInfoByName(vec[i]->mName) : nullptr;
 
          // Go through all our fields...
          for(U32 j = 0; j < (U32)classInfo->numFields; j++)
@@ -443,7 +443,7 @@ void NamespaceState::dumpClasses( bool dumpScript, bool dumpEngine )
                   }
                   else
                   {
-                     KorkApi::TypeInfo* typeInfo = info.type >= 0 ? &mVmInternal->mTypes[info.type] : NULL;
+                     KorkApi::TypeInfo* typeInfo = info.type >= 0 ? &mVmInternal->mTypes[info.type] : nullptr;
 
                      printClassMember(
                         mVmInternal,
@@ -549,9 +549,9 @@ void NamespaceState::dumpClasses( bool dumpScript, bool dumpEngine )
 void NamespaceState::dumpFunctions( bool dumpScript, bool dumpEngine )
 {
    // Get the global namespace.
-   Namespace* g = find(NULL); //->mParent;
+   Namespace* g = find(nullptr); //->mParent;
 
-   printClassHeader(mVmInternal, NULL, NULL,NULL, false);
+   printClassHeader(mVmInternal, nullptr, nullptr,nullptr, false);
 
    while(g) 
    {

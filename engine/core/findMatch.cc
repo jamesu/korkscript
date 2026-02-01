@@ -105,8 +105,8 @@ bool FindMatch::isMatch( const char *exp, const char *str, bool caseSensitive )
          return false;
    }
 
-   const char* cp = NULL;
-   const char* mp = NULL;
+   const char* cp = nullptr;
+   const char* mp = nullptr;
 
    while ( *str )
    {
@@ -150,7 +150,7 @@ bool FindMatch::isMatchMultipleExprs( const char *exps, const char *str, bool ca
    // they don't work when the paths have spaces in.
 
    // search for each expression. return true soon as we see one.
-   for( tok = strtok(e.data(),"\t"); tok != NULL; tok = strtok(NULL,"\t"))
+   for( tok = strtok(e.data(),"\t"); tok != nullptr; tok = strtok(nullptr,"\t"))
    {
       if( isMatch( tok, str, caseSensitive) )
       {

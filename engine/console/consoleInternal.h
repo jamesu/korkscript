@@ -137,7 +137,7 @@ public:
    KorkApi::VmInternal* mVm;
    
    Dictionary();
-   Dictionary(KorkApi::VmInternal *state, Dictionary::HashTableData* ref=NULL);
+   Dictionary(KorkApi::VmInternal *state, Dictionary::HashTableData* ref=nullptr);
    ~Dictionary();
    
    void clearEntry(Entry* e);
@@ -159,7 +159,7 @@ public:
    Entry *lookup(StringTableEntry name);
    Entry* getVariable(StringTableEntry name);
    Entry *add(StringTableEntry name);
-   void setState(KorkApi::VmInternal *state, Dictionary::HashTableData* ref=NULL);
+   void setState(KorkApi::VmInternal *state, Dictionary::HashTableData* ref=nullptr);
    void remove(Entry *);
    void reset();
    
@@ -188,7 +188,7 @@ public:
    Entry* addVariable(    const char *name,
                       S32 type,
                       void *dataPtr,
-                      const char* usage = NULL );
+                      const char* usage = nullptr );
    
    /// @see Con::removeVariable
    bool removeVariable(StringTableEntry name);
@@ -459,7 +459,7 @@ struct ConsoleVarRef
    Dictionary* dictionary;
    Dictionary::Entry *var;
    
-   ConsoleVarRef() : dictionary(NULL), var(NULL)
+   ConsoleVarRef() : dictionary(nullptr), var(nullptr)
    {
       
    }

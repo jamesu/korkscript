@@ -167,7 +167,7 @@ extern _StringTable *_gStringTable;
 
 inline _StringTable* _getStringTable()
 {
-   if(_gStringTable == NULL)
+   if(_gStringTable == nullptr)
       _StringTable::create();
    return _gStringTable;
 }

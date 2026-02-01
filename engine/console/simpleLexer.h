@@ -1175,7 +1175,7 @@ private:
                                  type,
                                  quote,
                                  quote,
-                                 NULL);
+                                 nullptr);
    }
    
    // --- identifiers / keywords

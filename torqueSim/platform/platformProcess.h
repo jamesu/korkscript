@@ -72,8 +72,8 @@ namespace Platform
     StringTableEntry getExecutablePath(); 
     void setMainDotCsDir(const char *dir);
     StringTableEntry getMainDotCsDir();
-    StringTableEntry getPrefsPath(const char *file = NULL);
-    char *makeFullPathName(const char *path, char *buffer, U32 size, const char *cwd = NULL);
+    StringTableEntry getPrefsPath(const char *file = nullptr);
+    char *makeFullPathName(const char *path, char *buffer, U32 size, const char *cwd = nullptr);
     StringTableEntry stripBasePath(const char *path);
     bool isFullPath(const char *path);
     StringTableEntry makeRelativePathName(const char *path, const char *to);

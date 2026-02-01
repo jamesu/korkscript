@@ -57,7 +57,7 @@ public:
    {
       if (mResources && mResources->currentASTGen == this)
       {
-         mResources->currentASTGen = NULL;
+         mResources->currentASTGen = nullptr;
       }
    }
    
@@ -92,12 +92,12 @@ public:
    // start : decl_list ;
    StmtNode* parseProgram()
    {
-      StmtNode* list = NULL;
+      StmtNode* list = nullptr;
       mResources->pushLocalVarContext();
       while (!atEnd())
       {
          StmtNode* d = parseDecl();
-         if (list == NULL)
+         if (list == nullptr)
          {
             list = d;
          }
@@ -133,13 +133,13 @@ private:
       return LA().kind == TT::END;
    }
    
-   bool match(TT t, S32* lineNo = NULL)
+   bool match(TT t, S32* lineNo = nullptr)
    {
       if (LA().kind == t) { if (lineNo) *lineNo = LA().pos.line; ++mTokenPos; return true; }
       return false;
    }
    
-   bool matchChar(char c, S32* lineNo = NULL)
+   bool matchChar(char c, S32* lineNo = nullptr)
    {
       if (LA().kind == TT::opCHAR && LA().ivalue == c) { if (lineNo) *lineNo = LA().pos.line; ++mTokenPos; return true; }
       return false;
@@ -263,8 +263,8 @@ private:
    // statement_list : (empty) | statement_list stmt
    StmtNode* parseStmtNodeListUntilSC()
    {
-      StmtNode* listHead = NULL;
-      StmtNode* listTail = NULL;
+      StmtNode* listHead = nullptr;
+      StmtNode* listTail = nullptr;
       while (!atEnd() && !(LA().kind == TT::opCHAR && LA().ivalue == '}'))
       {
          StmtNode* s = parseStmtNode();
@@ -284,24 +284,24 @@ private:
 
    VarNode* parseTypedVar(TOK v)
    {
-      StringTableEntry assignTypeName = NULL;
+      StringTableEntry assignTypeName = nullptr;
 
       if (matchChar(':')) // is typed var
       {
          if (!mResources->allowTypes)
          {
             errorHere(LA(), "types not enabled");
-            return NULL;
+            return nullptr;
          }
          TOK typeNameTok = expect(TT::IDENT, "expected type name");
          assignTypeName = typeNameTok.stString;
       }
       else if (LAChar() == '[') // array; types not allowed here
       {
-         return NULL;
+         return nullptr;
       }
 
-      return VarNode::alloc(mResources, v.pos.line, v.stString, NULL, assignTypeName);
+      return VarNode::alloc(mResources, v.pos.line, v.stString, nullptr, assignTypeName);
    }
    
    // Handles var lists
@@ -313,7 +313,7 @@ private:
    {
       // Handle empty
       if (LA().kind == TT::opCHAR && LA().ivalue == ')')
-         return NULL;
+         return nullptr;
       
       // First var
       TOK v = expect(TT::VAR, "parameter name expected");
@@ -340,7 +340,7 @@ private:
    {
       // Handle empty
       if (LA().kind == TT::opCHAR && LA().asChar() == endCh)
-         return NULL;
+         return nullptr;
       
       // head
       ExprNode* head = parseExprNode();
@@ -366,7 +366,7 @@ private:
       ExprNode* cond = parseExprNode();
       expectChar(')', "')' expected");
       StmtNode* thenS = parseStmtOrBlock();
-      StmtNode* elseS = NULL;
+      StmtNode* elseS = nullptr;
       if (match(TT::rwELSE))
       {
          elseS = parseStmtOrBlock();
@@ -382,7 +382,7 @@ private:
       if (!mResources->allowExceptions)
       {
          errorHere(LA(), "Exceptions disabled");
-         return NULL;
+         return nullptr;
       }
       
       TOK tryTok = expect(TT::rwTRY, "'try' expected");
@@ -391,7 +391,7 @@ private:
       if (!catchChain)
       {
          errorHere(LA(), "Expected one or more catch blocks");
-         return NULL;
+         return nullptr;
       }
       
       TryStmtNode* tryStmt = TryStmtNode::alloc(mResources, tryTok.pos.line, tryBlock, catchChain);
@@ -403,8 +403,8 @@ private:
    // catch_chain: catch_block | catch_block catch_chain
    CatchStmtNode* parseCatchChain()
    {
-      CatchStmtNode* startNode = NULL;
-      CatchStmtNode* tailNode = NULL;
+      CatchStmtNode* startNode = nullptr;
+      CatchStmtNode* tailNode = nullptr;
       S32 catchLineNo = 0;
       
       while (match(TT::rwCATCH, &catchLineNo))
@@ -416,7 +416,7 @@ private:
          if (!condBlock)
          {
             errorHere(LA(), "Expected {...}");
-            return NULL;
+            return nullptr;
          }
          
          // NOTE: Should be in definition order despite the stack implying otherwise,
@@ -449,7 +449,7 @@ private:
          ExprNode* test = parseExprNode();
          expectChar(')', "')' expected");
          StmtNode* body = parseStmtOrBlock();
-         return LoopStmtNode::alloc(mResources, wTok.pos.line, NULL, test, NULL, body, false);
+         return LoopStmtNode::alloc(mResources, wTok.pos.line, nullptr, test, nullptr, body, false);
       }
       else
       {
@@ -460,7 +460,7 @@ private:
          ExprNode* test = parseExprNode();
          expectChar(')', "')' expected");
          expectChar(';', "';' expected");
-         return LoopStmtNode::alloc(mResources, dTok.pos.line, NULL, test, NULL, body, true);
+         return LoopStmtNode::alloc(mResources, dTok.pos.line, nullptr, test, nullptr, body, true);
       }
    }
    
@@ -474,19 +474,19 @@ private:
       expectChar('(', "'(' expected");
       
       // init ;
-      ExprNode* init = NULL;
+      ExprNode* init = nullptr;
       if (!(LA().kind == TT::opCHAR && LA().ivalue == ';'))
          init = parseExprNode();
       expectChar(';', "';' expected");
       
       // test ;
-      ExprNode* test = NULL;
+      ExprNode* test = nullptr;
       if (!(LA().kind == TT::opCHAR && LA().ivalue == ';'))
          test = parseExprNode();
       expectChar(';', "';' expected");
       
       // end )
-      ExprNode* end = NULL;
+      ExprNode* end = nullptr;
       if (!(LA().kind == TT::opCHAR && LA().ivalue == ')'))
          end = parseExprNode();
       expectChar(')', "')' expected");
@@ -549,8 +549,8 @@ private:
    // Parse the case body (statement_list) until we hit 'case', 'default' or '}'
    StmtNode* parseCaseBody()
    {
-      StmtNode* head = NULL;
-      StmtNode* tail = NULL;
+      StmtNode* head = nullptr;
+      StmtNode* tail = nullptr;
       
       while (!atEnd())
       {
@@ -600,7 +600,7 @@ private:
       }
       
       // CASE ... ':' stmts
-      return IfStmtNode::alloc(mResources, caseTok.pos.line, list, body, NULL, false);
+      return IfStmtNode::alloc(mResources, caseTok.pos.line, list, body, nullptr, false);
    }
    
    // Handles switch statement
@@ -690,8 +690,8 @@ private:
       
       S32 line = LA().pos.line;
       StringTableEntry slotName = 0;
-      StringTableEntry typeName = NULL;
-      ExprNode* aidx = NULL;
+      StringTableEntry typeName = nullptr;
+      ExprNode* aidx = nullptr;
       
       // IDENT ... (maybe typed)
       // DATABLOCK ... (maybe typed)
@@ -719,7 +719,7 @@ private:
          if (!mResources->allowTypes)
          {
             errorHere(LA(), "Types not enabled");
-            return NULL;
+            return nullptr;
          }
 
          TOK typeNameTok = expect(TT::IDENT, "type name expected");
@@ -740,8 +740,8 @@ private:
    // slot_assign_list : slot_assign | slot_assign_list slot_assign
    SlotAssignNode* parseSlotAssignList(ExprNode* objectNode)
    {
-      SlotAssignNode* head = NULL;
-      SlotAssignNode* tail = NULL;
+      SlotAssignNode* head = nullptr;
+      SlotAssignNode* tail = nullptr;
       
       while (!atEnd())
       {
@@ -766,7 +766,7 @@ private:
    {
       // empty if we’re right before '}'
       if (LA().kind == TT::opCHAR && LA().asChar() == '}')
-         return NULL;
+         return nullptr;
       
       return parseSlotAssignList(object);
    }
@@ -807,8 +807,8 @@ private:
       // class_name_expr ( [ object_name ] parent_block object_args )     (object_name becomes internal name)
       
       expectChar('(', "'(' expected");
-      ExprNode* objectNameExpr = NULL;
-      ExprNode* argList = NULL;
+      ExprNode* objectNameExpr = nullptr;
+      ExprNode* argList = nullptr;
       StringTableEntry parentObject = 0;
       bool isInternal = false;
       
@@ -831,13 +831,13 @@ private:
          }
          
          // args
-         argList = matchChar(',') ? parseExprListOptUntil(')') : NULL;
+         argList = matchChar(',') ? parseExprListOptUntil(')') : nullptr;
          
          expectChar(')', "')' expected");
       }
       
       // If no object name, alloc ""
-      if (objectNameExpr == NULL)
+      if (objectNameExpr == nullptr)
       {
          char empty[1];
          empty[0] = '\0';
@@ -845,16 +845,16 @@ private:
       }
       
       // Optional { slots }
-      SlotAssignNode* slots = NULL;
-      ObjectDeclNode* subs = NULL;
+      SlotAssignNode* slots = nullptr;
+      ObjectDeclNode* subs = nullptr;
       if (matchChar('{'))
       {
-         // 1) slots first (relative to this object; pass NULL handles correctly on compile)
-         slots = parseSlotAssignListOpt(/*curObjExpr*/NULL);
+         // 1) slots first (relative to this object; pass nullptr handles correctly on compile)
+         slots = parseSlotAssignListOpt(/*curObjExpr*/nullptr);
          
          // 2) then nested objects (zero or more)
-         ObjectDeclNode* head = NULL;
-         ObjectDeclNode* tail = NULL;
+         ObjectDeclNode* head = nullptr;
+         ObjectDeclNode* tail = nullptr;
          
          while (beginsObjectDecl())
          {
@@ -906,13 +906,13 @@ private:
    StmtNode* parseDatablockDecl()
    {
       S32 line = LA().pos.line;
-      StringTableEntry parentObject = NULL;
+      StringTableEntry parentObject = nullptr;
       expect(TT::rwDATABLOCK, "datablock expected");
       
       // class_name_expr
       TOK startToken = LA();
       ExprNode* klassNameNode = parseClassNameExpr();
-      if (klassNameNode == NULL)
+      if (klassNameNode == nullptr)
       {
          errorHere(startToken, "class name expression expected");
       }
@@ -927,13 +927,13 @@ private:
       }
       expectChar(')', "')' expected");
       
-      SlotAssignNode* slotAssignNode = NULL;
+      SlotAssignNode* slotAssignNode = nullptr;
       expectChar('{', "{ expected for datablock");
-      slotAssignNode = parseSlotAssignListOpt(NULL);
+      slotAssignNode = parseSlotAssignListOpt(nullptr);
       expectChar('}', "} expected");
       expectChar(';', "; expected");
       
-      return ObjectDeclNode::alloc(mResources, line, klassNameNode, nameExpr, NULL, parentObject, slotAssignNode, NULL, /*isDatablock*/true, /*isSingleton*/false, /*isNewExpr*/false);
+      return ObjectDeclNode::alloc(mResources, line, klassNameNode, nameExpr, nullptr, parentObject, slotAssignNode, nullptr, /*isDatablock*/true, /*isSingleton*/false, /*isNewExpr*/false);
    }
    
    // Handles function definitions such as function foo(...) { ... }
@@ -1006,7 +1006,7 @@ private:
       TOK nameTok = expect(TT::IDENT, "package name expected");
       
       expectChar('{', "'{' expected");
-      StmtNode* fns = NULL;
+      StmtNode* fns = nullptr;
       if (!(LA().kind == TT::opCHAR && LA().ivalue == '}'))
       {
          fns = parseFnDeclList();
@@ -1081,7 +1081,7 @@ private:
                expectChar(';', "; expected");
                return ReturnStmtNode::alloc(mResources, (S32)tok.pos.line, e);
             }
-            return ReturnStmtNode::alloc(mResources, (S32)tok.pos.line, NULL);
+            return ReturnStmtNode::alloc(mResources, (S32)tok.pos.line, nullptr);
          }
          case TT::rwASSERT:
             return parseAssertStmt();
@@ -1099,13 +1099,13 @@ private:
          // ALSO: %var.slot : type is not allowed here; instead thats handled by parseSlotAssign.
          case TT::VAR: {
 
-            ExprNode* firstExpr = NULL;
+            ExprNode* firstExpr = nullptr;
             
             if (mResources->allowTypes)
             {
                mTokenPos++; // NEXT token
                VarNode* node = parseTypedVar(t); // NOTE: parses the initial %var and optional type (IGNORES arrays)
-               if (node == NULL)
+               if (node == nullptr)
                {
                   mTokenPos--; // rewind; something went wrong
                }
@@ -1141,7 +1141,7 @@ private:
          SlotAssignNode* slotExpr = dynamic_cast<SlotAssignNode*>(sn);
          AssignExprNode* assignExpr = dynamic_cast<AssignExprNode*>(sn);
 
-         if (slotExpr == NULL && assignExpr == NULL)
+         if (slotExpr == nullptr && assignExpr == nullptr)
          {
             errorHere(rootTok, "tuples cannot use math operators");
             return false;
@@ -1163,7 +1163,7 @@ private:
          if (!mResources->allowTuples)
          {
             errorHere(LA(), "tuples not enabled");
-            return NULL;
+            return nullptr;
          }
 
          // NOTE: in this case we allow:
@@ -1174,14 +1174,14 @@ private:
          // In the assign case, everything gets assigned to the
          // ALSO: all dependent assigns will get assigned the type at the root.
          BaseAssignExprNode* firstAssign = firstExpr->asAssign();
-         BaseAssignExprNode* lastAssign = firstAssign ? firstAssign->findDeepestAssign() : NULL;
+         BaseAssignExprNode* lastAssign = firstAssign ? firstAssign->findDeepestAssign() : nullptr;
          TupleExprNode* tupleExpr = TupleExprNode::alloc(mResources, firstAssign ? firstAssign->dbgLineNumber : firstExpr->dbgLineNumber, firstExpr);
 
          if (lastAssign)
          {
             if (!verifyTupleAssignment(firstToken, firstAssign))
             {
-               return NULL;
+               return nullptr;
             }
 
             // Replace RHS of last assignment with the tuple
@@ -1204,7 +1204,7 @@ private:
             // list of expressions; emit a distinct tuple
             while (matchChar(','))
             {
-               VarNode* nextVar = isSlotAssign ? NULL : parseTypedVar(LA());
+               VarNode* nextVar = isSlotAssign ? nullptr : parseTypedVar(LA());
                ExprNode* nextExpr = nextVar ? parseExpressionFrom(nextVar) : parseExpression(0);
                if (nextExpr)
                {
@@ -1227,7 +1227,7 @@ private:
       expectChar('(', "'(' expected after assert");
       
       ExprNode* cond = parseExprNode();
-      const char* msg  = NULL;
+      const char* msg  = nullptr;
       
       if (matchChar(','))
       {
@@ -1409,7 +1409,7 @@ private:
          return SlotAssignOpNode::alloc(mResources, tok.pos.line, s->objectExpr, s->slotName, s->arrayExpr, processCharOp(TOK(tok)), r);
       }
       errorHere(tok, "left-hand side of assignment must be a variable");
-      return NULL;
+      return nullptr;
    }
    
    // Handles postfix expressions
@@ -1435,7 +1435,7 @@ private:
                }
                // Generic slot/object indexing not implemented here.
                errorHere(op, "indexing allowed only on variables at this point");
-               return NULL;
+               return nullptr;
             }
             
             // Ternary ?:  (right-assoc)
@@ -1490,7 +1490,7 @@ private:
                }
                
                // Slot access: .IDENT [ '[' aidx ']' ]   -> SlotAccessNode
-               ExprNode* arr = NULL;
+               ExprNode* arr = nullptr;
                if (matchChar('[')) {
                   arr = parseAidxExprNode();
                   expectChar(']', "] expected");
@@ -1539,7 +1539,7 @@ private:
                return SlotAssignOpNode::alloc(mResources, op.pos.line, s->objectExpr, s->slotName, s->arrayExpr, asn, one);
             }
             errorHere(op, "postfix ++/-- requires a variable");
-            return NULL;
+            return nullptr;
          }
             
             // Logical / bitwise / arithmetic / shift / eq / rel / concat family
@@ -1580,7 +1580,7 @@ private:
       }
       
       errorHere(op, "unsupported operator in expression");
-      return NULL;
+      return nullptr;
    }
    
    // Handles prefix expressions
@@ -1602,7 +1602,7 @@ private:
          {
             //ExprNode* target = parseExpression(110);
             errorHere(t, "prefix ++/-- not supported");
-            return NULL;
+            return nullptr;
          }
             
             // Names
@@ -1632,7 +1632,7 @@ private:
             // bare name
             return ConstantNode::alloc(mResources, t.pos.line, t.stString);
          }
-         case TT::VAR:        return VarNode::alloc(mResources, t.pos.line, t.stString, NULL);
+         case TT::VAR:        return VarNode::alloc(mResources, t.pos.line, t.stString, nullptr);
             
          case TT::rwDECLARE:           // 'new'
          case TT::rwDECLARESINGLETON:  // 'singleton'
@@ -1663,7 +1663,7 @@ private:
       }
       
       errorHere(t, "unexpected token in expression");
-      return NULL;
+      return nullptr;
    }
 };
 

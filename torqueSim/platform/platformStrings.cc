@@ -37,8 +37,8 @@
 char *__strtoup(char *str)
 {
    char *newStr = str;
-   if (newStr == NULL)
-      return(NULL);
+   if (newStr == nullptr)
+      return(nullptr);
    while (*newStr)
    {
       *newStr = toupper(*newStr);
@@ -50,8 +50,8 @@ char *__strtoup(char *str)
 char *__strtolwr(char *str)
 {
    char *newStr = str;
-   if (newStr == NULL)
-      return(NULL);
+   if (newStr == nullptr)
+      return(nullptr);
    while (*newStr)
    {
       *newStr = tolower(*newStr);
@@ -67,13 +67,13 @@ char *strtolwr(char* str)
 
 char *stristr(char *szStringToBeSearched, const char *szSubstringToSearchFor)
 {
-   char *pPos = NULL;
-   char *szCopy1 = NULL;
-   char *szCopy2 = NULL;
+   char *pPos = nullptr;
+   char *szCopy1 = nullptr;
+   char *szCopy2 = nullptr;
 
    // verify parameters
-   if ( szStringToBeSearched == NULL || 
-        szSubstringToSearchFor == NULL ) 
+   if ( szStringToBeSearched == nullptr || 
+        szSubstringToSearchFor == nullptr ) 
    {
       return szStringToBeSearched;
    }
@@ -86,16 +86,16 @@ char *stristr(char *szStringToBeSearched, const char *szSubstringToSearchFor)
    szCopy1 = __strtolwr(strdup(szStringToBeSearched));
    szCopy2 = __strtolwr(strdup(szSubstringToSearchFor));
 
-   if ( szCopy1 == NULL || szCopy2 == NULL  ) {
+   if ( szCopy1 == nullptr || szCopy2 == nullptr  ) {
       // another option is to raise an exception here
       free((void*)szCopy1);
       free((void*)szCopy2);
-      return NULL;
+      return nullptr;
    }
 
    pPos = strstr(szCopy1, szCopy2);
 
-   if ( pPos != NULL ) {
+   if ( pPos != nullptr ) {
       // map to the original string
       pPos = szStringToBeSearched + (pPos - szCopy1);
    }
@@ -117,8 +117,8 @@ char* dStrncat(char *dst, const char *src, dsize_t len)
 }
 
 // concatenates a list of src's onto the end of dst
-// the list of src's MUST be terminated by a NULL parameter
-// dStrcatl(dst, sizeof(dst), src1, src2, NULL);
+// the list of src's MUST be terminated by a nullptr parameter
+// dStrcatl(dst, sizeof(dst), src1, src2, nullptr);
 char* dStrcatl(char *dst, U32 dstSize, ...)
 {
    const char* src;
@@ -135,7 +135,7 @@ char* dStrcatl(char *dst, U32 dstSize, ...)
    va_start(args, dstSize);
 
    // concatenate each src to end of dst
-   while ( (src = va_arg(args, const char*)) != NULL )
+   while ( (src = va_arg(args, const char*)) != nullptr )
       while( dstSize && *src )
       {
          *p++ = *src++;
@@ -152,8 +152,8 @@ char* dStrcatl(char *dst, U32 dstSize, ...)
 
 
 // copy a list of src's into dst
-// the list of src's MUST be terminated by a NULL parameter
-// dStrccpyl(dst, sizeof(dst), src1, src2, NULL);
+// the list of src's MUST be terminated by a nullptr parameter
+// dStrccpyl(dst, sizeof(dst), src1, src2, nullptr);
 char* dStrcpyl(char *dst, dsize_t dstSize, ...)
 {
    const char* src;
@@ -166,7 +166,7 @@ char* dStrcpyl(char *dst, dsize_t dstSize, ...)
    va_start(args, dstSize);
 
    // concatenate each src to end of dst
-   while ( (src = va_arg(args, const char*)) != NULL )
+   while ( (src = va_arg(args, const char*)) != nullptr )
       while( dstSize && *src )
       {
          *p++ = *src++;

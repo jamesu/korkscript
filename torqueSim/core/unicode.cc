@@ -227,7 +227,7 @@ UTF16* convertUTF8toUTF16( const UTF8* unistring)
    // perform conversion
    nCodepoints = convertUTF8toUTF16( unistring, buf, len);
    
-   // add 1 for the NULL terminator the converter promises it included.
+   // add 1 for the nullptr terminator the converter promises it included.
    nCodepoints++;
    
    // allocate the return buffer, copy over, and return it.
@@ -249,7 +249,7 @@ UTF32* convertUTF8toUTF32( const UTF8* unistring)
    // perform conversion
    nCodepoints = convertUTF8toUTF32( unistring, buf, len);
    
-   // add 1 for the NULL terminator the converter promises it included.
+   // add 1 for the nullptr terminator the converter promises it included.
    nCodepoints++;
    
    // allocate the return buffer, copy over, and return it.
@@ -272,7 +272,7 @@ UTF8*  convertUTF16toUTF8( const UTF16* unistring)
    // perform conversion
    nCodeunits = convertUTF16toUTF8( unistring, buf, len);
    
-   // add 1 for the NULL terminator the converter promises it included.
+   // add 1 for the nullptr terminator the converter promises it included.
    nCodeunits++;
    
    // allocate the return buffer, copy over, and return it.
@@ -294,7 +294,7 @@ UTF32* convertUTF16toUTF32(const UTF16* unistring)
    // perform conversion
    nCodepoints = convertUTF16toUTF32( unistring, buf, len);
    
-   // add 1 for the NULL terminator the converter promises it included.
+   // add 1 for the nullptr terminator the converter promises it included.
    nCodepoints++;
    
    // allocate the return buffer, copy over, and return it.
@@ -316,7 +316,7 @@ UTF8*  convertUTF32toUTF8( const UTF32* unistring)
    // perform conversion
    nCodeunits = convertUTF32toUTF8( unistring, buf, len);
    
-   // add 1 for the NULL terminator the converter promises it included.
+   // add 1 for the nullptr terminator the converter promises it included.
    nCodeunits++;
    
    // allocate the return buffer, copy over, and return it.
@@ -338,7 +338,7 @@ UTF16* convertUTF32toUTF16(const UTF32* unistring)
    // perform conversion
    nCodepoints = convertUTF32toUTF16( unistring, buf, len);
    
-   // add 1 for the NULL terminator the converter promises it included.
+   // add 1 for the nullptr terminator the converter promises it included.
    nCodepoints++;
    
    // allocate the return buffer, copy over, and return it.
@@ -408,7 +408,7 @@ const UTF32 oneUTF8toUTF32( const UTF8* codepoint, U32 *unitsWalked)
       expectedByteCount = 1;
    }
    
-   if(unitsWalked != NULL)
+   if(unitsWalked != nullptr)
       *unitsWalked = expectedByteCount;
    
    // codepoints in the surrogate range are illegal, and should be replaced.
@@ -460,7 +460,7 @@ const UTF32  oneUTF16toUTF32(const UTF16* codepoint, U32 *unitsWalked)
          break;
    }
 
-   if(unitsWalked != NULL)
+   if(unitsWalked != nullptr)
       *unitsWalked = unitCount;
 
    // codepoints in the surrogate range are illegal, and should be replaced.
@@ -632,7 +632,7 @@ bool chompUTF8BOM( const char *inString, char **outStringPtr )
    U8 bom[4];
    memcpy( bom, inString, 4 );
 
-   bool valid = isValidUTF8BOM( bom, NULL );
+   bool valid = isValidUTF8BOM( bom, nullptr );
 
    // This is hackey, but I am not sure the best way to do it at the present.
    // The only valid BOM is a UTF8 BOM, which is 3 bytes, even though we read
@@ -696,7 +696,7 @@ bool isValidUTF8BOM( U8 bom[4], const char** outName )
       return true;
    }
    
-   *outName = NULL;
+   *outName = nullptr;
 
    // Don't print out an error message here, because it will try this with
    // every script. -pw

@@ -46,7 +46,7 @@ namespace Sim
 //---------------------------------------------------------------------------
 
 // BEGIN T2D BLOCK
-SimFieldDictionary::Entry *SimFieldDictionary::mFreeList = NULL;
+SimFieldDictionary::Entry *SimFieldDictionary::mFreeList = nullptr;
 
 static Chunker<SimFieldDictionary::Entry> fieldChunker;
 
@@ -128,7 +128,7 @@ void SimFieldDictionary::setFieldValue(StringTableEntry slotName, const char *va
          field = allocEntry();
          field->value = strdup(value);
          field->slotName = slotName;
-         field->next = NULL;
+         field->next = nullptr;
          if (typeId != UINT_MAX)
          {
             field->enforcedTypeId = typeId;
@@ -157,7 +157,7 @@ const char *SimFieldDictionary::getFieldValue(StringTableEntry slotName, U32* ty
          return walk->value;
       }
    }
-   return NULL;
+   return nullptr;
 }
 
 
@@ -165,27 +165,27 @@ const char *SimFieldDictionary::getFieldValue(StringTableEntry slotName, U32* ty
 
 SimObject::SimObject( const U8 namespaceLinkMask ) : mNSLinkMask( namespaceLinkMask )
 {
-   objectName               = NULL;
-   mInternalName            = NULL;
+   objectName               = nullptr;
+   mInternalName            = nullptr;
    nextNameObject           = (SimObject*)-1;
    nextManagerNameObject    = (SimObject*)-1;
-   nextIdObject             = NULL;
+   nextIdObject             = nullptr;
    mId                      = 0;
    mIdString                = StringTable->EmptyString;
    mGroup                   = 0;
-   mVMNameSpace             = NULL;
-   mNotifyList              = NULL;
+   mVMNameSpace             = nullptr;
+   mNotifyList              = nullptr;
    mTypeMask                = 0;
    mScriptCallbackGuard     = 0;
-   mFieldDictionary         = NULL;
+   mFieldDictionary         = nullptr;
    mCanSaveFieldDictionary    = true;
-   mClassName               = NULL;
-   mSuperClassName          = NULL;
+   mClassName               = nullptr;
+   mSuperClassName          = nullptr;
    mProgenitorFile          = Con::getCurrentCodeBlockFullPath();
    mPeriodicTimerID         = 0;
    mSimFlags = 0;
-   vmObject = NULL;
-   vm = NULL;
+   vmObject = nullptr;
+   vm = nullptr;
 }
 
 
@@ -357,7 +357,7 @@ void SimObject::assignDynamicFieldsFrom(SimObject* parent)
 {
    if(parent->mFieldDictionary)
    {
-      if( mFieldDictionary == NULL )
+      if( mFieldDictionary == nullptr )
          mFieldDictionary = new SimFieldDictionary;
       mFieldDictionary->assignFrom(parent->mFieldDictionary);
    }
@@ -418,7 +418,7 @@ void SimObject::writeFields(Stream &stream, U32 tabStop)
       // Skip if the field should not be written.
       // For now, we only deal with non-array fields.
       if (  elementCount == 1 &&
-            f->writeDataFn != NULL &&
+            f->writeDataFn != nullptr &&
             f->writeDataFn( this, fieldName ) == false )
             continue;
       
@@ -517,7 +517,7 @@ bool SimObject::save(const char* pcFileName, bool bOnlySelected)
    static const char *beginMessage = "//--- OBJECT WRITE BEGIN ---";
    static const char *endMessage = "//--- OBJECT WRITE END ---";
    FileStream stream;
-   MemStream f(0, NULL, false, false);
+   MemStream f(0, nullptr, false, false);
    std::vector<char> w;
 
    if (stream.open(pcFileName, FileStream::Read))
@@ -583,8 +583,8 @@ bool SimObject::save(const char* pcFileName, bool bOnlySelected)
       stream.write(2, "\r\n");
    }
 
-   Con::setVariable("$DocRoot", NULL);
-   Con::setVariable("$ModRoot", NULL);
+   Con::setVariable("$DocRoot", nullptr);
+   Con::setVariable("$ModRoot", nullptr);
 
    return true;
 
@@ -623,7 +623,7 @@ ConsoleFunction(isObject, bool, 2, 2, "handle")
    if (!dStrcmp(argv[1], "0") || !dStrcmp(argv[1], ""))
       return false;
    else
-      return (Sim::findObject(argv[1]) != NULL);
+      return (Sim::findObject(argv[1]) != nullptr);
 }
 
 /*! cancel a previously scheduled event
@@ -767,11 +767,11 @@ ConsoleMethod(SimObject, save, bool, 3, 4, "fileName, [selectedOnly]?")
    if(argc > 3)
       bSelectedOnly   = dAtob(argv[3]);
    
-   const char* filename = NULL;
+   const char* filename = nullptr;
    
    filename = argv[2];
    
-   if(filename == NULL || *filename == 0)
+   if(filename == nullptr || *filename == 0)
       return false;
    
    return object->save(filename, bSelectedOnly);
@@ -929,7 +929,7 @@ ConsoleMethod(SimObject, getClassName, const char*, 2, 2, "")
 ConsoleMethod(SimObject, getFieldValue, const char*, 3, 3, "fieldName")
 {
    const char *fieldName = StringTable->insert( argv[2] );
-   return object->getDataField( fieldName, NULL );
+   return object->getDataField( fieldName, nullptr );
 }
 
 /*! Set the value of any field.
@@ -979,7 +979,7 @@ ConsoleMethod(SimObject, setFieldValue, bool, 4, 4, "fieldName,value")
    const char *fieldName = StringTable->insert(argv[2]);
    const char *value = argv[3];
    
-   object->setDataField( fieldName, NULL, value );
+   object->setDataField( fieldName, nullptr, value );
    
    return true;
    
@@ -1356,7 +1356,7 @@ ConsoleMethod(SimObject, getDynamicField, const char*, 3, 3, "index")
       if (!(*itr))
       {
          Con::warnf("Invalid dynamic field index passed to SimObject::getDynamicField!");
-         return NULL;
+         return nullptr;
       }
       ++itr;
    }
@@ -1371,7 +1371,7 @@ ConsoleMethod(SimObject, getDynamicField, const char*, 3, 3, "index")
    }
    
    Con::warnf("Invalid dynamic field index passed to SimObject::getDynamicField!");
-   return NULL;
+   return nullptr;
 }
 
 /*! dump the object to  the console.
@@ -1691,7 +1691,7 @@ bool SimObject::isLocked()
 
 void SimObject::setLocked( bool b = true )
 {
-   setDataField(StringTable->insert("locked", false), NULL, b ? "true" : "false" );
+   setDataField(StringTable->insert("locked", false), nullptr, b ? "true" : "false" );
 }
 
 //-----------------------------------------------------------------------------
@@ -1709,7 +1709,7 @@ bool SimObject::isHidden()
 
 void SimObject::setHidden(bool b = true)
 {
-   setDataField(StringTable->insert("hidden", false), NULL, b ? "true" : "false" );
+   setDataField(StringTable->insert("hidden", false), nullptr, b ? "true" : "false" );
 }
 
 //-----------------------------------------------------------------------------
@@ -1824,7 +1824,7 @@ U32 SimObject::getDataFieldType( StringTableEntry slotName, const char* array )
 //---------------------------------------------------------------------------
 
 static Chunker<SimObject::Notify> notifyChunker(128000);
-SimObject::Notify *SimObject::mNotifyFreeList = NULL;
+SimObject::Notify *SimObject::mNotifyFreeList = nullptr;
 
 SimObject::Notify *SimObject::allocNotify()
 {
@@ -1860,7 +1860,7 @@ SimObject::Notify* SimObject::removeNotify(void *ptr, SimObject::Notify::Type ty
       }
       list = &((*list)->next);
    }
-   return NULL;
+   return nullptr;
 }
 
 void SimObject::deleteNotify(SimObject* obj)
@@ -1932,7 +1932,7 @@ void SimObject::processDeleteNotifies()
       else
       {
          // it must be an object ref - a pointer refs this object
-         *((SimObject **) note->ptr) = NULL;
+         *((SimObject **) note->ptr) = nullptr;
       }
       freeNotify(note);
    }
@@ -1976,8 +1976,8 @@ void SimObject::initPersistFields()
 void SimObject::registerClassNameFields()
 {
    addGroup("Namespace Linking");
-   //addProtectedField("superclass", TypeString, Offset(mSuperClassName, SimObject), &setSuperClass, NULL, &writeSuperclass, "Script Class of object.");
-   //addProtectedField("className",      TypeString, Offset(mClassName,      SimObject), &setClass,      NULL, &writeClass, "Script SuperClass of object.");
+   //addProtectedField("superclass", TypeString, Offset(mSuperClassName, SimObject), &setSuperClass, nullptr, &writeSuperclass, "Script Class of object.");
+   //addProtectedField("className",      TypeString, Offset(mClassName,      SimObject), &setClass,      nullptr, &writeClass, "Script SuperClass of object.");
    endGroup("Namespace Linking");
 }
 
@@ -1990,7 +1990,7 @@ SimObject* SimObject::clone( const bool copyDynamicFields )
     if (!pCloneObject)
     {
         Con::errorf("SimObject::clone() - Unable to create cloned object.");
-        return NULL;
+        return nullptr;
     }
 
     // Register object.
@@ -1998,7 +1998,7 @@ SimObject* SimObject::clone( const bool copyDynamicFields )
     {
         Con::warnf("SimObject::clone() - Unable to register cloned object.");
         delete pCloneObject;
-        return NULL;
+        return nullptr;
     }
 
     // Copy object.
@@ -2018,7 +2018,7 @@ void SimObject::copyTo(SimObject* object)
 {
    object->mClassName = mClassName;
    object->mSuperClassName = mSuperClassName;
-   object->mVMNameSpace = NULL;
+   object->mVMNameSpace = nullptr;
    object->linkNamespaces();
 }
 
@@ -2032,9 +2032,9 @@ bool SimObject::setParentGroup(void* userPtr,
                                BitSet32 flag,
                                U32 requestedType)
 {
-   SimGroup *parent = NULL;
+   SimGroup *parent = nullptr;
    SimObject *object = static_cast<SimObject*>(outputStorage->fieldObject);
-   if (object == NULL || inputStorage->data.argc != 1)
+   if (object == nullptr || inputStorage->data.argc != 1)
    {
       return false;
    }
@@ -2214,8 +2214,8 @@ void SimObject::unlinkNamespaces()
       }
    }
 
-   mVMNameSpace = NULL;
-   getVM()->setObjectNamespace(getVMObject(), NULL);
+   mVMNameSpace = nullptr;
+   getVM()->setObjectNamespace(getVMObject(), nullptr);
 }
 
 void SimObject::setClassNamespace( const char *classNamespace )
@@ -2353,7 +2353,7 @@ ConsoleMethod(SimObject, getProgenitorFile, const char*, 2, 2, "")
 ConsoleMethod(SimObject, getFieldType, const char*, 3, 3, "fieldName")
 {
    const char *fieldName = StringTable->insert( argv[2] );
-   U32 typeID = object->getDataFieldType( fieldName, NULL );
+   U32 typeID = object->getDataFieldType( fieldName, nullptr );
    KorkApi::TypeInfo* type = vmPtr->getTypeInfo(typeID);
    return type ? type->name : "";
 }
@@ -2371,7 +2371,7 @@ ConsoleMethod(SimObject, clone, S32, 2, 3, "[copyDynamicFields = false]?")
     SimObject* pClonedObject = object->clone( copyDynamicFields );
 
     // Finish if object was not cloned.
-    if ( pClonedObject == NULL )
+    if ( pClonedObject == nullptr )
         return 0;
 
     return pClonedObject->getId();
@@ -3240,7 +3240,7 @@ void SimGroup::onRemove()
           // T2DJUNK WE NEED THIS? if ( (*ptr)->isProperlyAdded() )
           {
              (*ptr)->onGroupRemove();
-             (*ptr)->mGroup = NULL;
+             (*ptr)->mGroup = nullptr;
              (*ptr)->unregisterObject();
              (*ptr)->mGroup = this;
           }
@@ -3261,12 +3261,12 @@ SimObject *SimGroup::findObject(const char *namePath)
 
    StringTableEntry stName = StringTable->lookupn(namePath, len);
    if(!stName)
-      return NULL;
+      return nullptr;
 
    SimObject *root = nameDictionary.find(stName);
 
    if(!root)
-      return NULL;
+      return nullptr;
 
    if(namePath[len] == 0)
       return root;
@@ -3283,7 +3283,7 @@ SimObject *SimSet::findObject(const char *namePath)
 
    StringTableEntry stName = StringTable->lookupn(namePath, len);
    if(!stName)
-      return NULL;
+      return nullptr;
 
    lock();
    for(SimSet::iterator i = begin(); i != end(); i++)
@@ -3297,12 +3297,12 @@ SimObject *SimSet::findObject(const char *namePath)
       }
    }
    unlock();
-   return NULL;
+   return nullptr;
 }
 
 SimObject* SimObject::findObject(const char* )
 {
-   return NULL;
+   return nullptr;
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -3350,7 +3350,7 @@ SimObject* SimSet::findObjectByInternalName(const char* internalName, bool searc
       }
    }
 
-   return NULL;
+   return nullptr;
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -3407,7 +3407,7 @@ void SimConsoleEvent::process(SimObject* object)
       char* func = dStrstr( mArgv[0], (char*)"::" );
       if( func )
       {
-         // Set the first colon to NULL, so we can reference the namespace.
+         // Set the first colon to nullptr, so we can reference the namespace.
          // This is okay because events are deleted immediately after
          // processing. Maybe a bad idea anyway?
          func[0] = '\0';
@@ -3442,7 +3442,7 @@ void SimConsoleEvent::process(SimObject* object)
 
 // BEGIN T2D BLOCK
 
-SimConsoleThreadExecCallback::SimConsoleThreadExecCallback() : retVal(NULL)
+SimConsoleThreadExecCallback::SimConsoleThreadExecCallback() : retVal(nullptr)
 {
    sem = Semaphore::createSemaphore(0);
 }
@@ -3465,7 +3465,7 @@ const char *SimConsoleThreadExecCallback::waitForResult()
       return retVal;
    }
 
-   return NULL;
+   return nullptr;
 }
 
 //-----------------------------------------------------------------------------

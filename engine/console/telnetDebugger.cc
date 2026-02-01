@@ -106,14 +106,14 @@ TelnetDebugger::TelnetDebugger(KorkApi::VmInternal* vm)
    mVMInternal->mConfig.extraConsumers[1].cbFunc = debuggerConsumer;
    mVMInternal->mConfig.extraConsumers[1].cbUser = this;
    mVMInternal = vm;
-   mCurrentWatchFiber = NULL;
+   mCurrentWatchFiber = nullptr;
    
    mAcceptPort = -1;
    
    mState = NotConnected;
    mCurPos = 0;
    
-   mBreakpoints = NULL;
+   mBreakpoints = nullptr;
    mBreakOnNextStatement = false;
    mProgramPaused = false;
    mWaitForClient = false;
@@ -132,7 +132,7 @@ TelnetDebugger::Breakpoint **TelnetDebugger::findBreakpoint(StringTableEntry fil
 {
    Breakpoint **walk = &mBreakpoints;
    Breakpoint *cur;
-   while((cur = *walk) != NULL)
+   while((cur = *walk) != nullptr)
    {
       // TODO: This assumes that the OS file names are case
       // insensitive... Torque needs a dFilenameCmp() function.
@@ -140,7 +140,7 @@ TelnetDebugger::Breakpoint **TelnetDebugger::findBreakpoint(StringTableEntry fil
          return walk;
       walk = &cur->next;
    }
-   return NULL;
+   return nullptr;
 }
 
 
@@ -150,8 +150,8 @@ TelnetDebugger::~TelnetDebugger()
    
    if (mVMInternal->mConfig.extraConsumers[1].cbUser == this)
    {
-      mVMInternal->mConfig.extraConsumers[1].cbFunc = NULL;
-      mVMInternal->mConfig.extraConsumers[1].cbUser = NULL;
+      mVMInternal->mConfig.extraConsumers[1].cbFunc = nullptr;
+      mVMInternal->mConfig.extraConsumers[1].cbUser = nullptr;
    }
 
    if (mValid)
@@ -487,7 +487,7 @@ void TelnetDebugger::processLineBuffer(S32 cmdLen)
          mState = mWaitForClient ? Initialize : Connected;
       }
       
-      mCurrentWatchFiber = NULL;
+      mCurrentWatchFiber = nullptr;
       setWatchFiberFromVm();
       return;
    }
@@ -614,7 +614,7 @@ void TelnetDebugger::addAllBreakpoints(CodeBlock *code)
    
    // Find the breakpoints for this code block and attach them.
    Breakpoint *cur = mBreakpoints;
-   while( cur != NULL )
+   while( cur != nullptr )
    {
       // TODO: This assumes that the OS file names are case
       // insensitive... Torque needs a dFilenameCmp() function.
@@ -750,7 +750,7 @@ void TelnetDebugger::removeBreakpointsFromCode(CodeBlock *code)
 {
    Breakpoint **walk = &mBreakpoints;
    Breakpoint *cur;
-   while((cur = *walk) != NULL)
+   while((cur = *walk) != nullptr)
    {
       if(cur->code == code)
       {
@@ -789,7 +789,7 @@ void TelnetDebugger::removeAllBreakpoints()
       delete walk;
       walk = temp;
    }
-   mBreakpoints = NULL;
+   mBreakpoints = nullptr;
 }
 
 void TelnetDebugger::debugContinue()
@@ -912,7 +912,7 @@ void TelnetDebugger::evaluateExpression(const char *tag, S32 frame, const char *
    snprintf( buffer, len, format, evalBuffer );
    
    // Execute the eval.
-   KorkApi::ConsoleValue res = mVMInternal->mVM->evalCode(evalBuffer, NULL, NULL, frame);
+   KorkApi::ConsoleValue res = mVMInternal->mVM->evalCode(evalBuffer, nullptr, nullptr, frame);
    const char* result = mVMInternal->valueAsString(res);
    delete [] buffer;
    
@@ -984,10 +984,10 @@ void TelnetDebugger::clearCodeBlockPointers(CodeBlock *code)
 {
    Breakpoint **walk = &mBreakpoints;
    Breakpoint *cur;
-   while((cur = *walk) != NULL)
+   while((cur = *walk) != nullptr)
    {
       if(cur->code == code)
-         cur->code = NULL;
+         cur->code = nullptr;
       
       walk = &cur->next;
    }

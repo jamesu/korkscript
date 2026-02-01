@@ -229,8 +229,8 @@ namespace Con
    /// @see ConsoleLogger
    ///
    /// @{
-   void addConsumer(ConsumerCallback cb, void* userPtr = NULL);
-   void removeConsumer(ConsumerCallback cb, void* userPtr = NULL);
+   void addConsumer(ConsumerCallback cb, void* userPtr = nullptr);
+   void removeConsumer(ConsumerCallback cb, void* userPtr = nullptr);
    /// @}
 
    /// @name Miscellaneous
@@ -262,8 +262,8 @@ namespace Con
    /// @param  pDstPath    Pointer to string buffer to fill with absolute path.
    /// @param  size        Size of buffer pointed to by pDstPath.
    /// @param  pSrcPath    Original, possibly relative path.
-   bool expandPath( char* pDstPath, U32 size, const char* pSrcPath, const char* pWorkingDirectoryHint = NULL, const bool ensureTrailingSlash = false );
-   void collapsePath( char* pDstPath, U32 size, const char* pSrcPath, const char* pWorkingDirectoryHint = NULL );
+   bool expandPath( char* pDstPath, U32 size, const char* pSrcPath, const char* pWorkingDirectoryHint = nullptr, const bool ensureTrailingSlash = false );
+   void collapsePath( char* pDstPath, U32 size, const char* pSrcPath, const char* pWorkingDirectoryHint = nullptr );
    bool isBasePath( const char* SrcPath, const char* pBasePath );
    void ensureTrailingSlash( char* pDstPath, const char* pSrcPath );
    bool stripRepeatSlashes( char* pDstPath, const char* pSrcPath, S32 dstSize );
@@ -297,7 +297,7 @@ namespace Con
    /// @param  filename    Pointer to string buffer to fill with absolute path.
    /// @param  size        Size of buffer pointed to by filename.
    /// @param  src         Original, possibly relative script path.
-   bool expandScriptFilename(char *filename, U32 size, const char *src, const char* cbName = NULL);
+   bool expandScriptFilename(char *filename, U32 size, const char *src, const char* cbName = nullptr);
    //
 
    StringTableEntry getModNameFromPath(const char *path);
@@ -342,7 +342,7 @@ namespace Con
    /// @param type    The type of the C++ variable; see the ConsoleDynamicTypes enum for a complete list.
    /// @param pointer Pointer to the variable.
    /// @see ConsoleDynamicTypes
-   bool addVariable(const char *name, S32 type, void *pointer, const char* desc = NULL);
+   bool addVariable(const char *name, S32 type, void *pointer, const char* desc = nullptr);
 
    /// Remove a console variable.
    ///
@@ -460,7 +460,7 @@ namespace Con
    ///
    /// @{
 
-   void markCommandGroup (const char * nsName, const char *name, const char* usage=NULL);
+   void markCommandGroup (const char * nsName, const char *name, const char* usage=nullptr);
    void beginCommandGroup(const char * nsName, const char *name, const char* usage);
    void endCommandGroup  (const char * nsName, const char *name);
    
@@ -563,7 +563,7 @@ namespace Con
    /// @param  string   Buffer containing code to execute.
    /// @param  echo     Should we echo the string to the console?
    /// @param  fileName Indicate what file this code is coming from; used in error reporting and such.
-   const char *evaluate(const char* string, bool echo = false, const char *fileName = NULL);
+   const char *evaluate(const char* string, bool echo = false, const char *fileName = nullptr);
 
    /// Evaluate an arbitrary line of script.
    ///
@@ -673,7 +673,7 @@ public:
    ///      // Resulting code
    ///      static const char* cExpandPath(SimObject *, S32, const char **argv);
    ///      static ConsoleConstructor
-   ///            gExpandPathobj(NULL,"ExpandPath", cExpandPath,
+   ///            gExpandPathobj(nullptr,"ExpandPath", cExpandPath,
    ///            "(string filePath)", 2, 2);
    ///      static const char* cExpandPath(SimObject *, S32 argc, const char **argv)
    ///      {
@@ -878,7 +878,7 @@ typedef KorkApi::ConsoleValue ConsoleValue;
 
 // Console function macros
 #  define ConsoleFunctionGroupBegin(groupName, usage) \
-      static ConsoleConstructor gConsoleFunctionGroup##groupName##__GroupBegin(NULL,#groupName,usage);
+      static ConsoleConstructor gConsoleFunctionGroup##groupName##__GroupBegin(nullptr,#groupName,usage);
 
 #define ConsoleFunction(name, returnType, minArgs, maxArgs, usage)                 \
   static returnType c##name(SimObject*, KorkApi::Vm*, S32, const char**);           \
@@ -898,11 +898,11 @@ typedef KorkApi::ConsoleValue ConsoleValue;
 
 #  define ConsoleFunctionWithDocs(name,returnType,minArgs,maxArgs,argString)              \
       static returnType c##name(SimObject *, KorkApi::Vm* vmPtr, S32, const char **argv);                     \
-     static ConsoleConstructor g##name##obj(NULL,#name,c##name,#argString,minArgs,maxArgs);      \
+     static ConsoleConstructor g##name##obj(nullptr,#name,c##name,#argString,minArgs,maxArgs);      \
       static returnType c##name(SimObject *, KorkApi::Vm* vmPtr, S32 argc, const char **argv)
 
 #  define ConsoleFunctionGroupEnd(groupName) \
-      static ConsoleConstructor gConsoleFunctionGroup##groupName##__GroupEnd(NULL,#groupName,NULL);
+      static ConsoleConstructor gConsoleFunctionGroup##groupName##__GroupEnd(nullptr,#groupName,nullptr);
 
 // Console method macros
 #  define ConsoleNamespace(className, usage) \
@@ -967,7 +967,7 @@ typedef KorkApi::ConsoleValue ConsoleValue;
       static inline returnType c##className##name(KorkApi::Vm* vmPtr, S32 argc, const char **argv)
 
 #  define ConsoleMethodGroupEnd(className, groupName) \
-      static ConsoleConstructor className##groupName##__GroupEnd(#className,#groupName,NULL);
+      static ConsoleConstructor className##groupName##__GroupEnd(#className,#groupName,nullptr);
 
 #  define ConsoleMethodRootGroupEndWithDocs(className)
 #  define ConsoleMethodGroupEndWithDocs(className)

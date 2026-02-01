@@ -109,7 +109,7 @@ static void printChild(const char* key, const T* child, int pad) {
    if (!child) { puts("null"); return; }
    
    // If we are NOT an expression, print everything on the same level and dont recurse
-   if (dynamic_cast<const ExprNode*>(child) == NULL) {
+   if (dynamic_cast<const ExprNode*>(child) == nullptr) {
       if (child->next) {
          puts("{");
          const StmtNode* it = child;
@@ -541,7 +541,7 @@ bool printAST(const char* buf, const char* filename)
       res.allowTypes = gEnableExtensions;
       res.allowStringInterpolation = gEnableExtensions;
       
-      StmtNode* rootNode = NULL;
+      StmtNode* rootNode = nullptr;
       
       try
       {

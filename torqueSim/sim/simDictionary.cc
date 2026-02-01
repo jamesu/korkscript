@@ -29,7 +29,7 @@ extern U32 HashPointer(StringTableEntry e);
 
 SimNameDictionary::SimNameDictionary()
 {
-   hashTable = NULL;
+   hashTable = nullptr;
    mutex = Mutex::createMutex();
 }
 
@@ -53,7 +53,7 @@ void SimNameDictionary::insert(SimObject* obj)
       hashEntryCount = 0;
       S32 i;
       for(i = 0; i < hashTableSize; i++)
-         hashTable[i] = NULL;
+         hashTable[i] = nullptr;
    }
    U32 idx = HashPointer(obj->objectName) % hashTableSize;
    obj->nextNameObject = hashTable[idx];
@@ -63,7 +63,7 @@ void SimNameDictionary::insert(SimObject* obj)
    {
       // resize the hash table
       S32 i;
-      SimObject *head = NULL, *walk, *temp;
+      SimObject *head = nullptr, *walk, *temp;
       for(i = 0; i < hashTableSize; i++) {
          walk = hashTable[i];
          while(walk)
@@ -79,7 +79,7 @@ void SimNameDictionary::insert(SimObject* obj)
       hashTable = new SimObject *[hashTableSize];
 
       for(i = 0; i < hashTableSize;i++)
-         hashTable[i] = NULL;
+         hashTable[i] = nullptr;
       while(head)
       {
          temp = head->nextNameObject;
@@ -94,9 +94,9 @@ void SimNameDictionary::insert(SimObject* obj)
 
 SimObject* SimNameDictionary::find(StringTableEntry name)
 {
-   // NULL is a valid lookup - it will always return NULL
+   // nullptr is a valid lookup - it will always return nullptr
    if(!hashTable)
-      return NULL;
+      return nullptr;
       
    Mutex::lockMutex(mutex);
 
@@ -113,7 +113,7 @@ SimObject* SimNameDictionary::find(StringTableEntry name)
    }
 
    Mutex::unlockMutex(mutex);
-   return NULL;
+   return nullptr;
 }
 
 void SimNameDictionary::remove(SimObject* obj)
@@ -150,7 +150,7 @@ SimManagerNameDictionary::SimManagerNameDictionary()
    hashEntryCount = 0;
    S32 i;
    for(i = 0; i < hashTableSize; i++)
-      hashTable[i] = NULL;
+      hashTable[i] = nullptr;
    mutex = Mutex::createMutex();
 }
 
@@ -175,7 +175,7 @@ void SimManagerNameDictionary::insert(SimObject* obj)
    {
       // resize the hash table
       S32 i;
-      SimObject *head = NULL, *walk, *temp;
+      SimObject *head = nullptr, *walk, *temp;
       for(i = 0; i < hashTableSize; i++) {
          walk = hashTable[i];
          while(walk)
@@ -191,7 +191,7 @@ void SimManagerNameDictionary::insert(SimObject* obj)
       hashTable = new SimObject *[hashTableSize];
 
       for(i = 0; i < hashTableSize;i++)
-         hashTable[i] = NULL;
+         hashTable[i] = nullptr;
       while(head)
       {
          temp = head->nextManagerNameObject;
@@ -207,7 +207,7 @@ void SimManagerNameDictionary::insert(SimObject* obj)
 
 SimObject* SimManagerNameDictionary::find(StringTableEntry name)
 {
-   // NULL is a valid lookup - it will always return NULL
+   // nullptr is a valid lookup - it will always return nullptr
 
    Mutex::lockMutex(mutex);
 
@@ -224,7 +224,7 @@ SimObject* SimManagerNameDictionary::find(StringTableEntry name)
    }
 
    Mutex::unlockMutex(mutex);
-   return NULL;
+   return nullptr;
 }
 
 void SimManagerNameDictionary::remove(SimObject* obj)
@@ -258,7 +258,7 @@ void SimManagerNameDictionary::remove(SimObject* obj)
 SimIdDictionary::SimIdDictionary()
 {
    for(S32 i = 0; i < DefaultTableSize; i++)
-      table[i] = NULL;
+      table[i] = nullptr;
    mutex = Mutex::createMutex();
 }
 
@@ -297,7 +297,7 @@ SimObject* SimIdDictionary::find(SimObjectId id)
 
    Mutex::unlockMutex(mutex);
 
-   return NULL;
+   return nullptr;
 }
 
 void SimIdDictionary::remove(SimObject* obj)

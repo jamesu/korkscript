@@ -66,7 +66,7 @@ protected:
 public:
    
    BaseDataChunker(U32 chunkSize=BaseDataChunker<T>::ChunkSize, 
-      const Alloc& alloc = Alloc{}) : mChunkSize(chunkSize), mChunkHead(NULL)
+      const Alloc& alloc = Alloc{}) : mChunkSize(chunkSize), mChunkHead(nullptr)
    {
    }
    
@@ -100,13 +100,13 @@ public:
 
    void* alloc(size_t numBytes)
    {
-      void* theAlloc = mChunkHead ? mChunkHead->allocBytes(numBytes) : NULL;
-      if (theAlloc == NULL)
+      void* theAlloc = mChunkHead ? mChunkHead->allocBytes(numBytes) : nullptr;
+      if (theAlloc == nullptr)
       {
          size_t actualSize = std::max<size_t>(mChunkSize, numBytes);
          allocChunk(actualSize);
          theAlloc = mChunkHead->allocBytes(numBytes);
-         AssertFatal(theAlloc != NULL, "Something really odd going on here");
+         AssertFatal(theAlloc != nullptr, "Something really odd going on here");
       }
       return theAlloc;
    }
@@ -117,7 +117,7 @@ public:
       while (itr)
       {
          DataBlock* nextItr = itr->mNext;
-         if (nextItr == NULL && keepOne)
+         if (nextItr == nullptr && keepOne)
          {
             itr->setPosition(0);
             break;
@@ -156,7 +156,7 @@ public:
 
    void setChunkSize(size_t size)
    {
-      AssertFatal(mChunkHead == NULL, "Tried setting AFTER init");
+      AssertFatal(mChunkHead == nullptr, "Tried setting AFTER init");
       mChunkSize = size;
    }
 };
@@ -199,24 +199,24 @@ template<class T> struct ChunkerFreeClassList
 {
    ChunkerFreeClassList<T>* mNextList;
 
-   ChunkerFreeClassList() : mNextList(NULL)
+   ChunkerFreeClassList() : mNextList(nullptr)
    {
    }
 
    void reset()
    {
-      mNextList = NULL;
+      mNextList = nullptr;
    }
 
    bool isEmpty()
    {
-      return mNextList == NULL;
+      return mNextList == nullptr;
    }
 
    T* pop()
    {
       ChunkerFreeClassList<T>* oldNext = mNextList;
-      mNextList = mNextList ? mNextList->mNextList : NULL;
+      mNextList = mNextList ? mNextList->mNextList : nullptr;
       return (T*)oldNext;
    }
 

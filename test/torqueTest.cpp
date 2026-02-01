@@ -160,7 +160,7 @@ int main(int argc, char **argv)
 {
 	Con::init();
    Sim::init();
-	Con::addConsumer(MyLogger, NULL);
+	Con::addConsumer(MyLogger, nullptr);
    
    Con::evaluatef("echo(\"Hello world\" SPC TorqueScript SPC is SPC amazing);");
    

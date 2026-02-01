@@ -95,7 +95,7 @@ class ThreadManager
 {
    static ThreadManager* singleton()
    {
-      static ThreadManager* man = NULL;
+      static ThreadManager* man = nullptr;
       if(!man) man = new ThreadManager;
       AssertISV(man, "Thread manager doesn't exist.");
       return man;
@@ -155,7 +155,7 @@ public:
    static Thread* getThreadById(ThreadIdent threadid)
    {
       AssertFatal(threadid != 0, "ThreadManager::getThreadById() Searching for a bad thread id.");
-      Thread* ret = NULL;
+      Thread* ret = nullptr;
       
       singleton()->poolLock.lock();
       std::vector<Thread*> &pool = singleton()->threadPool;

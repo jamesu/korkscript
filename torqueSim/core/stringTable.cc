@@ -23,7 +23,7 @@
 #include "platform/platform.h"
 #include "core/stringTable.h"
 
-_StringTable *_gStringTable = NULL;
+_StringTable *_gStringTable = nullptr;
 const U32 _StringTable::csm_stInitSize = 29;
 StringTableEntry _StringTable::EmptyString;
 
@@ -110,15 +110,15 @@ void _StringTable::create()
 //--------------------------------------
 void _StringTable::destroy()
 {
-   AssertFatal(StringTable != NULL, "StringTable::destroy: StringTable does not exist.");
+   AssertFatal(StringTable != nullptr, "StringTable::destroy: StringTable does not exist.");
    delete StringTable;
-   _gStringTable = NULL;
+   _gStringTable = nullptr;
 }
 
 //--------------------------------------
 StringTableEntry _StringTable::insert(const char* val, const bool  caseSens)
 {
-   if ( val == NULL )
+   if ( val == nullptr )
       return StringTable->EmptyString;
    
    MutexHandle mutex;
@@ -127,7 +127,7 @@ StringTableEntry _StringTable::insert(const char* val, const bool  caseSens)
    Node **walk, *temp;
    U32 key = hashString(val);
    walk = &buckets[key % (U32)buckets.size()];
-   while((temp = *walk) != NULL)   {
+   while((temp = *walk) != nullptr)   {
       if(caseSens && !strcmp(temp->val, val))
          return temp->val;
       else if(!caseSens && !strcasecmp(temp->val, val))
@@ -156,7 +156,7 @@ StringTableEntry _StringTable::insert(const char* val, const bool  caseSens)
 //--------------------------------------
 StringTableEntry _StringTable::insertn(const char* src, S32 len, const bool  caseSens)
 {
-   if ( src == NULL )
+   if ( src == nullptr )
       return StringTable->EmptyString;
    
    MutexHandle mutex;
@@ -172,7 +172,7 @@ StringTableEntry _StringTable::insertn(const char* src, S32 len, const bool  cas
 //--------------------------------------
 StringTableEntry _StringTable::lookup(const char* val, const bool  caseSens)
 {
-   if ( val == NULL )
+   if ( val == nullptr )
       return StringTable->EmptyString;
    
    MutexHandle mutex;
@@ -181,20 +181,20 @@ StringTableEntry _StringTable::lookup(const char* val, const bool  caseSens)
    Node **walk, *temp;
    U32 key = hashString(val);
    walk = &buckets[key % (U32)buckets.size()];
-   while((temp = *walk) != NULL)   {
+   while((temp = *walk) != nullptr)   {
       if(caseSens && !strcmp(temp->val, val))
          return temp->val;
       else if(!caseSens && !strcasecmp(temp->val, val))
          return temp->val;
       walk = &(temp->next);
    }
-   return NULL;
+   return nullptr;
 }
 
 //--------------------------------------
 StringTableEntry _StringTable::lookupn(const char* val, S32 len, const bool  caseSens)
 {
-   if ( val == NULL )
+   if ( val == nullptr )
       return StringTable->EmptyString;
    
    MutexHandle mutex;
@@ -203,20 +203,20 @@ StringTableEntry _StringTable::lookupn(const char* val, S32 len, const bool  cas
    Node **walk, *temp;
    U32 key = hashStringn(val, len);
    walk = &buckets[key % (U32)buckets.size()];
-   while((temp = *walk) != NULL) {
+   while((temp = *walk) != nullptr) {
       if(caseSens && !strncasecmp(temp->val, val, len) && temp->val[len] == 0)
          return temp->val;
       else if(!caseSens && !strncasecmp(temp->val, val, len) && temp->val[len] == 0)
          return temp->val;
       walk = &(temp->next);
    }
-   return NULL;
+   return nullptr;
 }
 
 //--------------------------------------
 void _StringTable::resize(const U32 newSize)
 {
-   Node *head = NULL, *walk, *temp;
+   Node *head = nullptr, *walk, *temp;
    U32 i;
    // reverse individual bucket lists
    // we do this because new strings are added at the end of bucket

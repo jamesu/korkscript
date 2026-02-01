@@ -112,7 +112,7 @@ class Namespace
    ~Namespace();
 
    void initVM(KorkApi::VmInternal* vm);
-   void addFunction(StringTableEntry name, CodeBlock *cb, U32 functionOffset, const char* usage = NULL);
+   void addFunction(StringTableEntry name, CodeBlock *cb, U32 functionOffset, const char* usage = nullptr);
    void addCommand(StringTableEntry name, KorkApi::StringFuncCallback, void* userPtr, const char* usage, S32 minArgs, S32 maxArgs);
    void addCommand(StringTableEntry name, KorkApi::IntFuncCallback, void* userPtr, const char* usage, S32 minArgs, S32 maxArgs);
    void addCommand(StringTableEntry name, KorkApi::FloatFuncCallback, void* userPtr, const char* usage, S32 minArgs, S32 maxArgs);
@@ -161,8 +161,8 @@ struct NamespaceState
    NamespaceState();
    void trashCache();
    
-   Namespace *find(StringTableEntry name, StringTableEntry package=NULL);
-   Namespace *lookup(StringTableEntry name, StringTableEntry package=NULL);
+   Namespace *find(StringTableEntry name, StringTableEntry package=nullptr);
+   Namespace *lookup(StringTableEntry name, StringTableEntry package=nullptr);
    bool canTabComplete(const char *prevText, const char *bestMatch, const char *newText, S32 baseLen, bool fForward);
 
    // Packages

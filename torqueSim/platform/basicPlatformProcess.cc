@@ -60,12 +60,12 @@ void forceShutdown(S32 returnValue)
 
 StringTableEntry getUserHomeDirectory()
 {
-   return NULL;
+   return nullptr;
 }
 
 StringTableEntry getUserDataDirectory()
 {
-   return NULL;
+   return nullptr;
 }
 
 
@@ -113,7 +113,7 @@ void outputDebugString(const char *string)
 /// File IO.
 StringTableEntry getCurrentDirectory()
 {
-   return NULL;
+   return nullptr;
 }
 
 bool setCurrentDirectory(StringTableEntry newDir)
@@ -123,12 +123,12 @@ bool setCurrentDirectory(StringTableEntry newDir)
 
 StringTableEntry getExecutableName()
 {
-   return NULL;
+   return nullptr;
 }
 
 StringTableEntry getExecutablePath()
 {
-   return NULL;
+   return nullptr;
 }
 
 bool dumpPath(const char *in_pBasePath, std::vector<FileInfo>& out_rFileVector, S32 recurseDepth)

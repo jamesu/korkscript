@@ -77,7 +77,7 @@ namespace PlatformNetState
       if (strlen(addressString) > 255)
          return false;
       
-      char *portString = NULL;
+      char *portString = nullptr;
       
       if (addressString[0] == '[')
       {
@@ -92,7 +92,7 @@ namespace PlatformNetState
             *portString++ = '\0';
             if (*portString != ':')
             {
-               portString = NULL;
+               portString = nullptr;
             }
             else
             {
@@ -381,13 +381,13 @@ namespace PlatformNetState
    
    struct addrinfo* pickAddressByProtocol(struct addrinfo* addr, int protocol)
    {
-      for (; addr != NULL; addr = addr->ai_next)
+      for (; addr != nullptr; addr = addr->ai_next)
       {
          if (addr->ai_family == protocol)
             return addr;
       }
       
-      return NULL;
+      return nullptr;
    }
 
    Net::Error getSocketAddress(SOCKET socketFd, int requiredFamily, NetAddress *outAddress)
@@ -567,7 +567,7 @@ struct PolledSocket
 static std::vector<PolledSocket*> gPolledSockets;
 
 static PolledSocket* addPolledSocket(NetSocket handleFd, SOCKET fd, S32 state,
-                                     char* remoteAddr = NULL, S32 port = -1)
+                                     char* remoteAddr = nullptr, S32 port = -1)
 {
    PolledSocket* sock = new PolledSocket();
    sock->fd = fd;
@@ -593,7 +593,7 @@ bool netSocketWaitForWritable(NetSocket handleFd, S32 timeoutMs)
    timeout.tv_sec = timeoutMs / 1000;
    timeout.tv_usec = ( timeoutMs % 1000 ) * 1000;
    
-   if( select(socketFd + 1, NULL, &writefds, NULL, &timeout) > 0 )
+   if( select(socketFd + 1, nullptr, &writefds, nullptr, &timeout) > 0 )
       return true;
    
    return false;
@@ -620,7 +620,7 @@ void Net::shutdown()
    
    while (gPolledSockets.size() > 0)
    {
-      if (gPolledSockets[0] == NULL)
+      if (gPolledSockets[0] == nullptr)
          gPolledSockets.erase(gPolledSockets.begin());
       else
          closeConnectTo(gPolledSockets[0]->handleFd);
@@ -875,7 +875,7 @@ void Net::closeConnectTo(NetSocket handleFd)
       if (gPolledSockets[i] && gPolledSockets[i]->handleFd == handleFd)
       {
          delete gPolledSockets[i];
-         gPolledSockets[i] = NULL;
+         gPolledSockets[i] = nullptr;
          break;
       }
    }
@@ -1111,7 +1111,7 @@ void Net::process()
    S32 bytesRead;
    Net::Error err;
    bool removeSock = false;
-   PolledSocket *currentSock = NULL;
+   PolledSocket *currentSock = nullptr;
    NetSocket incomingHandleFd = NetSocket::INVALID;
    NetAddress out_h_addr;
    S32 out_h_length = 0;
@@ -1124,7 +1124,7 @@ void Net::process()
       currentSock = gPolledSockets[i];
       
       // Cleanup if we've removed it
-      if (currentSock == NULL)
+      if (currentSock == nullptr)
       {
          gPolledSockets.erase(gPolledSockets.begin()+i);
          continue;
@@ -1244,7 +1244,7 @@ void Net::process()
             {
                // try to connect
                out_h_addr.port = currentSock->remotePort;
-               const sockaddr *ai_addr = NULL;
+               const sockaddr *ai_addr = nullptr;
                int ai_addrlen = 0;
                sockaddr_in socketAddress;
                sockaddr_in6 socketAddress6;
@@ -1580,7 +1580,7 @@ Net::Error Net::getListenAddress(const NetAddress::Type type, NetAddress *addres
 {
    if (type == NetAddress::IPAddress)
    {
-      const char* serverIP = forceDefaults ? NULL : Con::getVariable("pref::Net::BindAddress");
+      const char* serverIP = forceDefaults ? nullptr : Con::getVariable("pref::Net::BindAddress");
       if (!serverIP || serverIP[0] == '\0')
       {
          address->type = type;
@@ -1602,7 +1602,7 @@ Net::Error Net::getListenAddress(const NetAddress::Type type, NetAddress *addres
    }
    else if (type == NetAddress::IPV6Address)
    {
-      const char* serverIP6 = forceDefaults ? NULL : Con::getVariable("pref::Net::BindAddress6");
+      const char* serverIP6 = forceDefaults ? nullptr : Con::getVariable("pref::Net::BindAddress6");
       if (!serverIP6 || serverIP6[0] == '\0')
       {
          sockaddr_in6 addr;
@@ -1621,7 +1621,7 @@ Net::Error Net::getListenAddress(const NetAddress::Type type, NetAddress *addres
    }
    else if (type == NetAddress::IPV6MulticastAddress)
    {
-      const char* multicastAddressValue = forceDefaults ? NULL : Con::getVariable("pref::Net::Multicast6Address");
+      const char* multicastAddressValue = forceDefaults ? nullptr : Con::getVariable("pref::Net::Multicast6Address");
       if (!multicastAddressValue || multicastAddressValue[0] == '\0')
       {
          multicastAddressValue = TORQUE_NET_DEFAULT_MULTICAST_ADDRESS;
@@ -1768,7 +1768,7 @@ Net::Error Net::stringToAddress(const char *addressString, NetAddress  *address,
       memset(&ipAddr, 0, sizeof(ipAddr));
       memset(&ipAddr6, 0, sizeof(ipAddr6));
       
-      bool hasInterface = dStrchr(addressString, '%') != NULL; // if we have an interface, best use getaddrinfo to parse
+      bool hasInterface = dStrchr(addressString, '%') != nullptr; // if we have an interface, best use getaddrinfo to parse
       
       // Check if we've got a simple ipv4 / ipv6
       
@@ -1805,12 +1805,12 @@ Net::Error Net::stringToAddress(const char *addressString, NetAddress  *address,
          if (!hostLookup && !hasInterface)
             return NeedHostLookup;
          
-         struct addrinfo hint, *res = NULL;
+         struct addrinfo hint, *res = nullptr;
          memset(&hint, 0, sizeof(hint));
          hint.ai_family = NetAddressTypeToIpType(actualType);
          hint.ai_flags = hostLookup ? 0 : AI_NUMERICHOST;
          
-         if (getaddrinfo(addressString, NULL, &hint, &res) == 0)
+         if (getaddrinfo(addressString, nullptr, &hint, &res) == 0)
          {
             if (hint.ai_family != AF_UNSPEC)
             {
@@ -2292,7 +2292,7 @@ bool Net::openPort(S32 port, bool doBind)
    {
 
       // Alloc new socket
-      PlatformStubSocket* socketPtr = NULL;
+      PlatformStubSocket* socketPtr = nullptr;
       printf("SocketPool::allocItem\n");
       FreeListHandle::Basic32 ret = PlatformNetState::smSocketPool.allocItem(&socketPtr);
       printf("SocketPool::allocItem DONE\n");
@@ -2353,10 +2353,10 @@ Net::Error Net::sendto(const NetAddress *address, const U8 *buffer, S32 bufferSi
       return socket.mAllocNumber != 0 && socket.mAddress.isEqual(*address);
    });
    
-   PlatformStubSocket* outSocket = itr != PlatformNetState::smSocketPool.mItems.end() ? itr : NULL;
+   PlatformStubSocket* outSocket = itr != PlatformNetState::smSocketPool.mItems.end() ? itr : nullptr;
    PlatformStubSocket* serverSocket = PlatformNetState::smSocketPool.getItem(PlatformNetState::udpSocket.getHandle());
 
-   if (outSocket == NULL || serverSocket == NULL)
+   if (outSocket == nullptr || serverSocket == nullptr)
       return NoError;
 
    // Send packet to inbox of socket
@@ -2382,7 +2382,7 @@ void Net::processListenSocket(NetSocket socketHandle)
    {
       // We store the packet header in the ring buffer in this case
       PlatformStubSocket* inSocket = PlatformNetState::smSocketPool.getItem(socketHandle.getHandle());
-      if (inSocket == NULL)
+      if (inSocket == nullptr)
          continue;
 
       U16 bytesRead = 0;
@@ -2430,7 +2430,7 @@ Net::Error Net::listen(NetSocket handleFd, S32 backlog)
 {
    // Grab socket
    PlatformStubSocket* inSocket = PlatformNetState::smSocketPool.getItem(handleFd.getHandle());
-   if (inSocket == NULL)
+   if (inSocket == nullptr)
       return NotASocket;
 
    // All stub sockets listen by default
@@ -2448,7 +2448,7 @@ Net::Error Net::bindAddress(const NetAddress &address, NetSocket handleFd, bool 
 {
    // Grab socket
    PlatformStubSocket* inSocket = PlatformNetState::smSocketPool.getItem(handleFd.getHandle());
-   if (inSocket == NULL)
+   if (inSocket == nullptr)
       return NotASocket;
 
    // See if address is free
@@ -2488,7 +2488,7 @@ Net::Error Net::getListenAddress(const NetAddress::Type type, NetAddress *addres
 {
    if (type == NetAddress::IPAddress)
    {
-      const char* serverIP = forceDefaults ? NULL : Con::getVariable("pref::Net::BindAddress");
+      const char* serverIP = forceDefaults ? nullptr : Con::getVariable("pref::Net::BindAddress");
       if (!serverIP || serverIP[0] == '\0')
       {
          address->type = type;

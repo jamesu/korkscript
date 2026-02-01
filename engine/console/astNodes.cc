@@ -69,7 +69,7 @@ void StmtNode::addBreakLine(CodeStream &code)
 
 StmtNode::StmtNode()
 {
-   next = NULL;
+   next = nullptr;
 }
 
 void StmtNode::setPackage(StringTableEntry)
@@ -1128,7 +1128,7 @@ U32 AssignExprNode::compile(CodeStream &codeStream, U32 ip, TypeReq type)
    codeStream.mResources->precompileIdent(varName);
 
    // In this case tuple gets pushed to the stack so we dont need to advance
-   bool usingStringStack = (tupleExpr == NULL) && (subType == TypeReqString || subType == TypeReqTypedString);
+   bool usingStringStack = (tupleExpr == nullptr) && (subType == TypeReqString || subType == TypeReqTypedString);
 
    TypeReq rhsType = tupleExpr ? TypeReqTuple : subType;
    // NOTE: compiling rhs first is compulsory in this case
@@ -1227,7 +1227,7 @@ U32 AssignExprNode::compile(CodeStream &codeStream, U32 ip, TypeReq type)
 
 TypeReq AssignExprNode::getPreferredType()
 {
-   return (assignTypeName != NULL && assignTypeName[0] != '\0' ? TypeReqTypedString : rhsExpr->getPreferredType());
+   return (assignTypeName != nullptr && assignTypeName[0] != '\0' ? TypeReqTypedString : rhsExpr->getPreferredType());
 }
 
 TypeReq AssignExprNode::getReturnLoadType()
@@ -1680,7 +1680,7 @@ U32 SlotAssignNode::compile(CodeStream &codeStream, U32 ip, TypeReq type)
 
    // NOTE: We always use StringStack, but for tuples 
    // we use a frame instead so dont need to advance/push the rhs here.
-   bool usingStringStack = (tupleExpr == NULL) && (subType == TypeReqString || subType == TypeReqTypedString);
+   bool usingStringStack = (tupleExpr == nullptr) && (subType == TypeReqString || subType == TypeReqTypedString);
    
    TypeReq rhsType = tupleExpr ? TypeReqTuple : subType;
 
@@ -2053,7 +2053,7 @@ U32 FunctionDeclStmtNode::compileStmt(CodeStream &codeStream, U32 ip)
    S32 typeId = codeStream.mResources->allowTypes ? codeStream.mResources->precompileType(returnTypeName) : -1;
    codeStream.pushReturnType(typeId);
    
-   codeStream.emit(U32( bool(stmts != NULL) ? 1 : 0 ) + U32( dbgLineNumber << 1 ));
+   codeStream.emit(U32( bool(stmts != nullptr) ? 1 : 0 ) + U32( dbgLineNumber << 1 ));
    const U32 endIp = codeStream.emit(0);
    codeStream.emit(argc);
    for(VarNode *walk = args; walk; walk = (VarNode *)((StmtNode*)walk)->getNext())

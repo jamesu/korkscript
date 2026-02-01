@@ -90,7 +90,7 @@ private:
 
 public:
    MutexHandle()
-      : mMutexPtr(NULL)
+      : mMutexPtr(nullptr)
    {
    }
 
@@ -120,7 +120,7 @@ public:
       if(mMutexPtr)
       {
          Mutex::unlockMutex(mMutexPtr);
-         mMutexPtr = NULL;
+         mMutexPtr = nullptr;
       }
    }
 

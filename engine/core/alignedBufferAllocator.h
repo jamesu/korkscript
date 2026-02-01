@@ -17,7 +17,7 @@ public:
    
    typedef T ValueType;
    
-   AlignedBufferAllocator() : mBuffer(NULL), mHighWaterMark(0), mWaterMark(0)
+   AlignedBufferAllocator() : mBuffer(nullptr), mHighWaterMark(0), mWaterMark(0)
    {
    }
    
@@ -44,7 +44,7 @@ public:
 #ifdef TORQUE_MEM_DEBUG
          AssertFatal(false, "Overflow");
 #endif
-         return NULL;
+         return nullptr;
       }
       mWaterMark += (U32)numElements;
       return ptr;
@@ -58,7 +58,7 @@ public:
 #ifdef TORQUE_MEM_DEBUG
          AssertFatal(false, "Overflow");
 #endif
-         return NULL;
+         return nullptr;
       }
       mWaterMark += numElements;
       return ptr;

@@ -45,8 +45,8 @@ void cprintf( const char* str )
 bool hasExtension(const char* pFilename, const char* pExtension)
 {
    // Sanity!
-   AssertFatal( pFilename != NULL, "Filename cannot be NULL." );
-   AssertFatal( pExtension != NULL, "Extension cannot be NULL." );
+   AssertFatal( pFilename != nullptr, "Filename cannot be nullptr." );
+   AssertFatal( pExtension != nullptr, "Extension cannot be nullptr." );
    
    // Find filename length.
    const U32 filenameLength = strlen( pFilename );

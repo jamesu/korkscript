@@ -27,13 +27,13 @@ class WasmTimeModuleObject : public BaseBridgeObject
       {
          if (!ptr || !ptr->mStore || !ptr->mHasMemory)
          {
-            return NULL;
+            return nullptr;
          }
          
          wasmtime_context_t* ctx = wasmtime_store_context(ptr->mStore);
          uint8_t* base = wasmtime_memory_data(ctx, &ptr->mMemory);
          size_t   sz   = wasmtime_memory_data_size(ctx, &ptr->mMemory);
-         return allocPos < sz ? base + allocPos : NULL;
+         return allocPos < sz ? base + allocPos : nullptr;
       }
    };
 
@@ -65,10 +65,10 @@ public:
 
    WasmTimeModuleObject()
    {
-      mEngine      = NULL;
-      mStore       = NULL;
-      mLinker      = NULL;
-      mModule      = NULL;
+      mEngine      = nullptr;
+      mStore       = nullptr;
+      mLinker      = nullptr;
+      mModule      = nullptr;
       mInstance = {};
       mMemory = {};
       mHasInstance = false;
@@ -90,7 +90,7 @@ public:
       wasmtime_val_t results[1] = {};
       args[0].kind = WASMTIME_I32; args[0].of.i32 = (int32_t)mScratchSize;
       
-      wasm_trap_t* trap = NULL;
+      wasm_trap_t* trap = nullptr;
       wasmtime_error_t* err = wasmtime_func_call(ctx, &mFuncs[0], args, 1, results, 1, &trap);
       if (trap)
       {
@@ -127,14 +127,14 @@ public:
          return false;
       }
       
-      mStore  = wasmtime_store_new(mEngine, NULL, NULL);
+      mStore  = wasmtime_store_new(mEngine, nullptr, nullptr);
       if (!mStore)
       {
          return false;
       }
       
       mLinker = wasmtime_linker_new(mEngine);
-      return mLinker != NULL;
+      return mLinker != nullptr;
    }
 
    void cleanup() override
@@ -142,22 +142,22 @@ public:
       if (mModule)
       {
          wasmtime_module_delete(mModule);
-         mModule = NULL;
+         mModule = nullptr;
       }
       if (mLinker)
       {
          wasmtime_linker_delete(mLinker);
-         mLinker = NULL;
+         mLinker = nullptr;
       }
       if (mStore)
       {
          wasmtime_store_delete(mStore);
-         mStore = NULL;
+         mStore = nullptr;
       }
       if (mEngine)
       {
          wasm_engine_delete(mEngine);
-         mEngine = NULL;
+         mEngine = nullptr;
       }
 
       mInstance = {};
@@ -218,7 +218,7 @@ public:
               fty,
               &hostThunkBridge, // wasmtime_func_callback_t
               info,             // env
-              NULL              // finalizer
+              nullptr              // finalizer
             );
             wasm_functype_delete(fty);
 
@@ -235,7 +235,7 @@ public:
 
       // 2) Instantiate via linker
       wasmtime_context_t* ctx = wasmtime_store_context(mStore);
-      wasm_trap_t* trap = NULL;
+      wasm_trap_t* trap = nullptr;
       wasmtime_error_t* err = wasmtime_linker_instantiate(mLinker, ctx, mModule, &mInstance, &trap);
       if (trap)
       {
@@ -271,7 +271,7 @@ public:
             size_t i = 0;
             while (true)
             {
-               char* name = NULL;
+               char* name = nullptr;
                size_t name_len = 0;
                bool ok = wasmtime_instance_export_nth(ctx, &mInstance, i++, &name, &name_len, &ext);
                if (!ok)
@@ -391,7 +391,7 @@ public:
       }
 
       wasmtime_context_t* ctx = wasmtime_store_context(userModule->mStore);
-      wasm_trap_t* trap = NULL;
+      wasm_trap_t* trap = nullptr;
       wasmtime_error_t* err = wasmtime_func_call(ctx, func, args, (size_t)argc,
                                                  results, (retCh=='v'?0:1), &trap);
       if (trap)
@@ -416,26 +416,26 @@ public:
       // return conversion
       if (retCh == 'v')
       {
-         return KorkApi::ConsoleValue::makeString(NULL);
+         return KorkApi::ConsoleValue::makeString(nullptr);
       }
       
       if (retCh == 's')
       {
          if (!userModule->mHasMemory || results[0].kind != WASMTIME_I32)
          {
-            return KorkApi::ConsoleValue::makeString(NULL);
+            return KorkApi::ConsoleValue::makeString(nullptr);
          }
          
          int32_t off = results[0].of.i32;
          uint8_t* base = wasmtime_memory_data(ctx, &userModule->mMemory);
          size_t   sz   = wasmtime_memory_data_size(ctx, &userModule->mMemory);
-         return KorkApi::ConsoleValue::makeString(((size_t)off >= sz) ? NULL : (const char*)(base + off));
+         return KorkApi::ConsoleValue::makeString(((size_t)off >= sz) ? nullptr : (const char*)(base + off));
       }
       if (retCh == 'i') return KorkApi::ConsoleValue::makeNumber((S32)(results[0].kind==WASMTIME_I32?results[0].of.i32:0));
       if (retCh == 'I') return KorkApi::ConsoleValue::makeNumber((S64)(results[0].kind==WASMTIME_I64?results[0].of.i64:0));
       if (retCh == 'f') return KorkApi::ConsoleValue::makeNumber((F32)(results[0].kind==WASMTIME_F32?results[0].of.f32:0));
       if (retCh == 'F') return KorkApi::ConsoleValue::makeNumber((F64)(results[0].kind==WASMTIME_F64?results[0].of.f64:0));
-      return KorkApi::ConsoleValue::makeString(NULL);
+      return KorkApi::ConsoleValue::makeString(nullptr);
    }
 
    // WASM -> TS (host import)
@@ -469,7 +469,7 @@ public:
 
       // memory for string offsets
       wasmtime_context_t* ctx = wasmtime_caller_context(caller);
-      uint8_t* memBase = NULL; size_t memSz = 0;
+      uint8_t* memBase = nullptr; size_t memSz = 0;
       if (userModule->mHasMemory)
       {
          memBase = wasmtime_memory_data(ctx, &userModule->mMemory);
@@ -503,7 +503,7 @@ public:
 
       if (nresults == 0)
       {
-         return NULL;
+         return nullptr;
       }
       
       char retCh = userModule->mHostFuncSignatures[userInfo->funcIdx][0];
@@ -526,14 +526,14 @@ public:
             results[0].kind = WASMTIME_I32;
             results[0].of.i32 = 0;
          }
-         return NULL;
+         return nullptr;
       }
 
-      if (retCh == 'i') { results[0].kind = WASMTIME_I32; results[0].of.i32 = (int32_t)vm->valueAsInt(retV);  return NULL; }
-      if (retCh == 'I') { results[0].kind = WASMTIME_I64; results[0].of.i64 = (int64_t)vm->valueAsInt(retV);  return NULL; }
-      if (retCh == 'f') { results[0].kind = WASMTIME_F32; results[0].of.f32 = (float)  vm->valueAsFloat(retV);return NULL; }
-      if (retCh == 'F') { results[0].kind = WASMTIME_F64; results[0].of.f64 = (double) vm->valueAsFloat(retV);return NULL; }
-      return NULL; // void
+      if (retCh == 'i') { results[0].kind = WASMTIME_I32; results[0].of.i32 = (int32_t)vm->valueAsInt(retV);  return nullptr; }
+      if (retCh == 'I') { results[0].kind = WASMTIME_I64; results[0].of.i64 = (int64_t)vm->valueAsInt(retV);  return nullptr; }
+      if (retCh == 'f') { results[0].kind = WASMTIME_F32; results[0].of.f32 = (float)  vm->valueAsFloat(retV);return nullptr; }
+      if (retCh == 'F') { results[0].kind = WASMTIME_F64; results[0].of.f64 = (double) vm->valueAsFloat(retV);return nullptr; }
+      return nullptr; // void
    }
 
 private:

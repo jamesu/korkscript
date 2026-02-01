@@ -142,10 +142,6 @@ struct FileTime
 typedef U64 FileTime;
 #endif
 
-#ifndef NULL
-#  define NULL 0
-#endif
-
 //--------------------------------------
 // Enable Asserts in all debug builds -- AFTER compiler types include.
 #if defined(TORQUE_DEBUG)

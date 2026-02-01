@@ -140,22 +140,22 @@ ConsoleGetType( TypeMyPoint3F )
 
 ConsoleTypeOp( TypeMyPoint3F )
 {
-   MyPoint3F* firstPoint = lhs.typeId == TypeMyPoint3F ? (MyPoint3F*)lhs.evaluatePtr(vmPtr->getAllocBase()) : NULL;
-   MyPoint3F* secondPoint = rhs.typeId == TypeMyPoint3F ? (MyPoint3F*)rhs.evaluatePtr(vmPtr->getAllocBase()) : NULL;
-   MyPoint3F* outPoint = NULL;
+   MyPoint3F* firstPoint = lhs.typeId == TypeMyPoint3F ? (MyPoint3F*)lhs.evaluatePtr(vmPtr->getAllocBase()) : nullptr;
+   MyPoint3F* secondPoint = rhs.typeId == TypeMyPoint3F ? (MyPoint3F*)rhs.evaluatePtr(vmPtr->getAllocBase()) : nullptr;
+   MyPoint3F* outPoint = nullptr;
    F32 otherScalar = 1.0f;
    
    MyPoint3F first;
    MyPoint3F second;
    
-   if (firstPoint == NULL)
+   if (firstPoint == nullptr)
    {
       otherScalar = vmPtr->valueAsFloat(lhs);
       first.x = first.y = first.z = otherScalar;
       second = *secondPoint;
       outPoint = secondPoint;
    }
-   else if (secondPoint == NULL)
+   else if (secondPoint == nullptr)
    {
       otherScalar = vmPtr->valueAsFloat(rhs);
       second.x = second.y = second.z = otherScalar;
@@ -281,7 +281,7 @@ ConsoleFunction(saveFibers, bool, 3, 3, "fiberIdList, fileName")
    FileStream fs;
    bool didWrite = false;
    U32 blobSize = 0;
-   U8* blob = NULL;
+   U8* blob = nullptr;
    
    const S32 count = StringUnit::getUnitCount(list, " \t\n");
    if (count <= 0)
@@ -323,7 +323,7 @@ ConsoleFunction(restoreFibers, const char*, 2, 2, "fileName")
       U8* blob = (U8*)malloc(blobSize);
       fs.read(blobSize, blob);
       
-      KorkApi::FiberId* outFibers = NULL;
+      KorkApi::FiberId* outFibers = nullptr;
       U32 outNumFibers = 0;
       
       const char* result = "";
@@ -374,7 +374,7 @@ ConsoleFunction(evalInFiber, const char*, 3, 3, "fiberId, code")
    KorkApi::FiberId fiberId = (KorkApi::FiberId)std::atoll(argv[1]);
    vmPtr->setCurrentFiber(fiberId);
    
-   const char* returnValue = Con::evaluate(argv[2], false, NULL);
+   const char* returnValue = Con::evaluate(argv[2], false, nullptr);
    vmPtr->clearCurrentFiberError();
    
    vmPtr->setCurrentFiber(existingFiberId);
@@ -422,7 +422,7 @@ int main(int argc, char **argv)
 {
 	Con::init();
    Sim::init();
-	Con::addConsumer(MyLogger, NULL);
+	Con::addConsumer(MyLogger, nullptr);
 
    if (argc < 2)
    {

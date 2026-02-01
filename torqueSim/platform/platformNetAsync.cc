@@ -42,7 +42,7 @@ NetAsync gNetAsync;
 
 #define LOOKUP_REQUEST_CHECK_INTERVAL	500
 
-void* gNetAsyncMutex = NULL;
+void* gNetAsyncMutex = nullptr;
 
 static void lockNetAsyncMutex()
 {
@@ -113,11 +113,11 @@ void NetAsync::run()
       return;
 
    mRunning = true;
-   NameLookupRequest* lookupRequest = NULL;
+   NameLookupRequest* lookupRequest = nullptr;
 
    while (isRunning())
    {
-      lookupRequest = NULL;
+      lookupRequest = nullptr;
 
       // lock 
       lockNetAsyncMutex();
@@ -134,7 +134,7 @@ void NetAsync::run()
       unlockNetAsyncMutex();
 
       // if we have a lookup request
-      if (lookupRequest != NULL)
+      if (lookupRequest != nullptr)
       {
           NetAddress address;
 	       Net::Error error = Net::stringToAddress(lookupRequest->remoteAddr, &address, true);

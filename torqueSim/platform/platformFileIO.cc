@@ -35,7 +35,7 @@ namespace Platform
 
 StringTableEntry osGetTemporaryDirectory()
 {
-   return NULL;
+   return nullptr;
 }
 
 StringTableEntry getTemporaryDirectory()
@@ -67,7 +67,7 @@ static char filePathBuffer[1024];
 static bool deleteDirectoryRecursive( const char* pPath )
 {
    // Sanity!
-   AssertFatal( pPath != NULL, "Cannot delete directory that is NULL." );
+   AssertFatal( pPath != nullptr, "Cannot delete directory that is nullptr." );
    
    // Find directories.
    std::vector<StringTableEntry> directories;
@@ -126,7 +126,7 @@ static bool deleteDirectoryRecursive( const char* pPath )
 bool deleteDirectory( const char* pPath )
 {
    // Sanity!
-   AssertFatal( pPath != NULL, "Cannot delete directory that is NULL." );
+   AssertFatal( pPath != nullptr, "Cannot delete directory that is nullptr." );
    
    // Is the path a file?
    if ( Platform::isFile( pPath ) )
@@ -140,11 +140,11 @@ bool deleteDirectory( const char* pPath )
 
 //-----------------------------------------------------------------------------
 
-static StringTableEntry sgMainCSDir = NULL;
+static StringTableEntry sgMainCSDir = nullptr;
 
 StringTableEntry getMainDotCsDir()
 {
-   if(sgMainCSDir == NULL)
+   if(sgMainCSDir == nullptr)
       sgMainCSDir = Platform::getExecutablePath();
    
    return sgMainCSDir;
@@ -221,7 +221,7 @@ static inline void _resolveLeadingSlash(char* buf, U32 size)
 }
 #endif
 
-char * makeFullPathName(const char *path, char *buffer, U32 size, const char *cwd /* = NULL */)
+char * makeFullPathName(const char *path, char *buffer, U32 size, const char *cwd /* = nullptr */)
 {
    char bspath[1024];
    dStrncpy(bspath, path, sizeof(bspath));
@@ -244,14 +244,14 @@ char * makeFullPathName(const char *path, char *buffer, U32 size, const char *cw
       return buffer;
    }
    
-   if(cwd == NULL)
+   if(cwd == nullptr)
       cwd = Platform::getCurrentDirectory();
    
    dStrncpy(buffer, cwd, size);
    buffer[size-1] = 0;
    
    char *ptr = bspath;
-   char *slash = NULL;
+   char *slash = nullptr;
    char *endptr = buffer + dStrlen(buffer) - 1;
    
    do
@@ -377,12 +377,12 @@ static StringTableEntry tryStripBasePath(const char *path, const char *base)
       if(*(path + len) == '/') ++len;
       return StringTable->insert(path + len, true);
    }
-   return NULL;
+   return nullptr;
 }
 
 StringTableEntry stripBasePath(const char *path)
 {
-   StringTableEntry str = NULL;
+   StringTableEntry str = nullptr;
    
    str = tryStripBasePath( path, Platform::getMainDotCsDir() );
    
@@ -405,7 +405,7 @@ StringTableEntry stripBasePath(const char *path)
 
 //-----------------------------------------------------------------------------
 
-StringTableEntry getPrefsPath(const char *file /* = NULL */)
+StringTableEntry getPrefsPath(const char *file /* = nullptr */)
 {
    return "";
 }
@@ -424,26 +424,26 @@ namespace fs = std::filesystem;
 File::File()
 : currentStatus(Closed), capability(0)
 {
-   handle = (void *)NULL;
+   handle = (void *)nullptr;
 }
 
 File::~File()
 {
    close();
-   handle = (void *)NULL;
+   handle = (void *)nullptr;
 }
 
 File::Status File::open(const char *filename, const AccessMode openMode)
 {
-   AssertFatal(NULL != filename, "File::open: NULL filename");
-   AssertWarn(NULL == handle, "File::open: handle already valid");
+   AssertFatal(nullptr != filename, "File::open: nullptr filename");
+   AssertWarn(nullptr == handle, "File::open: handle already valid");
    
    // Close the file if it was already open...
    if (Closed != currentStatus)
       close();
    
-   FILE* fp = NULL;
-   const char* sopenMode = NULL;
+   FILE* fp = nullptr;
+   const char* sopenMode = nullptr;
    
    switch (openMode)
    {
@@ -470,7 +470,7 @@ File::Status File::open(const char *filename, const AccessMode openMode)
    fp = fopen(filename, sopenMode);
    handle = fp;
    
-   if (fp == NULL)
+   if (fp == nullptr)
    {
       return setStatus();
    }
@@ -500,7 +500,7 @@ File::Status File::open(const char *filename, const AccessMode openMode)
 U32 File::getPosition() const
 {
    AssertFatal(Closed != currentStatus, "File::getPosition: file closed");
-   AssertFatal(NULL != handle, "File::getPosition: invalid file handle");
+   AssertFatal(nullptr != handle, "File::getPosition: invalid file handle");
    
    return (U32) ftell((FILE*)handle);
 }
@@ -508,7 +508,7 @@ U32 File::getPosition() const
 File::Status File::setPosition(S32 position, bool absolutePos)
 {
    AssertFatal(Closed != currentStatus, "File::setPosition: file closed");
-   AssertFatal(NULL != handle, "File::setPosition: invalid file handle");
+   AssertFatal(nullptr != handle, "File::setPosition: invalid file handle");
    
    if (Ok != currentStatus && EOS != currentStatus)
       return currentStatus;
@@ -543,7 +543,7 @@ File::Status File::setPosition(S32 position, bool absolutePos)
 U32 File::getSize() const
 {
    AssertWarn(Closed != currentStatus, "File::getSize: file closed");
-   AssertFatal(NULL != handle, "File::getSize: invalid file handle");
+   AssertFatal(nullptr != handle, "File::getSize: invalid file handle");
    
    if (Ok == currentStatus || EOS == currentStatus)
    {
@@ -561,7 +561,7 @@ U32 File::getSize() const
 File::Status File::flush()
 {
    AssertFatal(Closed != currentStatus, "File::flush: file closed");
-   AssertFatal(NULL != handle, "File::flush: invalid file handle");
+   AssertFatal(nullptr != handle, "File::flush: invalid file handle");
    AssertFatal(true == hasCapability(FileWrite), "File::flush: cannot flush a read-only file");
    
    if (fflush((FILE*)handle))
@@ -575,7 +575,7 @@ File::Status File::close()
    if (handle)
    {
       fclose((FILE*)handle);
-      handle = NULL;
+      handle = nullptr;
    }
    // Set the status to closed
    return currentStatus = Closed;
@@ -599,8 +599,8 @@ File::Status File::setStatus(File::Status status)
 File::Status File::read(U32 size, char *dst, U32 *bytesRead)
 {
    AssertFatal(Closed != currentStatus, "File::read: file closed");
-   AssertFatal(NULL != handle, "File::read: invalid file handle");
-   AssertFatal(NULL != dst, "File::read: NULL destination pointer");
+   AssertFatal(nullptr != handle, "File::read: invalid file handle");
+   AssertFatal(nullptr != dst, "File::read: nullptr destination pointer");
    AssertFatal(true == hasCapability(FileRead), "File::read: file lacks capability");
    AssertWarn(0 != size, "File::read: size of zero");
    
@@ -609,7 +609,7 @@ File::Status File::read(U32 size, char *dst, U32 *bytesRead)
    else
    {
       U32 lastBytes;
-      U32 *bytes = (NULL == bytesRead) ? &lastBytes : (U32 *)bytesRead;
+      U32 *bytes = (nullptr == bytesRead) ? &lastBytes : (U32 *)bytesRead;
       *bytes = (U32)fread(dst, 1, size, (FILE*)handle);
       if (*bytes == 0)
       {
@@ -632,8 +632,8 @@ File::Status File::write(U32 size, const char *src, U32 *bytesWritten)
    // function is probably the max value of S32, due to the unix syscall
    // api.
    AssertFatal(Closed != currentStatus, "File::write: file closed");
-   AssertFatal(NULL != handle, "File::write: invalid file handle");
-   AssertFatal(NULL != src, "File::write: NULL source pointer");
+   AssertFatal(nullptr != handle, "File::write: invalid file handle");
+   AssertFatal(nullptr != src, "File::write: nullptr source pointer");
    AssertFatal(true == hasCapability(FileWrite), "File::write: file lacks capability");
    AssertWarn(0 != size, "File::write: size of zero");
    

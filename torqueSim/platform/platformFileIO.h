@@ -130,12 +130,12 @@ public:
    /// Reads "size" bytes from the file, and dumps data into "dst".
    /// The number of actual bytes read is returned in bytesRead
    /// @returns The status of the file
-   Status read(U32 size, char *dst, U32 *bytesRead = NULL);
+   Status read(U32 size, char *dst, U32 *bytesRead = nullptr);
 
    /// Writes "size" bytes into the file from the pointer "src".
    /// The number of actual bytes written is returned in bytesWritten
    /// @returns The status of the file
-   Status write(U32 size, const char *src, U32 *bytesWritten = NULL);
+   Status write(U32 size, const char *src, U32 *bytesWritten = nullptr);
 
    /// Returns whether or not this file is capable of the given function.
    bool hasCapability(Capability cap) const;

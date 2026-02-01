@@ -162,8 +162,8 @@ public:
 	{
 		mMemSize = 128 * 1024;
 		mScratchSize = 256;
-		mModuleFile = NULL;
-		mClassName = NULL;
+		mModuleFile = nullptr;
+		mClassName = nullptr;
 		memset(mFuncNames, '\0', sizeof(mFuncNames));
 		memset(mFuncSignatures, '\0', sizeof(mFuncSignatures));
 		memset(mHostFuncs, '\0', sizeof(mHostFuncs));

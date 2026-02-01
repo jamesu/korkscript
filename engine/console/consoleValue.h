@@ -150,7 +150,7 @@ struct ConsoleValue
    {
       if (!(typeId == TypeInternalString || typeId >= TypeBeginCustom))
       {
-         return NULL;
+         return nullptr;
       }
       
       switch (getZone())
@@ -190,7 +190,7 @@ struct ConsoleValue
    
    static inline void* addOffset(const void* base, U64 off)
    {
-      return (!base) ? NULL : reinterpret_cast<void*>(reinterpret_cast<UINTPTR>(base) + static_cast<UINTPTR>(off));
+      return (!base) ? nullptr : reinterpret_cast<void*>(reinterpret_cast<UINTPTR>(base) + static_cast<UINTPTR>(off));
    }
    
    inline bool isString() const

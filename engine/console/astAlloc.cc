@@ -213,7 +213,7 @@ VarNode *VarNode::alloc( Compiler::Resources* res, S32 lineNumber, StringTableEn
    ret->dbgLineNumber = lineNumber;
    ret->varName = varName;
    ret->arrayIndex = arrayIndex;
-   ret->varType = res->allowTypes ? typeName : NULL;
+   ret->varType = res->allowTypes ? typeName : nullptr;
    ret->varInfo = res->getVarInfo(varName, ret->varType);
    ret->disableTypes = !res->allowTypes;
    return ret;
@@ -377,7 +377,7 @@ AssertCallExprNode *AssertCallExprNode::alloc( Compiler::Resources* res, S32 lin
    
 #else
    
-   return NULL;
+   return nullptr;
    
 #endif
 }
@@ -414,7 +414,7 @@ SlotAssignNode *SlotAssignNode::alloc( Compiler::Resources* res, S32 lineNumber,
    ret->arrayExpr = arrayExpr;
    ret->slotName = slotName;
    ret->rhsExpr = valueExpr;
-   ret->varType = res->allowTypes ? typeName : NULL;
+   ret->varType = res->allowTypes ? typeName : nullptr;
    ret->disableTypes = !res->allowTypes;
    return ret;
 }
@@ -464,7 +464,7 @@ FunctionDeclStmtNode *FunctionDeclStmtNode::alloc( Compiler::Resources* res, S32
    ret->args = args;
    ret->stmts = stmts;
    ret->nameSpace = nameSpace;
-   ret->package = NULL;
+   ret->package = nullptr;
    ret->argc = 0;
    ret->returnTypeName = retTypeName;
    return ret;

@@ -44,7 +44,7 @@ static Mutex* sLogMutex;
 
 KorkApi::Vm* sVM;
 
-ConsoleConstructor *ConsoleConstructor::first = NULL;
+ConsoleConstructor *ConsoleConstructor::first = nullptr;
 
 static char scratchBuffer[4096];
 
@@ -172,7 +172,7 @@ ConsoleConstructor::ConsoleConstructor(const char* className, const char* groupN
    // is properly populated.
 
    // This is probably redundant.
-   static char * lastUsage = NULL;
+   static char * lastUsage = nullptr;
    if(aUsage)
       lastUsage = (char *)aUsage;
 
@@ -181,7 +181,7 @@ ConsoleConstructor::ConsoleConstructor(const char* className, const char* groupN
 
 ConsoleConstructor::ConsoleConstructor(const char* className, const char* usage)
 {
-   init(className, NULL, usage, -1, -2);
+   init(className, nullptr, usage, -1, -2);
    ns = true;
 }
 
@@ -255,20 +255,20 @@ void init()
    
    config.iFind.FindObjectByIdFn = [](void* userPtr, SimObjectId ident){
       SimObject* obj = Sim::findObject(ident);
-      return obj ? obj->getVMObject() : (KorkApi::VMObject*)NULL;
+      return obj ? obj->getVMObject() : (KorkApi::VMObject*)nullptr;
    };
    config.iFind.FindDatablockGroup = [](void* userPtr){
       SimObject* obj = Sim::getDataBlockGroup();
-      return obj ? obj->getVMObject() : (KorkApi::VMObject*)NULL;
+      return obj ? obj->getVMObject() : (KorkApi::VMObject*)nullptr;
    };
    config.iFind.FindObjectByInternalNameFn = [](void* userPtr, StringTableEntry name, bool recursive, KorkApi::VMObject* parent){
       SimObject* obj = static_cast<SimObject*>(parent->userPtr);
       SimSet* set = dynamic_cast<SimSet*>(obj);
       obj = set->findObjectByInternalName(name, recursive);
-      return obj ? obj->getVMObject() : (KorkApi::VMObject*)NULL;
+      return obj ? obj->getVMObject() : (KorkApi::VMObject*)nullptr;
    };
    config.iFind.FindObjectByNameFn = [](void* userPtr, StringTableEntry name, KorkApi::VMObject* parent){
-      SimObject* obj = NULL;
+      SimObject* obj = nullptr;
       if (parent)
       {
          obj = static_cast<SimObject*>(parent->userPtr);
@@ -278,16 +278,16 @@ void init()
       {
          obj = Sim::findObject(name);
       }
-      return obj ? obj->getVMObject() : (KorkApi::VMObject*)NULL;
+      return obj ? obj->getVMObject() : (KorkApi::VMObject*)nullptr;
    };
    config.iFind.FindObjectByPathFn = [](void* userPtr, StringTableEntry name){
       SimObject* obj = Sim::findObject(name);
-      return obj ? obj->getVMObject() : (KorkApi::VMObject*)NULL;
+      return obj ? obj->getVMObject() : (KorkApi::VMObject*)nullptr;
    };
    
    config.iIntern.intern = [](void* user, const char* value, bool caseSens){
       _StringTable* localIntern = (_StringTable*)user;
-      if (value == NULL)
+      if (value == nullptr)
       {
          return localIntern->EmptyString;
       }
@@ -295,7 +295,7 @@ void init()
    };
    config.iIntern.internN = [](void* user, const char* value, size_t len, bool caseSens){
       _StringTable* localIntern = (_StringTable*)user;
-      if (value == NULL)
+      if (value == nullptr)
       {
          return localIntern->EmptyString;
       }
@@ -303,7 +303,7 @@ void init()
    };
    config.iIntern.lookup = [](void* user, const char* value, bool caseSens){
       _StringTable* localIntern = (_StringTable*)user;
-      if (value == NULL)
+      if (value == nullptr)
       {
          return localIntern->EmptyString;
       }
@@ -311,7 +311,7 @@ void init()
    };
    config.iIntern.lookupN = [](void* user, const char* value, size_t len, bool caseSens){
       _StringTable* localIntern = (_StringTable*)user;
-      if (value == NULL)
+      if (value == nullptr)
       {
          return localIntern->EmptyString;
       }
@@ -325,7 +325,7 @@ void init()
 
    // Set up general init values.
    active                        = true;
-   logFileName                   = NULL;
+   logFileName                   = nullptr;
    newLogFile                    = true;
    sLogMutex                     = new Mutex;
 
@@ -372,7 +372,7 @@ void shutdown()
    consoleLogFile.close();
 
    KorkApi::destroyVM(sVM);
-   sVM = NULL;
+   sVM = nullptr;
 
    SAFE_DELETE( sLogMutex );
 }
@@ -613,7 +613,7 @@ static void _outputDebugString(char* pString)
     dMemset( wstr, 0, stringLength );
 
     // Convert to wide string.
-    Con::MultiByteToWideChar( CP_ACP, NULL, pString, -1, wstr, stringLength );  
+    Con::MultiByteToWideChar( CP_ACP, nullptr, pString, -1, wstr, stringLength );  
 
     // Output string.
     Con::OutputDebugStringW( wstr );
@@ -690,7 +690,7 @@ class ConPrinfThreadedEvent : public SimEvent
    ConsoleLogEntry::Type mType;
    char *mBuf;
 public:
-   ConPrinfThreadedEvent(ConsoleLogEntry::Level level = ConsoleLogEntry::Normal, ConsoleLogEntry::Type type = ConsoleLogEntry::General, const char *buf = NULL)
+   ConPrinfThreadedEvent(ConsoleLogEntry::Level level = ConsoleLogEntry::Normal, ConsoleLogEntry::Type type = ConsoleLogEntry::General, const char *buf = nullptr)
    {
       mLevel = level;
       mType = type;
@@ -701,7 +701,7 @@ public:
          mBuf[dStrlen(buf)] = 0;
       }
       else
-         mBuf = NULL;
+         mBuf = nullptr;
    }
    ~ConPrinfThreadedEvent()
    {
@@ -897,7 +897,7 @@ const char *getVariable(const char *name)
       if(!token)
          return("");
 
-      while(token != NULL)
+      while(token != nullptr)
       {
          const char * val = obj->getDataField(sVM->internString(token), 0);
          if(!val)
@@ -1047,7 +1047,7 @@ void markCommandGroup(const char * nsName, const char *name, const char* usage)
 {
    sVM->markNamespaceGroup(nsName ? sVM->findNamespace(sVM->internString(nsName)) : sVM->getGlobalNamespace(), 
                            sVM->internString(name),
-                           usage ? sVM->internString(usage, true) : NULL);
+                           usage ? sVM->internString(usage, true) : nullptr);
 }
 
 void beginCommandGroup(const char * nsName, const char *name, const char* usage)
@@ -1057,7 +1057,7 @@ void beginCommandGroup(const char * nsName, const char *name, const char* usage)
 
 void endCommandGroup(const char * nsName, const char *name)
 {
-   markCommandGroup(nsName, name, NULL);
+   markCommandGroup(nsName, name, nullptr);
 }
 
 void addCommand(const char *name,StringCallback cb,const char *usage, S32 minArgs, S32 maxArgs)
@@ -1114,7 +1114,7 @@ bool expandScriptFilename(char *filename, U32 size, const char *src, const char*
       return true;
    }
    
-   if (slash == NULL)
+   if (slash == nullptr)
    {
       Con::errorf("Illegal CodeBlock path detected (no mod directory): %s", cbName);
       *filename = 0;
@@ -1149,20 +1149,20 @@ const char *evaluate(const char* string, bool echo, const char *fileName)
 //------------------------------------------------------------------------------
 const char *evaluatef(const char* string, ...)
 {
-   const char * result = NULL;
+   const char * result = nullptr;
    char * buffer = new char[4096];
-   if (buffer != NULL)
+   if (buffer != nullptr)
    {
       va_list args;
       va_start(args, string);
       dVsprintf(buffer, 4096, string, args);
       va_end (args);
 
-      KorkApi::ConsoleValue retValue = sVM->evalCode(buffer, NULL, NULL);
+      KorkApi::ConsoleValue retValue = sVM->evalCode(buffer, nullptr, nullptr);
       result = sVM->valueAsString(retValue);
 
       delete [] buffer;
-      buffer = NULL;
+      buffer = nullptr;
    }
 
    return result;
@@ -1325,8 +1325,8 @@ KorkApi::Vm* getVM()
 
 StringTableEntry getModNameFromPath(const char *path)
 {
-   if(path == NULL || *path == 0)
-      return NULL;
+   if(path == nullptr || *path == 0)
+      return nullptr;
 
    char buf[1024];
    buf[0] = 0;
@@ -1346,10 +1346,10 @@ StringTableEntry getModNameFromPath(const char *path)
             buf[slash - ptr] = 0;
          }
          else
-            return NULL;
+            return nullptr;
       }
       else
-         return NULL;
+         return nullptr;
    }
    else
    {
@@ -1360,7 +1360,7 @@ StringTableEntry getModNameFromPath(const char *path)
          buf[slash - path] = 0;
       }
       else
-         return NULL;
+         return nullptr;
    }
 
    return sVM->internString(buf);
@@ -1376,8 +1376,8 @@ static typePathExpandoMap PathExpandos;
 void addPathExpando( const char* pExpandoName, const char* pPath )
 {
    // Sanity!
-   AssertFatal( pExpandoName != NULL, "Expando name cannot be NULL." );
-   AssertFatal( pPath != NULL, "Expando path cannot be NULL." );
+   AssertFatal( pExpandoName != nullptr, "Expando name cannot be nullptr." );
+   AssertFatal( pPath != nullptr, "Expando path cannot be nullptr." );
    
    // Fetch expando name.
    StringTableEntry expandoName = StringTable->insert( pExpandoName );
@@ -1443,7 +1443,7 @@ void addPathExpando( const char* pExpandoName, const char* pPath )
 StringTableEntry getPathExpando( const char* pExpandoName )
 {
    // Sanity!
-   AssertFatal( pExpandoName != NULL, "Expando name cannot be NULL." );
+   AssertFatal( pExpandoName != nullptr, "Expando name cannot be nullptr." );
    
    // Fetch expando name.
    StringTableEntry expandoName = StringTable->insert( pExpandoName );
@@ -1459,7 +1459,7 @@ StringTableEntry getPathExpando( const char* pExpandoName )
    }
    
    // Not found.
-   return NULL;
+   return nullptr;
 }
 
 //-----------------------------------------------------------------------------
@@ -1467,7 +1467,7 @@ StringTableEntry getPathExpando( const char* pExpandoName )
 void removePathExpando( const char* pExpandoName )
 {
    // Sanity!
-   AssertFatal( pExpandoName != NULL, "Expando name cannot be NULL." );
+   AssertFatal( pExpandoName != nullptr, "Expando name cannot be nullptr." );
    
    // Fetch expando name.
    StringTableEntry expandoName = StringTable->insert( pExpandoName );
@@ -1498,7 +1498,7 @@ void removePathExpando( const char* pExpandoName )
 bool isPathExpando( const char* pExpandoName )
 {
    // Sanity!
-   AssertFatal( pExpandoName != NULL, "Expando name cannot be NULL." );
+   AssertFatal( pExpandoName != nullptr, "Expando name cannot be nullptr." );
    
    // Fetch expando name.
    StringTableEntry expandoName = StringTable->insert( pExpandoName );
@@ -1520,7 +1520,7 @@ StringTableEntry getPathExpandoKey( U32 expandoIndex )
 {
    // Finish if index is out of range.
    if ( expandoIndex >= PathExpandos.size() )
-      return NULL;
+      return nullptr;
    
    // Find indexed iterator.
    typePathExpandoMap::iterator expandoItr = PathExpandos.begin();
@@ -1535,7 +1535,7 @@ StringTableEntry getPathExpandoValue( U32 expandoIndex )
 {
    // Finish if index is out of range.
    if ( expandoIndex >= PathExpandos.size() )
-      return NULL;
+      return nullptr;
    
    // Find indexed iterator.
    typePathExpandoMap::iterator expandoItr = PathExpandos.begin();
@@ -1579,7 +1579,7 @@ bool expandPath( char* pDstPath, U32 size, const char* pSrcPath, const char* pWo
       StringTableEntry expandoPath = getPathExpando(pathBuffer);
       
       // Does the expando exist?
-      if( expandoPath == NULL )
+      if( expandoPath == nullptr )
       {
          // No, so error.
          Con::errorf("expandPath() : Could not find path expando '%s' for path '%s'.", pathBuffer, pSrcPath );
@@ -1625,7 +1625,7 @@ bool expandPath( char* pDstPath, U32 size, const char* pSrcPath, const char* pWo
       const StringTableEntry codeblockFullPath = sVM->getCurrentFiberFrameInfo().fullPath;
       
       // Do we have a code block full path?
-      if( codeblockFullPath == NULL )
+      if( codeblockFullPath == nullptr )
       {
          // No, so error.
          Con::errorf("expandPath() : Could not find relative path from code-block for path '%s'.", pSrcPath );
@@ -1687,7 +1687,7 @@ bool expandPath( char* pDstPath, U32 size, const char* pSrcPath, const char* pWo
    
    //Using a special case here because the code below barfs on trying to build a full path for apk reading
 #ifdef TORQUE_OS_ANDROID
-   if (leadingToken == '/' || strstr(pSrcPath, "/") == NULL)
+   if (leadingToken == '/' || strstr(pSrcPath, "/") == nullptr)
       Platform::makeFullPathName( pSrcPath, pathBuffer, sizeof(pathBuffer), pWorkingDirectoryHint );
    else
       dSprintf(pathBuffer, sizeof(pathBuffer), "/%s", pSrcPath);
@@ -1774,7 +1774,7 @@ void collapsePath( char* pDstPath, U32 size, const char* pSrcPath, const char* p
    }
    
    // Fetch the working directory.
-   StringTableEntry workingDirectory = pWorkingDirectoryHint != NULL ? pWorkingDirectoryHint : Platform::getCurrentDirectory();
+   StringTableEntry workingDirectory = pWorkingDirectoryHint != nullptr ? pWorkingDirectoryHint : Platform::getCurrentDirectory();
    
    // Fetch path relative to current directory.
    StringTableEntry relativePath = Platform::makeRelativePathName( pSrcPath, workingDirectory );

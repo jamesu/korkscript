@@ -45,36 +45,36 @@ using namespace Compiler;
 
 CodeBlock::CodeBlock(KorkApi::VmInternal* vm, bool _isExecBlock)
 {
-   globalStrings = NULL;
-   functionStrings = NULL;
+   globalStrings = nullptr;
+   functionStrings = nullptr;
    functionStringsMaxLen = 0;
    globalStringsMaxLen = 0;
    numGlobalFloats = 0;
    numFunctionFloats = 0;
-   globalFloats = NULL;
-   functionFloats = NULL;
-   lineBreakPairs = NULL;
-   breakList = NULL;
+   globalFloats = nullptr;
+   functionFloats = nullptr;
+   lineBreakPairs = nullptr;
+   breakList = nullptr;
    breakListSize = 0;
    
-   identStrings = NULL;
-   identStringOffsets = NULL;
+   identStrings = nullptr;
+   identStringOffsets = nullptr;
    numFunctionCalls = 0;
-   functionCalls = NULL;
+   functionCalls = nullptr;
    numIdentStrings = 0;
    startTypeStrings = 0;
    numTypeStrings = 0;
-   typeStringMap = NULL;
+   typeStringMap = nullptr;
 
    isExecBlock = _isExecBlock;
    inList = false;
    didFlushFunctions = false;
    
    refCount = 0;
-   code = NULL;
-   name = NULL;
-   fullPath = NULL;
-   modPath = NULL;
+   code = nullptr;
+   name = nullptr;
+   fullPath = nullptr;
+   modPath = nullptr;
    mRoot = vm->internString("", false);
    mVM = vm;
    mVMPublic = vm->mVM;
@@ -87,7 +87,7 @@ CodeBlock::~CodeBlock()
 
    removeFromCodeList();
 
-   if (mVM == NULL)
+   if (mVM == nullptr)
    {
       return;
    }
@@ -371,7 +371,7 @@ void CodeBlock::calcBreakList()
 
 void* CodeBlock::getNSEntry(U32 index)
 {
-   return functionCalls && index < numFunctionCalls ? functionCalls[index] : NULL;
+   return functionCalls && index < numFunctionCalls ? functionCalls[index] : nullptr;
 }
 
 void CodeBlock::setNSEntry(U32 index, void* entry)
@@ -421,7 +421,7 @@ bool CodeBlock::read(StringTableEntry fileName, StringTableEntry inModPath, Stre
       fullPath = fileName;
       modPath = inModPath ? inModPath : mVM->internString("", false);
       name = strrchr(fullPath, '/');
-      if (name == NULL)
+      if (name == nullptr)
       {
          name = fileName;
       }
@@ -550,7 +550,7 @@ bool CodeBlock::read(StringTableEntry fileName, StringTableEntry inModPath, Stre
 
    startTypeStrings = 0;
    numTypeStrings = 0;
-   typeStringMap = NULL;
+   typeStringMap = nullptr;
 
    if (readVersion > 77)
    {
@@ -605,7 +605,7 @@ StringTableEntry CodeBlock::getTypeName(U32 typeID)
    {
       return identStrings[startTypeStrings + typeID];
    }
-   return NULL;
+   return nullptr;
 }
 
 U32 CodeBlock::getRealTypeID(U32 typeID)
@@ -718,7 +718,7 @@ bool CodeBlock::compileToStream(Stream &st, StringTableEntry fileName, const cha
    
    mVM->mCompilerResources->STEtoCode = &Compiler::compileSTEtoCode;
    
-   StmtNode* rootNode = NULL;
+   StmtNode* rootNode = nullptr;
    
    SimpleLexer::Tokenizer<KorkApi::VMStringTable> lex(KorkApi::VMStringTable(mVM), inScript, fileName, mVM->mCompilerResources->allowStringInterpolation);
    SimpleParser::ASTGen<KorkApi::VMStringTable> astGen(&lex, mVM->mCompilerResources);
@@ -843,7 +843,7 @@ bool CodeBlock::compileToStream(Stream &st, StringTableEntry fileName, const cha
       fullPath = fileName;
       modPath = inModPath ? inModPath : mVM->internString("", false);
       name = strrchr(fullPath, '/');
-      if (name == NULL)
+      if (name == nullptr)
       {
          name = fileName;
       }
@@ -862,7 +862,7 @@ bool CodeBlock::compileToStream(Stream &st, StringTableEntry fileName, const cha
       addToCodeList();
    }
    
-   StmtNode* rootNode = NULL;
+   StmtNode* rootNode = nullptr;
    
    SimpleLexer::Tokenizer<KorkApi::VMStringTable> lex(KorkApi::VMStringTable(mVM), inString, fileName ? fileName : "", mVM->mCompilerResources->allowStringInterpolation);
    SimpleParser::ASTGen<KorkApi::VMStringTable> astGen(&lex, mVM->mCompilerResources);
@@ -941,7 +941,7 @@ bool CodeBlock::compileToStream(Stream &st, StringTableEntry fileName, const cha
       return KorkApi::ConsoleValue();
    }
    
-   return exec(0, fileName, NULL, 0, 0, noCalls, isNativeFrame, NULL, setFrame);
+   return exec(0, fileName, nullptr, 0, 0, noCalls, isNativeFrame, nullptr, setFrame);
 }
 
 //-------------------------------------------------------------------------
@@ -1011,9 +1011,9 @@ void CodeBlock::dumpInstructions( U32 startIp, bool upToReturn, bool downcaseStr
             
          case OP_FUNC_DECL:
          {
-            StringTableEntry fnName       = codeToSte(NULL, code, ip);
-            StringTableEntry fnNamespace  = codeToSte(NULL, code, ip+2);
-            StringTableEntry fnPackage    = codeToSte(NULL, code, ip+4);
+            StringTableEntry fnName       = codeToSte(nullptr, code, ip);
+            StringTableEntry fnNamespace  = codeToSte(nullptr, code, ip+2);
+            StringTableEntry fnPackage    = codeToSte(nullptr, code, ip+4);
             bool hasBody = bool(code[ip+6]);
             U32 newIp = code[ ip + 7 ];
             U32 argc = code[ ip + 8 ];
@@ -1031,7 +1031,7 @@ void CodeBlock::dumpInstructions( U32 startIp, bool upToReturn, bool downcaseStr
             
          case OP_CREATE_OBJECT:
          {
-            StringTableEntry objParent = codeToSte(NULL, code, ip);
+            StringTableEntry objParent = codeToSte(nullptr, code, ip);
             bool isDataBlock =          code[ip + 2];
             bool isInternal  =          code[ip + 3];
             bool isSingleton =          code[ip + 4];
@@ -1288,7 +1288,7 @@ void CodeBlock::dumpInstructions( U32 startIp, bool upToReturn, bool downcaseStr
 
          case OP_SETCURVAR:
          {
-            StringTableEntry var = codeToSte(NULL, code, ip);
+            StringTableEntry var = codeToSte(nullptr, code, ip);
             
             mVM->printf(0, "%i: OP_SETCURVAR var=%s", ip - 1, var );
             ip += 2;
@@ -1297,7 +1297,7 @@ void CodeBlock::dumpInstructions( U32 startIp, bool upToReturn, bool downcaseStr
          
          case OP_SETCURVAR_CREATE:
          {
-            StringTableEntry var = codeToSte(NULL, code, ip);
+            StringTableEntry var = codeToSte(nullptr, code, ip);
             
             mVM->printf(0, "%i: OP_SETCURVAR_CREATE var=%s", ip - 1, var );
             ip += 2;
@@ -1385,7 +1385,7 @@ void CodeBlock::dumpInstructions( U32 startIp, bool upToReturn, bool downcaseStr
          
          case OP_SETCURFIELD:
          {
-            StringTableEntry curField = codeToSte(NULL, code, ip);
+            StringTableEntry curField = codeToSte(nullptr, code, ip);
             mVM->printf(0, "%i: OP_SETCURFIELD field=%s", ip - 1, curField );
             ip += 2;
             break;
@@ -1543,7 +1543,7 @@ void CodeBlock::dumpInstructions( U32 startIp, bool upToReturn, bool downcaseStr
          
          case OP_LOADIMMED_IDENT:
          {
-            StringTableEntry str = codeToSte(NULL, code, ip);
+            StringTableEntry str = codeToSte(nullptr, code, ip);
             mVM->printf(0, "%i: OP_LOADIMMED_IDENT str=%s", ip - 1, str );
             ip += 2;
             break;
@@ -1551,8 +1551,8 @@ void CodeBlock::dumpInstructions( U32 startIp, bool upToReturn, bool downcaseStr
 
          case OP_CALLFUNC_RESOLVE:
          {
-            StringTableEntry fnNamespace = codeToSte(NULL, code, ip+2);
-            StringTableEntry fnName      = codeToSte(NULL, code, ip);
+            StringTableEntry fnNamespace = codeToSte(nullptr, code, ip+2);
+            StringTableEntry fnName      = codeToSte(nullptr, code, ip);
             U32 callType = code[ip+2];
 
             mVM->printf(0, "%i: OP_CALLFUNC_RESOLVE name=%s nspace=%s callType=%s", ip - 1, fnName, fnNamespace,
@@ -1565,8 +1565,8 @@ void CodeBlock::dumpInstructions( U32 startIp, bool upToReturn, bool downcaseStr
          
          case OP_CALLFUNC:
          {
-            StringTableEntry fnNamespace = codeToSte(NULL, code, ip+2);
-            StringTableEntry fnName      = codeToSte(NULL, code, ip);
+            StringTableEntry fnNamespace = codeToSte(nullptr, code, ip+2);
+            StringTableEntry fnName      = codeToSte(nullptr, code, ip);
             U32 callType = code[ip+4];
 
             mVM->printf(0, "%i: OP_CALLFUNC name=%s nspace=%s callType=%s", ip - 1, fnName, fnNamespace,
@@ -1667,7 +1667,7 @@ void CodeBlock::dumpInstructions( U32 startIp, bool upToReturn, bool downcaseStr
          
          case OP_ITER_BEGIN:
          {
-            StringTableEntry varName = codeToSte(NULL, code, ip);
+            StringTableEntry varName = codeToSte(nullptr, code, ip);
             U32 failIp = code[ ip + 2 ];
             
             mVM->printf(0, "%i: OP_ITER_BEGIN varName=%s failIp=%i", ip - 1, varName, failIp );
@@ -1678,7 +1678,7 @@ void CodeBlock::dumpInstructions( U32 startIp, bool upToReturn, bool downcaseStr
 
          case OP_ITER_BEGIN_STR:
          {
-            StringTableEntry varName = codeToSte(NULL, code, ip);
+            StringTableEntry varName = codeToSte(nullptr, code, ip);
             U32 failIp = code[ ip + 2 ];
             
             mVM->printf(0, "%i: OP_ITER_BEGIN varName=%s failIp=%i", ip - 1, varName, failIp );

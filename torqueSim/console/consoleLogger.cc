@@ -31,7 +31,7 @@ IMPLEMENT_CONOBJECT( ConsoleLogger );
 
 ConsoleLogger::ConsoleLogger()
 {
-   mFilename = NULL;
+   mFilename = nullptr;
    mLogging = false;
    mAppend = false;
 
@@ -119,7 +119,7 @@ bool ConsoleLogger::init()
 
 bool ConsoleLogger::attach()
 {
-   if( mFilename == NULL )
+   if( mFilename == nullptr )
    {
       Con::errorf( "ConsoleLogger failed to attach: no filename supplied." );
       return false;

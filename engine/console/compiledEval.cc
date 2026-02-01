@@ -53,7 +53,7 @@ struct LocalRefTrack
    KorkApi::VmInternal* vm;
    KorkApi::VMObject* obj;
 
-   LocalRefTrack(KorkApi::VmInternal* _vm) : vm(_vm), obj(NULL) {;}
+   LocalRefTrack(KorkApi::VmInternal* _vm) : vm(_vm), obj(nullptr) {;}
    ~LocalRefTrack()
    {
       if (obj)
@@ -177,7 +177,7 @@ struct ConsoleFrame
    char prevFieldArray[FieldArraySize];
 
 public:
-   ConsoleFrame(KorkApi::VmInternal* vm, ExprEvalState* fiber, Dictionary::HashTableData* parentVars = NULL)
+   ConsoleFrame(KorkApi::VmInternal* vm, ExprEvalState* fiber, Dictionary::HashTableData* parentVars = nullptr)
       : stackStart(0)
       , dictionary(vm, parentVars)
       , evalState(nullptr)
@@ -192,11 +192,11 @@ public:
       , inFunctionCall(false)
       , popMinDepth(false)
       , failJump(0)
-      , scopeName( NULL )
-      , scopePackage( NULL )
-      , scopeNamespace( NULL )
-      , codeBlock( NULL )
-      , thisObject( NULL )
+      , scopeName( nullptr )
+      , scopePackage( nullptr )
+      , scopeNamespace( nullptr )
+      , codeBlock( nullptr )
+      , thisObject( nullptr )
       , ip( 0 )
       , dynTypeId( 0 )
       , _FLT(0)
@@ -344,31 +344,31 @@ inline KorkApi::ConsoleValue ConsoleFrame::getConsoleVariable()
 
 inline void ConsoleFrame::setUnsignedVariable(U32 val)
 {
-   AssertFatal(currentVar.var != NULL, "Invalid evaluator state - trying to set null variable!");
+   AssertFatal(currentVar.var != nullptr, "Invalid evaluator state - trying to set null variable!");
    currentVar.dictionary->setEntryUnsignedValue(currentVar.var, val);
 }
 
 inline void ConsoleFrame::setNumberVariable(F64 val)
 {
-   AssertFatal(currentVar.var != NULL, "Invalid evaluator state - trying to set null variable!");
+   AssertFatal(currentVar.var != nullptr, "Invalid evaluator state - trying to set null variable!");
    currentVar.dictionary->setEntryNumberValue(currentVar.var, val);
 }
 
 inline void ConsoleFrame::setStringVariable(const char *val)
 {
-   AssertFatal(currentVar.var != NULL, "Invalid evaluator state - trying to set null variable!");
+   AssertFatal(currentVar.var != nullptr, "Invalid evaluator state - trying to set null variable!");
    currentVar.dictionary->setEntryStringValue(currentVar.var, val);
 }
 
 inline void ConsoleFrame::setConsoleValue(KorkApi::ConsoleValue value)
 {
-   AssertFatal(currentVar.var != NULL, "Invalid evaluator state - trying to set null variable!");
+   AssertFatal(currentVar.var != nullptr, "Invalid evaluator state - trying to set null variable!");
    currentVar.dictionary->setEntryValue(currentVar.var, value);
 }
 
 inline void ConsoleFrame::setConsoleValues(U32 argc, KorkApi::ConsoleValue* values)
 {
-   AssertFatal(currentVar.var != NULL, "Invalid evaluator state - trying to set null variable!");
+   AssertFatal(currentVar.var != nullptr, "Invalid evaluator state - trying to set null variable!");
    currentVar.dictionary->setEntryValues(currentVar.var, argc, values);
 }
 
@@ -403,7 +403,7 @@ void CodeBlock::getFunctionArgs(char buffer[1024], U32 ip)
    buffer[0] = 0;
    for(U32 i = 0; i < fnArgc; i++)
    {
-      StringTableEntry var = Compiler::CodeToSTE(NULL, identStrings, code, ip + (i*2) + 6);
+      StringTableEntry var = Compiler::CodeToSTE(nullptr, identStrings, code, ip + (i*2) + 6);
       
       // Add a comma so it looks nice!
       if(i != 0)
@@ -423,7 +423,7 @@ void CodeBlock::getFunctionArgs(char buffer[1024], U32 ip)
 
 inline void* safeObjectUserPtr(KorkApi::VMObject* obj)
 {
-   return obj ? obj->userPtr : NULL;
+   return obj ? obj->userPtr : nullptr;
 }
 
 
@@ -446,7 +446,7 @@ void ExprEvalState::clearCreatedObject(U32 index, LocalRefTrack& outTrack, U32* 
    
    if (newObject)
    {
-      objectCreationStack[index].newObject = NULL;
+      objectCreationStack[index].newObject = nullptr;
       vmInternal->decVMRef(newObject);
    }
 }
@@ -458,7 +458,7 @@ void ExprEvalState::clearCreatedObjects(U32 start, U32 end)
       if (objectCreationStack[i].newObject)
       {
          vmInternal->decVMRef(objectCreationStack[i].newObject);
-         objectCreationStack[i].newObject = NULL;
+         objectCreationStack[i].newObject = nullptr;
       }
    }
 }
@@ -474,7 +474,7 @@ ConsoleFrame& CodeBlock::setupExecFrame(
    S32              setFrame,
    bool isNativeFrame)
 {
-   ConsoleFrame* newFrame = NULL;
+   ConsoleFrame* newFrame = nullptr;
    if (isNativeFrame)
    {
       eval.pushMinStackDepth();
@@ -485,7 +485,7 @@ ConsoleFrame& CodeBlock::setupExecFrame(
    {
       // assume this points into a function decl:
       U32 fnArgc = code[ip + 2 + 6];
-      StringTableEntry fnName = Compiler::CodeToSTE(NULL, identStrings, code, ip);
+      StringTableEntry fnName = Compiler::CodeToSTE(nullptr, identStrings, code, ip);
       S32 wantedArgc = getMin(argc - 1, fnArgc); // argv[0] is func name
 
       // Trace output
@@ -539,7 +539,7 @@ ConsoleFrame& CodeBlock::setupExecFrame(
       for (U32 i = 0; i < (U32)wantedArgc; i++)
       {
          StringTableEntry var =
-            Compiler::CodeToSTE(NULL, identStrings, code, ip + (2 + 6 + 1) + (i * 2));
+            Compiler::CodeToSTE(nullptr, identStrings, code, ip + (2 + 6 + 1) + (i * 2));
          newFrame->setCurVarNameCreate(var);
          newFrame->setConsoleValue(argv[i + 1]);
       }
@@ -555,7 +555,7 @@ ConsoleFrame& CodeBlock::setupExecFrame(
       if (setFrame < 0 || eval.vmFrames.empty())
       {
          // Always push a fresh frame
-         eval.pushFrame(NULL, NULL, NULL, this, ip);
+         eval.pushFrame(nullptr, nullptr, nullptr, this, ip);
       }
       else
       {
@@ -655,7 +655,7 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
    }
 
    auto cleanupIterator = [](ExprEvalState& evalState, ConsoleFrame& frame){
-      frame.curIterObject = NULL;
+      frame.curIterObject = nullptr;
 
       // Clear iterator state.
       while ( frame._ITER > 0 )
@@ -682,17 +682,17 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
    S32 lastTypeId = -1;
    
    // NOTE: these are only used temporarily inside opcode cases
-   StringTableEntry tmpVar = NULL;
-   StringTableEntry tmpFnName = NULL;
-   StringTableEntry tmpFnNamespace = NULL;
-   StringTableEntry tmpFnPackage = NULL;
+   StringTableEntry tmpVar = nullptr;
+   StringTableEntry tmpFnName = nullptr;
+   StringTableEntry tmpFnNamespace = nullptr;
+   StringTableEntry tmpFnPackage = nullptr;
    // These used for lookup but this all happens within a single step
-   Namespace::Entry* tmpNsEntry = NULL;
-   Namespace*        tmpNs = NULL;  // ACTIVE namespace (e.g. for parentcall)
+   Namespace::Entry* tmpNsEntry = nullptr;
+   Namespace*        tmpNs = nullptr;  // ACTIVE namespace (e.g. for parentcall)
    // Tmp args
    U32 callArgc = 0;
-   KorkApi::ConsoleValue* callArgv = NULL;
-   const char**           callArgvS = NULL;
+   KorkApi::ConsoleValue* callArgv = nullptr;
+   const char**           callArgvS = nullptr;
    
    AssertFatal(!vmFrames.empty(), "no frames");
    
@@ -773,9 +773,9 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
          case OP_FUNC_DECL:
             if(!frame.noCalls)
             {
-               tmpFnName       = Compiler::CodeToSTE(NULL, identStrings, code, ip);
-               tmpFnNamespace  = Compiler::CodeToSTE(NULL, identStrings, code, ip+2);
-               tmpFnPackage    = Compiler::CodeToSTE(NULL, identStrings, code, ip+4);
+               tmpFnName       = Compiler::CodeToSTE(nullptr, identStrings, code, ip);
+               tmpFnNamespace  = Compiler::CodeToSTE(nullptr, identStrings, code, ip+2);
+               tmpFnPackage    = Compiler::CodeToSTE(nullptr, identStrings, code, ip+4);
                bool hasBody = ( code[ ip + 6 ] & 0x01 ) != 0;
                U32 lineNumber = code[ ip + 6 ] >> 1;
                
@@ -791,7 +791,7 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
                   if (tmpFnNamespace == vmInternal->lookupStringN(classText, frame.nsDocBlockClassNameLength, false))
                   {
                      const char *usageStr = baseDocStr + frame.nsDocBlockOffset;
-                     tmpNs->mUsage = NULL;
+                     tmpNs->mUsage = nullptr;
                      tmpNs->mDynamicUsage = usageStr;
                      frame.nsDocBlockClassLocation = 0;
                   }
@@ -799,7 +799,7 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
                vmInternal->mNSState.relinkPackages();
                
                // If we had a docblock, it's definitely not valid anymore, so clear it out.
-               frame.curFNDocBlock = NULL;
+               frame.curFNDocBlock = nullptr;
                
                //Con::printf("Adding function %s::%s (%d)", fnNamespace, fnName, ip);
             }
@@ -809,7 +809,7 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
          case OP_CREATE_OBJECT:
          {
             // Read some useful info.
-            tmpVar        = Compiler::CodeToSTE(NULL, identStrings, code, ip); // objParent
+            tmpVar        = Compiler::CodeToSTE(nullptr, identStrings, code, ip); // objParent
             bool isDataBlock =          code[ip + 2];
             bool isInternal  =          code[ip + 3];
             bool isSingleton =          code[ip + 4];
@@ -832,14 +832,14 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
             evalState.setCreatedObject(frame._OBJ++, frame.currentNewObject, frame.failJump);
             
             // Get the constructor information off the stack.
-            evalState.mSTR.getArgcArgv(NULL, &callArgc, &callArgv);
+            evalState.mSTR.getArgcArgv(nullptr, &callArgc, &callArgv);
             evalState.mSTR.convertArgv(vmInternal, callArgc, &callArgvS);
             const char *objectName = callArgvS[ 2 ];
             
             // Con::printf("Creating object...");
             
             // objectName = argv[1]...
-            frame.currentNewObject = NULL;
+            frame.currentNewObject = nullptr;
             
             // Are we creating a datablock? If so, deal with case where we override
             // an old one.
@@ -879,7 +879,7 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
                   oldObject->klass->iCreate.RemoveObjectFn(oldObject->klass->userPtr, vmPublic, oldObject);
                   oldObject->klass->iCreate.DestroyClassFn(oldObject->klass->userPtr, vmPublic, oldObject->userPtr);
                   
-                  oldObject = NULL;
+                  oldObject = nullptr;
 
                   // Prevent stack value corruption
                   evalState.mSTR.popFrame();
@@ -894,23 +894,23 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
             {
                // Well, looks like we have to create a new object.
                KorkApi::ClassInfo* klassInfo = vmInternal->getClassInfoByName(vmInternal->internString(callArgvS[1], false));
-               KorkApi::VMObject *object = NULL;
+               KorkApi::VMObject *object = nullptr;
 
                if (klassInfo)
                {
                   object = vmInternal->New<KorkApi::VMObject>();
                   object->klass = klassInfo;
-                  object->ns = NULL;
+                  object->ns = nullptr;
 
                   KorkApi::CreateClassReturn ret = {};
                   klassInfo->iCreate.CreateClassFn(klassInfo->userPtr,  vmPublic, &ret);
                   object->userPtr = ret.userPtr;
                   object->flags = ret.initialFlags;
 
-                  if (object->userPtr == NULL)
+                  if (object->userPtr == nullptr)
                   {
                      delete object;
-                     object = NULL;
+                     object = nullptr;
                   }
                }
                
@@ -937,7 +937,7 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
                if (*tmpVar)
                {
                   // Find it!
-                  KorkApi::VMObject *parent = vmInternal->mConfig.iFind.FindObjectByNameFn(vmInternal->mConfig.findUser, tmpVar, NULL);
+                  KorkApi::VMObject *parent = vmInternal->mConfig.iFind.FindObjectByNameFn(vmInternal->mConfig.findUser, tmpVar, nullptr);
                   if (parent)
                   {
                      // Con::printf(" - Parent object found: %s", parent->getClassName());
@@ -952,7 +952,7 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
 
                if (!klassInfo->iCreate.ProcessArgsFn(vmPublic, frame.currentNewObject->userPtr, objectName, isDataBlock, isInternal, callArgc-3, callArgvS+3))
                {
-                  frame.currentNewObject = NULL;
+                  frame.currentNewObject = nullptr;
                   ip = frame.failJump;
                   break;
                }
@@ -989,7 +989,7 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
 
                // NOTE: AddObject may have "unregistered" the object, but since we refcount our objects this is still safe.
                frame.currentNewObject->klass->iCreate.DestroyClassFn(frame.currentNewObject->klass->userPtr, vmPublic, frame.currentNewObject->userPtr);
-               frame.currentNewObject = NULL;
+               frame.currentNewObject = nullptr;
                ip = frame.failJump;
                break;
             }
@@ -1240,15 +1240,15 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
             break;
             
          case OP_SETCURVAR:
-            tmpVar = Compiler::CodeToSTE(NULL, identStrings, code, ip);
+            tmpVar = Compiler::CodeToSTE(nullptr, identStrings, code, ip);
             ip += 2;
             
-            // If a variable is set, then these must be NULL. It is necessary
+            // If a variable is set, then these must be nullptr. It is necessary
             // to set this here so that the vector parser can appropriately
             // identify whether it's dealing with a vector.
-            frame.prevField = NULL;
-            frame.prevObject = NULL;
-            frame.curObject = NULL;
+            frame.prevField = nullptr;
+            frame.prevObject = nullptr;
+            frame.curObject = nullptr;
             
             frame.setCurVarName(tmpVar);
             
@@ -1259,13 +1259,13 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
             break;
             
          case OP_SETCURVAR_CREATE:
-            tmpVar = Compiler::CodeToSTE(NULL, identStrings, code, ip);
+            tmpVar = Compiler::CodeToSTE(nullptr, identStrings, code, ip);
             ip += 2;
             
             // See OP_SETCURVAR
-            frame.prevField = NULL;
-            frame.prevObject = NULL;
-            frame.curObject = NULL;
+            frame.prevField = nullptr;
+            frame.prevObject = nullptr;
+            frame.curObject = nullptr;
             
             frame.setCurVarNameCreate(tmpVar);
             
@@ -1277,9 +1277,9 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
             tmpVar = vmInternal->internString(evalState.mSTR.getStringValue(), false);
             
             // See OP_SETCURVAR
-            frame.prevField = NULL;
-            frame.prevObject = NULL;
-            frame.curObject = NULL;
+            frame.prevField = nullptr;
+            frame.prevObject = nullptr;
+            frame.curObject = nullptr;
             
             frame.setCurVarName(tmpVar);
             
@@ -1291,9 +1291,9 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
             tmpVar = vmInternal->internString(evalState.mSTR.getStringValue(), false);
             
             // See OP_SETCURVAR
-            frame.prevField = NULL;
-            frame.prevObject = NULL;
-            frame.curObject = NULL;
+            frame.prevField = nullptr;
+            frame.prevObject = nullptr;
+            frame.curObject = nullptr;
             
             frame.setCurVarNameCreate(tmpVar);
             
@@ -1389,7 +1389,7 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
             // Save the previous field for parsing vector fields.
             frame.prevField = frame.curField;
             strcpy( frame.prevFieldArray, frame.curFieldArray );
-            frame.curField = Compiler::CodeToSTE(NULL, identStrings, code, ip);
+            frame.curField = Compiler::CodeToSTE(nullptr, identStrings, code, ip);
             frame.curFieldArray[0] = 0;
             ip += 2;
             break;
@@ -1471,7 +1471,7 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
                // The field is not being set on an object. Maybe it's
                // a special accessor?
                //setFieldComponent( prevObject, prevField, prevFieldArray, curField );
-               frame.prevObject = NULL;
+               frame.prevObject = nullptr;
             }
             break;
             
@@ -1487,7 +1487,7 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
                // The field is not being set on an object. Maybe it's
                // a special accessor?
                //setFieldComponent( prevObject, prevField, prevFieldArray, curField );
-               frame.prevObject = NULL;
+               frame.prevObject = nullptr;
             }
             break;
             
@@ -1502,7 +1502,7 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
                // The field is not being set on an object. Maybe it's
                // a special accessor?
                //setFieldComponent( prevObject, prevField, prevFieldArray, curField );
-               frame.prevObject = NULL;
+               frame.prevObject = nullptr;
             }
             break;
             
@@ -1551,7 +1551,7 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
             break;
          
          case OP_COPYVAR_TO_NONE:
-            frame.copyVar.var = NULL;
+            frame.copyVar.var = nullptr;
             break;
             
          case OP_LOADIMMED_UINT:
@@ -1584,7 +1584,7 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
                                                              vmPublic,
                                                              &inputStorage,
                                                              &outputStorage,
-                                                             NULL,
+                                                             nullptr,
                                                              0,
                                                              typeId);
             }
@@ -1655,7 +1655,7 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
             break;
             
          case OP_LOADIMMED_IDENT:
-            evalState.mSTR.setStringValue(Compiler::CodeToSTE(NULL, identStrings, code, ip));
+            evalState.mSTR.setStringValue(Compiler::CodeToSTE(nullptr, identStrings, code, ip));
             ip += 2;
             break;
             
@@ -1666,10 +1666,10 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
             U32 funcSlotIndex = (code[ip+4] >> 16) & 0xFFFF;
             tmpNsEntry = (Namespace::Entry*)frame.codeBlock->getNSEntry(funcSlotIndex);
             
-            if (tmpNsEntry == NULL || funcSlotIndex == 0)
+            if (tmpNsEntry == nullptr || funcSlotIndex == 0)
             {
-               tmpFnNamespace = Compiler::CodeToSTE(NULL, identStrings, code, ip+2);
-               tmpFnName      = Compiler::CodeToSTE(NULL, identStrings, code, ip);
+               tmpFnNamespace = Compiler::CodeToSTE(nullptr, identStrings, code, ip+2);
+               tmpFnName      = Compiler::CodeToSTE(nullptr, identStrings, code, ip);
                
                tmpNs = vmInternal->mNSState.find(tmpFnNamespace);
                tmpNsEntry = tmpNs->lookup(tmpFnName);
@@ -1686,7 +1686,7 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
             // or just on the object.
             S32 routingId = 0;
             
-            tmpFnName = Compiler::CodeToSTE(NULL, identStrings, code, ip);
+            tmpFnName = Compiler::CodeToSTE(nullptr, identStrings, code, ip);
             
             //if this is called from inside a function, append the ip and codeptr
             if (!evalState.vmFrames.empty())
@@ -1706,7 +1706,7 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
                // Lookup function
                U32 funcSlotIndex = (code[ip-5+4] >> 16) & 0xFFFF;
                tmpNsEntry = (Namespace::Entry*)frame.codeBlock->getNSEntry(funcSlotIndex);
-               tmpNs = NULL;
+               tmpNs = nullptr;
             }
             else if(frame.lastCallType == FuncCallExprNode::MethodCall)
             {
@@ -1728,7 +1728,7 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
                if(tmpNs)
                   tmpNsEntry = tmpNs->lookup(tmpFnName);
                else
-                  tmpNsEntry = NULL;
+                  tmpNsEntry = nullptr;
             }
             else // it's a ParentCall
             {
@@ -1738,12 +1738,12 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
                   if(tmpNs)
                      tmpNsEntry = tmpNs->lookup(tmpFnName);
                   else
-                     tmpNsEntry = NULL;
+                     tmpNsEntry = nullptr;
                }
                else
                {
-                  tmpNs = NULL;
-                  tmpNsEntry = NULL;
+                  tmpNs = nullptr;
+                  tmpNsEntry = nullptr;
                }
             }
             
@@ -2009,7 +2009,7 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
          
          case OP_ITER_BEGIN:
          {
-            StringTableEntry varName = Compiler::CodeToSTE(NULL, identStrings, code, ip);
+            StringTableEntry varName = Compiler::CodeToSTE(nullptr, identStrings, code, ip);
             U32 failIp = code[ ip + 2 ];
             
             IterStackRecord& iter = evalState.iterStack[ frame._ITER ];
@@ -2020,7 +2020,7 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
             {
                iter.mData = evalState.mSTR.getConsoleValue();
                iter.mIndex = 0;
-               frame.curIterObject = NULL;
+               frame.curIterObject = nullptr;
             }
             else
             {
@@ -2039,7 +2039,7 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
                
                // Set up.
 
-               AssertFatal(iter.mData.cvalue == 0, "Should be NULL");
+               AssertFatal(iter.mData.cvalue == 0, "Should be nullptr");
 
                iter.mIndex = 0;
             }
@@ -2110,7 +2110,7 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
                {
                   if (set)
                   {
-                     frame.curIterObject = NULL;
+                     frame.curIterObject = nullptr;
                   }
                   ip = breakIp;
                   continue;
@@ -2124,7 +2124,7 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
             {
                // Problem: break out
                iter.mData = KorkApi::ConsoleValue();
-               frame.curIterObject = NULL;
+               frame.curIterObject = nullptr;
                ip = breakIp;
             }
             
@@ -2136,7 +2136,7 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
          {
             -- frame._ITER;
             IterStackRecord& iter = evalState.iterStack[frame._ITER]; // iter we are ending
-            frame.curIterObject = NULL;
+            frame.curIterObject = nullptr;
 
             if (iter.mIsStringIter)
             {
@@ -2200,7 +2200,7 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
          case OP_SAVEVAR_MULTIPLE:
          {
             // This is like OP_CALLFUNC
-            evalState.mSTR.getArgcArgv(NULL, &callArgc, &callArgv);
+            evalState.mSTR.getArgcArgv(nullptr, &callArgc, &callArgv);
 
             frame.setConsoleValues(callArgc-1, callArgv+1);
             
@@ -2227,7 +2227,7 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
          case OP_SAVEFIELD_MULTIPLE:
          {
             // This is like OP_CALLFUNC
-            evalState.mSTR.getArgcArgv(NULL, &callArgc, &callArgv);
+            evalState.mSTR.getArgcArgv(nullptr, &callArgc, &callArgv);
             vmInternal->setObjectFieldTuple(frame.curObject, frame.curField, frame.curFieldArray, callArgc-1, callArgv+1);
             
             evalState.mSTR.popFrame();
@@ -2286,7 +2286,7 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
                // The field is not being set on an object. Maybe it's
                // a special accessor?
                //setFieldComponent( prevObject, prevField, prevFieldArray, curField );
-               frame.prevObject = NULL;
+               frame.prevObject = nullptr;
             }
             
             break;
@@ -2324,7 +2324,7 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
                // The field is not being set on an object. Maybe it's
                // a special accessor?
                //setFieldComponent( prevObject, prevField, prevFieldArray, curField );
-               frame.prevObject = NULL;
+               frame.prevObject = nullptr;
             }
 
             break;
@@ -2340,12 +2340,12 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
 
                KorkApi::TypeStorageInterface inputStorage = KorkApi::CreateRegisterStorageFromArg(vmInternal, cv);
                
-               // NOTE: types should set head of stack to value if data pointer is NULL in this case
+               // NOTE: types should set head of stack to value if data pointer is nullptr in this case
                vmInternal->mTypes[frame.dynTypeId].iFuncs.CastValueFn(vmInternal->mTypes[frame.dynTypeId].userPtr,
                                                                    vmPublic,
                                                                    &inputStorage,
                                                                    &outputStorage,
-                                                                   NULL,
+                                                                   nullptr,
                                                                    0,
                                                                    frame.dynTypeId);
             }
@@ -2362,12 +2362,12 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
 
                KorkApi::TypeStorageInterface inputStorage = KorkApi::CreateRegisterStorageFromArg(vmInternal, cv);
                
-               // NOTE: types should set head of stack to value if data pointer is NULL in this case
+               // NOTE: types should set head of stack to value if data pointer is nullptr in this case
                vmInternal->mTypes[frame.dynTypeId].iFuncs.CastValueFn(vmInternal->mTypes[frame.dynTypeId].userPtr,
                                                                    vmPublic,
                                                                    &inputStorage,
                                                                    &outputStorage,
-                                                                   NULL,
+                                                                   nullptr,
                                                                    0,
                                                                    frame.dynTypeId);
             }
@@ -2389,12 +2389,12 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
 
                KorkApi::TypeStorageInterface inputStorage = KorkApi::CreateRegisterStorageFromArg(vmInternal, cv);
                
-               // NOTE: types should set head of stack to value if data pointer is NULL in this case
+               // NOTE: types should set head of stack to value if data pointer is nullptr in this case
                vmInternal->mTypes[frame.dynTypeId].iFuncs.CastValueFn(vmInternal->mTypes[frame.dynTypeId].userPtr,
                                                                    vmPublic,
                                                                    &inputStorage,
                                                                    &outputStorage,
-                                                                   NULL,
+                                                                   nullptr,
                                                                    0,
                                                                    frame.dynTypeId);
             }
@@ -2500,7 +2500,7 @@ execFinished:
          vmInternal->mLastExceptionInfo.cb = frame.codeBlock;
 
          // Unwind stack as much as we can and return info
-         handleThrow(-1, NULL, getMinStackDepth());
+         handleThrow(-1, nullptr, getMinStackDepth());
          result.state = mState;
          result.value = KorkApi::ConsoleValue::makeNumber(lastThrow);
          result.exceptionInfo = &vmInternal->mLastExceptionInfo;
@@ -2602,7 +2602,7 @@ void ExprEvalState::setLocalFrameVariable(StringTableEntry name, KorkApi::Consol
 
 KorkApi::ConsoleValue ExprEvalState::getLocalFrameVariable(StringTableEntry name)
 {
-   Dictionary::Entry* e = vmFrames.empty() ? NULL : vmFrames.back()->dictionary.getVariable(name);
+   Dictionary::Entry* e = vmFrames.empty() ? nullptr : vmFrames.back()->dictionary.getVariable(name);
    
    if (!e)
    {
@@ -2738,7 +2738,7 @@ bool ExprEvalState::handleThrow(S32 throwIdx, TryItem* info, S32 minStackPos)
       curFrame->inNativeFunction = false;
    }
    
-   ConsoleFrame* frame = minFrame < 0 ? NULL : vmFrames[minFrame];
+   ConsoleFrame* frame = minFrame < 0 ? nullptr : vmFrames[minFrame];
    
    // Pop down to correct frame
    for (U32 i=vmFrames.size()-1; i>minFrame; i--)
@@ -2855,7 +2855,7 @@ bool ConsoleSerializer::isOk()
 
 S32 ConsoleSerializer::addReferencedCodeblock(CodeBlock* block)
 {
-   if (block == NULL)
+   if (block == nullptr)
    {
       return -1;
    }
@@ -2875,7 +2875,7 @@ S32 ConsoleSerializer::addReferencedCodeblock(CodeBlock* block)
 
 S32 ConsoleSerializer::addReferencedDictionary(Dictionary::HashTableData* dict)
 {
-   if (dict == NULL)
+   if (dict == nullptr)
    {
       return -1;
    }
@@ -2894,7 +2894,7 @@ S32 ConsoleSerializer::addReferencedDictionary(Dictionary::HashTableData* dict)
 
 S32 ConsoleSerializer::addReferencedFiber(ExprEvalState* fiber)
 {
-   if (fiber == NULL)
+   if (fiber == nullptr)
    {
       return -1;
    }
@@ -2913,17 +2913,17 @@ S32 ConsoleSerializer::addReferencedFiber(ExprEvalState* fiber)
 
 CodeBlock* ConsoleSerializer::getReferencedCodeblock(S32 blockId)
 {
-   return blockId < 0 ? NULL : mCodeBlocks[blockId];
+   return blockId < 0 ? nullptr : mCodeBlocks[blockId];
 }
 
 Dictionary::HashTableData* ConsoleSerializer::getReferencedDictionary(S32 dictId)
 {
-   return dictId < 0 ? NULL : mDictionaryTables[dictId];
+   return dictId < 0 ? nullptr : mDictionaryTables[dictId];
 }
 
 ExprEvalState* ConsoleSerializer::getReferencedFiber(S32 fiberId)
 {
-   return fiberId < 0 ? NULL : mFibers[fiberId];
+   return fiberId < 0 ? nullptr : mFibers[fiberId];
 }
 
 ExprEvalState* ConsoleSerializer::loadEvalState()
@@ -2935,18 +2935,18 @@ ExprEvalState* ConsoleSerializer::loadEvalState()
    if (!mStream->read(&version) ||
        version != CEOB_VERSION)
    {
-      return NULL;
+      return nullptr;
    }
 
    if (!mStream->read(&theRemap.oldIndex))
    {
-      return NULL;
+      return nullptr;
    }
 
    ExprEvalState* state = mTarget->createFiberPtr(mUserPtr);
-   if (state == NULL)
+   if (state == nullptr)
    {
-      return NULL;
+      return nullptr;
    }
 
    theRemap.newIndex = state->mAllocNumber-1;
@@ -3010,15 +3010,15 @@ ExprEvalState* ConsoleSerializer::loadEvalState()
           frameBlock.ident != CFFB_MAGIC)
       {
          delete state;
-         return NULL;
+         return nullptr;
       }
       
       U32 startBlock = mStream->getPosition();
       
       ConsoleFrame* frame = loadFrame(state);
-      if (frame == NULL)
+      if (frame == nullptr)
       {
-         return NULL;
+         return nullptr;
       }
       
       state->vmFrames.push_back(frame);
@@ -3098,7 +3098,7 @@ bool ConsoleSerializer::saveEvalState(ExprEvalState* state)
    }
    
    // Dictionary
-   S32 dictionaryId = addReferencedDictionary(ownsDict ? state->globalVars.mHashTable : NULL); // fiber must own globals for them to be written
+   S32 dictionaryId = addReferencedDictionary(ownsDict ? state->globalVars.mHashTable : nullptr); // fiber must own globals for them to be written
    mStream->write(dictionaryId);
 
    // Frames
@@ -3178,7 +3178,7 @@ bool ConsoleSerializer::readHeapData(KorkApi::ConsoleHeapAllocRef& ref)
    }
    else
    {
-      ref = NULL;
+      ref = nullptr;
    }
    
    return true;
@@ -3224,10 +3224,10 @@ bool ConsoleSerializer::readVarRef(ConsoleVarRef& ref)
    StringTableEntry steName = readSTString(mStream);
    
    Dictionary::HashTableData* data = getReferencedDictionary(dictId);
-   if (!data || data->owner == NULL)
+   if (!data || data->owner == nullptr)
    {
-      ref.dictionary = NULL;
-      ref.var = NULL;
+      ref.dictionary = nullptr;
+      ref.var = nullptr;
    }
    else
    {
@@ -3240,7 +3240,7 @@ bool ConsoleSerializer::readVarRef(ConsoleVarRef& ref)
 
 bool ConsoleSerializer::writeVarRef(ConsoleVarRef& ref)
 {
-   S32 dictId = addReferencedDictionary(ref.dictionary ? ref.dictionary->mHashTable : NULL);
+   S32 dictId = addReferencedDictionary(ref.dictionary ? ref.dictionary->mHashTable : nullptr);
    mStream->write(dictId);
    mStream->writeString(ref.var ? ref.var->name : "");
    return mStream->getStatus() == Stream::Ok;
@@ -3249,7 +3249,7 @@ bool ConsoleSerializer::writeVarRef(ConsoleVarRef& ref)
 KorkApi::VMObject* ConsoleSerializer::loadObject()
 {
    U8 refType = 0;
-   KorkApi::VMObject *foundObject = NULL;
+   KorkApi::VMObject *foundObject = nullptr;
    mStream->read(&refType);
 
    // By name?
@@ -3260,7 +3260,7 @@ KorkApi::VMObject* ConsoleSerializer::loadObject()
    }
 
    // By id?
-   if (mAllowId && foundObject == NULL && (refType & BIT(0)) != 0)
+   if (mAllowId && foundObject == nullptr && (refType & BIT(0)) != 0)
    {
       KorkApi::SimObjectId value = 0;
       mStream->read(&value);
@@ -3272,7 +3272,7 @@ KorkApi::VMObject* ConsoleSerializer::loadObject()
 
 void ConsoleSerializer::writeObject(KorkApi::VMObject* obj)
 {
-   if (obj != NULL)
+   if (obj != nullptr)
    {
       StringTableEntry objName = obj->klass->iCreate.GetNameFn(obj);
       U8 objFlags = 0;
@@ -3370,9 +3370,9 @@ ConsoleFrame* ConsoleSerializer::loadFrame(ExprEvalState* state)
    
    state->globalVars.setState(mTarget, mTarget->mGlobalVars.mHashTable);
    
-   if (block == NULL)
+   if (block == nullptr)
    {
-      return NULL;
+      return nullptr;
    }
 
    ConsoleFrame* frame = state->vmInternal->New<ConsoleFrame>(mTarget, state, dict);
@@ -3591,7 +3591,7 @@ void ConsoleSerializer::reset(bool ownObjects)
    
    for (Dictionary::HashTableData* ht : mDictionaryTables)
    {
-      if (ht->owner == NULL)
+      if (ht->owner == nullptr)
       {
          delete ht;
       }
@@ -3712,7 +3712,7 @@ Dictionary::HashTableData* ConsoleSerializer::loadHashTable()
    U32 entryCount = 0;
    if (!mStream->read(&entryCount))
    {
-      return NULL;
+      return nullptr;
    }
    
    for (U32 i = 0; i < entryCount; ++i)
@@ -3720,19 +3720,19 @@ Dictionary::HashTableData* ConsoleSerializer::loadHashTable()
       bool isConst = false;
       if (!mStream->read(&isConst))
       {
-         return NULL;
+         return nullptr;
       }
       
       StringTableEntry name = readSTString(mStream);
-      if (name == NULL)
+      if (name == nullptr)
       {
-         return NULL;
+         return nullptr;
       }
       
       Dictionary::Entry* entry = tempDict.add(name);
       if (!entry)
       {
-         return NULL;
+         return nullptr;
       }
       
       U32 valueSize = 0;
@@ -3744,21 +3744,21 @@ Dictionary::HashTableData* ConsoleSerializer::loadHashTable()
          entry->mHeapAlloc = mTarget->createHeapRef(valueSize);
          if (!mStream->read(valueSize, entry->mHeapAlloc->ptr()))
          {
-            return NULL;
+            return nullptr;
          }
       }
       
       if (!readConsoleValue(entry->mConsoleValue, entry->mHeapAlloc))
       {
-         return NULL;
+         return nullptr;
       }
       
       entry->mIsConstant = isConst;
    }
    
    Dictionary::HashTableData* ht = tempDict.mHashTable;
-   ht->owner = NULL;
-   tempDict.setState(mTarget, NULL);
+   ht->owner = nullptr;
+   tempDict.setState(mTarget, nullptr);
    return ht;
 }
 
@@ -3827,7 +3827,7 @@ bool ConsoleSerializer::loadRelatedObjects()
             
             Dictionary::HashTableData* ht = loadHashTable();
             
-            if (ht == NULL)
+            if (ht == nullptr)
             {
                return false;
             }
@@ -3848,8 +3848,8 @@ bool ConsoleSerializer::loadRelatedObjects()
             StringTableEntry steFilename = readSTString(mStream);
             StringTableEntry steModPath = readSTString(mStream);
             CodeBlock* block = mTarget->New<CodeBlock>(mTarget, true);
-            if (!block->read(steFilename[0] == '\0' ? NULL : steFilename,
-                             steModPath[0] == '\0' ? NULL : steModPath,
+            if (!block->read(steFilename[0] == '\0' ? nullptr : steFilename,
+                             steModPath[0] == '\0' ? nullptr : steModPath,
                              *mStream, 0))
             {
                delete block;
@@ -3925,7 +3925,7 @@ bool ConsoleSerializer::loadFibers()
    {
       U32 startInBlock = mStream->getPosition();
       
-      ExprEvalState* evalState = NULL;
+      ExprEvalState* evalState = nullptr;
 
       switch (scanBlock.ident)
       {
@@ -4054,7 +4054,7 @@ bool KorkApi::Vm::enumLocals(void* userPtr, EnumFuncCallback callback, S32 frame
       return false;
    }
 
-   mInternal->mCurrentFiberState->vmFrames[frameIdx]->dictionary.exportVariables(NULL, userPtr, callback);
+   mInternal->mCurrentFiberState->vmFrames[frameIdx]->dictionary.exportVariables(nullptr, userPtr, callback);
    return true;
 }
 

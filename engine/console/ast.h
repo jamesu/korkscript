@@ -110,10 +110,10 @@ struct StmtNode
    virtual void setPackage(StringTableEntry packageName);
    /// @}
 
-   virtual StmtNode* rhsAssign() { return NULL; }
-   virtual BaseAssignExprNode* asAssign() { return NULL; }
+   virtual StmtNode* rhsAssign() { return nullptr; }
+   virtual BaseAssignExprNode* asAssign() { return nullptr; }
 
-   inline BaseAssignExprNode* nextAssign() { StmtNode* rh = rhsAssign(); return rh ? rh->asAssign() : NULL; }
+   inline BaseAssignExprNode* nextAssign() { StmtNode* rh = rhsAssign(); return rh ? rh->asAssign() : nullptr; }
    
    // Answers "does the result of this node load a field or var we can copy out?"
    virtual TypeReq getReturnLoadType() { return TypeReqNone; }
@@ -341,7 +341,7 @@ struct VarNode : ExprNode
    ExprNode *arrayIndex;
    bool disableTypes;
 
-   static VarNode *alloc( Compiler::Resources* res, S32 lineNumber, StringTableEntry varName, ExprNode *arrayIndex, StringTableEntry assignTypeName = NULL );
+   static VarNode *alloc( Compiler::Resources* res, S32 lineNumber, StringTableEntry varName, ExprNode *arrayIndex, StringTableEntry assignTypeName = nullptr );
   
    U32 compile(CodeStream &codeStream, U32 ip, TypeReq type);
    TypeReq getPreferredType();
@@ -431,7 +431,7 @@ struct AssignExprNode : BaseAssignExprNode
    
    bool disableTypes;
 
-   static AssignExprNode *alloc( Compiler::Resources* res, S32 lineNumber, StringTableEntry varName, ExprNode *arrayIndex, ExprNode *expr, StringTableEntry assignTypeName = NULL);
+   static AssignExprNode *alloc( Compiler::Resources* res, S32 lineNumber, StringTableEntry varName, ExprNode *arrayIndex, ExprNode *expr, StringTableEntry assignTypeName = nullptr);
   
    U32 compile(CodeStream &codeStream, U32 ip, TypeReq type);
    TypeReq getPreferredType();
@@ -582,7 +582,7 @@ struct SlotAssignNode : BaseAssignExprNode
    StringTableEntry varType;
    bool disableTypes;
 
-   static SlotAssignNode *alloc( Compiler::Resources* res, S32 lineNumber, ExprNode *objectExpr, ExprNode *arrayExpr, StringTableEntry slotName, ExprNode *valueExpr, StringTableEntry assignTypeName = NULL );
+   static SlotAssignNode *alloc( Compiler::Resources* res, S32 lineNumber, ExprNode *objectExpr, ExprNode *arrayExpr, StringTableEntry slotName, ExprNode *valueExpr, StringTableEntry assignTypeName = nullptr );
   
    U32 compile(CodeStream &codeStream, U32 ip, TypeReq type);
    TypeReq getPreferredType();
@@ -645,7 +645,7 @@ struct FunctionDeclStmtNode : StmtNode
    U32 endOffset;
    U32 argc;
 
-   static FunctionDeclStmtNode *alloc( Compiler::Resources* res, S32 lineNumber, StringTableEntry fnName, StringTableEntry nameSpace, VarNode *args, StmtNode *stmts, StringTableEntry returnType = NULL );
+   static FunctionDeclStmtNode *alloc( Compiler::Resources* res, S32 lineNumber, StringTableEntry fnName, StringTableEntry nameSpace, VarNode *args, StmtNode *stmts, StringTableEntry returnType = nullptr );
    
    U32 compileStmt(CodeStream &codeStream, U32 ip);
    void setPackage(StringTableEntry packageName);

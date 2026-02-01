@@ -39,8 +39,8 @@ extern U32 HashPointer(StringTableEntry ptr);
 NamespaceState::NamespaceState()
 {
    mCacheSequence = 0;
-   mNamespaceList = NULL;
-   mGlobalNamespace = NULL;
+   mNamespaceList = nullptr;
+   mGlobalNamespace = nullptr;
 }
 
 void NamespaceState::init(KorkApi::VmInternal* vmInternal)
@@ -48,7 +48,7 @@ void NamespaceState::init(KorkApi::VmInternal* vmInternal)
    mNumActivePackages = 0;
    mOldNumActivePackages = 0;
    mVmInternal = vmInternal;
-   mGlobalNamespace = find(NULL);
+   mGlobalNamespace = find(nullptr);
 }
 
 Namespace *NamespaceState::global()
@@ -171,7 +171,7 @@ void NamespaceState::deactivatePackage(StringTableEntry name)
             Namespace *parent = find(walk->mName);
             // hook the parent
             parent->mParent = walk->mParent;
-            walk->mParent = NULL;
+            walk->mParent = nullptr;
 
             // now swap the entries:
             Namespace::Entry *ew;
@@ -219,8 +219,8 @@ void NamespaceState::trashCache()
 
 Namespace::Entry::Entry()
 {
-   mCode = NULL;
-   mUserPtr = NULL;
+   mCode = nullptr;
+   mUserPtr = nullptr;
    mType = InvalidFunctionType;
 }
 
@@ -229,24 +229,24 @@ void Namespace::Entry::clear()
    if(mCode)
    {
       mCode->decRefCount();
-      mCode = NULL;
+      mCode = nullptr;
    }
-   mUserPtr = NULL;
+   mUserPtr = nullptr;
 }
 
 Namespace::Namespace()
 {
-   mPackage = NULL;
-   mName = NULL;
-   mParent = NULL;
-   mNext = NULL;
-   mEntryList = NULL;
+   mPackage = nullptr;
+   mName = nullptr;
+   mParent = nullptr;
+   mNext = nullptr;
+   mEntryList = nullptr;
    mHashSize = 0;
    mHashTable = 0;
    mHashSequence = 0;
    mRefCountToParent = 0;
-   mUserPtr = NULL;
-   mVmInternal = NULL;
+   mUserPtr = nullptr;
+   mVmInternal = nullptr;
 }
 
 void Namespace::initVM(KorkApi::VmInternal* vm)
@@ -300,7 +300,7 @@ bool Namespace::unlinkClass(Namespace *parent)
    AssertFatal(mRefCountToParent >= 0, "Namespace::unlinkClass: reference count to parent is less than 0");
 
    if(mRefCountToParent == 0)
-      walk->mParent = NULL;
+      walk->mParent = nullptr;
 
    return true;
 }
@@ -351,7 +351,7 @@ void Namespace::buildHashTable()
 
    mHashTable = (Namespace::Entry **) mVmInternal->mNSState.mCacheAllocator.alloc(sizeof(Namespace::Entry *) * mHashSize);
    for(U32 i = 0; i < mHashSize; i++)
-      mHashTable[i] = NULL;
+      mHashTable[i] = nullptr;
 
    for(ns = this; ns; ns = ns->mParent)
    {
@@ -378,7 +378,7 @@ const char *Namespace::tabComplete(const char *prevText, S32 baseLen, bool fForw
    if(mHashSequence != mVmInternal->mNSState.mCacheSequence)
       buildHashTable();
 
-   const char *bestMatch = NULL;
+   const char *bestMatch = nullptr;
    for(U32 i = 0; i < mHashSize; i++)
       if(mHashTable[i] && mVmInternal->mNSState.canTabComplete(prevText, bestMatch, mHashTable[i]->mFunctionName, baseLen, fForward))
          bestMatch = mHashTable[i]->mFunctionName;
@@ -392,7 +392,7 @@ Namespace::Entry *Namespace::lookupRecursive(StringTableEntry name)
          if(walk->mFunctionName == name)
             return walk;
 
-   return NULL;
+   return nullptr;
 }
 
 Namespace::Entry *Namespace::lookup(StringTableEntry name)
@@ -401,7 +401,7 @@ Namespace::Entry *Namespace::lookup(StringTableEntry name)
       buildHashTable();
 
    if (mHashSize == 0)
-      return NULL;
+      return nullptr;
 
    U32 index = HashPointer(name) % mHashSize;
    while(mHashTable[index] && mHashTable[index]->mFunctionName != name)
@@ -457,7 +457,7 @@ void Namespace::addFunction(StringTableEntry name, CodeBlock *cb, U32 functionOf
    Entry *ent = createLocalEntry(name);
    mVmInternal->mNSState.trashCache();
 
-   ent->mUsage = NULL;
+   ent->mUsage = nullptr;
    ent->mCode = cb;
    ent->mFunctionOffset = functionOffset;
    ent->mCode->incRefCount();
@@ -559,7 +559,7 @@ void Namespace::markGroup(const char* name, const char* usage)
    Entry *ent = createLocalEntry(mVmInternal->internString(buffer, false));
    mVmInternal->mNSState.trashCache();
 
-   if(usage != NULL)
+   if(usage != nullptr)
       lastUsage = (char*)(ent->mUsage = usage);
    else
       ent->mUsage = lastUsage;
@@ -573,7 +573,7 @@ void Namespace::markGroup(const char* name, const char* usage)
 
 inline void* safeObjectUserPtr(KorkApi::VMObject* obj)
 {
-   return obj ? obj->userPtr : NULL;
+   return obj ? obj->userPtr : nullptr;
 }
 
 KorkApi::ConsoleValue Namespace::Entry::execute(S32 argc, KorkApi::ConsoleValue* argv, ExprEvalState *state, KorkApi::VMObject* resolvedThis, bool startSuspended)

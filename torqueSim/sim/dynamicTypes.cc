@@ -24,7 +24,7 @@
 #include "embed/compilerOpcodes.h"
 
 // Init the globals.
-ConsoleBaseType *ConsoleBaseType::smListHead = NULL;
+ConsoleBaseType *ConsoleBaseType::smListHead = nullptr;
 S32              ConsoleBaseType::smConsoleTypeCount = KorkApi::ConsoleValue::TypeBeginCustom; // tge
 
 // And, we also privately store the types lookup table.
@@ -47,7 +47,7 @@ void ConsoleBaseType::initialize()
    {
       // Store a pointer to the type in the appropriate slot.
       const S32 id = walk->getTypeID();
-      AssertFatal(gConsoleTypeTable[id]==NULL, "ConsoleBaseType::initialize - encountered a table slot that contained something!");
+      AssertFatal(gConsoleTypeTable[id]==nullptr, "ConsoleBaseType::initialize - encountered a table slot that contained something!");
       gConsoleTypeTable[id] = walk;
 
       // Advance down the list...
@@ -120,7 +120,7 @@ ConsoleBaseType  *ConsoleBaseType::getType(const S32 typeID)
 ConsoleBaseType::ConsoleBaseType(const U32 size, const U32 vsize, S32 *idPtr, const char *aTypeName)
 {
    // General initialization.
-   mInspectorFieldType = NULL;
+   mInspectorFieldType = nullptr;
 
    // Store general info.
    mTypeSize = size;

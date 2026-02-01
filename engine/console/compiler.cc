@@ -131,7 +131,7 @@ namespace Compiler
 
    VarTypeTableEntry* Resources::getVarInfo(StringTableEntry varName, StringTableEntry typeName)
    {
-      VarTypeTableEntry* tt = NULL;
+      VarTypeTableEntry* tt = nullptr;
 
       if (varName[0] == '$')
       {
@@ -147,7 +147,7 @@ namespace Compiler
       }
 
       if (tt &&
-         typeName != NULL)
+         typeName != nullptr)
       {
          if (tt->typeName &&
              tt->typeName != typeName)
@@ -187,14 +187,14 @@ namespace Compiler
       table = newEntry;
       
       newEntry->name = name;
-      newEntry->typeName = NULL;
+      newEntry->typeName = nullptr;
       newEntry->typeId = -1;
       return newEntry;
    }
 
    void VarTypeTable::reset()
    {
-      table = NULL;
+      table = nullptr;
    }
 
 }
@@ -230,7 +230,7 @@ U32 CompilerStringTable::add(const char *str, bool caseSens, bool tag)
    // Write it out.
    Entry *newStr = (Entry *) res->consoleAlloc(sizeof(Entry));
    *walk = newStr;
-   newStr->next = NULL;
+   newStr->next = nullptr;
    newStr->start = totalLen;
    U32 len = strlen(str) + 1;
    if(tag && len < 7) // alloc space for the numeric tag 1 for tag, 5 for # and 1 for nul
@@ -257,7 +257,7 @@ U32 CompilerStringTable::addFloatString(F64 value)
 
 void CompilerStringTable::reset()
 {
-   list = NULL;
+   list = nullptr;
    totalLen = 0;
 }
 
@@ -287,14 +287,14 @@ U32 CompilerFloatTable::add(F64 value)
          return i;
    Entry *newFloat = (Entry *) res->consoleAlloc(sizeof(Entry));
    newFloat->val = value;
-   newFloat->next = NULL;
+   newFloat->next = nullptr;
    count++;
    *walk = newFloat;
    return count-1;
 }
 void CompilerFloatTable::reset()
 {
-   list = NULL;
+   list = nullptr;
    count = 0;
 }
 F64 *CompilerFloatTable::build()
@@ -317,8 +317,8 @@ void CompilerFloatTable::write(Stream &st)
 
 void CompilerIdentTable::reset()
 {
-   list = NULL;
-   tail = NULL;
+   list = nullptr;
+   tail = nullptr;
    numIdentStrings = 0;
 }
 
@@ -326,7 +326,7 @@ U32 CompilerIdentTable::addNoAddress(StringTableEntry ste)
 {
    U32 index = res->globalStringTable.add(ste, false);
    
-   FullEntry* patchEntry = NULL;
+   FullEntry* patchEntry = nullptr;
    
    U32 elementIndex = 0;
    for(FullEntry *walk = list; walk; walk = walk->next)
@@ -339,15 +339,15 @@ U32 CompilerIdentTable::addNoAddress(StringTableEntry ste)
       elementIndex++;
    }
    
-   if (patchEntry == NULL)
+   if (patchEntry == nullptr)
    {
       patchEntry = (FullEntry *) res->consoleAlloc(sizeof(FullEntry));
-      patchEntry->patch = NULL;
+      patchEntry->patch = nullptr;
       patchEntry->steName = ste;
       patchEntry->offset = index;
-      patchEntry->next = NULL;
+      patchEntry->next = nullptr;
       
-      if (tail == NULL)
+      if (tail == nullptr)
       {
          list = patchEntry;
          tail = patchEntry;
@@ -371,7 +371,7 @@ U32 CompilerIdentTable::add(StringTableEntry ste, U32 ip)
    Patch* newPatch = (Patch*)res->consoleAlloc(sizeof(Patch));
    newPatch->ip = ip;
    
-   FullEntry* patchEntry = NULL;
+   FullEntry* patchEntry = nullptr;
    
    U32 elementIndex = 0;
    for(FullEntry *walk = list; walk; walk = walk->next)
@@ -384,16 +384,16 @@ U32 CompilerIdentTable::add(StringTableEntry ste, U32 ip)
       elementIndex++;
    }
    
-   if (patchEntry == NULL)
+   if (patchEntry == nullptr)
    {
       patchEntry = (FullEntry *) res->consoleAlloc(sizeof(FullEntry));
-      patchEntry->patch = NULL;
+      patchEntry->patch = nullptr;
       patchEntry->steName = ste;
       patchEntry->offset = index;
       patchEntry->numInstances = 0;
-      patchEntry->next = NULL;
+      patchEntry->next = nullptr;
       
-      if (tail == NULL)
+      if (tail == nullptr)
       {
          list = patchEntry;
          tail = patchEntry;
@@ -450,12 +450,12 @@ U32 CompilerIdentTable::append(CompilerIdentTable &other)
 {
    U32 offset = numIdentStrings;
    
-   if (other.list == NULL)
+   if (other.list == nullptr)
    {
       return numIdentStrings;
    }
    
-   if (list == NULL)
+   if (list == nullptr)
    {
       list = other.list;
       numIdentStrings = other.numIdentStrings;
@@ -472,7 +472,7 @@ U32 CompilerIdentTable::append(CompilerIdentTable &other)
   
 U8 *CodeStream::allocCode(U32 sz)
 {
-   U8 *ptr = NULL;
+   U8 *ptr = nullptr;
    if (mCodeHead)
    {
       const U32 bytesLeft = BlockSize - mCodeHead->size;
@@ -487,12 +487,12 @@ U8 *CodeStream::allocCode(U32 sz)
    CodeData *data = KorkApi::VMem::New<CodeData>();
    data->data = KorkApi::VMem::NewArray<U8>(BlockSize);
    data->size = sz;
-   data->next = NULL;
+   data->next = nullptr;
    
    if (mCodeHead)
       mCodeHead->next = data;
    mCodeHead = data;
-   if (mCode == NULL)
+   if (mCode == nullptr)
       mCode = data;
    return data->data;
 }
@@ -548,7 +548,7 @@ void CodeStream::emitCodeStream(U32 *size, U32 **stream, U32 **lineBreaks, U32* 
    // Dump chunks & line breaks
    U32 outBytes = mCodePos * sizeof(U32);
    U8 *outPtr = *((U8**)stream);
-   for (CodeData *itr = mCode; itr != NULL; itr = itr->next)
+   for (CodeData *itr = mCode; itr != nullptr; itr = itr->next)
    {
       U32 bytesToCopy = itr->size > outBytes ? outBytes : itr->size;
       memcpy(outPtr, itr->data, bytesToCopy);
@@ -584,8 +584,8 @@ void CodeStream::reset()
    mBreakLines.clear();
    
    // Pop down to one code block
-   CodeData *itr = mCode ? mCode->next : NULL;
-   while (itr != NULL)
+   CodeData *itr = mCode ? mCode->next : nullptr;
+   while (itr != nullptr)
    {
       CodeData *next = itr->next;
       KorkApi::VMem::Delete(itr->data);
@@ -596,7 +596,7 @@ void CodeStream::reset()
    if (mCode)
    {
       mCode->size = 0;
-      mCode->next = NULL;
+      mCode->next = nullptr;
       mCodeHead = mCode;
    }
 }

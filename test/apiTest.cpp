@@ -15,37 +15,37 @@ void MyLogger(U32 level, const char *consoleLine, void* userPtr)
    printf("%s\n", consoleLine);
 }
 
-Vm* gVM = NULL;
+Vm* gVM = nullptr;
 static std::unordered_map<StringTableEntry, VMObject*> gByName;
 static std::unordered_map<U32, VMObject*> gById;
 static KorkApi::SimObjectId gCurrentId = 1;
 
 static VMObject* FindByName(void* userPtr, StringTableEntry name, VMObject* parent)
 {
-   if (!name) return NULL;
+   if (!name) return nullptr;
    auto it = gByName.find(name);
-   return it == gByName.end() ? NULL : it->second;
+   return it == gByName.end() ? nullptr : it->second;
 }
 
 static VMObject* FindById(void* userPtr, KorkApi::SimObjectId ident)
 {
    auto it = gById.find(ident);
-   return it == gById.end() ? NULL : it->second;
+   return it == gById.end() ? nullptr : it->second;
 }
 
 static VMObject* FindByPath(void* userPtr, const char* path)
 {
-   if (!path) return NULL;
+   if (!path) return nullptr;
    
    if (path[0] >= '0' && path[0] < '9')
    {
       auto numIt = gById.find(atoi(path));
-      return numIt == gById.end() ? NULL : numIt->second;
+      return numIt == gById.end() ? nullptr : numIt->second;
    }
    else
    {
       auto it = gByName.find(gVM->internString(path));
-      return it == gByName.end() ? NULL : it->second;
+      return it == gByName.end() ? nullptr : it->second;
    }
 }
 
@@ -182,7 +182,7 @@ struct MyBase
 static void MyBase_Create(void* classUser, Vm* vm, CreateClassReturn* outP)
 {
    MyBase* b = new MyBase();
-   b->mVMInstance = NULL;
+   b->mVMInstance = nullptr;
    outP->userPtr = b;
    outP->initialFlags |= KorkApi::ObjectFlags::ModStaticFields;
 }
@@ -193,7 +193,7 @@ static void MyBase_RemoveObject(void* user, Vm* vm, VMObject* object)
    if (b->mVMInstance)
    {
       vm->decVMRef(b->mVMInstance);
-      b->mVMInstance = NULL;
+      b->mVMInstance = nullptr;
    }
 }
 
@@ -201,7 +201,7 @@ static bool MyBase_AddObject(Vm* vm, VMObject* object, bool placeAtRoot, U32 gro
 {
    MyBase* b = (MyBase*)object->userPtr;
    
-   if (b->mVMInstance != NULL && b->mVMInstance != object)
+   if (b->mVMInstance != nullptr && b->mVMInstance != object)
    {
       vm->decVMRef(b->mVMInstance);
    }
@@ -256,7 +256,7 @@ static void Player_Create(void* classUser, Vm* vm, CreateClassReturn* outP)
 {
    Player* b = new Player();
    b->mPosition = {};
-   b->mVMInstance = NULL;
+   b->mVMInstance = nullptr;
    outP->userPtr = b;
    outP->initialFlags = KorkApi::ModStaticFields;
 }
@@ -312,7 +312,7 @@ int testScript(char* script, const char* filename)
       free(ptr);
    };
    cfg.logFn = MyLogger;
-   cfg.iFind = { &FindByName, &FindByPath, NULL, &FindById };
+   cfg.iFind = { &FindByName, &FindByPath, nullptr, &FindById };
    Vm* vm = createVM(&cfg);
    gVM = vm;
    if (!vm)
@@ -322,13 +322,13 @@ int testScript(char* script, const char* filename)
    
    TypeInfo tInfo{};
    tInfo.name = "MyPoint3F";
-   tInfo.userPtr = NULL;
+   tInfo.userPtr = nullptr;
    tInfo.fieldSize = sizeof(MyPoint3F);
    tInfo.valueSize = sizeof(MyPoint3F);
    tInfo.iFuncs = {
       &MyPoint3F_CastValue,
       &MyPoint3F_GetTypeClassName,
-      NULL
+      nullptr
    };
    
    TypeId typeMyPoint3F = vm->registerType(tInfo);
@@ -337,9 +337,9 @@ int testScript(char* script, const char* filename)
    // 3) Register MyBase
    ClassInfo myBase{};
    myBase.name = vm->internString("MyBase");
-   myBase.userPtr = NULL;
+   myBase.userPtr = nullptr;
    myBase.numFields = 0;
-   myBase.fields = NULL;
+   myBase.fields = nullptr;
    myBase.iCreate = { &MyBase_Create, &MyBase_Destroy, &MyBase_ProcessArgs, &MyBase_AddObject, &MyBase_RemoveObject, &MyBase_GetID };
    
    myBase.iCustomFields   = {};
@@ -359,7 +359,7 @@ int testScript(char* script, const char* filename)
    
    ClassInfo player{};
    player.name        = vm->internString("Player");
-   player.userPtr     = NULL;
+   player.userPtr     = nullptr;
    player.numFields   = 1;
    player.fields      = playerFields;
    player.iCreate     = { &Player_Create, &Player_Destroy, &MyBase_ProcessArgs, &Player_AddObject, &Player_RemoveObject, &MyBase_GetID };
@@ -369,17 +369,17 @@ int testScript(char* script, const char* filename)
    
    // 5) Register a basic echo in the global namespace so the script can print
    NamespaceId globalNS = vm->getGlobalNamespace(); // or obtain root namespace
-   NamespaceId playerNS = vm->findNamespace(vm->internString("Player"), NULL);
+   NamespaceId playerNS = vm->findNamespace(vm->internString("Player"), nullptr);
    
-   vm->addNamespaceFunction(vm->getGlobalNamespace(), vm->internString("echo"), cEcho, NULL, "", 1, 32);
-   vm->addNamespaceFunction(playerNS, vm->internString("jump"), (KorkApi::VoidFuncCallback)cPlayerJump, NULL, "()", 2, 2);
+   vm->addNamespaceFunction(vm->getGlobalNamespace(), vm->internString("echo"), cEcho, nullptr, "", 1, 32);
+   vm->addNamespaceFunction(playerNS, vm->internString("jump"), (KorkApi::VoidFuncCallback)cPlayerJump, nullptr, "()", 2, 2);
    vm->evalCode(script, filename, "");
    
-   VMObject* found = cfg.iFind.FindObjectByNameFn(cfg.findUser, "player1", NULL);
+   VMObject* found = cfg.iFind.FindObjectByNameFn(cfg.findUser, "player1", nullptr);
    AssertFatal(found, "player1 should be registered in iFind");
    
    destroyVM(vm);
-   gVM = NULL;
+   gVM = nullptr;
    return 0;
 }
 

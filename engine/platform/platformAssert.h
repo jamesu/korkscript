@@ -56,7 +56,7 @@ private:
    virtual ~PlatformAssert();
 
 public:
-   static void create( PlatformAssert* newAssertClass = NULL );
+   static void create( PlatformAssert* newAssertClass = nullptr );
    static void destroy();
    static bool processAssert(Type         assertType,
                              const char*  filename,

@@ -561,7 +561,7 @@ ConsoleFunction(firstWord, const char *, 2, 2, "firstWord(text)")
    argc;
    const char *word = dStrchr(argv[1], ' ');
    U32 len;
-   if(word == NULL)
+   if(word == nullptr)
       len = dStrlen(argv[1]);
    else
       len = word - argv[1];
@@ -576,7 +576,7 @@ ConsoleFunction(restWords, const char *, 2, 2, "restWords(text)")
 {
    argc;
    const char *word = dStrchr(argv[1], ' ');
-   if(word == NULL)
+   if(word == nullptr)
       return "";
    KorkApi::ConsoleValue retV = Con::getReturnBuffer(dStrlen(word + 1) + 1);
    char *ret = (char*)retV.evaluatePtr(vmPtr->getAllocBase());
@@ -804,7 +804,7 @@ ConsoleFunction(exec, bool, 2, 4, "exec(fileName [, nocalls [,journalScript]])")
    }
 
    StringTableEntry scriptFileName = vmPtr->internString(scriptFilenameBuffer);
-   StringTableEntry compiledScriptFileName = NULL;
+   StringTableEntry compiledScriptFileName = nullptr;
 
    // Is this a file we should compile?
    bool compiled = dStricmp(ext, ".mis") && !journal && !Con::getBoolVariable("Scripts::ignoreDSOs");
@@ -814,7 +814,7 @@ ConsoleFunction(exec, bool, 2, 4, "exec(fileName [, nocalls [,journalScript]])")
    bool compiledScriptExists = false;
 
    char nameBuffer[512];
-   char* script = NULL;
+   char* script = nullptr;
    U32 scriptSize = 0;
    U32 version;
 
@@ -824,14 +824,14 @@ ConsoleFunction(exec, bool, 2, 4, "exec(fileName [, nocalls [,journalScript]])")
    // If we're supposed to be compiling this file, check to see if there's a DSO
    if(compiled)
    {
-      dStrcpyl(nameBuffer, sizeof(nameBuffer), scriptFileName, ".dso", NULL);
+      dStrcpyl(nameBuffer, sizeof(nameBuffer), scriptFileName, ".dso", nullptr);
       compiledScriptFileName = vmPtr->internString(nameBuffer);
       compiledScriptExists = Platform::isFile(compiledScriptFileName);
 
       if(compiledScriptExists)
-         Platform::getFileTimes(compiledScriptFileName, NULL, &comModifyTime);
+         Platform::getFileTimes(compiledScriptFileName, nullptr, &comModifyTime);
       if(scriptExists)
-         Platform::getFileTimes(scriptFileName, NULL, &scrModifyTime);
+         Platform::getFileTimes(scriptFileName, nullptr, &scrModifyTime);
    }
 
    KorkApi::CompiledBlock loadedBlock = {};
@@ -982,7 +982,7 @@ ConsoleFunction(exec, bool, 2, 4, "exec(fileName [, nocalls [,journalScript]])")
 ConsoleFunction(eval, const char *, 2, 2, "eval(consoleString)")
 {
    argc;
-   const char* returnValue = Con::evaluate(argv[1], false, NULL);
+   const char* returnValue = Con::evaluate(argv[1], false, nullptr);
    vmPtr->clearCurrentFiberError();
    return returnValue;
 }
@@ -1001,7 +1001,7 @@ ConsoleFunction(isFunction, bool, 2, 2, "(string funcName)")
 
 ConsoleFunction(export, void, 2, 4, "export(searchString [, fileName [,append]])")
 {
-   const char *filename = NULL;
+   const char *filename = nullptr;
    bool append = (argc == 4) ? dAtob(argv[3]) : false;
 
    if (argc >= 3)
@@ -1040,7 +1040,7 @@ ConsoleFunction(export, void, 2, 4, "export(searchString [, fileName [,append]])
    }
    else
    {
-      vmPtr->enumGlobals(argv[1], NULL, [](KorkApi::Vm* vmPtr, void* streamPtr, const char* name, KorkApi::ConsoleValue value){
+      vmPtr->enumGlobals(argv[1], nullptr, [](KorkApi::Vm* vmPtr, void* streamPtr, const char* name, KorkApi::ConsoleValue value){
          
          char expandBuffer[1024];
          

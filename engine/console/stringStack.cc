@@ -116,12 +116,12 @@ void StringStack::copyStoredValueToStack(KorkApi::VmInternal* vm, KorkApi::Conso
 
       KorkApi::TypeStorageInterface inputStorage = KorkApi::CreateRegisterStorageFromArg(vm, v);
       
-      // NOTE: types should set head of stack to value if data pointer is NULL in this case
+      // NOTE: types should set head of stack to value if data pointer is nullptr in this case
       vm->mTypes[v.typeId].iFuncs.CastValueFn(vm->mTypes[v.typeId].userPtr,
                                                           vm->mVM,
                                                           &inputStorage,
                                                           &outputStorage,
-                                                          NULL,
+                                                          nullptr,
                                                           0,
                                                           v.typeId);
    }
@@ -135,7 +135,7 @@ void StringStack::copyStoredValueToStack(KorkApi::VmInternal* vm, KorkApi::Conso
 
 void StringStack::setConsoleValue(KorkApi::VmInternal* vmInternal, KorkApi::ConsoleValue v)
 {
-   void* valueBase = NULL;
+   void* valueBase = nullptr;
    
    if (v.typeId != KorkApi::ConsoleValue::TypeInternalString && 
        v.typeId < KorkApi::ConsoleValue::TypeBeginCustom)

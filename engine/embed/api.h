@@ -198,7 +198,7 @@ struct VMObject {
    U16 flags;
    U16 refCount; // basic ref count (for interpreter loop)
 
-   VMObject() : klass(NULL), ns(NULL), userPtr(NULL), flags(0), refCount(0) {;}
+   VMObject() : klass(nullptr), ns(nullptr), userPtr(nullptr), flags(0), refCount(0) {;}
 };
 
 struct VMIterator {
@@ -411,7 +411,7 @@ struct FiberRunResult
    State state;
    ExceptionInfo* exceptionInfo;
 
-   FiberRunResult() : value(), state(INACTIVE), exceptionInfo(NULL) {;}
+   FiberRunResult() : value(), state(INACTIVE), exceptionInfo(nullptr) {;}
    static const char* stateAsString(State inState);
    static const char* getExceptionLineIp();
 };
@@ -453,8 +453,8 @@ public:
    
 public:
    
-	NamespaceId findNamespace(StringTableEntry name, StringTableEntry package = NULL);
-   NamespaceId lookupNamespace(StringTableEntry name, StringTableEntry package = NULL);
+	NamespaceId findNamespace(StringTableEntry name, StringTableEntry package = nullptr);
+   NamespaceId lookupNamespace(StringTableEntry name, StringTableEntry package = nullptr);
    NamespaceId getGlobalNamespace();
    void setNamespaceUsage(NamespaceId ns, const char* usage);
    void setNamespaceUserPtr(NamespaceId ns, void* userPtr);
@@ -578,7 +578,7 @@ public:
    // Fiber API
    void setCurrentFiberMain();
    void setCurrentFiber(FiberId fiber);
-   FiberId createFiber(void* userPtr = NULL); // needs exec too
+   FiberId createFiber(void* userPtr = nullptr); // needs exec too
    FiberId getCurrentFiber();
    FiberRunResult::State getCurrentFiberState();
    void clearCurrentFiberError();

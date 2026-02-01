@@ -111,9 +111,9 @@ namespace FreeListHandle
       if (realIndex < container.mItems.size())
       {
          Y* item = &container.mItems[(S32)realIndex];
-         return item->mGeneration == handle.parts.generation ? item : NULL;
+         return item->mGeneration == handle.parts.generation ? item : nullptr;
       }
-      return NULL;
+      return nullptr;
    }
 
    template<class T, class H, class Y> inline Y* resolveHandlePtr(const T& container, const H& handle)
@@ -122,9 +122,9 @@ namespace FreeListHandle
       if (realIndex < container.mItems.size())
       {
          Y* item = container.mItems[(S32)realIndex];
-         return item != NULL && item->mGeneration == handle.parts.generation ? item : NULL;
+         return item != nullptr && item->mGeneration == handle.parts.generation ? item : nullptr;
       }
-      return NULL;
+      return nullptr;
    }
 
    template<class T> inline U32 getReserveSize(T& container)
@@ -184,7 +184,7 @@ template<class T, class B,  template<class...> class VEC> struct FreeListStruct
 
    void freeItemPtr(T* itemPtr)
    {
-      if (itemPtr == NULL || itemPtr->mAllocNumber == 0)
+      if (itemPtr == nullptr || itemPtr->mAllocNumber == 0)
          return;
 
       mFreeItems.push_back(itemPtr->mAllocNumber-1);
@@ -296,10 +296,10 @@ template<class T, class B, template<class...> class VEC> struct FreeListPtr
 
    void freeListPtr(T* itemPtr)
    {
-      if (itemPtr == NULL || itemPtr->mAllocNumber == 0)
+      if (itemPtr == nullptr || itemPtr->mAllocNumber == 0)
          return;
 
-      mItems[itemPtr->mAllocNumber-1] = NULL;
+      mItems[itemPtr->mAllocNumber-1] = nullptr;
       mFreeItems.push_back(itemPtr->mAllocNumber-1);
       itemPtr->reset();
       itemPtr->mAllocNumber = 0;
@@ -338,7 +338,7 @@ template<class T, class B, template<class...> class VEC> struct FreeListPtr
       for (auto itr = mItems.begin(); itr != mItems.end(); itr++)
       {
          T* item = *itr;
-         if (item == NULL || (item && item->mAllocNumber == 0))
+         if (item == nullptr || (item && item->mAllocNumber == 0))
             continue;
          func(item);
       }
@@ -349,7 +349,7 @@ template<class T, class B, template<class...> class VEC> struct FreeListPtr
       for (auto itr = mItems.begin(); itr != mItems.end(); itr++)
       {
          T* item = *itr;
-         if (item == NULL || (item && item->mAllocNumber == 0))
+         if (item == nullptr || (item && item->mAllocNumber == 0))
             continue;
          if (func(item))
          {

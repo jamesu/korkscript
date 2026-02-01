@@ -99,7 +99,7 @@ void Stream::writeLongString(U32 maxStringLen, const char *string)
 
 void Stream::readLine(U8 *buffer, U32 bufferSize)
 {
-   bufferSize--;  // account for NULL terminator
+   bufferSize--;  // account for nullptr terminator
    U8 *buff = buffer;
    U8 *buffEnd = buff + bufferSize;
    *buff = '\r';
@@ -122,7 +122,7 @@ void Stream::readLine(U8 *buffer, U32 bufferSize)
 
 #if defined(TORQUE_OS_OSX)
       U32 pushPos = getPosition(); // in case we need to back up.
-      if (read(buff)) // feeling free to overwrite the \r as the NULL below will overwrite again...
+      if (read(buff)) // feeling free to overwrite the \r as the nullptr below will overwrite again...
           if (*buff != '\n') // then push our position back.
              setPosition(pushPos);
        break; // we're always done after seeing the CR...

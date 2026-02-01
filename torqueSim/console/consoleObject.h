@@ -229,7 +229,7 @@ public:
 public:
    AbstractClassRep() 
    {
-      parentClass  = NULL;
+      parentClass  = nullptr;
    }
    virtual ~AbstractClassRep() { }
 
@@ -349,13 +349,13 @@ public:
    {
       // Fetch container children type.
       AbstractClassRep* pChildren = T::getContainerChildStaticClassRep();
-      if ( !recurse || pChildren != NULL )
+      if ( !recurse || pChildren != nullptr )
           return pChildren;
 
       // Fetch parent type.
       AbstractClassRep* pParent = T::getParentStaticClassRep();
-      if ( pParent == NULL )
-          return NULL;
+      if ( pParent == nullptr )
+          return nullptr;
 
       // Get parent container children.
       return pParent->getContainerChildClass( recurse );
@@ -469,7 +469,7 @@ protected:
    ///
    /// This is used in the consoleDoc system.
    /// @see console_autodoc
-   static void addGroup(const char*  in_pGroupname, const char* in_pGroupDocs = NULL);
+   static void addGroup(const char*  in_pGroupname, const char* in_pGroupDocs = nullptr);
 
    /// Mark the end of a group of fields.
    ///
@@ -489,8 +489,8 @@ protected:
       const U32     in_fieldType,
       const dsize_t in_fieldOffset,
       const U32     in_elementCount = 1,
-      EnumTable *   in_table        = NULL,
-      const char*   in_pFieldDocs   = NULL);
+      EnumTable *   in_table        = nullptr,
+      const char*   in_pFieldDocs   = nullptr);
 
    /// Register a complex field with a write notify.
    ///
@@ -506,8 +506,8 @@ protected:
       const dsize_t in_fieldOffset,
       AbstractClassRep::WriteDataNotify in_writeDataFn,
       const U32     in_elementCount = 1,
-      EnumTable *   in_table        = NULL,
-      const char*   in_pFieldDocs   = NULL);
+      EnumTable *   in_table        = nullptr,
+      const char*   in_pFieldDocs   = nullptr);
 
    /// Register a simple field.
    ///
@@ -547,7 +547,7 @@ protected:
       const U32      in_fieldType,
       const dsize_t  in_fieldOffset,
       TypeValidator *v,
-      const char *   in_pFieldDocs = NULL);
+      const char *   in_pFieldDocs = nullptr);
 
    /// Register a complex protected field.
    ///
@@ -562,10 +562,10 @@ protected:
    static void addProtectedField(const char*   in_pFieldname,
       const U32     in_fieldType,
       const dsize_t in_fieldOffset,
-      AbstractClassRep::CastValue in_getDataFn = NULL,
+      AbstractClassRep::CastValue in_getDataFn = nullptr,
       const U32     in_elementCount = 1,
-      EnumTable *   in_table        = NULL,
-      const char*   in_pFieldDocs   = NULL);
+      EnumTable *   in_table        = nullptr,
+      const char*   in_pFieldDocs   = nullptr);
 
    /// Register a complex protected field.
    ///
@@ -581,11 +581,11 @@ protected:
    static void addProtectedField(const char*   in_pFieldname,
       const U32     in_fieldType,
       const dsize_t in_fieldOffset,
-      AbstractClassRep::CastValue in_getDataFn = NULL,
+      AbstractClassRep::CastValue in_getDataFn = nullptr,
       AbstractClassRep::WriteDataNotify in_writeDataFn = &defaultProtectedWriteFn,
       const U32     in_elementCount = 1,
-      EnumTable *   in_table        = NULL,
-      const char*   in_pFieldDocs   = NULL);
+      EnumTable *   in_table        = nullptr,
+      const char*   in_pFieldDocs   = nullptr);
 
    /// Register a simple protected field.
    ///
@@ -598,8 +598,8 @@ protected:
    static void addProtectedField(const char*   in_pFieldname,
       const U32     in_fieldType,
       const dsize_t in_fieldOffset,
-      AbstractClassRep::CastValue in_getDataFn = NULL,
-      const char*   in_pFieldDocs = NULL);
+      AbstractClassRep::CastValue in_getDataFn = nullptr,
+      const char*   in_pFieldDocs = nullptr);
 
    /// Register a simple protected field.
    ///
@@ -613,9 +613,9 @@ protected:
    static void addProtectedField(const char*   in_pFieldname,
       const U32     in_fieldType,
       const dsize_t in_fieldOffset,
-      AbstractClassRep::CastValue in_getDataFn = NULL,
+      AbstractClassRep::CastValue in_getDataFn = nullptr,
       AbstractClassRep::WriteDataNotify in_writeDataFn = &defaultProtectedWriteFn,
-      const char*   in_pFieldDocs = NULL);
+      const char*   in_pFieldDocs = nullptr);
 
    /// Add a deprecated field.
    ///
@@ -669,10 +669,10 @@ public:
    /// @{
 
    /// Get the abstract class information for this class.
-   static AbstractClassRep *getStaticClassRep() { return NULL; }
+   static AbstractClassRep *getStaticClassRep() { return nullptr; }
 
    /// Get the abstract class information for this class's superclass.
-   static AbstractClassRep *getParentStaticClassRep() { return NULL; }
+   static AbstractClassRep *getParentStaticClassRep() { return nullptr; }
 
    /// Get our network-layer class id.
    ///
@@ -697,7 +697,7 @@ public:
 
 inline S32 ConsoleObject::getClassId(U32 netClassGroup) const
 {
-   AssertFatal(getClassRep() != NULL,"Cannot get tag from non-declared dynamic class!");
+   AssertFatal(getClassRep() != nullptr,"Cannot get tag from non-declared dynamic class!");
    return getClassRep()->getClassId(netClassGroup);
 }
 
@@ -705,7 +705,7 @@ inline S32 ConsoleObject::getClassId(U32 netClassGroup) const
 
 inline const char * ConsoleObject::getClassName() const
 {
-   AssertFatal(getClassRep() != NULL,
+   AssertFatal(getClassRep() != nullptr,
       "Cannot get tag from non-declared dynamic class");
    return getClassRep()->getClassName();
 }
@@ -714,7 +714,7 @@ inline const char * ConsoleObject::getClassName() const
 
 inline const AbstractClassRep::Field * ConsoleObject::findField(StringTableEntry name) const
 {
-   AssertFatal(getClassRep() != NULL,
+   AssertFatal(getClassRep() != nullptr,
       avar("Cannot get field '%s' from non-declared dynamic class.", name));
    return getClassRep()->findField(name);
 }
@@ -767,7 +767,7 @@ inline bool& ConsoleObject::getDynamicGroupExpand()
    AbstractClassRep* className::getClassRep() const { return &className::dynClassRep; }                            \
    AbstractClassRep* className::getStaticClassRep() { return &dynClassRep; }                                       \
    AbstractClassRep* className::getParentStaticClassRep() { return Parent::getStaticClassRep(); }                  \
-   AbstractClassRep* className::getContainerChildStaticClassRep() { return NULL; }                                 \
+   AbstractClassRep* className::getContainerChildStaticClassRep() { return nullptr; }                                 \
    ConcreteClassRep<className> className::dynClassRep(#className, 0, -1, 0, className::getParentStaticClassRep())
 
 #define IMPLEMENT_CONOBJECT_CHILDREN(className)                                                                     \
@@ -781,7 +781,7 @@ inline bool& ConsoleObject::getDynamicGroupExpand()
    AbstractClassRep* className::getClassRep() const { return &className::dynClassRep; }                            \
    AbstractClassRep* className::getStaticClassRep() { return &dynClassRep; }                                       \
    AbstractClassRep* className::getParentStaticClassRep() { return Parent::getStaticClassRep(); }                  \
-   AbstractClassRep* className::getContainerChildStaticClassRep() { return NULL; }                                 \
+   AbstractClassRep* className::getContainerChildStaticClassRep() { return nullptr; }                                 \
    ConcreteClassRep<className> className::dynClassRep(#className, 0, -1, 0, className::getParentStaticClassRep())
 
 #define IMPLEMENT_CONOBJECT_CHILDREN_SCHEMA(className, schema)                                                      \
@@ -795,14 +795,14 @@ inline bool& ConsoleObject::getDynamicGroupExpand()
    AbstractClassRep* className::getClassRep() const { return &className::dynClassRep; }                            \
    AbstractClassRep* className::getStaticClassRep() { return &dynClassRep; }                                       \
    AbstractClassRep* className::getParentStaticClassRep() { return Parent::getStaticClassRep(); }                  \
-   AbstractClassRep* className::getContainerChildStaticClassRep() { return NULL; }                                 \
+   AbstractClassRep* className::getContainerChildStaticClassRep() { return nullptr; }                                 \
    ConcreteClassRep<className> className::dynClassRep(#className, NetClassGroupGameMask, NetClassTypeObject, 0, className::getParentStaticClassRep())
 
 #define IMPLEMENT_CO_DATABLOCK_V1(className)                                                                        \
    AbstractClassRep* className::getClassRep() const { return &className::dynClassRep; }                            \
    AbstractClassRep* className::getStaticClassRep() { return &dynClassRep; }                                       \
    AbstractClassRep* className::getParentStaticClassRep() { return Parent::getStaticClassRep(); }                  \
-   AbstractClassRep* className::getContainerChildStaticClassRep() {return NULL; }                                  \
+   AbstractClassRep* className::getContainerChildStaticClassRep() {return nullptr; }                                  \
    ConcreteClassRep<className> className::dynClassRep(#className, NetClassGroupGameMask, NetClassTypeDataBlock, 0, className::getParentStaticClassRep())
 
 //-----------------------------------------------------------------------------

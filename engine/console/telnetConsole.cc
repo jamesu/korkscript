@@ -44,24 +44,24 @@ TelnetConsole::TelnetConsole(KorkApi::VmInternal* vm)
    mVMInternal->mConfig.extraConsumers[0].cbUser = this;
 
    mAcceptPort = -1;
-   mClientList = NULL;
+   mClientList = nullptr;
    mRemoteEchoEnabled = false;
 
-   mValid = mVMInternal->mConfig.iTelnet.StartListenFn != NULL &&
-   mVMInternal->mConfig.iTelnet.StopListenFn != NULL &&
-   mVMInternal->mConfig.iTelnet.CheckSocketActiveFn != NULL &&
-   mVMInternal->mConfig.iTelnet.CheckAcceptFn != NULL &&
-   mVMInternal->mConfig.iTelnet.CheckListenFn != NULL &&
-   mVMInternal->mConfig.iTelnet.SendDataFn != NULL &&
-   mVMInternal->mConfig.iTelnet.RecvDataFn != NULL;
+   mValid = mVMInternal->mConfig.iTelnet.StartListenFn != nullptr &&
+   mVMInternal->mConfig.iTelnet.StopListenFn != nullptr &&
+   mVMInternal->mConfig.iTelnet.CheckSocketActiveFn != nullptr &&
+   mVMInternal->mConfig.iTelnet.CheckAcceptFn != nullptr &&
+   mVMInternal->mConfig.iTelnet.CheckListenFn != nullptr &&
+   mVMInternal->mConfig.iTelnet.SendDataFn != nullptr &&
+   mVMInternal->mConfig.iTelnet.RecvDataFn != nullptr;
 }
 
 TelnetConsole::~TelnetConsole()
 {
    if (mVMInternal->mConfig.extraConsumers[0].cbUser == this)
    {
-      mVMInternal->mConfig.extraConsumers[0].cbFunc = NULL;
-      mVMInternal->mConfig.extraConsumers[0].cbUser = NULL;
+      mVMInternal->mConfig.extraConsumers[0].cbFunc = nullptr;
+      mVMInternal->mConfig.extraConsumers[0].cbUser = nullptr;
    }
 
    if (mValid)
@@ -92,7 +92,7 @@ void TelnetConsole::setTelnetParameters(S32 port, const char *telnetPassword, co
 
 void TelnetConsole::processConsoleLine(const char *consoleLine)
 {
-   if (mClientList==NULL || !mValid) return;  // just escape early.  don't even do another step...
+   if (mClientList==nullptr || !mValid) return;  // just escape early.  don't even do another step...
 
    // ok, spew this line out to all our subscribers...
    S32 len = strlen(consoleLine)+1;
@@ -322,7 +322,7 @@ void TelnetConsole::process()
    
    TelnetClient ** walk = &mClientList;
    TelnetClient *cl;
-   while((cl = *walk) != NULL)
+   while((cl = *walk) != nullptr)
    {
       if(cl->socket == 0)
       {
@@ -343,7 +343,7 @@ void TelnetConsole::disconnect()
 
    KorkApi::Config& cfg = mVMInternal->mConfig;
    KorkApi::TelnetInterface& tel = cfg.iTelnet;
-   TelnetClient* client = NULL;
+   TelnetClient* client = nullptr;
 
    for (client = mClientList; client; client = client->nextClient)
    {
@@ -351,7 +351,7 @@ void TelnetConsole::disconnect()
    }
 
    client = mClientList;
-   while (client != NULL)
+   while (client != nullptr)
    {
       TelnetClient* delClient = client;
       client = mClientList->nextClient;

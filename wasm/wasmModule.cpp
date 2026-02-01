@@ -111,7 +111,7 @@ struct TypeBinding
    cb_getTypeName(JsVal::undefined()),
    cb_prepData(JsVal::undefined())
    {
-      vm = NULL;
+      vm = nullptr;
       fieldSize = 0;
       valueSize = 0;
    }
@@ -180,9 +180,9 @@ struct ObjBinding
 
    void reset()
    {
-      vm = NULL;
-      vmObject = NULL;
-      klass = NULL;
+      vm = nullptr;
+      vmObject = nullptr;
+      klass = nullptr;
    }
 };
 
@@ -212,7 +212,7 @@ ObjBinding* lookup_wrapper_from_peer(JsVal& val)
    {
       return find_wrapper_from_js(val["vmBindingId"].as<U32>());
    }
-   return NULL;
+   return nullptr;
 }
 
 // Attach a JS object to VMObject::userPtr (replaces existing if present)
@@ -1000,9 +1000,9 @@ static VMObject* FindByNameThunk(void* user, StringTableEntry name, VMObject* pa
    if (!js_is_nullish(ret)) 
    {
       ObjBinding* binding = lookup_wrapper_from_peer(ret);
-      return binding ? binding->vmObject : NULL;
+      return binding ? binding->vmObject : nullptr;
    }
-   return NULL;
+   return nullptr;
 }
 
 static VMObject* FindByPathThunk(void* user, const char* path)
@@ -1019,10 +1019,10 @@ static VMObject* FindByPathThunk(void* user, const char* path)
    if (!js_is_nullish(ret)) 
    {
       ObjBinding* binding = lookup_wrapper_from_peer(ret);
-      return binding ? binding->vmObject : NULL;
+      return binding ? binding->vmObject : nullptr;
    }
 
-   return NULL;
+   return nullptr;
 }
 
 static VMObject* FindByInternalNameThunk(void* user, StringTableEntry internalName, bool recursive, VMObject* parent)
@@ -1040,9 +1040,9 @@ static VMObject* FindByInternalNameThunk(void* user, StringTableEntry internalNa
    if (!js_is_nullish(ret)) 
    {
       ObjBinding* binding = lookup_wrapper_from_peer(ret);
-      return binding ? binding->vmObject : NULL;
+      return binding ? binding->vmObject : nullptr;
    }
-   return NULL;
+   return nullptr;
 }
 
 static VMObject* FindByIdThunk(void* user, SimObjectId objectId)
@@ -1081,7 +1081,7 @@ static void Class_CreateThunk(void* user, Vm* vm, CreateClassReturn* outP)
    else
    {
       delete ob;
-      ob = NULL;
+      ob = nullptr;
    }
 
    if (!js_is_nullish(ob->peer))
@@ -1161,8 +1161,8 @@ static bool Class_AddObjectThunk(Vm* vm, VMObject* object, bool placeAtRoot, U32
    }
    else
    {
-      ob->vm = NULL;
-      ob->vmObject = NULL;
+      ob->vm = nullptr;
+      ob->vmObject = nullptr;
       vm->decVMRef(object);
    }
 
@@ -1187,8 +1187,8 @@ static void Class_RemoveObjectThunk(void* user, Vm* vm, VMObject* object)
    if (ob)
    {
       vm->decVMRef(ob->vmObject);
-      ob->vm = NULL;
-      ob->vmObject = NULL;
+      ob->vm = nullptr;
+      ob->vmObject = nullptr;
    }
 }
 

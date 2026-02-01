@@ -97,8 +97,8 @@ const U32 convertUTF32toUTF16(const UTF32 *unistring, UTF16 *outbuffer, U32 len)
 ///   in *codepoint, and set *unitsWalked to the \# of code units *codepoint took up.
 ///   The next Unicode code point should start at *(codepoint + *unitsWalked).
 /// - oneUTF32toUTF8()  requires a 3 byte buffer, and returns the \# of bytes used.
-const UTF32  oneUTF8toUTF32( const UTF8 *codepoint,  U32 *unitsWalked = NULL);
-const UTF32  oneUTF16toUTF32(const UTF16 *codepoint, U32 *unitsWalked = NULL);
+const UTF32  oneUTF8toUTF32( const UTF8 *codepoint,  U32 *unitsWalked = nullptr);
+const UTF32  oneUTF16toUTF32(const UTF16 *codepoint, U32 *unitsWalked = nullptr);
 const UTF16  oneUTF32toUTF16(const UTF32 codepoint);
 const U32    oneUTF32toUTF8( const UTF32 codepoint, UTF8 *threeByteCodeunitBuf);
 

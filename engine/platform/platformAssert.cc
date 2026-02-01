@@ -24,7 +24,7 @@
 #include <stdarg.h>
 
 //-------------------------------------- STATIC Declaration
-PlatformAssert *PlatformAssert::platformAssert = NULL;
+PlatformAssert *PlatformAssert::platformAssert = nullptr;
 
 //--------------------------------------
 PlatformAssert::PlatformAssert()
@@ -50,7 +50,7 @@ void PlatformAssert::destroy()
 {
    if (platformAssert)
       delete platformAssert;
-   platformAssert = NULL;
+   platformAssert = nullptr;
 }
 
 
@@ -111,7 +111,7 @@ bool PlatformAssert::processAssert(Type        assertType,
 {
    if (platformAssert)
       return platformAssert->process(assertType, filename, lineNumber, message);
-   else // when platAssert NULL (during _start/_exit) try direct output...
+   else // when platAssert nullptr (during _start/_exit) try direct output...
       printf("\n%s: (%s @ %ld) %s\n", typeName[assertType], filename, lineNumber, message);
 
    // this could also be platform-specific: OutputDebugString on PC, DebugStr on Mac.

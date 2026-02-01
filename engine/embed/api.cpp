@@ -154,7 +154,7 @@ TypeId Vm::registerType(TypeInfo& info)
    
    // stubs
    
-   if (chkFunc.iFuncs.CastValueFn == NULL)
+   if (chkFunc.iFuncs.CastValueFn == nullptr)
    {
       chkFunc.iFuncs.CastValueFn = [](void* userPtr,
                                     Vm* vm,
@@ -167,7 +167,7 @@ TypeId Vm::registerType(TypeInfo& info)
       };
    }
    
-   if (chkFunc.iFuncs.PerformOpFn == NULL)
+   if (chkFunc.iFuncs.PerformOpFn == nullptr)
    {
       chkFunc.iFuncs.PerformOpFn = [](void* userPtr, Vm* vm, U32 op, ConsoleValue lhs, ConsoleValue rhs){
          return lhs;
@@ -206,12 +206,12 @@ ConsoleValue Vm::castToReturn(U32 argc, KorkApi::ConsoleValue* argv, U32 inputTy
                                                                                        1024,
                                                                                           outputTypeId);
 
-   // NOTE: types should set head of stack to value if data pointer is NULL in this case
+   // NOTE: types should set head of stack to value if data pointer is nullptr in this case
    if (mInternal->mTypes[inputTypeId].iFuncs.CastValueFn(mInternal->mTypes[inputTypeId].userPtr,
                                            this,
                                                     &inputStorage,
                                                     &outputStorage,
-                                                    NULL,
+                                                    nullptr,
                                                     0,
                                                     outputTypeId))
    {
@@ -234,82 +234,82 @@ ClassId Vm::registerClass(ClassInfo& info)
    
    // iCreate stubs
    
-   if (chkFunc.iCreate.CreateClassFn == NULL)
+   if (chkFunc.iCreate.CreateClassFn == nullptr)
    {
       chkFunc.iCreate.CreateClassFn = [](void* user, Vm* vm, CreateClassReturn* outP) {
       };
    }
-   if (chkFunc.iCreate.DestroyClassFn == NULL)
+   if (chkFunc.iCreate.DestroyClassFn == nullptr)
    {
       chkFunc.iCreate.DestroyClassFn = [](void* user, Vm* vm, void* createdPtr) {
       };
    }
-   if (chkFunc.iCreate.ProcessArgsFn == NULL)
+   if (chkFunc.iCreate.ProcessArgsFn == nullptr)
    {
       chkFunc.iCreate.ProcessArgsFn = [](Vm* vm, void* createdPtr, const char* name, bool isDatablock, bool internalName, int argc, const char** argv) {
          return false;
       };
    }
-   if (chkFunc.iCreate.AddObjectFn == NULL)
+   if (chkFunc.iCreate.AddObjectFn == nullptr)
    {
       chkFunc.iCreate.AddObjectFn = [](Vm* vm, VMObject* object, bool placeAtRoot, U32 groupAddId) {
          return false;
       };
    }
-   if (chkFunc.iCreate.RemoveObjectFn == NULL)
+   if (chkFunc.iCreate.RemoveObjectFn == nullptr)
    {
       chkFunc.iCreate.RemoveObjectFn = [](void* user, Vm* vm, VMObject* object) {
       };
    }
-   if (chkFunc.iCreate.GetIdFn == NULL)
+   if (chkFunc.iCreate.GetIdFn == nullptr)
    {
       chkFunc.iCreate.GetIdFn = [](VMObject* object) {
          return (SimObjectId)0;
       };
    }
-   if (chkFunc.iCreate.GetNameFn == NULL)
+   if (chkFunc.iCreate.GetNameFn == nullptr)
    {
       chkFunc.iCreate.GetNameFn = [](VMObject* object) {
-         return (StringTableEntry)NULL;
+         return (StringTableEntry)nullptr;
       };
    }
    
    // iEnum stubs
    
-   if (chkFunc.iEnum.GetSize == NULL)
+   if (chkFunc.iEnum.GetSize == nullptr)
    {
       chkFunc.iEnum.GetSize = [](VMObject* object) { return (U32)0; };
    }
-   if (chkFunc.iEnum.GetObjectAtIndex == NULL)
+   if (chkFunc.iEnum.GetObjectAtIndex == nullptr)
    {
-      chkFunc.iEnum.GetObjectAtIndex = [](VMObject* object, U32 index) { return (VMObject*)NULL; };
+      chkFunc.iEnum.GetObjectAtIndex = [](VMObject* object, U32 index) { return (VMObject*)nullptr; };
    }
    
    // iCustomFields stubs
-   if (chkFunc.iCustomFields.IterateFields == NULL)
+   if (chkFunc.iCustomFields.IterateFields == nullptr)
    {
       chkFunc.iCustomFields.IterateFields = [](KorkApi::Vm* vm, KorkApi::VMObject* object, VMIterator& state, StringTableEntry* name){
          return false;
       };
    }
-   if (chkFunc.iCustomFields.GetFieldByIterator == NULL)
+   if (chkFunc.iCustomFields.GetFieldByIterator == nullptr)
    {
       chkFunc.iCustomFields.GetFieldByIterator = [](KorkApi::Vm* vm, VMObject* object, VMIterator& state){
          return ConsoleValue();
       };
    }
-   if (chkFunc.iCustomFields.GetFieldByName == NULL)
+   if (chkFunc.iCustomFields.GetFieldByName == nullptr)
    {
       chkFunc.iCustomFields.GetFieldByName = [](KorkApi::Vm* vm, VMObject* object, const char* name){
          return ConsoleValue();
       };
    }
-   if (chkFunc.iCustomFields.SetCustomFieldByName == NULL)
+   if (chkFunc.iCustomFields.SetCustomFieldByName == nullptr)
    {
       chkFunc.iCustomFields.SetCustomFieldByName = [](KorkApi::Vm* vm, VMObject* object, const char* name, const char* array, U32 argc, ConsoleValue* argv){
       };
    }
-   if (chkFunc.iCustomFields.SetCustomFieldType == NULL)
+   if (chkFunc.iCustomFields.SetCustomFieldType == nullptr)
    {
       chkFunc.iCustomFields.SetCustomFieldType = [](KorkApi::Vm* vm, VMObject* object, const char* name, const char* array, U32 typeId){
          return false;
@@ -527,7 +527,7 @@ VMObject* Vm::constructObject(ClassId klassId, const char* name, int argc, const
    if (ci->iCreate.CreateClassFn)
    {
       object->klass = ci;
-      object->ns = NULL;
+      object->ns = nullptr;
       ci->iCreate.CreateClassFn(ci->userPtr, this, &ret);
       object->userPtr = ret.userPtr;
       object->flags = ret.initialFlags;
@@ -537,7 +537,7 @@ VMObject* Vm::constructObject(ClassId klassId, const char* name, int argc, const
          if (!ci->iCreate.ProcessArgsFn(this, object->userPtr, name, false, false, argc, argv))
          {
             ci->iCreate.DestroyClassFn(ci->userPtr, this, object->userPtr);
-            return NULL;
+            return nullptr;
          }
          else
          {
@@ -547,7 +547,7 @@ VMObject* Vm::constructObject(ClassId klassId, const char* name, int argc, const
    }
    
    mInternal->decVMRef(object);
-   return NULL;
+   return nullptr;
 }
 
 void Vm::setObjectNamespace(VMObject* object, NamespaceId nsId)
@@ -562,7 +562,7 @@ VMObject* Vm::createVMObject(ClassId klassId, void* klassPtr)
    VMObject* object = mInternal->New<VMObject>();
    mInternal->incVMRef(object);
    object->klass = &mInternal->mClassList[klassId];
-   object->ns = NULL;
+   object->ns = nullptr;
    object->userPtr = klassPtr;
    return object;
 }
@@ -625,7 +625,7 @@ bool Vm::isNamespaceFunction(NamespaceId nsId, StringTableEntry name)
 {
    VmAllocTLS::Scope memScope(mInternal);
    Namespace* ns = (Namespace*)nsId;
-   return ns->lookup(name) != NULL;
+   return ns->lookup(name) != nullptr;
 }
 
 void Vm::markNamespaceGroup(NamespaceId nsId, StringTableEntry groupName, StringTableEntry usage)
@@ -641,7 +641,7 @@ bool Vm::compileCodeBlock(const char* code, const char* filename, CompiledBlock*
    CodeBlock* block = mInternal->New<CodeBlock>(mInternal, false);
    
    U8* buffer = (U8*)mInternal->NewArray<U8>(1024 * 1024);
-   outBlock->data = NULL;
+   outBlock->data = nullptr;
    outBlock->size = 0;
    MemStream outS(1024*1024, buffer, true, true);
    
@@ -668,7 +668,7 @@ void Vm::freeCompiledBlock(CompiledBlock block)
 ConsoleValue Vm::execCodeBlock(U32 codeSize, U8* code, const char* filename, const char* modPath, bool noCalls, int setFrame)
 {
    VmAllocTLS::Scope memScope(mInternal);
-   CodeBlock* block = mInternal->New<CodeBlock>(mInternal, (filename == NULL || *filename == '\0') ? true : false);
+   CodeBlock* block = mInternal->New<CodeBlock>(mInternal, (filename == nullptr || *filename == '\0') ? true : false);
    
    MemStream stream(codeSize, code, true, false);
    
@@ -680,13 +680,13 @@ ConsoleValue Vm::execCodeBlock(U32 codeSize, U8* code, const char* filename, con
       return ConsoleValue();
    }
    
-   return block->exec(0, filename, NULL, 0, 0, noCalls, true, NULL, setFrame);
+   return block->exec(0, filename, nullptr, 0, 0, noCalls, true, nullptr, setFrame);
 }
 
 ConsoleValue Vm::evalCode(const char* code, const char* filename, const char* modPath, S32 setFrame)
 {
    VmAllocTLS::Scope memScope(mInternal);
-   CodeBlock *newCodeBlock = mInternal->New<CodeBlock>(mInternal, (filename == NULL || *filename == '\0') ? true : false);
+   CodeBlock *newCodeBlock = mInternal->New<CodeBlock>(mInternal, (filename == nullptr || *filename == '\0') ? true : false);
    return newCodeBlock->compileExec(mInternal->internString(filename, false),
                                     mInternal->internString(modPath, false),
                                     code, false, true, (!filename || setFrame < 0) ? -1 : setFrame);
@@ -729,7 +729,7 @@ bool Vm::callObjectFunction(VMObject* self, StringTableEntry funcName, int argc,
 
    Namespace::Entry *ent = self->ns->lookup(funcName);
 
-   if(ent == NULL)
+   if(ent == nullptr)
    {
       mInternal->printf(0, "%s: undefined for object id %d", funcName, self->klass->iCreate.GetIdFn(self));
 
@@ -774,7 +774,7 @@ bool Vm::callNamespaceFunction(NamespaceId nsId, StringTableEntry name, int argc
       return false;
    }
 
-   retValue = ent->execute(argc, argv, mInternal->mCurrentFiberState, NULL, startSuspended);
+   retValue = ent->execute(argc, argv, mInternal->mCurrentFiberState, nullptr, startSuspended);
 
    // Reset the function offset so the stack
    // doesn't continue to grow unnecessarily
@@ -786,7 +786,7 @@ bool Vm::callNamespaceFunction(NamespaceId nsId, StringTableEntry name, int argc
 // Helpers (should call into user funcs)
 VMObject* Vm::findObjectByName(const char* name)
 {
-    return mInternal->mConfig.iFind.FindObjectByNameFn(mInternal->mConfig.findUser, name, NULL);
+    return mInternal->mConfig.iFind.FindObjectByNameFn(mInternal->mConfig.findUser, name, nullptr);
 }
 
 VMObject* Vm::findObjectByPath(const char* path)
@@ -900,9 +900,9 @@ void Vm::setTracing(bool value)
 
 Vm* createVM(Config* cfg)
 {
-   if (cfg->mallocFn == NULL || cfg->freeFn == NULL)
+   if (cfg->mallocFn == nullptr || cfg->freeFn == nullptr)
    {
-      return NULL;
+      return nullptr;
    }
    
    Vm* vm = (Vm*)cfg->mallocFn(sizeof(Vm), cfg->allocUser);
@@ -930,10 +930,10 @@ void destroyVM(Vm* vm)
 VmInternal::VmInternal(Vm* vm, Config* cfg) : mGlobalVars(this)
 {
    mVM = vm;
-   mLocalIntern = NULL;
+   mLocalIntern = nullptr;
    mConfig = *cfg;
-   mCodeBlockList = NULL;
-   mCurrentCodeBlock = NULL;
+   mCodeBlockList = nullptr;
+   mCurrentCodeBlock = nullptr;
    mReturnBuffer.resize(2048);
    mNSState.init(this);
    
@@ -952,18 +952,18 @@ VmInternal::VmInternal(Vm* vm, Config* cfg) : mGlobalVars(this)
    }
    else
    {
-      mTelDebugger = NULL;
-      mTelConsole = NULL;
+      mTelDebugger = nullptr;
+      mTelConsole = nullptr;
    }
    
    // Use inbuilt string interner
 
-   if (mConfig.iIntern.intern == NULL) 
+   if (mConfig.iIntern.intern == nullptr) 
    {
       mLocalIntern = new SimpleStringInterner();
       mConfig.iIntern.intern = [](void* user, const char* value, bool caseSens){
          SimpleStringInterner* localIntern = (SimpleStringInterner*)user;
-         if (value == NULL)
+         if (value == nullptr)
          {
             return localIntern->empty();
          }
@@ -971,7 +971,7 @@ VmInternal::VmInternal(Vm* vm, Config* cfg) : mGlobalVars(this)
       };
       mConfig.iIntern.internN = [](void* user, const char* value, size_t len, bool caseSens){
          SimpleStringInterner* localIntern = (SimpleStringInterner*)user;
-         if (value == NULL)
+         if (value == nullptr)
          {
             return localIntern->empty();
          }
@@ -979,7 +979,7 @@ VmInternal::VmInternal(Vm* vm, Config* cfg) : mGlobalVars(this)
       };
       mConfig.iIntern.lookup = [](void* user, const char* value, bool caseSens){
          SimpleStringInterner* localIntern = (SimpleStringInterner*)user;
-         if (value == NULL)
+         if (value == nullptr)
          {
             return localIntern->empty();
          }
@@ -987,7 +987,7 @@ VmInternal::VmInternal(Vm* vm, Config* cfg) : mGlobalVars(this)
       };
       mConfig.iIntern.lookupN = [](void* user, const char* value, size_t len, bool caseSens){
          SimpleStringInterner* localIntern = (SimpleStringInterner*)user;
-         if (value == NULL)
+         if (value == nullptr)
          {
             return localIntern->empty();
          }
@@ -995,7 +995,7 @@ VmInternal::VmInternal(Vm* vm, Config* cfg) : mGlobalVars(this)
       };
       mConfig.internUser = mLocalIntern;
    }
-   mHeapAllocs = NULL;
+   mHeapAllocs = nullptr;
    mConvIndex = 0;
    mCVConvIndex = 0;
    mNSCounter = 0;
@@ -1022,8 +1022,8 @@ VmInternal::VmInternal(Vm* vm, Config* cfg) : mGlobalVars(this)
    TypeInfo typeInfo = {};
    
    typeInfo.name = internString("string", false);
-   typeInfo.inspectorFieldType = NULL;
-   typeInfo.userPtr = NULL;
+   typeInfo.inspectorFieldType = nullptr;
+   typeInfo.userPtr = nullptr;
    typeInfo.fieldSize = sizeof(const char*);
    typeInfo.valueSize = UINT_MAX;
    
@@ -1072,16 +1072,16 @@ VmInternal::VmInternal(Vm* vm, Config* cfg) : mGlobalVars(this)
    mTypes.push_back(typeInfo);
    
    typeInfo.name = internString("float", false);
-   typeInfo.inspectorFieldType = NULL;
-   typeInfo.userPtr = NULL;
+   typeInfo.inspectorFieldType = nullptr;
+   typeInfo.userPtr = nullptr;
    typeInfo.fieldSize = typeInfo.valueSize = sizeof(F64);
    // TODO
    
    mTypes.push_back(typeInfo);
    
    typeInfo.name = internString("uint", false);
-   typeInfo.inspectorFieldType = NULL;
-   typeInfo.userPtr = NULL;
+   typeInfo.inspectorFieldType = nullptr;
+   typeInfo.userPtr = nullptr;
    typeInfo.fieldSize = typeInfo.valueSize = sizeof(U64);
    // TODO
    
@@ -1089,37 +1089,37 @@ VmInternal::VmInternal(Vm* vm, Config* cfg) : mGlobalVars(this)
    
    // Config Stubs
    
-   if (mConfig.logFn == NULL) {
+   if (mConfig.logFn == nullptr) {
       mConfig.logFn = [](U32 level, const char* buffer, void* user) {
       };
    }
-   if (mConfig.addTagFn == NULL) {
+   if (mConfig.addTagFn == nullptr) {
       mConfig.addTagFn = [](const char* vmString, void* user) {
          return (U32)0;
       };
    }
 
-   if (mConfig.iFind.FindObjectByNameFn == NULL) {
+   if (mConfig.iFind.FindObjectByNameFn == nullptr) {
       mConfig.iFind.FindObjectByNameFn = [](void* userPtr, StringTableEntry name, VMObject* parent) {
-           return (VMObject*)NULL;
+           return (VMObject*)nullptr;
        };
    }
 
-   if (mConfig.iFind.FindObjectByPathFn == NULL) {
+   if (mConfig.iFind.FindObjectByPathFn == nullptr) {
       mConfig.iFind.FindObjectByPathFn = [](void* userPtr, const char* path) {
-         return (VMObject*)NULL;
+         return (VMObject*)nullptr;
        };
    }
 
-   if (mConfig.iFind.FindObjectByInternalNameFn == NULL) {
+   if (mConfig.iFind.FindObjectByInternalNameFn == nullptr) {
       mConfig.iFind.FindObjectByInternalNameFn = [](void* userPtr, StringTableEntry name, bool recursive, VMObject* parent) {
-         return (VMObject*)NULL;
+         return (VMObject*)nullptr;
        };
    }
 
-   if (mConfig.iFind.FindObjectByIdFn == NULL) {
+   if (mConfig.iFind.FindObjectByIdFn == nullptr) {
       mConfig.iFind.FindObjectByIdFn = [](void* userPtr, SimObjectId ident) {
-         return (VMObject*)NULL;
+         return (VMObject*)nullptr;
        };
    }
 
@@ -1129,7 +1129,7 @@ VmInternal::VmInternal(Vm* vm, Config* cfg) : mGlobalVars(this)
    
    // Setup base fiber
 
-   FiberId baseFiber = createFiber(NULL);
+   FiberId baseFiber = createFiber(nullptr);
    mCurrentFiberState = mFiberStates.mItems[0];
    if (mTelDebugger)
    {
@@ -1159,7 +1159,7 @@ VmInternal::~VmInternal()
    for (Vector<ExprEvalState*>::iterator itr = mFiberStates.mItems.begin(), itrEnd = mFiberStates.mItems.end(); itr != itrEnd; itr++)
    {
       Delete(*itr);
-      *itr = NULL;
+      *itr = nullptr;
    }
    mFiberStates.clear();
    mFiberAllocator.freeBlocks();
@@ -1168,7 +1168,7 @@ VmInternal::~VmInternal()
    {
       mConfig.freeFn(alloc, mConfig.allocUser);
    }
-   mHeapAllocs = NULL;
+   mHeapAllocs = nullptr;
 
    if (mLocalIntern)
    {
@@ -1226,13 +1226,13 @@ void VmInternal::cleanupFiber(FiberId fiber)
    {
       mFiberStates.freeListPtr(state);
       Delete(state);
-      mAllocBase.func[vh.getIndex()] = NULL;
+      mAllocBase.func[vh.getIndex()] = nullptr;
    }
 }
 
 FiberRunResult VmInternal::resumeCurrentFiber(ConsoleValue value)
 {
-   if (mCurrentFiberState == NULL)
+   if (mCurrentFiberState == nullptr)
    {
       FiberRunResult r = {};
       return r;
@@ -1243,7 +1243,7 @@ FiberRunResult VmInternal::resumeCurrentFiber(ConsoleValue value)
 
 void VmInternal::suspendCurrentFiber()
 {
-   if (mCurrentFiberState == NULL)
+   if (mCurrentFiberState == nullptr)
       return;
    
    mCurrentFiberState->suspend();
@@ -1257,7 +1257,7 @@ void Vm::throwFiber(U32 mask)
 
 void VmInternal::throwFiber(U32 mask)
 {
-   if (mCurrentFiberState == NULL)
+   if (mCurrentFiberState == nullptr)
       return;
    
    mCurrentFiberState->throwMask(mask);
@@ -1294,7 +1294,7 @@ void VmInternal::clearCurrentFiberError()
 
 void* VmInternal::getCurrentFiberUserPtr()
 {
-   return mCurrentFiberState ? mCurrentFiberState->mUserPtr : NULL;
+   return mCurrentFiberState ? mCurrentFiberState->mUserPtr : nullptr;
 }
 
 StringTableEntry VmInternal::getCurrentCodeBlockName()
@@ -1302,7 +1302,7 @@ StringTableEntry VmInternal::getCurrentCodeBlockName()
    if (mCurrentCodeBlock)
       return mCurrentCodeBlock->name;
    else
-      return NULL;
+      return nullptr;
 }
 
 StringTableEntry VmInternal::getCurrentCodeBlockFullPath()
@@ -1310,7 +1310,7 @@ StringTableEntry VmInternal::getCurrentCodeBlockFullPath()
    if (mCurrentCodeBlock)
       return mCurrentCodeBlock->fullPath;
    else
-      return NULL;
+      return nullptr;
 }
 
 StringTableEntry VmInternal::getCurrentCodeBlockModName()
@@ -1318,7 +1318,7 @@ StringTableEntry VmInternal::getCurrentCodeBlockModName()
    if (mCurrentCodeBlock)
       return mCurrentCodeBlock->modPath;
    else
-      return NULL;
+      return nullptr;
 }
 
 CodeBlock *VmInternal::findCodeBlock(StringTableEntry name)
@@ -1326,7 +1326,7 @@ CodeBlock *VmInternal::findCodeBlock(StringTableEntry name)
    for(CodeBlock *walk = mCodeBlockList; walk; walk = walk->nextFile)
       if(walk->name == name)
          return walk;
-   return NULL;
+   return nullptr;
 }
 
 ClassInfo* VmInternal::getClassInfoByName(StringTableEntry name)
@@ -1341,7 +1341,7 @@ ClassInfo* VmInternal::getClassInfoByName(StringTableEntry name)
    }
    else
    {
-      return NULL;
+      return nullptr;
    }
 }
 
@@ -1582,7 +1582,7 @@ F64 VmInternal::valueAsFloat(ConsoleValue v)
       case KorkApi::ConsoleValue::TypeInternalString:
       {
          const char* ptr = (const char*)v.evaluatePtr(mAllocBase);
-         return ptr ? strtod(ptr, NULL) : 0.0;
+         return ptr ? strtod(ptr, nullptr) : 0.0;
       }
       break;
       default:
@@ -1592,12 +1592,12 @@ F64 VmInternal::valueAsFloat(ConsoleValue v)
                KorkApi::TypeStorageInterface outputStorage = KorkApi::CreateRegisterStorage(this,
                                                                                        KorkApi::ConsoleValue::TypeInternalNumber);
                
-               // NOTE: types should set head of stack to value if data pointer is NULL in this case
+               // NOTE: types should set head of stack to value if data pointer is nullptr in this case
                mTypes[v.typeId].iFuncs.CastValueFn(mTypes[v.typeId].userPtr,
                                                                    mVM,
                                                                    &inputStorage,
                                                                    &outputStorage,
-                                                                   NULL,
+                                                                   nullptr,
                                                                    0,
                                                                    KorkApi::ConsoleValue::TypeInternalNumber);
 
@@ -1631,12 +1631,12 @@ S64 VmInternal::valueAsBool(ConsoleValue v)
                KorkApi::TypeStorageInterface outputStorage = KorkApi::CreateRegisterStorage(this,
                                                                                     KorkApi::ConsoleValue::TypeInternalUnsigned);
                
-               // NOTE: types should set head of stack to value if data pointer is NULL in this case
+               // NOTE: types should set head of stack to value if data pointer is nullptr in this case
                mTypes[v.typeId].iFuncs.CastValueFn(mTypes[v.typeId].userPtr,
                                                                    mVM,
                                                                    &inputStorage,
                                                                    &outputStorage,
-                                                                   NULL,
+                                                                   nullptr,
                                                                    0,
                                                                    KorkApi::ConsoleValue::TypeInternalUnsigned);
 
@@ -1661,7 +1661,7 @@ S64 VmInternal::valueAsInt(ConsoleValue v)
       case KorkApi::ConsoleValue::TypeInternalString:
       {
          const char* ptr = (const char*)v.evaluatePtr(mAllocBase);
-         return ptr ? strtoll(ptr, NULL, 10) : 0;
+         return ptr ? strtoll(ptr, nullptr, 10) : 0;
       }
       break;
       default:
@@ -1671,12 +1671,12 @@ S64 VmInternal::valueAsInt(ConsoleValue v)
                KorkApi::TypeStorageInterface outputStorage = KorkApi::CreateRegisterStorage(this,
                                                                                        KorkApi::ConsoleValue::TypeInternalNumber);
                
-               // NOTE: types should set head of stack to value if data pointer is NULL in this case
+               // NOTE: types should set head of stack to value if data pointer is nullptr in this case
                mTypes[v.typeId].iFuncs.CastValueFn(mTypes[v.typeId].userPtr,
                                                                    mVM,
                                                                    &inputStorage,
                                                                    &outputStorage,
-                                                                   NULL,
+                                                                   nullptr,
                                                                    0,
                                                                    KorkApi::ConsoleValue::TypeInternalNumber);
 
@@ -1712,12 +1712,12 @@ const char* VmInternal::valueAsString(ConsoleValue v)
                                                                                                    1024,
                                                                                     KorkApi::ConsoleValue::TypeInternalString);
             
-            // NOTE: types should set head of stack to value if data pointer is NULL in this case
+            // NOTE: types should set head of stack to value if data pointer is nullptr in this case
             mTypes[v.typeId].iFuncs.CastValueFn(mTypes[v.typeId].userPtr,
                                                                 mVM,
                                                                 &inputStorage,
                                                                 &outputStorage,
-                                                                NULL,
+                                                                nullptr,
                                                                 0,
                                                                 KorkApi::ConsoleValue::TypeInternalString);
             
@@ -1731,9 +1731,9 @@ const char* VmInternal::valueAsString(ConsoleValue v)
 
 void VmInternal::printf(int level, const char* fmt, ...)
 {
-   if (mConfig.logFn == NULL && 
-       mConfig.extraConsumers[0].cbFunc == NULL &&
-       mConfig.extraConsumers[1].cbFunc == NULL)
+   if (mConfig.logFn == nullptr && 
+       mConfig.extraConsumers[0].cbFunc == nullptr &&
+       mConfig.extraConsumers[1].cbFunc == nullptr)
       return;
 
    char buffer[4096];
@@ -1758,7 +1758,7 @@ void VmInternal::printf(int level, const char* fmt, ...)
 
 void VmInternal::print(int level, const char* buf)
 {
-   if (mConfig.logFn == NULL)
+   if (mConfig.logFn == nullptr)
       return;
    
    mConfig.logFn(level, buf, mConfig.logUser);
@@ -1875,11 +1875,11 @@ bool Vm::dumpFiberStateToBlob(U32 numFibers, KorkApi::FiberId* fibers, U32* outB
    VmAllocTLS::Scope memScope(mInternal);
    const U32 maxBlobSize = 1024*1024*16;
    U8* buffer = mInternal->NewArray<U8>(maxBlobSize);
-   *outBlob = NULL;
+   *outBlob = nullptr;
    *outBlobSize = 0;
    
    MemStream outS(maxBlobSize, buffer, true, true);
-   ConsoleSerializer serializer(mInternal, NULL, false, &outS);
+   ConsoleSerializer serializer(mInternal, nullptr, false, &outS);
    
    Vector<ExprEvalState*> fiberList;
    for (U32 i=0; i<numFibers; i++)
@@ -1916,7 +1916,7 @@ bool Vm::restoreFiberStateFromBlob(U32* outNumFibers, KorkApi::FiberId** outFibe
 {
    VmAllocTLS::Scope memScope(mInternal);
    MemStream inS(blobSize, blob, true, false);
-   ConsoleSerializer serializer(mInternal, NULL, false, &inS);
+   ConsoleSerializer serializer(mInternal, nullptr, false, &inS);
    
    Vector<ExprEvalState*> fiberList;
    
@@ -2047,7 +2047,7 @@ void* allocBytes(std::size_t n)
    }
    else
    {
-      return NULL;
+      return nullptr;
    }
 }
 
