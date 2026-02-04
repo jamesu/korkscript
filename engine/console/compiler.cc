@@ -390,6 +390,7 @@ U32 CompilerIdentTable::add(StringTableEntry ste, U32 ip)
       patchEntry->patch = NULL;
       patchEntry->steName = ste;
       patchEntry->offset = index;
+      patchEntry->numInstances = 0;
       patchEntry->next = NULL;
       
       if (tail == NULL)

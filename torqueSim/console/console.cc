@@ -929,19 +929,19 @@ const char *getLocalVariable(const char *name)
 bool getBoolVariable(const char *varName, bool def)
 {
    const char *value = getVariable(varName);
-   return *value ? dAtob(value) : def;
+   return (value && *value) ? dAtob(value) : def;
 }
 
 S32 getIntVariable(const char *varName, S32 def)
 {
    const char *value = getVariable(varName);
-   return *value ? dAtoi(value) : def;
+   return (value && *value) ? dAtoi(value) : def;
 }
 
 F32 getFloatVariable(const char *varName, F32 def)
 {
    const char *value = getVariable(varName);
-   return *value ? dAtof(value) : def;
+   return (value && *value) ? dAtof(value) : def;
 }
 
 StringTableEntry getCurrentCodeBlockFullPath()

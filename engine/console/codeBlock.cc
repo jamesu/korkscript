@@ -529,15 +529,20 @@ bool CodeBlock::read(StringTableEntry fileName, StringTableEntry inModPath, Stre
       identStrings[i] = ste;
       identStringOffsets[i] = offset;
       
-      U32 count;
+      U32 count=0;
       st.read(&count);
       while(count--)
       {
          U32 ip;
          st.read(&ip);
-         // NOTE: this technically should no longer be needed
-         // for new codeblocks.
-         code[ip] = i;
+
+         if (readVersion < 77)
+         {
+            // NOTE: this technically should no longer be needed
+            // for new codeblocks.
+            // 0 is treated as NULL
+            code[ip] = i+1;
+         }
       }
       
       i++;
@@ -814,6 +819,7 @@ bool CodeBlock::compileToStream(Stream &st, StringTableEntry fileName, const cha
 
    // Write offsets
    
+   st.write(numFunctionCalls);
    st.write(startTypeStrings);
    st.write(numTypeStrings);
    

@@ -834,8 +834,8 @@ ConsoleFunction(exec, bool, 2, 4, "exec(fileName [, nocalls [,journalScript]])")
          Platform::getFileTimes(scriptFileName, NULL, &scrModifyTime);
    }
 
-   U8* blockBytes = NULL;
-   U32 blockSize = 0;
+   KorkApi::CompiledBlock loadedBlock = {};
+   KorkApi::CompiledBlock compiledBlock = {};
 
    // If we had a DSO, let's check to see if we should be reading from it.
    if(compiled && compiledScriptExists && 
@@ -854,14 +854,14 @@ ConsoleFunction(exec, bool, 2, 4, "exec(fileName [, nocalls [,journalScript]])")
          else
          {
             compiledStream.setPosition(0);
-            blockSize = compiledStream.getStreamSize();
-            blockBytes = (U8*)malloc(blockSize);
-            compiledStream.read(blockSize, blockBytes);
+            loadedBlock.size = compiledStream.getStreamSize();
+            loadedBlock.data = (U8*)malloc(loadedBlock.size);
+            compiledStream.read(loadedBlock.size, loadedBlock.data);
          }
       }
    }
 
-   if(scriptExists && compiledStream.getStatus() != Stream::Closed)
+   if(scriptExists && compiledStream.getStatus() == Stream::Closed)
    {
       // If we have source but no compiled version, then we need to compile
       // (and journal as we do so, if that's required).
@@ -880,10 +880,6 @@ ConsoleFunction(exec, bool, 2, 4, "exec(fileName [, nocalls [,journalScript]])")
 
       if (!scriptSize || !script)
       {
-         if (blockBytes)
-         {
-            free(blockBytes);
-         }
          delete [] script;
          Con::errorf(ConsoleLogEntry::Script, "exec: invalid script file %s.", scriptFileName);
          execDepth--;
@@ -897,11 +893,17 @@ ConsoleFunction(exec, bool, 2, 4, "exec(fileName [, nocalls [,journalScript]])")
 
          bool errorCond = true;
 
-         if (vmPtr->compileCodeBlock(script, scriptFileName, &blockSize, &blockBytes))
+         if (vmPtr->compileCodeBlock(script, scriptFileName, &compiledBlock))
          {
-            if (!compiledStream.open(nameBuffer, FileStream::Write))
+            errorCond = false;
+            if (compiledStream.open(nameBuffer, FileStream::Write))
             {
-               errorCond = true;
+               compiledStream.write(compiledBlock.size, compiledBlock.data);
+               compiledStream.close();
+            }
+            else
+            {
+               Con::errorf("Couldn't write compiled codeblock %s", nameBuffer);
             }
          }
 
@@ -911,16 +913,19 @@ ConsoleFunction(exec, bool, 2, 4, "exec(fileName [, nocalls [,journalScript]])")
             delete [] script;
             execDepth--;
 
-            if (blockBytes)
+            if (compiledBlock.data)
             {
-               free(blockBytes);
+               vmPtr->freeCompiledBlock(compiledBlock);
+               compiledBlock = {};
             }
             return false;
          }
       }
    }
 
-   if(blockBytes)
+   KorkApi::CompiledBlock* correctBlock = compiledBlock.data ? &compiledBlock : &loadedBlock;
+
+   if (correctBlock->data)
    {
       // Delete the script object first to limit memory used
       // during recursive execs.
@@ -929,10 +934,11 @@ ConsoleFunction(exec, bool, 2, 4, "exec(fileName [, nocalls [,journalScript]])")
 
       // We're all compiled, so let's run it.
       Con::printf("Loading compiled script %s.", scriptFileName);
-      vmPtr->execCodeBlock(blockSize, blockBytes, scriptFileName, "", noCalls, 0);
+      vmPtr->execCodeBlock(correctBlock->size, correctBlock->data, scriptFileName, "", noCalls, 0);
       vmPtr->clearCurrentFiberError();
 
-      free(blockBytes);
+      vmPtr->freeCompiledBlock(*correctBlock);
+      *correctBlock = {};
       ret = true;
    }
    else if(script)
@@ -942,11 +948,12 @@ ConsoleFunction(exec, bool, 2, 4, "exec(fileName [, nocalls [,journalScript]])")
       // we're on a readonly volume.
       Con::printf("Executing %s.", scriptFileName);
 
-      if (vmPtr->compileCodeBlock(script, scriptFileName, &blockSize, &blockBytes))
+      if (vmPtr->compileCodeBlock(script, scriptFileName, &compiledBlock))
       {
-         vmPtr->execCodeBlock(blockSize, blockBytes, scriptFileName, "", noCalls, 0);
+         vmPtr->execCodeBlock(compiledBlock.size, compiledBlock.data, scriptFileName, "", noCalls, 0);
          vmPtr->clearCurrentFiberError();
-         free(blockBytes);
+         vmPtr->freeCompiledBlock(compiledBlock);
+         compiledBlock = {};
          ret = true;
       }
    }
@@ -955,6 +962,16 @@ ConsoleFunction(exec, bool, 2, 4, "exec(fileName [, nocalls [,journalScript]])")
       // Don't have anything.
       Con::warnf(ConsoleLogEntry::Script, "Missing file: %s!", scriptFileName);
       ret = false;
+   }
+
+   // This is likely not needed, but here just in case someone screws up
+   if (loadedBlock.data)
+   {
+      free(loadedBlock.data);
+   }
+   if (compiledBlock.data)
+   {
+      vmPtr->freeCompiledBlock(compiledBlock);
    }
 
    delete [] script;

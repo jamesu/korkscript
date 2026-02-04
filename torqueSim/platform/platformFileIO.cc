@@ -64,7 +64,7 @@ StringTableEntry getTemporaryFileName()
 
 //-----------------------------------------------------------------------------
 static char filePathBuffer[1024];
-static bool deleteDirectoryRecusrive( const char* pPath )
+static bool deleteDirectoryRecursive( const char* pPath )
 {
    // Sanity!
    AssertFatal( pPath != NULL, "Cannot delete directory that is NULL." );
@@ -88,7 +88,7 @@ static bool deleteDirectoryRecusrive( const char* pPath )
          continue;
       
       // Delete any directories recursively.
-      if ( !deleteDirectoryRecusrive( basePath ) )
+      if ( !deleteDirectoryRecursive( basePath ) )
          return false;
    }
    
@@ -135,7 +135,7 @@ bool deleteDirectory( const char* pPath )
    }
    // Delete directory recursively.
    
-   return deleteDirectoryRecusrive( pPath );
+   return deleteDirectoryRecursive( pPath );
 }
 
 //-----------------------------------------------------------------------------

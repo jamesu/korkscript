@@ -418,6 +418,12 @@ enum ACRFieldTypes : U16
    DepricatedFieldType = 0xFFFF   // 65535
 };
 
+struct CompiledBlock
+{
+    U32 size;
+    U8* data;
+};
+
 class Vm
 {
 public:
@@ -490,8 +496,9 @@ public:
    void markNamespaceGroup(NamespaceId nsId, StringTableEntry groupName, StringTableEntry usage);
 
 
-   bool compileCodeBlock(const char* code, const char* filename, U32* outCodeSize, U8** outCode);
+   bool compileCodeBlock(const char* code, const char* filename, CompiledBlock* outBlock);
    ConsoleValue execCodeBlock(U32 codeSize, U8* code, const char* filename, const char* modPath, bool noCalls, int setFrame);
+   void freeCompiledBlock(CompiledBlock block);
 
    ConsoleValue evalCode(const char* code, const char* filename, const char* modPath, S32 setFrame=-1);
    ConsoleValue call(int argc, ConsoleValue* argv, bool startSuspended=false);

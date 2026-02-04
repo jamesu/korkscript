@@ -635,14 +635,14 @@ void Vm::markNamespaceGroup(NamespaceId nsId, StringTableEntry groupName, String
    return ns->markGroup(groupName, usage);
 }
 
-bool Vm::compileCodeBlock(const char* code, const char* filename, U32* outCodeSize, U8** outCode)
+bool Vm::compileCodeBlock(const char* code, const char* filename, CompiledBlock* outBlock)
 {
    VmAllocTLS::Scope memScope(mInternal);
    CodeBlock* block = mInternal->New<CodeBlock>(mInternal, false);
    
    U8* buffer = (U8*)mInternal->NewArray<U8>(1024 * 1024);
-   *outCode = NULL;
-   *outCodeSize = 0;
+   outBlock->data = NULL;
+   outBlock->size = 0;
    MemStream outS(1024*1024, buffer, true, true);
    
    if (!block->compileToStream(outS, filename, code))
@@ -652,9 +652,17 @@ bool Vm::compileCodeBlock(const char* code, const char* filename, U32* outCodeSi
       return -1;
    }
    
-   *outCode = buffer;
-   *outCodeSize = outS.getPosition();
+   outBlock->data = buffer;
+   outBlock->size = outS.getPosition();
    return true;
+}
+
+void Vm::freeCompiledBlock(CompiledBlock block)
+{
+   if (block.data)
+   {
+      mInternal->DeleteArray(block.data);
+   }
 }
 
 ConsoleValue Vm::execCodeBlock(U32 codeSize, U8* code, const char* filename, const char* modPath, bool noCalls, int setFrame)
@@ -1987,7 +1995,6 @@ StringTableEntry Vm::lookupStringN(const char* str, U32 len, bool caseSens)
    VmAllocTLS::Scope memScope(mInternal);
    return mInternal->lookupStringN(str, len, caseSens);
 }
-
 
 const char* FiberRunResult::stateAsString(State inState)
 {
