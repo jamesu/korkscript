@@ -4034,7 +4034,7 @@ KorkApi::FiberFrameInfo KorkApi::Vm::getCurrentFiberFrameInfo(S32 frameId)
    ConsoleFrame* curFrame = mInternal->mCurrentFiberState->vmFrames[frameId];
    outInfo.fullPath = curFrame->codeBlock->fullPath;
    outInfo.scopeName = curFrame->scopeName;
-   outInfo.scopeNamespace = curFrame->scopeNamespace->mName;
+   outInfo.scopeNamespace = curFrame->scopeNamespace ? curFrame->scopeNamespace->mName : mInternal->internString("", false);
    
    return outInfo;
 }
