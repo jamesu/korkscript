@@ -162,7 +162,7 @@ static bool MyPoint3F_CastValue(void*,
       KorkApi::TypeStorageInterface castInput =
          KorkApi::CreateRegisterStorageFromArgs(vm->mInternal, 3, vals);
 
-      return vm->castValue(typeId, &castInput, outputStorage, tbl, flag);
+      return vm->castValue(typeId, &castInput, outputStorage, fieldUserPtr, flag);
    }
 }
 

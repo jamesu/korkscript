@@ -1011,7 +1011,7 @@ ConsoleTypeOpDefaultUnsigned( TypeBoolVector )
 
 ConsoleGetType( TypeEnum )
 {
-   AssertFatal(tbl, "invalid table");
+   AssertFatal(fieldUserPtr, "invalid table");
    if (inputStorage->data.argc != 1) return false;
    
    S32 value = inputStorage->isField ? *((S32*)(ConsoleGetInputStoragePtr())) : (S32)vmPtr->valueAsInt(inputStorage->data.storageRegister[0]);
