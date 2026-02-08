@@ -1827,7 +1827,7 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
                   
                   // Handle calling
                   // NOTE regarding yielding:
-                  //   Yielded value should match the type of the function in this case. i.e. you
+                  //   Yielded value should match the type of the function in this case.
                   
                   switch(tmpNsEntry->mType)
                   {
