@@ -225,7 +225,6 @@ public:
    static void registerClassRep(AbstractClassRep*);
    static AbstractClassRep* findClassRep(const char* in_pClassName);
    static void initialize(); // Called from Con::init once on startup
-   static void destroyFieldValidators(AbstractClassRep::FieldList &mFieldList);
 
 public:
    AbstractClassRep() 

@@ -452,9 +452,9 @@ void AbstractClassRep::initialize()
       if (sg_tempFieldList.size() != 0)
       {
          if( !walk->mFieldList.size())
+         {
             walk->mFieldList = sg_tempFieldList;
-         else
-            destroyFieldValidators( sg_tempFieldList );
+         }
       }
 
       // And of course delete it every round.
@@ -505,19 +505,6 @@ void AbstractClassRep::initialize()
    // Ok, we're golden!
    initialized = true;
 
-}
-
-void AbstractClassRep::destroyFieldValidators( AbstractClassRep::FieldList &mFieldList )
-{
-   for(S32 i = mFieldList.size()-1; i>=0; i-- )
-   {
-      TypeValidator **p = (TypeValidator**)&mFieldList[i].userPtr;
-      if( *p )
-      {
-         delete *p;
-         *p = NULL;
-      }
-   }
 }
 
 //------------------------------------------------------------------------------
