@@ -118,7 +118,7 @@ ConsoleGetType( TypeMyPoint3F )
       KorkApi::TypeStorageInterface castInput =
          KorkApi::CreateRegisterStorageFromArgs(vmPtr->mInternal, 3, vals);
 
-      return vmPtr->castValue(requestedType, &castInput, outputStorage, tbl, flag);
+      return vmPtr->castValue(requestedType, &castInput, outputStorage, fieldUserPtr, flag);
    }
 }
 

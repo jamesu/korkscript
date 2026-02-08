@@ -91,7 +91,7 @@ public:
    void setInspectorFieldType(const char *type) { mInspectorFieldType = type; }
    const char *getInspectorFieldType() { return mInspectorFieldType; }
 
-   virtual bool getData(KorkApi::Vm* vmPtr, KorkApi::TypeStorageInterface *inputStorage, KorkApi::TypeStorageInterface *outputStorage, const EnumTable* tbl, BitSet32 flag, U32 requestedType)=0;
+   virtual bool getData(KorkApi::Vm* vmPtr, KorkApi::TypeStorageInterface *inputStorage, KorkApi::TypeStorageInterface *outputStorage, void* fieldUserPtr, BitSet32 flag, U32 requestedType)=0;
    virtual const char *getTypeClassName()=0;
    virtual const bool isDatablock() { return false; };
    virtual const char *prepData(KorkApi::Vm* vmPtr, const char *data, char *buffer, U32 bufferLen) { return data; };
@@ -110,7 +110,7 @@ public:
    { \
    public: \
       ConsoleType##type (const U32 aSize, const U32 vSize, S32 *idPtr, const char *aTypeName) : ConsoleBaseType(aSize, vSize, idPtr, aTypeName) { } \
-      virtual bool getData(KorkApi::Vm* vmPtr, KorkApi::TypeStorageInterface *inputStorage, KorkApi::TypeStorageInterface *outputStorage, const EnumTable* tbl, BitSet32 flag, U32 requestedType); \
+      virtual bool getData(KorkApi::Vm* vmPtr, KorkApi::TypeStorageInterface *inputStorage, KorkApi::TypeStorageInterface *outputStorage, void* fieldUserPtr, BitSet32 flag, U32 requestedType); \
       virtual const char *getTypeClassName() { return #typeName ; } \
       virtual StringTableEntry getTypePrefix( void ) const { return StringTable->insert( typePrefix ); }\
       void exportToVm(KorkApi::Vm* vm) { exportTypeToVm(this, vm); } \
@@ -124,7 +124,7 @@ public:
    { \
    public: \
       ConsoleType##type (const U32 aSize, const U32 vSize, S32 *idPtr, const char *aTypeName) : ConsoleBaseType(aSize, vSize, idPtr, aTypeName) { } \
-      virtual bool getData(KorkApi::Vm* vmPtr,  KorkApi::TypeStorageInterface *inputStorage, KorkApi::TypeStorageInterface *outputStorage, const EnumTable* tbl, BitSet32 flag, U32 requestedType); \
+      virtual bool getData(KorkApi::Vm* vmPtr,  KorkApi::TypeStorageInterface *inputStorage, KorkApi::TypeStorageInterface *outputStorage, void* fieldUserPtr, BitSet32 flag, U32 requestedType); \
       virtual const char *getTypeClassName() { return #typeName; }; \
       virtual const char *prepData(KorkApi::Vm* vmPtr, const char *data, char *buffer, U32 bufferLen); \
       virtual StringTableEntry getTypePrefix( void ) const { return StringTable->insert( typePrefix ); }\
@@ -141,7 +141,7 @@ public:
    (outputStorage->data.storageAddress.evaluatePtr(vmPtr->getAllocBase()))
 
 #define ConsoleGetType( type ) \
-   bool ConsoleType##type::getData(KorkApi::Vm* vmPtr, KorkApi::TypeStorageInterface *inputStorage, KorkApi::TypeStorageInterface *outputStorage, const EnumTable* tbl, BitSet32 flag, U32 requestedType)
+   bool ConsoleType##type::getData(KorkApi::Vm* vmPtr, KorkApi::TypeStorageInterface *inputStorage, KorkApi::TypeStorageInterface *outputStorage, void* fieldUserPtr, BitSet32 flag, U32 requestedType)
 
 #define ConsoleTypeOp( type ) \
    KorkApi::ConsoleValue ConsoleType##type::performOp(KorkApi::Vm* vmPtr, U32 op, KorkApi::ConsoleValue lhs, KorkApi::ConsoleValue rhs)
@@ -169,7 +169,7 @@ public:
    { \
    public: \
       ConsoleType##type (const S32 aSize, S32 *idPtr, const char *aTypeName) : ConsoleBaseType(aSize, idPtr, aTypeName) { } \
-      virtual bool getData(KorkApi::Vm* vmPtr, KorkApi::TypeStorageInterface* inputStorage, const EnumTable *tbl, BitSet32 flag, U32 requestedType); \
+      virtual bool getData(KorkApi::Vm* vmPtr, KorkApi::TypeStorageInterface* inputStorage, void* fieldUserPtr, BitSet32 flag, U32 requestedType); \
       virtual const char *getTypeClassName() { return #className; }; \
       virtual const bool isDatablock() { return true; }; \
    }; \
@@ -184,7 +184,7 @@ inline KorkApi::TypeInterface buildTypeInterface()
    KorkApi::TypeInterface ti{};
 
    ti.CastValueFn = &KorkApi::APIThunk<ConsoleBaseType,
-      static_cast<bool(ConsoleBaseType::*)(KorkApi::Vm*,KorkApi::TypeStorageInterface*, KorkApi::TypeStorageInterface*, const EnumTable*, BitSet32, U32)>
+      static_cast<bool(ConsoleBaseType::*)(KorkApi::Vm*,KorkApi::TypeStorageInterface*, KorkApi::TypeStorageInterface*, void*, BitSet32, U32)>
       (&ConsoleBaseType::getData)>::call;
 
    ti.GetTypeClassNameFn = &KorkApi::APIThunk<ConsoleBaseType,

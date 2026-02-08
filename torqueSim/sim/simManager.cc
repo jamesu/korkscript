@@ -31,6 +31,7 @@
 #include "core/idGenerator.h"
 #include "core/safeDelete.h"
 
+extern KorkApi::Vm* sVM;
 
 //---------------------------------------------------------------------------
 
@@ -380,6 +381,22 @@ SimObject* findObject(const char* name)
    if(!obj)
       return NULL;
    return obj->findObject(name + len + 1);
+}
+
+SimObject* findObject(KorkApi::ConsoleValue cv)
+{
+   if (cv.isFloat() || cv.isUnsigned())
+   {
+      return findObject(cv.getInt());
+   }
+   else
+   {
+      const char* str = sVM->valueAsString(cv);
+      if (str && *str)
+      {
+         return findObject(str);
+      }
+   }
 }
 
 SimObject* findObject(SimObjectId id)

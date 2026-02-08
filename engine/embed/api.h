@@ -94,7 +94,7 @@ typedef bool(*CastValueFnType)(void* userPtr,
                                    Vm* vm,
                                    TypeStorageInterface* inputStorage,
                                    TypeStorageInterface* outputStorage,
-                                   const EnumTable* tbl,
+                                   void* fieldUserPtr,
                                    BitSet32 flag,
                                    U32 requestedType); // requested cast type
 
@@ -133,17 +133,39 @@ struct TypeInfo
 // Class Field Info
 //
 
-typedef bool (*WriteDataNotifyFn)( void* obj, StringTableEntry pFieldName );
+struct FieldInfo;
+struct VMObject;
 
-struct FieldInfo {
-   const char* pFieldname;
-   const char* pGroupname;
-   
-   EnumTable *     table;
-   const char*     pFieldDocs;
-   void*           userPtr; // for validator etc
-   CastValueFnType   ovrCastValue;
-   WriteDataNotifyFn writeDataFn;
+typedef bool (*WriteDataNotifyFn)( void* obj, StringTableEntry pFieldName );
+typedef bool (*AllocFieldStorageFn)( void* obj, const FieldInfo* field, KorkApi::ConsoleValue arrayValue );
+typedef bool (*FieldKeyVisitorFn)( void* user, KorkApi::Vm* vmPtr, KorkApi::VMObject* obj, KorkApi::ConsoleValue key, KorkApi::ConsoleValue value );
+typedef bool (*EnumerateFieldKeysFn)( void* user, KorkApi::Vm* vmPtr, KorkApi::VMObject* obj, const FieldInfo* field, FieldKeyVisitorFn visit );
+
+// Field info
+// This is metadata for modifying an object field. The code assumes all fields are of a type located at an offset in the object.
+// Fields can be of 4 basic forms:
+//   - Single value (requires elementCount = 1)
+//   - Array (requires elementCount > 1)
+//   - Keyed (requires allocStorageFn & enumKeysFn)
+//   - Functional (requires ovrCastValue to be set)
+// You can also combine these basic forms so for example you can have a completely functional keyed field.
+// Note however it's not possible to have an Array which is also Keyed - this is because the field
+// only has one "array" accessor value to work with.
+// If you need both and array and a keyed field, it's best handling any extra accessors at the type level.
+struct FieldInfo
+{
+   // descriptors
+   const char* pFieldname; ///< Field name
+   const char* pGroupname; ///< Group name
+   const char* pFieldDocs; ///< Doc string
+   // user ptrs
+   void*       fieldUserPtr;    ///< intended for validator or enum table ptr
+   // func callbacks
+   CastValueFnType      ovrCastValue;   ///< Casts field value
+   WriteDataNotifyFn    writeDataFn;    ///< Checks if field can be written
+   AllocFieldStorageFn  allocStorageFn; ///< Alloc storage for value
+   EnumerateFieldKeysFn enumKeysFn;     ///< Enumerate used keys in value
+   // metadata
    S32             elementCount;
    U32             offset;
    BitSet32        flag;
@@ -454,7 +476,7 @@ public:
     ClassId getClassId(const char* name);
     TypeInfo* getTypeInfo(TypeId ident);
 
-    bool castValue(TypeId inputType, TypeStorageInterface* inputStorage, TypeStorageInterface* outputStorage, const EnumTable* et, BitSet32 flags);
+    bool castValue(TypeId inputType, TypeStorageInterface* inputStorage, TypeStorageInterface* outputStorage, void* fieldUserPtr, BitSet32 flags);
    
    ConsoleValue castToReturn(U32 argc, KorkApi::ConsoleValue* argv, U32 inputTypeId, U32 outputTypeId);
 

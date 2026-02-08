@@ -81,11 +81,11 @@ void ConsoleBaseType::registerTypeWithVm(KorkApi::Vm* vm)
                               KorkApi::Vm* vm,
                                      KorkApi::TypeStorageInterface* inputStorage,
                                 KorkApi::TypeStorageInterface* outputStorage,
-                                     const EnumTable* tbl,
+                                     void* fieldUserPtr,
                                      BitSet32 flag,
                                      U32 requestedType){
       ConsoleBaseType* typeInfo = (ConsoleBaseType*)userPtr;
-      return typeInfo->getData(vm, inputStorage, outputStorage, tbl, flag, requestedType);
+      return typeInfo->getData(vm, inputStorage, outputStorage, fieldUserPtr, flag, requestedType);
    };
    info.iFuncs.PrepDataFn = [](void* userPtr, KorkApi::Vm* vm,
                                const char* data,

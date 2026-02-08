@@ -160,7 +160,7 @@ TypeId Vm::registerType(TypeInfo& info)
                                     Vm* vm,
                                            TypeStorageInterface* inputStorage,
                                       TypeStorageInterface* outputStorage,
-                                    const EnumTable* tbl,
+                                    void* fieldUserPtr,
                                     BitSet32 flag,
                                     U32 requestedType){
          return false;
@@ -182,7 +182,7 @@ TypeInfo* Vm::getTypeInfo(TypeId ident)
    return &mInternal->mTypes[ident];
 }
 
-bool Vm::castValue(TypeId inputType, TypeStorageInterface* inputStorage, TypeStorageInterface* outputStorage, const EnumTable* et, BitSet32 flags)
+bool Vm::castValue(TypeId inputType, TypeStorageInterface* inputStorage, TypeStorageInterface* outputStorage, void* userPtr, BitSet32 flags)
 {
    VmAllocTLS::Scope memScope(mInternal);
    CastValueFnType castFn = mInternal->mTypes[inputType].iFuncs.CastValueFn;
@@ -191,7 +191,7 @@ bool Vm::castValue(TypeId inputType, TypeStorageInterface* inputStorage, TypeSto
       this,
       inputStorage,
       outputStorage,
-      et,
+      userPtr,
       flags,
       inputType
    );
@@ -1037,7 +1037,7 @@ VmInternal::VmInternal(Vm* vm, Config* cfg) : mGlobalVars(this)
                              Vm* vm,
                                TypeStorageInterface* inputStorage,
                                TypeStorageInterface* outputStorage,
-                             const EnumTable* tbl,
+                             void* fieldUserPtr,
                              BitSet32 flag,
                              U32 requestedType) {
      switch (requestedType)
@@ -1420,11 +1420,11 @@ bool VmInternal::setObjectFieldTuple(VMObject* obj, StringTableEntry fieldName, 
          
          outputStorage.fieldObject = obj->userPtr;
          
-         castFn(f.ovrCastValue ? obj->userPtr : tinfo.userPtr,
+         castFn(tinfo.userPtr,
                mVM,
                &inputStorage,
                &outputStorage,
-               f.table,
+               f.fieldUserPtr,
                f.flag,
                tid);
       }
@@ -1490,11 +1490,11 @@ ConsoleValue VmInternal::getObjectField(VMObject* obj, StringTableEntry name, co
       }
       
       castFn(
-         f.ovrCastValue ? obj->userPtr : tinfo.userPtr,
+         tinfo.userPtr,
          mVM,
          &inputStorage,
          &outputStorage,
-         f.table,
+         f.fieldUserPtr,
          f.flag,
          requestedType
       );

@@ -820,7 +820,7 @@ inline bool defaultProtectedNotSetFn(void* userPtr,
                                      void* dptr,
                                      S32 argc,
                                      KorkApi::ConsoleValue* argv,
-                                     const EnumTable* tbl,
+                                     void* fieldUserPtr,
                                      BitSet32 flag,
                                      U32 typeId)
 {

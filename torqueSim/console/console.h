@@ -160,15 +160,6 @@ typedef KorkApi::ConsoleValue   (*ValueCallback)(SimObject *obj, KorkApi::Vm* vm
 using ConsumerCallback = KorkApi::ConsumerCallback;
 /// @}
 
-/// @defgroup console_types Scripting Engine Type Functions
-/// @ingroup tsScripting
-///
-/// @see Con::registerType
-/// @{
-typedef const char* (*GetDataFunction)(void *dptr, EnumTable *tbl, BitSet32 flag);
-typedef void        (*SetDataFunction)(void *dptr, S32 argc, const char **argv, EnumTable *tbl, BitSet32 flag);
-/// @}
-
 /// This namespace contains the core of the console functionality.
 ///
 /// @section con_intro Introduction
@@ -939,7 +930,7 @@ typedef KorkApi::ConsoleValue ConsoleValue;
       #className, #name,                                                          \
       &ValueCallbackAdapter<className>::template thunk<c##className##name>,      \
       usage, minArgs, maxArgs);                                                    \
-  static KorkApi::ConsoleValue c##className##name(SimObject*, KorkApi::Vm* vmPtr, S32 argc, KorkApi::ConsoleValue argv[]
+  static KorkApi::ConsoleValue c##className##name(className *object, KorkApi::Vm* vmPtr, S32 argc, KorkApi::ConsoleValue argv[])
 
 #  define ConsoleMethodWithDoc(className,name,returnType,minArgs,maxArgs,usage1,desc)                                                 \
       static inline returnType c##className##name(className *, KorkApi::Vm* vmPtr, S32, const char **argv);                                   \

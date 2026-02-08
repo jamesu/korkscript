@@ -78,7 +78,7 @@ ConsoleGetType( TypeString )
     {
       KorkApi::ConsoleValue cv = KorkApi::ConsoleValue::makeString(value);
       KorkApi::TypeStorageInterface castInput = KorkApi::CreateRegisterStorageFromArgs(vmPtr->mInternal, 1, &cv);
-      return vmPtr->castValue(requestedType, &castInput, outputStorage, NULL, 0);
+      return vmPtr->castValue(requestedType, &castInput, outputStorage, nullptr, 0);
     }
    
    // Now all we need to do is deal with whether the output is a field or not
@@ -115,7 +115,7 @@ ConsoleTypeOpDefaultNumeric( TypeString )
 
 ConsoleGetType( TypeStringTableEntryVector )
 {
-   std::vector<StringTableEntry> *vec = NULL;
+   std::vector<StringTableEntry> *vec = nullptr;
    static std::vector<StringTableEntry> workVec;
    
    if (!inputStorage->isField)
@@ -222,7 +222,7 @@ ConsoleGetType( TypeStringTableEntryVector )
          tmpArgv[i] = KorkApi::ConsoleValue::makeString(vec->operator[](i));
       }
       KorkApi::TypeStorageInterface castInput = KorkApi::CreateRegisterStorageFromArgs(vmPtr->mInternal, inputStorage->data.argc, &tmpArgv[0]);
-      return vmPtr->castValue(requestedType, &castInput, outputStorage, NULL, 0);
+      return vmPtr->castValue(requestedType, &castInput, outputStorage, nullptr, 0);
    }
    
    return false;
@@ -266,7 +266,7 @@ ConsoleGetType( TypeCaseString )
     {
       KorkApi::ConsoleValue cv = KorkApi::ConsoleValue::makeString(value);
       KorkApi::TypeStorageInterface castInput = KorkApi::CreateRegisterStorageFromArgs(vmPtr->mInternal, 1, &cv);
-      return vmPtr->castValue(requestedType, &castInput, outputStorage, NULL, 0);
+      return vmPtr->castValue(requestedType, &castInput, outputStorage, nullptr, 0);
     }
    
    // Now all we need to do is deal with whether the output is a field or not
@@ -512,7 +512,7 @@ ConsoleTypeOpDefaultUnsigned( TypeBool )
 
 ConsoleGetType( TypeS32Vector )
 {
-   std::vector<S32> *vec = NULL;
+   std::vector<S32> *vec = nullptr;
    static std::vector<S32> workVec;
    
    if (!inputStorage->isField)
@@ -669,7 +669,7 @@ ConsoleGetType( TypeS32Vector )
          tmpArgv[i] = KorkApi::ConsoleValue::makeNumber(vec->operator[](i));
       }
       KorkApi::TypeStorageInterface castInput = KorkApi::CreateRegisterStorageFromArgs(vmPtr->mInternal, inputStorage->data.argc, &tmpArgv[0]);
-      return vmPtr->castValue(requestedType, &castInput, outputStorage, NULL, 0);
+      return vmPtr->castValue(requestedType, &castInput, outputStorage, nullptr, 0);
    }
    
    return false;
@@ -679,7 +679,7 @@ ConsoleTypeOpDefaultNumeric( TypeS32Vector )
 
 ConsoleGetType( TypeF32Vector )
 {
-   std::vector<F32> *vec = NULL;
+   std::vector<F32> *vec = nullptr;
    static std::vector<F32> workVec;
    
    if (!inputStorage->isField)
@@ -835,7 +835,7 @@ ConsoleGetType( TypeF32Vector )
          tmpArgv[i] = KorkApi::ConsoleValue::makeNumber(vec->operator[](i));
       }
       KorkApi::TypeStorageInterface castInput = KorkApi::CreateRegisterStorageFromArgs(vmPtr->mInternal, inputStorage->data.argc, &tmpArgv[0]);
-      return vmPtr->castValue(requestedType, &castInput, outputStorage, NULL, 0);
+      return vmPtr->castValue(requestedType, &castInput, outputStorage, nullptr, 0);
    }
    
    return false;
@@ -845,7 +845,7 @@ ConsoleTypeOpDefaultNumeric( TypeF32Vector )
 
 ConsoleGetType( TypeBoolVector )
 {
-   std::vector<bool> *vec = NULL;
+   std::vector<bool> *vec = nullptr;
    static std::vector<bool> workVec;
    
    if (!inputStorage->isField)
@@ -1001,7 +1001,7 @@ ConsoleGetType( TypeBoolVector )
          tmpArgv[i] = KorkApi::ConsoleValue::makeNumber(vec->operator[](i));
       }
       KorkApi::TypeStorageInterface castInput = KorkApi::CreateRegisterStorageFromArgs(vmPtr->mInternal, inputStorage->data.argc, &tmpArgv[0]);
-      return vmPtr->castValue(requestedType, &castInput, outputStorage, NULL, 0);
+      return vmPtr->castValue(requestedType, &castInput, outputStorage, nullptr, 0);
    }
    
    return false;
@@ -1033,6 +1033,7 @@ ConsoleGetType( TypeEnum )
    }
    else if (requestedType == KorkApi::ConsoleValue::TypeInternalString)
    {
+      const EnumTable* tbl = (const EnumTable*)fieldUserPtr;
       const char* label = tbl->table[value].label;
       U32 len = dStrlen(label)+1;
       outputStorage->FinalizeStorage(outputStorage, len);
@@ -1072,6 +1073,7 @@ ConsoleGetType( TypeEnum )
    else
    {
       // Cast to correct value based on label
+      const EnumTable* tbl = (const EnumTable*)fieldUserPtr;
       KorkApi::ConsoleValue cv = KorkApi::ConsoleValue::makeString(tbl->table[value].label);
       KorkApi::TypeStorageInterface castInput =
          KorkApi::CreateRegisterStorageFromArgs(vmPtr->mInternal, 1, &cv);
@@ -1088,7 +1090,7 @@ ConsoleTypeOpDefaultUnsigned( TypeSimObjectPtr )
 
 ConsoleGetType( TypeSimObjectPtr )
 {
-   SimObject* valueObject = NULL;
+   SimObject* valueObject = nullptr;
    SimObjectId value = 0;
    
    if (inputStorage->isField)

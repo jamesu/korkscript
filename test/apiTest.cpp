@@ -70,7 +70,7 @@ static bool MyPoint3F_CastValue(void*,
                                KorkApi::Vm* vm,
                                KorkApi::TypeStorageInterface* inputStorage,
                                KorkApi::TypeStorageInterface* outputStorage,
-                              const EnumTable* tbl,
+                              void* fieldUserPtr,
                               BitSet32 flag,
                               U32 typeId)
 {

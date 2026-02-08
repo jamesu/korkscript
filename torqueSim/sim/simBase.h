@@ -591,7 +591,7 @@ protected:
                                KorkApi::Vm* vm,
                                KorkApi::TypeStorageInterface* inputStorage,
                                KorkApi::TypeStorageInterface* outputStorage,
-                               const EnumTable* tbl,
+                               void* fieldUserPtr,
                                BitSet32 flag,
                                U32 requestedType);
     static bool writeParentGroup( void* obj, StringTableEntry pFieldName )           { return static_cast<SimObject*>(obj)->mGroup != NULL; }
@@ -1579,6 +1579,8 @@ namespace Sim
 
    SimObject* findObject(SimObjectId);
    SimObject* findObject(const char* name);
+   SimObject* findObject(KorkApi::ConsoleValue cv);
+
    template<class T> inline bool findObject(SimObjectId id,T*&t)
    {
       t = dynamic_cast<T*>(findObject(id));
@@ -1587,6 +1589,11 @@ namespace Sim
    template<class T> inline bool findObject(const char* pObjectName,T*&t)
    {
       t = dynamic_cast<T*>(findObject(pObjectName));
+      return t != NULL;
+   }
+   template<class T> inline bool findObject(KorkApi::ConsoleValue cv,T*&t)
+   {
+      t = dynamic_cast<T*>(findObject(cv));
       return t != NULL;
    }
    template<class T> inline T* findObject(SimObjectId id)

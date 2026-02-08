@@ -348,7 +348,7 @@ static void Type_SetValueThunk(
                                void* dptr,
                                S32 argc,
                                ConsoleValue* argv,
-                               const EnumTable* tbl,
+                               void* tbl,
                                BitSet32 flag,
                                U32 typeId);
 
@@ -356,7 +356,7 @@ static ConsoleValue Type_CopyValueThunk(
                                         void* userPtr,
                                         Vm* vm,
                                         void* sptr,
-                                        const EnumTable* tbl,
+                                        void* tbl,
                                         BitSet32 flag,
                                         U32 requestedType,
                                         U32 requestedZone);
@@ -1297,7 +1297,7 @@ static void Type_SetValueThunk(
                                void* dptr,
                                S32 argc,
                                ConsoleValue* argv,
-                               const EnumTable* tbl,
+                               void* tbl,
                                BitSet32 flag,
                                U32 typeId)
 {
@@ -1345,7 +1345,7 @@ static ConsoleValue Type_CopyValueThunk(
                                         void* userPtr,
                                         Vm* vm,
                                         void* sptr,
-                                        const EnumTable* tbl,
+                                        void* tbl,
                                         BitSet32 flag,
                                         U32 requestedType,
                                         U32 requestedZone)

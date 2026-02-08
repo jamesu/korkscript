@@ -386,7 +386,19 @@ void SimObject::writeFields(Stream &stream, U32 tabStop)
 {
    const AbstractClassRep::FieldList &list = getFieldList();
    std::string valCopy;
-   std::vector<char> expandedBuffer;
+   
+   struct EnumKeyUser
+   {
+      std::vector<char> buffer;
+      Stream* s;
+      StringTableEntry fieldName;
+      U32 tabStop;
+   };
+
+   EnumKeyUser userData;
+   userData.s = &stream;
+   userData.tabStop = tabStop;
+   
    
    for(U32 i = 0; i < (U32)list.size(); i++)
    {
@@ -398,6 +410,7 @@ void SimObject::writeFields(Stream &stream, U32 tabStop)
 
       // Fetch fieldname.
       StringTableEntry fieldName = StringTable->insert( f->pFieldname );
+      userData.fieldName = fieldName;
 
       // Fetch element count.
       const S32 elementCount = f->elementCount;
@@ -408,49 +421,76 @@ void SimObject::writeFields(Stream &stream, U32 tabStop)
             f->writeDataFn != NULL &&
             f->writeDataFn( this, fieldName ) == false )
             continue;
-
-      for(U32 j = 0; S32(j) < elementCount; j++)
+      
+      if (f->enumKeysFn)
       {
-         char array[8];
-         dSprintf( array, 8, "%d", j );
-         const char *val = getDataField(fieldName, array );
-
-         // Make a copy for the field check.
-         if (!val)
-            continue;
-
-         valCopy = val;
-
-         if (!writeField(fieldName, valCopy.c_str()))
-            continue;
-
-         size_t expandedBufferSize = ( (valCopy.size() + 1)  * 2 ) + 32;
-         expandedBuffer.resize(expandedBufferSize);
+         userData.buffer.resize(4096);
          
-         if(f->elementCount == 1)
-         {
-            dSprintf(expandedBuffer.data(), expandedBufferSize, "%s = \"", f->pFieldname);
-         }
-         else
-         {
-            dSprintf(expandedBuffer.data(), expandedBufferSize, "%s[%d] = \"", f->pFieldname, j);
-         }
-         
-         // detect and collapse relative path information
-         /*char fnBuf[1024]; // Not implemented YET
-         if (f->type == TypeFilename)
-         {
-            Con::collapsePath(fnBuf, 1024, val);
-            val = fnBuf;
-         }*/
-
-         expandEscape(expandedBuffer.data() + strlen(expandedBuffer.data()), val);
-         dStrcat(expandedBuffer.data(), "\";\r\n");
-
-         stream.writeTabs(tabStop);
-         stream.write((U32)strlen(expandedBuffer.data()), expandedBuffer.data());
+         f->enumKeysFn(&userData, getVM(), getVMObject(), f, +[](void* user, KorkApi::Vm* vmPtr, KorkApi::VMObject* obj, KorkApi::ConsoleValue key, KorkApi::ConsoleValue value){
+            bool isString = key.isString() || key.isCustom();
+            const char* keyName = vmPtr->valueAsString(key);
+            EnumKeyUser* enumUser = (EnumKeyUser*)user;
+            const char* valueS = vmPtr->valueAsString(value);
+            
+            if (isString)
+            {
+               dSprintf(enumUser->buffer.data(), enumUser->buffer.size(), "%s[\"%s\"] = \"%s\";\r\n", enumUser->fieldName, keyName, valueS);
+            }
+            else
+            {
+               dSprintf(enumUser->buffer.data(), enumUser->buffer.size(), "%s[%s] = \"%s\";\r\n", enumUser->fieldName, keyName, valueS);
+            }
+            
+            enumUser->s->writeTabs(enumUser->tabStop);
+            enumUser->s->write((U32)strlen(enumUser->buffer.data()), enumUser->buffer.data());
+            return true;
+         });
       }
-   }    
+      else
+      {
+         for(U32 j = 0; S32(j) < elementCount; j++)
+         {
+            char array[8];
+            dSprintf( array, 8, "%d", j );
+            const char *val = getDataField(fieldName, array );
+            
+            // Make a copy for the field check.
+            if (!val)
+               continue;
+            
+            valCopy = val;
+            
+            if (!writeField(fieldName, valCopy.c_str()))
+               continue;
+            
+            size_t expandedBufferSize = ( (valCopy.size() + 1)  * 2 ) + 32;
+            userData.buffer.resize(expandedBufferSize);
+            
+            if(f->elementCount == 1)
+            {
+               dSprintf(userData.buffer.data(), expandedBufferSize, "%s = \"", f->pFieldname);
+            }
+            else
+            {
+               dSprintf(userData.buffer.data(), expandedBufferSize, "%s[%d] = \"", f->pFieldname, j);
+            }
+            
+            // detect and collapse relative path information
+            /*char fnBuf[1024]; // Not implemented YET
+             if (f->type == TypeFilename)
+             {
+             Con::collapsePath(fnBuf, 1024, val);
+             val = fnBuf;
+             }*/
+            
+            expandEscape(userData.buffer.data() + strlen(userData.buffer.data()), val);
+            dStrcat(userData.buffer.data(), "\";\r\n");
+            
+            stream.writeTabs(tabStop);
+            stream.write((U32)strlen(userData.buffer.data()), userData.buffer.data());
+         }
+      }
+   }
    if(mFieldDictionary && mCanSaveFieldDictionary)
    {
       mFieldDictionary->writeFields(this, stream, tabStop);
@@ -1988,7 +2028,7 @@ bool SimObject::setParentGroup(void* userPtr,
                                KorkApi::Vm* vmPtr,
                                KorkApi::TypeStorageInterface* inputStorage,
                                KorkApi::TypeStorageInterface* outputStorage,
-                               const EnumTable* tbl,
+                               void* fieldUserPtr,
                                BitSet32 flag,
                                U32 requestedType)
 {
