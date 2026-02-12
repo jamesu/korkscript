@@ -791,7 +791,7 @@ ConsoleFunction(exec, bool, 2, 4, "exec(fileName [, nocalls [,journalScript]])")
    }
 
    // Determine the filename we actually want...
-   Con::expandScriptFilename(scriptFilenameBuffer, sizeof(scriptFilenameBuffer), argv[1]);
+   Con::expandScriptFilename(scriptFilenameBuffer, sizeof(scriptFilenameBuffer), argv[1], vmPtr->getCurrentFiberFrameInfo().fullPath);
 
    const char *ext = dStrrchr(scriptFilenameBuffer, '.');
 
