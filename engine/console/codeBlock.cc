@@ -1126,7 +1126,7 @@ void CodeBlock::dumpInstructions( U32 startIp, bool upToReturn, bool downcaseStr
 
          case OP_RETURN_VOID:
          {
-            mVM->printf(0, "%i: OP_RETURN_VOID", ip - 1 );
+            mVM->printf(0, "%i: OP_RETURNVOID", ip - 1 );
 
             if( upToReturn )
                return;
@@ -1136,7 +1136,7 @@ void CodeBlock::dumpInstructions( U32 startIp, bool upToReturn, bool downcaseStr
 
          case OP_RETURN_UINT:
          {
-            mVM->printf(0, "%i: OP_RETURN_UINT", ip - 1 );
+            mVM->printf(0, "%i: OP_RETURNUINT", ip - 1 );
 
             if( upToReturn )
                return;
@@ -1146,7 +1146,7 @@ void CodeBlock::dumpInstructions( U32 startIp, bool upToReturn, bool downcaseStr
 
          case OP_RETURN_FLT:
          {
-            mVM->printf(0, "%i: OP_RETURN_FLT", ip - 1 );
+            mVM->printf(0, "%i: OP_RETURNFLT", ip - 1 );
 
             if( upToReturn )
                return;
