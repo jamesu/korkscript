@@ -927,6 +927,98 @@ void destroyVM(Vm* vm)
    freeFn(vm, freeUser);
 }
 
+
+static KorkApi::ConsoleValue performOpNumeric(void* userPtr, KorkApi::Vm* vm, U32 op, KorkApi::ConsoleValue lhs, KorkApi::ConsoleValue rhs)
+{
+   F64 valueL = vm->valueAsFloat(lhs);
+   F64 valueR = vm->valueAsFloat(rhs);
+   
+   switch (op)
+   {
+      // unary
+      case Compiler::OP_NOT:
+         valueL = !((U64)valueL);
+         break;
+      case Compiler::OP_NOTF:
+         valueL = !valueL;
+         break;
+      case Compiler::OP_ONESCOMPLEMENT:
+         valueL = ~((U64)valueL);
+         break;
+      case Compiler::OP_NEG:
+         valueL = -valueL;
+         break;
+         
+      // comparisons (return 0/1)
+      case Compiler::OP_CMPEQ: valueL = (valueL == valueR) ? 1.0f : 0.0f; break;
+      case Compiler::OP_CMPNE: valueL = (valueL != valueR) ? 1.0f : 0.0f; break;
+      case Compiler::OP_CMPGR: valueL = (valueL >  valueR) ? 1.0f : 0.0f; break;
+      case Compiler::OP_CMPGE: valueL = (valueL >= valueR) ? 1.0f : 0.0f; break;
+      case Compiler::OP_CMPLT: valueL = (valueL <  valueR) ? 1.0f : 0.0f; break;
+      case Compiler::OP_CMPLE: valueL = (valueL <= valueR) ? 1.0f : 0.0f; break;
+      
+      // bitwise (operate on integer views)
+      case Compiler::OP_XOR:
+         valueL = (F32)(((U64)valueL) ^ ((U64)valueR));
+         break;
+         
+      case Compiler::OP_BITAND:
+         valueL = (F32)(((U64)valueL) & ((U64)valueR));
+         break;
+         
+      case Compiler::OP_BITOR:
+         valueL = (F32)(((U64)valueL) | ((U64)valueR));
+         break;
+         
+      case Compiler::OP_SHR:
+      {
+         const U64 a = (U64)valueL;
+         const U64 b = (U64)valueR;
+         valueL = (F32)(a >> b);
+         break;
+      }
+         
+      case Compiler::OP_SHL:
+      {
+         const U64 a = (U64)valueL;
+         const U64 b = (U64)valueR;
+         valueL = (F32)(a << b);
+         break;
+      }
+         
+      // logical (return 0/1)
+      case Compiler::OP_AND:
+         valueL = (valueL != 0.0f && valueR != 0.0f) ? 1.0f : 0.0f;
+         break;
+         
+      case Compiler::OP_OR:
+         valueL = (valueL != 0.0f || valueR != 0.0f) ? 1.0f : 0.0f;
+         break;
+         
+      // arithmetic
+      case Compiler::OP_ADD: valueL = valueL + valueR; break;
+      case Compiler::OP_SUB: valueL = valueL - valueR; break;
+      case Compiler::OP_MUL: valueL = valueL * valueR; break;
+         
+      case Compiler::OP_DIV:
+         valueL = (valueR == 0.0f) ? 0.0f : (valueL / valueR);
+         break;
+         
+      case Compiler::OP_MOD:
+      {
+         const U64 a = (U64)valueL;
+         const U64 b = (U64)valueR;
+         valueL = (b == 0u) ? 0.0f : (F32)(a % b);
+         break;
+      }
+         
+      default:
+         break;
+   }
+   
+   return KorkApi::ConsoleValue::makeNumber(valueL);
+}
+
 VmInternal::VmInternal(Vm* vm, Config* cfg) : mGlobalVars(this)
 {
    mVM = vm;
@@ -1065,7 +1157,7 @@ VmInternal::VmInternal(Vm* vm, Config* cfg) : mGlobalVars(this)
    
    typeInfo.iFuncs.CastValueFn = genericCastFunc;
    
-   typeInfo.iFuncs.PerformOpFn = noOpFunc;
+   typeInfo.iFuncs.PerformOpFn = performOpNumeric;
    
    // TODO
    

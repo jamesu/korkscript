@@ -225,7 +225,7 @@ ConsoleFunction(testInt, void, 4, 4, "msg, value, expected")
 {
    if (dAtoi(argv[2]) != dAtoi(argv[3]))
    {
-      Con::errorf("Failed: %s (got %s)\n", argv[1], argv[2]);
+      Con::errorf("Failed: %s (got %s expected %s)\n", argv[1], argv[2], argv[3]);
       gReturnCode = 1;
       gNumFails++;
    }
