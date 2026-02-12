@@ -1410,8 +1410,7 @@ void SimObject::dump()
       StringTableEntry steField = getVM()->internString(f->pFieldname);
       for(U32 j = 0; S32(j) < f->elementCount; j++)
       {
-         char arrayValue[32];
-         snprintf(arrayValue, sizeof(arrayValue), "%u", j);
+         KorkApi::ConsoleValue arrayValue = KorkApi::ConsoleValue::makeUnsigned(j);
          KorkApi::ConsoleValue fieldValue = getVM()->getObjectField(getVMObject(), steField, arrayValue);
          const char* val = getVM()->valueAsString(fieldValue);
 
@@ -1591,7 +1590,7 @@ const char *SimObject::tabComplete(const char *prevText, S32 baseLen, bool fForw
 
 void SimObject::setDataField(StringTableEntry slotName, const char *array, const char *value)
 {
-   getVM()->setObjectField(getVMObject(),slotName, KorkApi::ConsoleValue::makeString(value), array);
+   getVM()->setObjectField(getVMObject(),slotName, KorkApi::ConsoleValue::makeString(value), KorkApi::ConsoleValue::makeString(array));
 }
 
 void SimObject::setDataFieldDynamic(StringTableEntry slotName, const char *array, const char *value, U32 typeId)
@@ -1628,7 +1627,7 @@ void  SimObject::dumpClassHierarchy()
 
 const char *SimObject::getDataField(StringTableEntry slotName, const char *array)
 {
-   return getVM()->valueAsString(getVM()->getObjectField(getVMObject(), slotName, array));
+   return getVM()->valueAsString(getVM()->getObjectField(getVMObject(), slotName, KorkApi::ConsoleValue::makeString(array)));
 }
 
 

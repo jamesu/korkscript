@@ -352,6 +352,7 @@ FuncCallExprNode *FuncCallExprNode::alloc( Compiler::Resources* res, S32 lineNum
    ret->funcName = funcName;
    ret->nameSpace = nameSpace;
    ret->args = args;
+   ret->disableTypes = !res->allowTypes;
    if(dot)
       ret->callType = MethodCall;
    else

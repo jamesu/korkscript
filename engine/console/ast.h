@@ -511,11 +511,13 @@ struct FuncCallExprNode : ExprNode
       MethodCall,
       ParentCall
    };
+   bool disableTypes;
 
    static FuncCallExprNode *alloc( Compiler::Resources* res, S32 lineNumber, StringTableEntry funcName, StringTableEntry nameSpace, ExprNode *args, bool dot );
   
    U32 compile(CodeStream &codeStream, U32 ip, TypeReq type);
    TypeReq getPreferredType();
+   bool canBeTyped();
    DBG_STMT_TYPE(FuncCallExprNode);
 };
 

@@ -549,6 +549,8 @@ void ConsoleObject::addGroup(const char* in_pGroupname, const char* in_pGroupDoc
    f.fieldUserPtr = nullptr;
    f.ovrCastValue = nullptr;
    f.writeDataFn  = &defaultProtectedWriteFn;
+   f.allocStorageFn  = nullptr;
+   f.enumKeysFn   = nullptr;
 
    // Add to field list.
    sg_tempFieldList.push_back(f);
@@ -572,6 +574,8 @@ void ConsoleObject::endGroup(const char*  in_pGroupname)
    f.fieldUserPtr = nullptr;
    f.ovrCastValue = nullptr;
    f.writeDataFn  = &defaultProtectedWriteFn;
+   f.allocStorageFn  = nullptr;
+   f.enumKeysFn   = nullptr;
    f.elementCount = 0;
 
    // Add to field list.
@@ -651,6 +655,8 @@ void ConsoleObject::addField(const char*  in_pFieldname,
    
    f.ovrCastValue = nullptr;
    f.writeDataFn  = in_writeDataFn;
+   f.allocStorageFn  = nullptr;
+   f.enumKeysFn   = nullptr;
 
    sg_tempFieldList.push_back(f);
 }
@@ -666,6 +672,8 @@ void ConsoleObject::addProtectedField(const char*  in_pFieldname,
       in_fieldType,
       in_fieldOffset,
       in_getDataFn,
+      nullptr,
+      nullptr,
       &defaultProtectedWriteFn,
       1,
       nullptr,
@@ -684,6 +692,8 @@ void ConsoleObject::addProtectedField(const char*  in_pFieldname,
       in_fieldType,
       in_fieldOffset,
       in_getDataFn,
+      nullptr,
+      nullptr,
       in_writeDataFn,
       1,
       nullptr,
@@ -703,6 +713,8 @@ void ConsoleObject::addProtectedField(const char*  in_pFieldname,
       in_fieldType,
       in_fieldOffset,
       in_getDataFn,
+      nullptr,
+      nullptr,
       &defaultProtectedWriteFn,
       in_elementCount,
       in_table,
@@ -712,7 +724,9 @@ void ConsoleObject::addProtectedField(const char*  in_pFieldname,
 void ConsoleObject::addProtectedField(const char*  in_pFieldname,
                        const U32 in_fieldType,
                        const dsize_t in_fieldOffset,
-                                      AbstractClassRep::CastValue in_getDataFn,
+                       AbstractClassRep::CastValue in_getDataFn,
+                       AbstractClassRep::AllocFieldStorage  in_allocStorageFn,
+                       AbstractClassRep::EnumerateFieldKeys in_enumerateKeysFn,
                        AbstractClassRep::WriteDataNotify in_writeDataFn,
                        const U32 in_elementCount,
                        EnumTable *in_table,
@@ -734,6 +748,8 @@ void ConsoleObject::addProtectedField(const char*  in_pFieldname,
 
    f.ovrCastValue    = in_getDataFn;
    f.writeDataFn  = in_writeDataFn;
+   f.allocStorageFn  = in_allocStorageFn;
+   f.enumKeysFn   = in_enumerateKeysFn;
 
    sg_tempFieldList.push_back(f);
 }
@@ -774,6 +790,8 @@ void ConsoleObject::addDepricatedField(const char *fieldName)
    f.fieldUserPtr = nullptr;
    f.ovrCastValue = nullptr;
    f.writeDataFn  = &defaultProtectedWriteFn;
+   f.allocStorageFn  = nullptr;
+   f.enumKeysFn   = nullptr;
 
    sg_tempFieldList.push_back(f);
 }

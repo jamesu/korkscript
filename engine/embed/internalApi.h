@@ -188,10 +188,10 @@ struct VmInternal
    const char* tempIntConv(U64 val);
    const char* tempStringConv(const char* str);
 
-   bool setObjectField(VMObject* object, StringTableEntry name, const char* array, ConsoleValue value);
-   bool setObjectFieldTuple(VMObject* object, StringTableEntry fieldName, const char* arrayIndex, U32 argc, ConsoleValue* argv);
-   ConsoleValue getObjectField(VMObject* object, StringTableEntry name, const char* array, U32 requestedType, U32 requestedZone);
-   U16 getObjectFieldType(VMObject* object, StringTableEntry name, const char* array);
+   bool setObjectField(VMObject* object, StringTableEntry name, ConsoleValue arrayIndex, ConsoleValue value);
+   bool setObjectFieldTuple(VMObject* object, StringTableEntry fieldName, ConsoleValue arrayIndex, U32 argc, ConsoleValue* argv);
+   ConsoleValue getObjectField(VMObject* object, StringTableEntry name, ConsoleValue  arrayIndex, U32 requestedType, U32 requestedZone);
+   U16 getObjectFieldType(VMObject* object, StringTableEntry name, ConsoleValue arrayIndex);
    void assignFieldsFromTo(VMObject* from, VMObject* to);
 
    void printf(int level, const char* fmt, ...);
@@ -202,6 +202,7 @@ struct VmInternal
    S64 valueAsInt(ConsoleValue v);
    S64 valueAsBool(ConsoleValue v);
    const char* valueAsString(ConsoleValue v);
+   KorkApi::ConsoleValue valueAsCVString(ConsoleValue v);
    
    // memory helpers
    

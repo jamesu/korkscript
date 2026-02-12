@@ -1503,6 +1503,10 @@ TypeReq FuncCallExprNode::getPreferredType()
    return TypeReqString;
 }
 
+bool FuncCallExprNode::canBeTyped()
+{
+   return !disableTypes;
+}
 
 //------------------------------------------------------------
 

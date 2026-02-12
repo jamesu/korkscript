@@ -799,32 +799,32 @@ VMObject* Vm::findObjectById(SimObjectId ident)
    return mInternal->mConfig.iFind.FindObjectByIdFn(mInternal->mConfig.findUser, ident);
 }
 
-bool Vm::setObjectField(VMObject* object, StringTableEntry fieldName, ConsoleValue nativeValue, const char* arrayIndex)
+bool Vm::setObjectField(VMObject* object, StringTableEntry fieldName, ConsoleValue nativeValue, ConsoleValue arrayIndex)
 {
    VmAllocTLS::Scope memScope(mInternal);
    return mInternal->setObjectField(object, fieldName, arrayIndex, nativeValue);
 }
 
-bool Vm::setObjectFieldTuple(VMObject* object, StringTableEntry fieldName, U32 argc, ConsoleValue* argv, const char* arrayIndex)
+bool Vm::setObjectFieldTuple(VMObject* object, StringTableEntry fieldName, U32 argc, ConsoleValue* argv, ConsoleValue arrayIndex)
 {
    VmAllocTLS::Scope memScope(mInternal);
    return mInternal->setObjectFieldTuple(object, fieldName, arrayIndex, argc, argv);
 }
 
-bool Vm::setObjectFieldString(VMObject* object, StringTableEntry fieldName, const char* stringValue, const char* arrayIndex)
+bool Vm::setObjectFieldString(VMObject* object, StringTableEntry fieldName, const char* stringValue, ConsoleValue arrayIndex)
 {
    VmAllocTLS::Scope memScope(mInternal);
    ConsoleValue val = ConsoleValue::makeString(stringValue);
    return mInternal->setObjectField(object, fieldName, arrayIndex, val);
 }
 
-ConsoleValue Vm::getObjectField(VMObject* object, StringTableEntry fieldName, const char* arrayIndex)
+ConsoleValue Vm::getObjectField(VMObject* object, StringTableEntry fieldName, ConsoleValue arrayIndex)
 {
    VmAllocTLS::Scope memScope(mInternal);
    return mInternal->getObjectField(object, fieldName, arrayIndex, KorkApi::TypeDirectCopy, KorkApi::ConsoleValue::ZoneExternal);
 }
 
-const char* Vm::getObjectFieldString(VMObject* object, StringTableEntry fieldName, const char* arrayIndex)
+const char* Vm::getObjectFieldString(VMObject* object, StringTableEntry fieldName, ConsoleValue arrayIndex)
 {
    VmAllocTLS::Scope memScope(mInternal);
    ConsoleValue foundValue = mInternal->getObjectField(object, fieldName, arrayIndex, KorkApi::TypeDirectCopy, KorkApi::ConsoleValue::ZoneFunc);
@@ -1381,12 +1381,12 @@ KorkApi::ConsoleValue* VmInternal::getTempValuePtr()
    return &mTempConversionValue[mCVConvIndex++];
 }
 
-bool VmInternal::setObjectField(VMObject* obj, StringTableEntry name, const char* array, ConsoleValue value)
+bool VmInternal::setObjectField(VMObject* obj, StringTableEntry name, KorkApi::ConsoleValue array, ConsoleValue value)
 {
    return setObjectFieldTuple(obj, name, array, 1, &value);
 }
 
-bool VmInternal::setObjectFieldTuple(VMObject* obj, StringTableEntry fieldName, const char* arrayIndex, U32 argc, ConsoleValue* argv)
+bool VmInternal::setObjectFieldTuple(VMObject* obj, StringTableEntry fieldName, KorkApi::ConsoleValue arrayIndex, U32 argc, ConsoleValue* argv)
 {
    if ((obj->flags & KorkApi::ModStaticFields) != 0)
    {
@@ -1397,11 +1397,6 @@ bool VmInternal::setObjectFieldTuple(VMObject* obj, StringTableEntry fieldName, 
          if (f.pFieldname != fieldName)
             continue;
          
-         U32 idx = atoi(arrayIndex);
-         U32 elemCount = f.elementCount > 0 ? (U32)f.elementCount : 1;
-         if (idx >= elemCount)
-            break;
-         
          TypeId tid = f.type;
          if (tid < 0 || (U32)tid >= mTypes.size())
             break;
@@ -1409,13 +1404,30 @@ bool VmInternal::setObjectFieldTuple(VMObject* obj, StringTableEntry fieldName, 
          TypeInfo& tinfo = mTypes[tid];
          if (!tinfo.iFuncs.CastValueFn || tinfo.fieldSize == 0)
             break;
-         
-         U8* base = static_cast<U8*>(obj->userPtr);
-         U8* dptr = base + f.offset + (idx * (U32)tinfo.fieldSize);
+
+         TypeStorageInterface outputStorage;
+
+         if (f.allocStorageFn)
+         {
+            if (!f.allocStorageFn(this->mVM, obj->userPtr, &f, arrayIndex, &outputStorage, true))
+            {
+               return false;
+            }
+         }
+         else
+         {
+            U32 idx = valueAsInt(arrayIndex);
+            U32 elemCount = f.elementCount > 0 ? (U32)f.elementCount : 1;
+            if (idx >= elemCount)
+               break;
+            
+            U8* base = static_cast<U8*>(obj->userPtr);
+            U8* dptr = base + f.offset + (idx * (U32)tinfo.fieldSize);
+            outputStorage = KorkApi::CreateFixedTypeStorage(this, dptr, tid, true);
+         }
          
          CastValueFnType castFn = f.ovrCastValue ? f.ovrCastValue : tinfo.iFuncs.CastValueFn;
 
-         TypeStorageInterface outputStorage = KorkApi::CreateFixedTypeStorage(this, dptr, tid, true);
          TypeStorageInterface inputStorage = KorkApi::CreateRegisterStorageFromArgs(this, argc, argv);
          
          outputStorage.fieldObject = obj->userPtr;
@@ -1432,14 +1444,14 @@ bool VmInternal::setObjectFieldTuple(VMObject* obj, StringTableEntry fieldName, 
 
    if ((obj->flags & KorkApi::ModDynamicFields) != 0)
    {
-      obj->klass->iCustomFields.SetCustomFieldByName(mVM, obj, fieldName, arrayIndex, argc, argv);
+      obj->klass->iCustomFields.SetCustomFieldByName(mVM, obj, fieldName, valueAsString(arrayIndex), argc, argv);
       return true;
    }
    
    return false;
 }
 
-ConsoleValue VmInternal::getObjectField(VMObject* obj, StringTableEntry name, const char* array, U32 requestedType, U32 requestedZone)
+ConsoleValue VmInternal::getObjectField(VMObject* obj, StringTableEntry name, KorkApi::ConsoleValue array, U32 requestedType, U32 requestedZone)
 {
    // Default result if nothing matches.
    ConsoleValue def;
@@ -1452,11 +1464,6 @@ ConsoleValue VmInternal::getObjectField(VMObject* obj, StringTableEntry name, co
 
       if (f.pFieldname != name)
          continue;
-      
-      U32 idx = atoi(array);
-      U32 elemCount = f.elementCount > 0 ? (U32)f.elementCount : 1;
-      if (idx >= elemCount)
-         break;
 
       TypeId tid = (TypeId)f.type;
       if (tid < 0 || (U32)tid >= mTypes.size())
@@ -1467,8 +1474,29 @@ ConsoleValue VmInternal::getObjectField(VMObject* obj, StringTableEntry name, co
       if (!tinfo.iFuncs.CastValueFn || tinfo.fieldSize == 0)
          return def;
 
-      U8* base = static_cast<U8*>(obj->userPtr);
-      U8* dptr = base + f.offset + (idx * (U32)tinfo.fieldSize);
+      TypeStorageInterface inputStorage;
+
+      if (f.allocStorageFn)
+      {
+         if (!f.allocStorageFn(this->mVM, obj, &f, array, &inputStorage, false))
+         {
+            return def;
+         }
+      }
+      else
+      {  
+         U32 idx = valueAsInt(array);
+         U32 elemCount = f.elementCount > 0 ? (U32)f.elementCount : 1;
+         if (idx >= elemCount)
+         {
+            return def;
+         }
+
+         U8* base = static_cast<U8*>(obj->userPtr);
+         U8* dptr = base + f.offset + (idx * (U32)tinfo.fieldSize);
+
+         inputStorage = KorkApi::CreateFixedTypeStorage(this, dptr, tid, true);
+      }
       
       // Add requested type
       if ((requestedType & KorkApi::TypeDirectCopy) != 0)
@@ -1476,7 +1504,6 @@ ConsoleValue VmInternal::getObjectField(VMObject* obj, StringTableEntry name, co
          requestedType |= f.type;
       }
 
-      TypeStorageInterface inputStorage = KorkApi::CreateFixedTypeStorage(this, dptr, tid, true);
       TypeStorageInterface outputStorage = KorkApi::CreateExprEvalReturnTypeStorage(this, 0, 0);
       
       CastValueFnType castFn = f.ovrCastValue ? f.ovrCastValue : tinfo.iFuncs.CastValueFn;
@@ -1506,7 +1533,7 @@ ConsoleValue VmInternal::getObjectField(VMObject* obj, StringTableEntry name, co
    return obj->klass->iCustomFields.GetFieldByName(mVM, obj, name);
 }
 
-U16 VmInternal::getObjectFieldType(VMObject* obj, StringTableEntry name, const char* array)
+U16 VmInternal::getObjectFieldType(VMObject* obj, StringTableEntry name, KorkApi::ConsoleValue array)
 {
    // Default result if nothing matches.
    if (!obj || !obj->klass || !obj->klass->fields)
@@ -1724,6 +1751,48 @@ const char* VmInternal::valueAsString(ConsoleValue v)
             // NOTE: this needs to be put somewhere since the return buffer is often used elsewhere
             // TODO: maybe need a variant here for custom output storage to handle externally
             return tempStringConv((const char*)outputStorage.data.storageRegister->evaluatePtr(mAllocBase));
+      }
+      break;
+   }
+}
+
+KorkApi::ConsoleValue VmInternal::valueAsCVString(ConsoleValue v)
+{
+   switch (v.typeId)
+   {
+      case KorkApi::ConsoleValue::TypeInternalUnsigned:
+      return  KorkApi::ConsoleValue::makeString(tempIntConv(v.getInt()));
+      break;
+      case KorkApi::ConsoleValue::TypeInternalNumber:
+      return  KorkApi::ConsoleValue::makeString(tempFloatConv(v.getFloat()));
+      break;
+      case KorkApi::ConsoleValue::TypeInternalString:
+      {
+         const char* r = (const char*)v.evaluatePtr(mAllocBase);
+         return  KorkApi::ConsoleValue::makeString(r ? r : "");
+      }
+         
+      break;
+   default:
+      {
+            KorkApi::TypeStorageInterface inputStorage = KorkApi::CreateRegisterStorageFromArg(this, v);
+
+            KorkApi::TypeStorageInterface outputStorage = KorkApi::CreateExprEvalReturnTypeStorage(this,
+                                                                                                   1024,
+                                                                                    KorkApi::ConsoleValue::TypeInternalString);
+            
+            // NOTE: types should set head of stack to value if data pointer is nullptr in this case
+            mTypes[v.typeId].iFuncs.CastValueFn(mTypes[v.typeId].userPtr,
+                                                                mVM,
+                                                                &inputStorage,
+                                                                &outputStorage,
+                                                                nullptr,
+                                                                0,
+                                                                KorkApi::ConsoleValue::TypeInternalString);
+            
+            // NOTE: this needs to be put somewhere since the return buffer is often used elsewhere
+            // TODO: maybe need a variant here for custom output storage to handle externally
+            return KorkApi::ConsoleValue::makeString(tempStringConv((const char*)outputStorage.data.storageRegister->evaluatePtr(mAllocBase)));
       }
       break;
    }
@@ -1995,6 +2064,19 @@ StringTableEntry Vm::lookupStringN(const char* str, U32 len, bool caseSens)
    VmAllocTLS::Scope memScope(mInternal);
    return mInternal->lookupStringN(str, len, caseSens);
 }
+
+bool Vm::initFixedTypeStorage(void* ptr, U16 typeId, bool isField, TypeStorageInterface* outInterface)
+{
+   *outInterface = KorkApi::CreateFixedTypeStorage(mInternal, ptr, typeId, isField);
+   return true;
+}
+
+bool Vm::initReturnTypeStorage(U32 minSize, U16 typeId, TypeStorageInterface* outInterface)
+{
+   *outInterface = KorkApi::CreateExprEvalReturnTypeStorage(mInternal, minSize, typeId);
+   return true;
+}
+
 
 const char* FiberRunResult::stateAsString(State inState)
 {

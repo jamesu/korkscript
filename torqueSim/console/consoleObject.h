@@ -187,6 +187,8 @@ class AbstractClassRep
 public:
    using CastValue = KorkApi::CastValueFnType;
    using WriteDataNotify = KorkApi::WriteDataNotifyFn;
+   using AllocFieldStorage = KorkApi::AllocFieldStorageFn;
+   using EnumerateFieldKeys = KorkApi::EnumerateFieldKeysFn;
    
    static void registerWithVM(KorkApi::Vm* vm);
 
@@ -582,6 +584,8 @@ protected:
       const U32     in_fieldType,
       const dsize_t in_fieldOffset,
       AbstractClassRep::CastValue in_getDataFn = nullptr,
+      AbstractClassRep::AllocFieldStorage in_allocStorageFn = nullptr,
+      AbstractClassRep::EnumerateFieldKeys in_enumerateKeysFn = nullptr,
       AbstractClassRep::WriteDataNotify in_writeDataFn = &defaultProtectedWriteFn,
       const U32     in_elementCount = 1,
       EnumTable *   in_table        = nullptr,
@@ -615,6 +619,7 @@ protected:
       const dsize_t in_fieldOffset,
       AbstractClassRep::CastValue in_getDataFn = nullptr,
       AbstractClassRep::WriteDataNotify in_writeDataFn = &defaultProtectedWriteFn,
+
       const char*   in_pFieldDocs = nullptr);
 
    /// Add a deprecated field.

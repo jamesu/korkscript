@@ -137,7 +137,7 @@ struct FieldInfo;
 struct VMObject;
 
 typedef bool (*WriteDataNotifyFn)( void* obj, StringTableEntry pFieldName );
-typedef bool (*AllocFieldStorageFn)( void* obj, const FieldInfo* field, KorkApi::ConsoleValue arrayValue );
+typedef bool (*AllocFieldStorageFn)( KorkApi::Vm* vmPtr, void* obj, const FieldInfo* field, KorkApi::ConsoleValue arrayValue, TypeStorageInterface* outStorage, bool needWrite );
 typedef bool (*FieldKeyVisitorFn)( void* user, KorkApi::Vm* vmPtr, KorkApi::VMObject* obj, KorkApi::ConsoleValue key, KorkApi::ConsoleValue value );
 typedef bool (*EnumerateFieldKeysFn)( void* user, KorkApi::Vm* vmPtr, KorkApi::VMObject* obj, const FieldInfo* field, FieldKeyVisitorFn visit );
 
@@ -534,11 +534,11 @@ public:
    VMObject* findObjectByPath(const char* path);
    VMObject* findObjectById(SimObjectId ident);
 
-   bool setObjectField(VMObject* object, StringTableEntry fieldName, ConsoleValue nativeValue, const char* arrayIndex);
-   bool setObjectFieldTuple(VMObject* object, StringTableEntry fieldName, U32 argc, ConsoleValue* argv, const char* arrayIndex);
-   bool setObjectFieldString(VMObject* object, StringTableEntry fieldName, const char* stringValue, const char* arrayIndex);
-   ConsoleValue getObjectField(VMObject* object, StringTableEntry fieldName, const char* arrayIndex);
-   const char* getObjectFieldString(VMObject* object, StringTableEntry fieldName, const char* arrayIndex);
+   bool setObjectField(VMObject* object, StringTableEntry fieldName, ConsoleValue nativeValue, ConsoleValue arrayIndex);
+   bool setObjectFieldTuple(VMObject* object, StringTableEntry fieldName, U32 argc, ConsoleValue* argv, ConsoleValue arrayIndex);
+   bool setObjectFieldString(VMObject* object, StringTableEntry fieldName, const char* stringValue, ConsoleValue arrayIndex);
+   ConsoleValue getObjectField(VMObject* object, StringTableEntry fieldName, ConsoleValue arrayIndex);
+   const char* getObjectFieldString(VMObject* object, StringTableEntry fieldName, ConsoleValue arrayIndex);
    void assignFieldsFromTo(VMObject* from, VMObject* to);
 
    void setGlobalVariable(StringTableEntry name, ConsoleValue value);
@@ -607,6 +607,10 @@ public:
   // Enum dict API
   void enumGlobals(const char* expr, void* userPtr, EnumFuncCallback callback);
   bool enumLocals(void* userPtr, EnumFuncCallback callback, S32 frame=-1);
+   
+   // Storage helpers
+   bool initFixedTypeStorage(void* ptr, U16 typeId, bool isField, TypeStorageInterface* outInterface);
+   bool initReturnTypeStorage(U32 minSize, U16 typeId, TypeStorageInterface* outInterface);
 };
 
 Vm* createVM(Config* cfg);

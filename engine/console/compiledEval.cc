@@ -746,10 +746,8 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
             ip++;
          }
          
-         // NOTE: can't assume this since concat may occur after this;
-         // ideally we need something like OP_STR_TO_VALUE
-         //evalState.mSTR.setConsoleValue(result);
-         evalState.mSTR.setStringValue(vmInternal->valueAsString(mLastFiberValue));
+         // NOTE: since we have typed value handling now, this should be safe.
+         evalState.mSTR.setConsoleValue(vmInternal, mLastFiberValue);
       }
       
       if(frame.lastCallType == FuncCallExprNode::MethodCall)
@@ -1414,7 +1412,7 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
          case OP_LOADFIELD_UINT:
             if (frame.curObject)
             {
-               KorkApi::ConsoleValue retValue = vmInternal->getObjectField(frame.curObject, frame.curField, frame.curFieldArray, KorkApi::ConsoleValue::TypeInternalUnsigned, KorkApi::ConsoleValue::ZoneExternal);
+               KorkApi::ConsoleValue retValue = vmInternal->getObjectField(frame.curObject, frame.curField, KorkApi::ConsoleValue::makeString(frame.curFieldArray), KorkApi::ConsoleValue::TypeInternalUnsigned, KorkApi::ConsoleValue::ZoneExternal);
                evalState.intStack[frame._UINT+1] = vmInternal->valueAsInt(retValue);
             }
             else
@@ -1431,7 +1429,7 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
          case OP_LOADFIELD_FLT:
             if (frame.curObject)
             {
-               KorkApi::ConsoleValue retValue =  vmInternal->getObjectField(frame.curObject, frame.curField, frame.curFieldArray, KorkApi::ConsoleValue::TypeInternalNumber, KorkApi::ConsoleValue::ZoneExternal);
+               KorkApi::ConsoleValue retValue =  vmInternal->getObjectField(frame.curObject, frame.curField, KorkApi::ConsoleValue::makeString(frame.curFieldArray), KorkApi::ConsoleValue::TypeInternalNumber, KorkApi::ConsoleValue::ZoneExternal);
                evalState.floatStack[frame._FLT+1] = vmInternal->valueAsFloat(retValue);
             }
             else
@@ -1447,7 +1445,7 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
          case OP_LOADFIELD_STR:
             if (frame.curObject)
             {
-               KorkApi::ConsoleValue retValue =  vmInternal->getObjectField(frame.curObject, frame.curField, frame.curFieldArray, KorkApi::ConsoleValue::TypeInternalString, KorkApi::ConsoleValue::ZoneExternal);
+               KorkApi::ConsoleValue retValue =  vmInternal->getObjectField(frame.curObject, frame.curField, KorkApi::ConsoleValue::makeString(frame.curFieldArray), KorkApi::ConsoleValue::TypeInternalString, KorkApi::ConsoleValue::ZoneExternal);
                evalState.mSTR.setStringValue(vmInternal->valueAsString(retValue));
             }
             else
@@ -1464,7 +1462,7 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
             if (frame.curObject)
             {
                KorkApi::ConsoleValue cv = evalState.mSTR.getConsoleValue();
-               vmInternal->setObjectField(frame.curObject, frame.curField, frame.curFieldArray, cv);
+               vmInternal->setObjectField(frame.curObject, frame.curField, KorkApi::ConsoleValue::makeString(frame.curFieldArray), cv);
             }
             else
             {
@@ -1480,7 +1478,7 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
             if (frame.curObject)
             {
                KorkApi::ConsoleValue cv = evalState.mSTR.getConsoleValue();
-               vmInternal->setObjectField(frame.curObject, frame.curField, frame.curFieldArray, cv);
+               vmInternal->setObjectField(frame.curObject, frame.curField, KorkApi::ConsoleValue::makeString(frame.curFieldArray), cv);
             }
             else
             {
@@ -1494,8 +1492,8 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
          case OP_SAVEFIELD_STR:
             if (frame.curObject)
             {
-               KorkApi::ConsoleValue cv = KorkApi::ConsoleValue::makeString(evalState.mSTR.getStringValue());
-               vmInternal->setObjectField(frame.curObject, frame.curField, frame.curFieldArray, cv);
+               KorkApi::ConsoleValue cv = vmInternal->valueAsCVString(evalState.mSTR.getConsoleValue());
+               vmInternal->setObjectField(frame.curObject, frame.curField, KorkApi::ConsoleValue::makeString(frame.curFieldArray), cv);
             }
             else
             {
@@ -2228,7 +2226,7 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
          {
             // This is like OP_CALLFUNC
             evalState.mSTR.getArgcArgv(nullptr, &callArgc, &callArgv);
-            vmInternal->setObjectFieldTuple(frame.curObject, frame.curField, frame.curFieldArray, callArgc-1, callArgv+1);
+            vmInternal->setObjectFieldTuple(frame.curObject, frame.curField, KorkApi::ConsoleValue::makeString(frame.curFieldArray), callArgc-1, callArgv+1);
             
             evalState.mSTR.popFrame();
             evalState.mSTR.setStringValue(""); // clear stack in case original value is garbage
@@ -2270,7 +2268,7 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
             
          case OP_LOADFIELD_VAR:
             // field -> var
-            tmpVal = vmInternal->getObjectField(frame.curObject, frame.curField, frame.curFieldArray, KorkApi::ConsoleValue::TypeInternalUnsigned, KorkApi::ConsoleValue::ZoneFunc);
+            tmpVal = vmInternal->getObjectField(frame.curObject, frame.curField, KorkApi::ConsoleValue::makeString(frame.curFieldArray), KorkApi::ConsoleValue::TypeInternalUnsigned, KorkApi::ConsoleValue::ZoneFunc);
             frame.setConsoleValue(tmpVal);
             break;
          case OP_SAVEFIELD_VAR:
@@ -2279,7 +2277,7 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
             if (frame.curObject)
             {
                KorkApi::ConsoleValue cv = frame.getConsoleVariable();
-               vmInternal->setObjectField(frame.curObject, frame.curField, frame.curFieldArray, cv);
+               vmInternal->setObjectField(frame.curObject, frame.curField, KorkApi::ConsoleValue::makeString(frame.curFieldArray), cv);
             }
             else
             {
@@ -2301,7 +2299,7 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
             break;
          case OP_LOADFIELD_TYPED:
             // field -> typed
-            tmpVal = vmInternal->getObjectField(frame.curObject, frame.curField, frame.curFieldArray, KorkApi::ConsoleValue::TypeInternalUnsigned, KorkApi::ConsoleValue::ZoneFunc);
+            tmpVal = vmInternal->getObjectField(frame.curObject, frame.curField, KorkApi::ConsoleValue::makeString(frame.curFieldArray), KorkApi::ConsoleValue::TypeInternalUnsigned, KorkApi::ConsoleValue::ZoneFunc);
             evalState.mSTR.setConsoleValue(vmInternal, tmpVal);
             break;
          case OP_SAVEVAR_TYPED:
@@ -2317,7 +2315,7 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
             {
    
                KorkApi::ConsoleValue cv = evalState.mSTR.getConsoleValue();
-               vmInternal->setObjectField(frame.curObject, frame.curField, frame.curFieldArray, cv);
+               vmInternal->setObjectField(frame.curObject, frame.curField, KorkApi::ConsoleValue::makeString(frame.curFieldArray), cv);
             }
             else
             {
@@ -2413,7 +2411,7 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
 
          case OP_SET_DYNAMIC_TYPE_FROM_FIELD:
          {
-            frame.dynTypeId = frame.curObject ? vmInternal->getObjectFieldType(frame.curObject, frame.curField, frame.curFieldArray) : 0;
+            frame.dynTypeId = frame.curObject ? vmInternal->getObjectFieldType(frame.curObject, frame.curField, KorkApi::ConsoleValue::makeString(frame.curFieldArray)) : 0;
             break;
          }
          
