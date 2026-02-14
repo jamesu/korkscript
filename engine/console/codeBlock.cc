@@ -258,13 +258,14 @@ void CodeBlock::findBreakLine(U32 ip, U32 &line, U32 &instruction)
       }
    }
    instruction = p[found].instLine & 0xFF;
-   line = p[found].instLine;// >> 8;
+   line = p[found].instLine >> 8;
 }
 
 const char *CodeBlock::getFileLine(U32 ip)
 {
    char* nameBuffer = mVM->mFileLineBuffer;
-   U32 line, inst;
+   U32 line=0;
+   U32 inst=0;
    findBreakLine(ip, line, inst);
    
    snprintf(nameBuffer, KorkApi::VmInternal::FileLineBufferSize, "%s (%d)", name ? name : "<input>", line);
