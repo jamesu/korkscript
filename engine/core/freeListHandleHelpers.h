@@ -43,6 +43,7 @@ namespace FreeListHandle
       inline U32 getNum() const { return parts.index; }
       inline U8 getGen() const { return (U8)parts.generation; }
       inline U32 getIndex() const { return parts.index-1; }
+      inline U32 getWeakValue() const { return makeValue(parts.index, parts.generation, false); }
       inline U32 getValue() const { return value; }
       inline bool setHeavyRef(bool value) { return parts.heavyRef = (U32)value; }
       inline bool isHeavyRef() const { return parts.heavyRef != 0; }
@@ -88,6 +89,7 @@ namespace FreeListHandle
       inline U64 getNum() const { return parts.index; }
       inline U8 getGen() const { return (U8)parts.generation; }
       inline U64 getIndex() const { return parts.index-1; }
+      inline U64 getWeakValue() const { return makeValue(parts.index, parts.generation, false); }
       inline U64 getValue() const { return value; }
       inline bool setHeavyRef(bool value) { return parts.heavyRef = (U32)value; }
       inline bool isHeavyRef() const { return parts.heavyRef != 0; }

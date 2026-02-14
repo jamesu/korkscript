@@ -606,6 +606,12 @@ KorkApi::ConsoleValue CodeBlock::exec(U32 ip, const char *functionName, Namespac
       return result.value;
    }
    
+   // Mark as suspended
+   if (frame)
+   {
+      evalState.mState = KorkApi::FiberRunResult::SUSPENDED;
+   }
+   
    return KorkApi::ConsoleValue();
 }
 

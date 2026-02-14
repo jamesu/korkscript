@@ -36,17 +36,19 @@ public:
 
 	enum WaitMode
 	{
-		WAIT_IGNORE=0,      // Skipped during check
-		WAIT_FLAGS=1,       // Wait for global flags to be set
-		WAIT_FLAGS_CLEAR=2, // Wait for global flags to be clear
-		WAIT_SIMTIME=3,      // Wait for min sim time
-		WAIT_NONE=4         // Dont wait just run
+		WAIT_IGNORE=0,        // Skipped during check
+		WAIT_FLAGS=1,         // Wait for global flags to be set
+		WAIT_FLAGS_CLEAR=2,   // Wait for global flags to be clear
+		WAIT_LOCAL_CLEAR=3,   // Wait for local wait flags to be clear
+		WAIT_SIMTIME=4,       // Wait for min sim time
+		WAIT_TICK=5,          // Wait for a ticker value
+		WAIT_NONE=6           // Dont wait just run
 	};
 
 	struct ScheduleParam
 	{
-		U64 flagMask;  // flags to check
-		F64 minTime;   // min time to resume
+		U64 flagMask;  // flags to check (or local flags to wait on)
+		U64 minTime;   // min time value to resume 
 	};
 
 	struct ScheduleInfo
@@ -58,6 +60,7 @@ public:
 
 	std::vector<ScheduleInfo> mFiberSchedules;
 	U64 mFiberGlobalFlags;
+	U64 mNowTick;
 
 	static void initPersistFields();
 
@@ -68,9 +71,11 @@ public:
 
 	KorkApi::FiberId spawnFiber(SimObject* thisObject, int argc, KorkApi::ConsoleValue* argv, ScheduleInfo initialInfo);
 	void setFiberWaitMode(KorkApi::FiberId fid, WaitMode mode, ScheduleParam param);
-	void execFibers();
-   void cleanupFibers();
+	void execFibers(U64 tickAdvance);
+	void cleanupFibers();
 	void cleanupFiber(KorkApi::FiberId fid);
+   
+   inline U64 getCurrentTick() { return mNowTick; }
 
 	DECLARE_CONOBJECT(SimFiberManager);
 };

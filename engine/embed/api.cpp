@@ -1293,7 +1293,7 @@ FiberId VmInternal::createFiber(void* userPtr)
    InternalFiberList::HandleType handle = mFiberStates.allocListHandle(newState);
    newState->mSTR.initForFiber(handle.getIndex());
    newState->mUserPtr = userPtr;
-   return handle.getValue();
+   return handle.getWeakValue();
 }
 
 ExprEvalState* VmInternal::createFiberPtr(void* userPtr)
@@ -1368,6 +1368,12 @@ bool Vm::getCurrentFiberFileLine(StringTableEntry* outFile, U32* outLine)
 FiberRunResult::State VmInternal::getCurrentFiberState()
 {
    return mCurrentFiberState ? mCurrentFiberState->mState : FiberRunResult::ERROR;
+}
+
+FiberRunResult::State VmInternal::getFiberState(KorkApi::FiberId fid)
+{
+   ExprEvalState* state = mFiberStates.getItem(fid);
+   return state ? state->mState : FiberRunResult::State::ERROR;
 }
 
 void VmInternal::clearCurrentFiberError()
@@ -2103,6 +2109,12 @@ void Vm::suspendCurrentFiber()
 {
    VmAllocTLS::Scope memScope(mInternal);
    return mInternal->suspendCurrentFiber();
+}
+
+FiberRunResult::State Vm::getFiberState(KorkApi::FiberId fid)
+{
+   VmAllocTLS::Scope memScope(mInternal);
+   return mInternal->getFiberState(fid);
 }
 
 FiberRunResult::State Vm::getCurrentFiberState()

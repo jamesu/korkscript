@@ -5,7 +5,7 @@
 IMPLEMENT_CONOBJECT(SimFiberManager);
 
 SimFiberManager::SimFiberManager()
-   : mFiberGlobalFlags(0)
+   : mFiberGlobalFlags(0), mNowTick(0)
 {
 }
 
@@ -57,6 +57,8 @@ KorkApi::FiberId SimFiberManager::spawnFiber(SimObject* thisObject,
 {
    KorkApi::Vm* vm = getVM();
 
+   KorkApi::FiberId currentFiber = vm->getCurrentFiber();
+   
    vm->setCurrentFiberMain();
    KorkApi::FiberId fid = vm->createFiber(this);
    if (fid == 0)
@@ -76,10 +78,25 @@ KorkApi::FiberId SimFiberManager::spawnFiber(SimObject* thisObject,
    {
       ret = vm->call(argc, argv, true);
    }
+   
+   auto fiberState = vm->getCurrentFiberState();
+   
+   // Fibers that don't end up being suspended here won't be added.
+   if (fiberState != KorkApi::FiberRunResult::SUSPENDED)
+   {
+      vm->cleanupFiber(fid);
+      vm->setCurrentFiber(currentFiber);
+      return 0;
+   }
 
-   ScheduleInfo info;
    initialInfo.fiberId  = fid;
-   mFiberSchedules.push_back(info);
+   mFiberSchedules.push_back(initialInfo);
+   
+   // Actually run fiber
+   vm->resumeCurrentFiber(KorkApi::ConsoleValue());
+   
+   // Return control
+   vm->setCurrentFiber(currentFiber);
 
    return fid;
 }
@@ -117,7 +134,8 @@ void SimFiberManager::cleanupFiber(KorkApi::FiberId fid)
 
 static bool shouldRunFiber(const SimFiberManager::ScheduleInfo &info,
                            U64 globalFlags,
-                           F64 nowTime)
+                           U64 nowTime,
+                           U64 nowTick)
 {
    using WaitMode = SimFiberManager::WaitMode;
 
@@ -139,9 +157,15 @@ static bool shouldRunFiber(const SimFiberManager::ScheduleInfo &info,
          // Wait until *no* bits in flagMask are set in globalFlags.
          return (globalFlags & info.param.flagMask) == 0;
 
+      case SimFiberManager::WAIT_LOCAL_CLEAR:
+         return (info.param.flagMask == 0);
+
       case SimFiberManager::WAIT_SIMTIME:
          // Wait until current sim time >= minTime.
          return nowTime >= info.param.minTime;
+
+      case SimFiberManager::WAIT_TICK:
+         return info.param.flagMask != 1 && nowTick >= info.param.minTime;
 
       default:
          break;
@@ -150,16 +174,24 @@ static bool shouldRunFiber(const SimFiberManager::ScheduleInfo &info,
    return false;
 }
 
-void SimFiberManager::execFibers()
+void SimFiberManager::execFibers(U64 tickAdvance)
 {
    KorkApi::Vm* vm = getVM();
-   F64 nowTime = Sim::getCurrentTime();
+   U64 nowTime = Sim::getCurrentTime();
+   mNowTick += tickAdvance;
 
    for (ScheduleInfo &info : mFiberSchedules)
    {
-      if (!shouldRunFiber(info, mFiberGlobalFlags, nowTime))
+      if (!shouldRunFiber(info, mFiberGlobalFlags, nowTime, mNowTick))
       {
          continue;
+      }
+      
+      // Mark as used
+      if (info.waitMode == SimFiberManager::WAIT_SIMTIME ||
+          info.waitMode == SimFiberManager::WAIT_TICK)
+      {
+         info.param.flagMask |= 0x1;
       }
 
       // Ready to run.

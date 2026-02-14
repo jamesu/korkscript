@@ -157,6 +157,7 @@ struct VmInternal
    FiberRunResult resumeCurrentFiber(ConsoleValue value);
    bool getCurrentFiberFileLine(StringTableEntry* outFile, U32* outLine);
    FiberRunResult::State getCurrentFiberState();
+   FiberRunResult::State getFiberState(KorkApi::FiberId fid);
    void clearCurrentFiberError();
    void* getCurrentFiberUserPtr();
    void throwFiber(U32 mask);
