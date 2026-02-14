@@ -695,7 +695,7 @@ ConsoleValue Vm::evalCode(const char* code, const char* filename, const char* mo
 ConsoleValue Vm::call(int argc, ConsoleValue* argv, bool startSuspended)
 {
    ConsoleValue retValue = ConsoleValue();
-   callNamespaceFunction(getGlobalNamespace(), mInternal->internString(mInternal->valueAsString(argv[1]), false), argc, argv, retValue, startSuspended);
+   callNamespaceFunction(getGlobalNamespace(), mInternal->internString(mInternal->valueAsString(argv[0]), false), argc, argv, retValue, startSuspended);
    return retValue;
 }
 
@@ -768,7 +768,7 @@ bool Vm::callNamespaceFunction(NamespaceId nsId, StringTableEntry name, int argc
 
    if (!ent)
    {
-      mInternal->printf(0, "%s: Unknown command.", argv[0]);
+      mInternal->printf(0, "%s: Unknown command.", valueAsString(argv[0]));
       // Clean up arg buffers, if any.
       mInternal->mCurrentFiberState->mSTR.clearFunctionOffset();
       return false;
