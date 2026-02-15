@@ -702,7 +702,7 @@ ConsoleValue Vm::call(int argc, ConsoleValue* argv, bool startSuspended)
 ConsoleValue Vm::callObject(VMObject* h, int argc, ConsoleValue* argv, bool startSuspended)
 {
    ConsoleValue retValue = ConsoleValue();
-   callObjectFunction(h, mInternal->internString(mInternal->valueAsString(argv[1]), false), argc, argv, retValue, startSuspended);
+   callObjectFunction(h, mInternal->internString(mInternal->valueAsString(argv[0]), false), argc, argv, retValue, startSuspended);
    return retValue;
 }
 

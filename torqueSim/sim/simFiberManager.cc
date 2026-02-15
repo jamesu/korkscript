@@ -72,7 +72,7 @@ KorkApi::FiberId SimFiberManager::spawnFiber(SimObject* thisObject,
 
    if (thisObject)
    {
-      ret = vm->callObject((KorkApi::VMObject*)thisObject, argc, argv, true);
+      ret = vm->callObject(thisObject->getVMObject(), argc, argv, true);
    }
    else
    {
