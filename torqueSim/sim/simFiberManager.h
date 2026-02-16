@@ -42,8 +42,19 @@ public:
 		WAIT_LOCAL_CLEAR=3,   // Wait for local wait flags to be clear
 		WAIT_SIMTIME=4,       // Wait for min sim time
 		WAIT_TICK=5,          // Wait for a ticker value
-		WAIT_NONE=6           // Dont wait just run
+		WAIT_NONE=6,          // Dont wait just run
+      WAIT_REMOVE=7         // Waiting to be removed (used in case current is active)
 	};
+   
+   enum BaseFlags : U8
+   {
+      // Flag for when time based waits are visited
+      FLAG_VISITED = BIT(0),
+      // Flag to mark object call
+      FLAG_OBJECT = BIT(1),
+      // These flags can never be set from user code
+      STICKY_FLAGS_MASK = BIT(1) | BIT(2) | BIT(3) | BIT(4)
+   };
 
 	struct ScheduleParam
 	{
@@ -54,12 +65,14 @@ public:
 	struct ScheduleInfo
 	{
 		KorkApi::FiberId fiberId;   // fiber to resume
-		WaitMode waitMode; // what we are waiting for
-		ScheduleParam param;
+      SimObjectId thisId; // who spawned us
+      WaitMode waitMode; // what we are waiting for
+      ScheduleParam param;
 	};
 
 	std::vector<ScheduleInfo> mFiberSchedules;
 	U64 mFiberGlobalFlags;
+   U64 mWaitFiberFlags;
 	U64 mNowTick;
 
 	static void initPersistFields();
@@ -72,6 +85,11 @@ public:
 	KorkApi::FiberId spawnFiber(SimObject* thisObject, int argc, KorkApi::ConsoleValue* argv, ScheduleInfo initialInfo);
 	void setFiberWaitMode(KorkApi::FiberId fid, WaitMode mode, ScheduleParam param);
 	void execFibers(U64 tickAdvance);
+   
+   void setSuspendMode(U64 flags);
+   void cleanupWithFlags(U64 flags);
+   void cleanupWithObjectId(SimObjectId objectId);
+   
 	void cleanupFibers();
 	void cleanupFiber(KorkApi::FiberId fid);
    

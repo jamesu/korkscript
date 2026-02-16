@@ -74,11 +74,13 @@ KorkApi::FiberId SimFiberManager::spawnFiber(SimObject* thisObject,
    if (thisObject)
    {
       initialInfo.thisId = thisObject->getId();
+      initialInfo.param.flagMask |= SimFiberManager::FLAG_OBJECT;
       ret = vm->callObject(thisObject->getVMObject(), argc, argv, true);
    }
    else
    {
       initialInfo.thisId = 0;
+      initialInfo.param.flagMask &= ~SimFiberManager::FLAG_OBJECT;
       ret = vm->call(argc, argv, true);
    }
    
@@ -115,14 +117,15 @@ void SimFiberManager::setFiberWaitMode(KorkApi::FiberId fid,
    if (itr != mFiberSchedules.end())
    {
       itr->waitMode = mode;
-      itr->param    = param;
+      itr->param.flagMask = (itr->param.flagMask & STICKY_FLAGS_MASK) |
+                            (param.flagMask & (~STICKY_FLAGS_MASK));
+      itr->param.minTime = param.minTime;
    }
 }
 
 void SimFiberManager::cleanupFiber(KorkApi::FiberId fid)
 {
    KorkApi::Vm* vm = getVM();
-   vm->cleanupFiber(fid);
 
    auto itr = std::find_if(mFiberSchedules.begin(), mFiberSchedules.end(), [fid](ScheduleInfo& info){
    	return info.fiberId == fid;
@@ -130,8 +133,12 @@ void SimFiberManager::cleanupFiber(KorkApi::FiberId fid)
    
    if (itr != mFiberSchedules.end())
    {
-     vm->cleanupFiber(fid);
-     itr->fiberId = 0;
+      if (getVM()->getFiberState(fid) != KorkApi::FiberRunResult::RUNNING)
+      {
+         getVM()->cleanupFiber(fid);
+         itr->fiberId = 0;
+      }
+      itr->waitMode = WAIT_REMOVE;
    }
 }
 
@@ -172,10 +179,10 @@ static bool shouldRunFiber(const SimFiberManager::ScheduleInfo &info,
 
       case SimFiberManager::WAIT_SIMTIME:
          // Wait until current sim time >= minTime.
-         return nowTime >= info.param.minTime;
+         return ((info.param.flagMask & SimFiberManager::FLAG_VISITED) == 0) && nowTime >= info.param.minTime;
 
       case SimFiberManager::WAIT_TICK:
-         return info.param.flagMask != 1 && nowTick >= info.param.minTime;
+         return ((info.param.flagMask & SimFiberManager::FLAG_VISITED) == 0) && nowTick >= info.param.minTime;
 
       default:
          break;
@@ -201,7 +208,7 @@ void SimFiberManager::execFibers(U64 tickAdvance)
       if (info.waitMode == SimFiberManager::WAIT_SIMTIME ||
           info.waitMode == SimFiberManager::WAIT_TICK)
       {
-         info.param.flagMask |= 0x1;
+         info.param.flagMask |= FLAG_VISITED;
       }
 
       // Ready to run.
@@ -210,10 +217,13 @@ void SimFiberManager::execFibers(U64 tickAdvance)
       KorkApi::ConsoleValue inValue = KorkApi::ConsoleValue();
       KorkApi::FiberRunResult result = vm->resumeCurrentFiber(inValue);
       
-      if (result.state == KorkApi::FiberRunResult::FINISHED)
+      // NOTE: technically we should only get suspended here; RUNNING is only possible if
+      // we call execFibers from a fiber which isn't possible.
+      if (result.state != KorkApi::FiberRunResult::SUSPENDED)
       {
          vm->cleanupFiber(info.fiberId);
          info.fiberId = 0;
+         info.waitMode = WAIT_REMOVE;
       }
    }
    
@@ -235,8 +245,12 @@ void SimFiberManager::cleanupWithFlags(U64 flags)
       if (info.fiberId != 0 &&
           (info.param.flagMask & flags) != 0)
       {
-         getVM()->cleanupFiber(info.fiberId);
-         info.fiberId = 0;
+         if (getVM()->getFiberState(info.fiberId) != KorkApi::FiberRunResult::RUNNING)
+         {
+            getVM()->cleanupFiber(info.fiberId);
+            info.fiberId = 0;
+         }
+         info.waitMode = WAIT_REMOVE;
       }
    }
 }
@@ -250,8 +264,12 @@ void SimFiberManager::cleanupWithObjectId(SimObjectId objectId)
       if (info.fiberId != 0 &&
           info.thisId == objectId)
       {
-         getVM()->cleanupFiber(info.fiberId);
-         info.fiberId = 0;
+         if (getVM()->getFiberState(info.fiberId) != KorkApi::FiberRunResult::RUNNING)
+         {
+            getVM()->cleanupFiber(info.fiberId);
+            info.fiberId = 0;
+         }
+         info.waitMode = WAIT_REMOVE;
       }
    }
 }
@@ -262,8 +280,13 @@ void SimFiberManager::cleanupFibers()
    {
       ScheduleInfo &info = mFiberSchedules[i];
       
-      if (info.fiberId == 0)
+      if (info.fiberId == 0 ||
+          info.waitMode == WAIT_REMOVE)
       {
+         if (info.fiberId != 0)
+         {
+            getVM()->cleanupFiber(info.fiberId);
+         }
          mFiberSchedules.erase(mFiberSchedules.begin() + i);
          continue;
       }
