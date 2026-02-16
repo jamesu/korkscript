@@ -536,7 +536,7 @@ ConsoleFrame& CodeBlock::setupExecFrame(
       newFrame->inFunctionCall = true;
 
       // Bind arguments into the new frame's locals
-      for (U32 i = 0; i < (U32)wantedArgc; i++)
+      for (S32 i = 0; i < (S32)wantedArgc-1; i++)
       {
          StringTableEntry var =
             Compiler::CodeToSTE(nullptr, identStrings, code, ip + (2 + 6 + 1) + (i * 2));
