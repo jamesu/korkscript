@@ -20,6 +20,7 @@ bool SimFiberManager::onAdd()
 
    mFiberSchedules.clear();
    mFiberGlobalFlags = 0;
+   mWaitFiberFlags = 0;
 
    return true;
 }
@@ -72,10 +73,12 @@ KorkApi::FiberId SimFiberManager::spawnFiber(SimObject* thisObject,
 
    if (thisObject)
    {
+      initialInfo.thisId = thisObject->getId();
       ret = vm->callObject(thisObject->getVMObject(), argc, argv, true);
    }
    else
    {
+      initialInfo.thisId = 0;
       ret = vm->call(argc, argv, true);
    }
    
@@ -133,11 +136,18 @@ void SimFiberManager::cleanupFiber(KorkApi::FiberId fid)
 }
 
 static bool shouldRunFiber(const SimFiberManager::ScheduleInfo &info,
+                           U64 suspendFlags,
                            U64 globalFlags,
                            U64 nowTime,
                            U64 nowTick)
 {
    using WaitMode = SimFiberManager::WaitMode;
+   
+   // override: don't schedule if this flag set
+   if ((info.param.flagMask & suspendFlags) != 0)
+   {
+      return false;
+   }
 
    switch (info.waitMode)
    {
@@ -182,7 +192,7 @@ void SimFiberManager::execFibers(U64 tickAdvance)
 
    for (ScheduleInfo &info : mFiberSchedules)
    {
-      if (!shouldRunFiber(info, mFiberGlobalFlags, nowTime, mNowTick))
+      if (!shouldRunFiber(info, mWaitFiberFlags, mFiberGlobalFlags, nowTime, mNowTick))
       {
          continue;
       }
@@ -209,6 +219,41 @@ void SimFiberManager::execFibers(U64 tickAdvance)
    
    vm->setCurrentFiberMain();
    cleanupFibers();
+}
+
+void SimFiberManager::setSuspendMode(U64 flags)
+{
+   mWaitFiberFlags = flags;
+}
+
+void SimFiberManager::cleanupWithFlags(U64 flags)
+{
+   for (S32 i = (S32)mFiberSchedules.size() - 1; i >= 0; --i)
+   {
+      ScheduleInfo &info = mFiberSchedules[i];
+      
+      if (info.fiberId != 0 &&
+          (info.param.flagMask & flags) != 0)
+      {
+         getVM()->cleanupFiber(info.fiberId);
+         info.fiberId = 0;
+      }
+   }
+}
+
+void SimFiberManager::cleanupWithObjectId(SimObjectId objectId)
+{
+   for (S32 i = (S32)mFiberSchedules.size() - 1; i >= 0; --i)
+   {
+      ScheduleInfo &info = mFiberSchedules[i];
+      
+      if (info.fiberId != 0 &&
+          info.thisId == objectId)
+      {
+         getVM()->cleanupFiber(info.fiberId);
+         info.fiberId = 0;
+      }
+   }
 }
 
 void SimFiberManager::cleanupFibers()
