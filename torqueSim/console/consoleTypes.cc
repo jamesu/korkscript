@@ -339,7 +339,23 @@ ConsolePrepData( TypeFilename )
 
 ConsoleGetType( TypeS8 )
 {
-   S8 value = inputStorage->isField ? *((S32*)(ConsoleGetInputStoragePtr())) : vmPtr->valueAsInt(inputStorage->data.storageRegister[0]);
+   S8 value = 0;
+   
+   if (inputStorage->isField)
+   {
+      value = *((S8*)(ConsoleGetInputStoragePtr()));
+   }
+   else
+   {
+      if (inputStorage->data.storageRegister[0].typeId == TypeS8)
+      {
+         value = *(S8*)(inputStorage->data.storageRegister[0].evaluatePtr(vmPtr->getAllocBase()));
+      }
+      else
+      {
+         value = vmPtr->valueAsInt(inputStorage->data.storageRegister[0]);
+      }
+   }
    
    if (requestedType == KorkApi::ConsoleValue::TypeInternalString)
    {
@@ -353,7 +369,9 @@ ConsoleGetType( TypeS8 )
       
       return true;
    }
-   else if (requestedType == TypeS8)
+   else if (requestedType == TypeS8 ||
+            requestedType == KorkApi::ConsoleValue::TypeInternalNumber ||
+            requestedType == KorkApi::ConsoleValue::TypeInternalUnsigned)
    {
       if (outputStorage->isField)
       {
@@ -363,7 +381,7 @@ ConsoleGetType( TypeS8 )
       
       if (outputStorage->data.storageRegister)
       {
-         *outputStorage->data.storageRegister = KorkApi::ConsoleValue::makeNumber(value);
+         *outputStorage->data.storageRegister = (requestedType == KorkApi::ConsoleValue::TypeInternalUnsigned) ? KorkApi::ConsoleValue::makeUnsigned(value) : KorkApi::ConsoleValue::makeNumber(value);
       }
       
       return true;
@@ -382,7 +400,23 @@ ConsoleTypeOpDefaultNumeric( TypeS8 )
 
 ConsoleGetType( TypeS32 )
 {
-   S32 value = inputStorage->isField ? *((S32*)(ConsoleGetInputStoragePtr())) : vmPtr->valueAsInt(inputStorage->data.storageRegister[0]);
+   S32 value = 0;
+   
+   if (inputStorage->isField)
+   {
+      value = *((S32*)(ConsoleGetInputStoragePtr()));
+   }
+   else
+   {
+      if (inputStorage->data.storageRegister[0].typeId == TypeS32)
+      {
+         value = *(S32*)(inputStorage->data.storageRegister[0].evaluatePtr(vmPtr->getAllocBase()));
+      }
+      else
+      {
+         value = vmPtr->valueAsInt(inputStorage->data.storageRegister[0]);
+      }
+   }
    
    if (requestedType == KorkApi::ConsoleValue::TypeInternalString)
    {
@@ -396,7 +430,9 @@ ConsoleGetType( TypeS32 )
       
       return true;
    }
-   else if (requestedType == TypeS32)
+   else if (requestedType == TypeS32 ||
+            requestedType == KorkApi::ConsoleValue::TypeInternalNumber ||
+            requestedType == KorkApi::ConsoleValue::TypeInternalUnsigned)
    {
       if (outputStorage->isField)
       {
@@ -406,7 +442,7 @@ ConsoleGetType( TypeS32 )
       
       if (outputStorage->data.storageRegister)
       {
-         *outputStorage->data.storageRegister = KorkApi::ConsoleValue::makeNumber(value);
+         *outputStorage->data.storageRegister = (requestedType == KorkApi::ConsoleValue::TypeInternalUnsigned) ? KorkApi::ConsoleValue::makeUnsigned(value) : KorkApi::ConsoleValue::makeNumber(value);
       }
       
       return true;
@@ -425,7 +461,23 @@ ConsoleTypeOpDefaultNumeric( TypeS32 )
 
 ConsoleGetType( TypeF32 )
 {
-   F32 value = inputStorage->isField ? *((F32*)(ConsoleGetInputStoragePtr())) : vmPtr->valueAsFloat(inputStorage->data.storageRegister[0]);
+   S32 value = 0;
+   
+   if (inputStorage->isField)
+   {
+      value = *((F32*)(ConsoleGetInputStoragePtr()));
+   }
+   else
+   {
+      if (inputStorage->data.storageRegister[0].typeId == TypeF32)
+      {
+         value = *(F32*)(inputStorage->data.storageRegister[0].evaluatePtr(vmPtr->getAllocBase()));
+      }
+      else
+      {
+         value = vmPtr->valueAsFloat(inputStorage->data.storageRegister[0]);
+      }
+   }
    
    if (requestedType == KorkApi::ConsoleValue::TypeInternalString)
    {
@@ -439,7 +491,9 @@ ConsoleGetType( TypeF32 )
       
       return true;
    }
-   else if (requestedType == TypeF32)
+   else if (requestedType == TypeF32 ||
+            requestedType == KorkApi::ConsoleValue::TypeInternalNumber ||
+            requestedType == KorkApi::ConsoleValue::TypeInternalUnsigned)
    {
       if (outputStorage->isField)
       {
@@ -447,9 +501,11 @@ ConsoleGetType( TypeF32 )
          *dst = value;
       }
       
+      if (requestedType == KorkApi::ConsoleValue::TypeInternalUnsigned)
+      
       if (outputStorage->data.storageRegister)
       {
-         *outputStorage->data.storageRegister = KorkApi::ConsoleValue::makeNumber(value);
+         *outputStorage->data.storageRegister = (requestedType == KorkApi::ConsoleValue::TypeInternalUnsigned) ? KorkApi::ConsoleValue::makeUnsigned(value) : KorkApi::ConsoleValue::makeNumber(value);
       }
       
       return true;
@@ -468,7 +524,23 @@ ConsoleTypeOpDefaultNumeric( TypeF32 )
 
 ConsoleGetType( TypeBool )
 {
-   bool value = inputStorage->isField ? *((bool*)(ConsoleGetInputStoragePtr())) : vmPtr->valueAsBool(inputStorage->data.storageRegister[0]);
+   bool value = 0;
+   
+   if (inputStorage->isField)
+   {
+      value = *((bool*)(ConsoleGetInputStoragePtr()));
+   }
+   else
+   {
+      if (inputStorage->data.storageRegister[0].typeId == TypeBool)
+      {
+         value = *(bool*)(inputStorage->data.storageRegister[0].evaluatePtr(vmPtr->getAllocBase()));
+      }
+      else
+      {
+         value = vmPtr->valueAsBool(inputStorage->data.storageRegister[0]);
+      }
+   }
    
    if (requestedType == KorkApi::ConsoleValue::TypeInternalString)
    {
@@ -482,7 +554,9 @@ ConsoleGetType( TypeBool )
       
       return true;
    }
-   else if (requestedType == TypeBool)
+   else if (requestedType == TypeBool ||
+            requestedType == KorkApi::ConsoleValue::TypeInternalNumber ||
+            requestedType == KorkApi::ConsoleValue::TypeInternalUnsigned)
    {
       if (outputStorage->isField)
       {
@@ -492,7 +566,7 @@ ConsoleGetType( TypeBool )
       
       if (outputStorage->data.storageRegister)
       {
-         *outputStorage->data.storageRegister = KorkApi::ConsoleValue::makeUnsigned(value);
+         *outputStorage->data.storageRegister = (requestedType == KorkApi::ConsoleValue::TypeInternalUnsigned) ? KorkApi::ConsoleValue::makeUnsigned(value) : KorkApi::ConsoleValue::makeNumber(value);
       }
       
       return true;
@@ -1103,7 +1177,14 @@ ConsoleGetType( TypeSimObjectPtr )
    }
    else
    {
-      value = (SimObjectId)vmPtr->valueAsInt(inputStorage->data.storageRegister[0]);
+      if (inputStorage->data.storageRegister[0].typeId == TypeSimObjectPtr)
+      {
+         value = *(SimObjectId*)(inputStorage->data.storageRegister[0].evaluatePtr(vmPtr->getAllocBase()));
+      }
+      else
+      {
+         value = (SimObjectId)vmPtr->valueAsInt(inputStorage->data.storageRegister[0]);
+      }
       Sim::findObject(value, valueObject);
    }
    

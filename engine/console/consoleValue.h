@@ -133,6 +133,14 @@ struct ConsoleValue
       U64 val = cvalue;
       return *((F64*)&val);
    }
+   
+   F64 quickCastToNumeric(F64 def = 0.0) const
+   {
+      if (typeId == TypeInternalNumber)
+         return getFloat(def);
+      else
+         return getInt(def);
+   }
 
    void* ptr() const
    {

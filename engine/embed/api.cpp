@@ -1726,7 +1726,7 @@ F64 VmInternal::valueAsFloat(ConsoleValue v)
                                                                    0,
                                                                    KorkApi::ConsoleValue::TypeInternalNumber);
 
-               return outputStorage.data.storageRegister->getFloat();
+               return outputStorage.data.storageRegister->quickCastToNumeric();
          }
          break;
    }
@@ -1765,7 +1765,7 @@ S64 VmInternal::valueAsBool(ConsoleValue v)
                                                                    0,
                                                                    KorkApi::ConsoleValue::TypeInternalUnsigned);
 
-               return outputStorage.data.storageRegister->getInt();
+               return outputStorage.data.storageRegister->quickCastToNumeric();
          }
          break;
    }
@@ -1805,7 +1805,7 @@ S64 VmInternal::valueAsInt(ConsoleValue v)
                                                                    0,
                                                                    KorkApi::ConsoleValue::TypeInternalNumber);
 
-               return outputStorage.data.storageRegister->getInt();
+               return outputStorage.data.storageRegister->quickCastToNumeric();
          }
          break;
    }
