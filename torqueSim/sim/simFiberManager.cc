@@ -142,7 +142,8 @@ void SimFiberManager::cleanupFiber(KorkApi::FiberId fid)
    }
 }
 
-static bool shouldRunFiber(const SimFiberManager::ScheduleInfo &info,
+static bool shouldRunFiber(KorkApi::Vm* vm,
+                           const SimFiberManager::ScheduleInfo &info,
                            U64 suspendFlags,
                            U64 globalFlags,
                            U64 nowTime,
@@ -176,7 +177,17 @@ static bool shouldRunFiber(const SimFiberManager::ScheduleInfo &info,
 
       case SimFiberManager::WAIT_LOCAL_CLEAR:
          return (info.param.flagMask == 0);
-
+         
+      case SimFiberManager::WAIT_FIBER: {
+         auto state = vm->getFiberState((KorkApi::FiberId)info.param.minTime);
+         // NOTE: any state which is not suspended is a candidate here;
+         // if we allowed checks within a fiber we would also need to check RUNNING too.
+         if (state != KorkApi::FiberRunResult::SUSPENDED)
+         {
+            return true;
+         }
+      }
+      
       case SimFiberManager::WAIT_SIMTIME:
          // Wait until current sim time >= minTime.
          return ((info.param.flagMask & SimFiberManager::FLAG_VISITED) == 0) && nowTime >= info.param.minTime;
@@ -199,7 +210,7 @@ void SimFiberManager::execFibers(U64 tickAdvance)
 
    for (ScheduleInfo &info : mFiberSchedules)
    {
-      if (!shouldRunFiber(info, mWaitFiberFlags, mFiberGlobalFlags, nowTime, mNowTick))
+      if (!shouldRunFiber(vm, info, mWaitFiberFlags, mFiberGlobalFlags, nowTime, mNowTick))
       {
          continue;
       }
@@ -209,6 +220,13 @@ void SimFiberManager::execFibers(U64 tickAdvance)
           info.waitMode == SimFiberManager::WAIT_TICK)
       {
          info.param.flagMask |= FLAG_VISITED;
+      }
+      
+      // Reset wait state for certain modes
+      if (info.waitMode == SimFiberManager::WAIT_FIBER)
+      {
+         info.waitMode = SimFiberManager::WAIT_IGNORE;
+         info.param.minTime = 0;
       }
 
       // Ready to run.

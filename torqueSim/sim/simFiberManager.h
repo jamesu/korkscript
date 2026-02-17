@@ -42,8 +42,9 @@ public:
 		WAIT_LOCAL_CLEAR=3,   // Wait for local wait flags to be clear
 		WAIT_SIMTIME=4,       // Wait for min sim time
 		WAIT_TICK=5,          // Wait for a ticker value
-		WAIT_NONE=6,          // Dont wait just run
-      WAIT_REMOVE=7         // Waiting to be removed (used in case current is active)
+      WAIT_FIBER=6,         // Waiting for fiber to stop
+		WAIT_NONE=7,          // Dont wait just run
+      WAIT_REMOVE=8         // Waiting to be removed (used in case current is active)
 	};
    
    enum BaseFlags : U8
