@@ -486,7 +486,9 @@ ConsoleFrame& CodeBlock::setupExecFrame(
       // assume this points into a function decl:
       U32 fnArgc = code[ip + 2 + 6];
       StringTableEntry fnName = Compiler::CodeToSTE(nullptr, identStrings, code, ip);
-      S32 wantedArgc = getMin(argc - 1, fnArgc); // argv[0] is func name
+      // NOTE: wantedArgc needs to be number of args MINUS function name;
+      // fnArgc includes function name so should always be at least 1.
+      S32 wantedArgc = getMin(argc - 1, fnArgc == 0 ? 0 : fnArgc-1); // argv[0] is func name
 
       // Trace output
       if (eval.traceOn)
@@ -536,7 +538,8 @@ ConsoleFrame& CodeBlock::setupExecFrame(
       newFrame->inFunctionCall = true;
 
       // Bind arguments into the new frame's locals
-      for (S32 i = 0; i < (S32)wantedArgc-1; i++)
+      // NOTE: first argv is function name; wantedArgc contains args AFTER function name.
+      for (S32 i = 0; i < (S32)wantedArgc; i++)
       {
          StringTableEntry var =
             Compiler::CodeToSTE(nullptr, identStrings, code, ip + (2 + 6 + 1) + (i * 2));
