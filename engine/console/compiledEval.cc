@@ -487,8 +487,8 @@ ConsoleFrame& CodeBlock::setupExecFrame(
       U32 fnArgc = code[ip + 2 + 6];
       StringTableEntry fnName = Compiler::CodeToSTE(nullptr, identStrings, code, ip);
       // NOTE: wantedArgc needs to be number of args MINUS function name;
-      // fnArgc includes function name so should always be at least 1.
-      S32 wantedArgc = getMin(argc - 1, fnArgc == 0 ? 0 : fnArgc-1); // argv[0] is func name
+      // argc includes function name so should always be at least 1.
+      S32 wantedArgc = getMin(argc - 1, fnArgc); // argv[0] is func name
 
       // Trace output
       if (eval.traceOn)
