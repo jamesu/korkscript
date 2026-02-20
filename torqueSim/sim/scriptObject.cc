@@ -81,7 +81,7 @@ bool ScriptObject::onAdd()
       return false;
    
    // Call onAdd in script!
-   //Con::executef(this, 2, "onAdd", Con::getIntArg(getId()));
+   //Con::executef(this, "onAdd", Con::getIntArg(getId()));
    return true;
 }
 
@@ -90,7 +90,7 @@ void ScriptObject::onRemove()
    // We call this on this objects namespace so we unlink them after. - jdd
    //
    // Call onRemove in script!
-   Con::executef(this, 2, "onRemove", Con::getIntArg(getId()));
+   Con::executef(this, "onRemove", Con::getIntArg(getId()));
    
    Parent::onRemove();
 }
@@ -166,14 +166,14 @@ bool ScriptGroup::onAdd()
       return false;
    
    // Call onAdd in script!
-   Con::executef(this, 2, "onAdd", Con::getIntArg(getId()));
+   Con::executef(this, "onAdd", Con::getIntArg(getId()));
    return true;
 }
 
 void ScriptGroup::onRemove()
 {
    // Call onRemove in script!
-   Con::executef(this, 2, "onRemove", Con::getIntArg(getId()));
+   Con::executef(this, "onRemove", Con::getIntArg(getId()));
    
    Parent::onRemove();
 }

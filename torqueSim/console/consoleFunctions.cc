@@ -758,9 +758,9 @@ ConsoleFunction(quitWithErrorMessage, void, 2, 2, "quitWithErrorMessage(msg)"
 
 ConsoleFunctionGroupBegin(MetaScripting, "Functions that let you manipulate the scripting engine programmatically.");
 
-ConsoleFunction(call, const char *, 2, 0, "call(funcName [,args ...])")
+ConsoleFunctionValue(call, 2, 0, "call(funcName [,args ...])")
 {
-   const char* result = Con::execute(argc - 1, argv + 1);
+   KorkApi::ConsoleValue result = Con::execute(argc - 1, argv + 1);
    vmPtr->clearCurrentFiberError();
    return result;
 }

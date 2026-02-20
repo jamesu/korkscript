@@ -1168,87 +1168,41 @@ const char *evaluatef(const char* string, ...)
    return result;
 }
 
-const char *execute(S32 argc, const char *argv[])
+KorkApi::ConsoleValue execute(S32 argc, KorkApi::ConsoleValue argv[])
 {
-#ifdef TORQUE_MULTITHREAD
-   if(isMainThread())
-   {
-#endif
-      StringTableEntry funcName = sVM->internString(argv[0]);
-      
-      KorkApi::ConsoleValue retValue = KorkApi::ConsoleValue();
+   AssertFatal(isMainThread(), "Please use WaitableLambdaSimEvent instead");
+   
+   StringTableEntry funcName = sVM->internString((const char*)argv[0].evaluatePtr(sVM->getAllocBase()));
+   
+   KorkApi::ConsoleValue retValue = KorkApi::ConsoleValue();
 
-      KorkApi::ConsoleValue localArgv[KorkApi::MaxArgs];
-      KorkApi::ConsoleValue::convertArgsReverse(argc, argv, localArgv);
-      sVM->callNamespaceFunction(sVM->getGlobalNamespace(), funcName, argc, localArgv, retValue);
-      sVM->clearCurrentFiberError();
+   sVM->callNamespaceFunction(sVM->getGlobalNamespace(), funcName, argc, argv, retValue);
+   sVM->clearCurrentFiberError();
 
-      return sVM->valueAsString(retValue);
-
-#ifdef TORQUE_MULTITHREAD
-   }
-   else
-   {
-      SimConsoleThreadExecCallback cb;
-      SimConsoleThreadExecEvent *evt = new SimConsoleThreadExecEvent(argc, argv, false, &cb);
-      Sim::postEvent(Sim::getRootGroup(), evt, Sim::getCurrentTime());
-      
-      return cb.waitForResult();
-   }
-#endif
+   return retValue;
 }
 
 //------------------------------------------------------------------------------
-const char *execute(SimObject *object, S32 argc, const char *argv[],bool thisCallOnly)
+KorkApi::ConsoleValue execute(SimObject *object, S32 argc, KorkApi::ConsoleValue argv[],bool thisCallOnly)
 {
-   static char idBuf[16];
    if(argc < 2)
-      return "";
+      return KorkApi::ConsoleValue();
    
    if(object->getNamespace())
    {
-      StringTableEntry funcName = sVM->internString(argv[0]);
+      StringTableEntry funcName = sVM->internString((const char*)argv[0].evaluatePtr(sVM->getAllocBase()));
 
       KorkApi::ConsoleValue retValue = KorkApi::ConsoleValue();
-      KorkApi::ConsoleValue localArgv[KorkApi::MaxArgs];
 
       object->pushScriptCallbackGuard();
-      KorkApi::ConsoleValue::convertArgsReverse(argc, argv, localArgv);
-      localArgv[1] = KorkApi::ConsoleValue::makeUnsigned(object->getId());
-      sVM->callObjectFunction(object->getVMObject(), funcName, argc, localArgv, retValue);
+      argv[1] = KorkApi::ConsoleValue::makeUnsigned(object->getId());
+      sVM->callObjectFunction(object->getVMObject(), funcName, argc, argv, retValue);
       object->popScriptCallbackGuard();
 
-      return sVM->valueAsString(retValue);
+      return retValue;
    }
    warnf(ConsoleLogEntry::Script, "Con::execute - %d has no namespace: %s", object->getId(), argv[0]);
-   return "";
-}
-const char *executef(SimObject *object, S32 argc, ...)
-{
-   const char *argv[128];
-
-   va_list args;
-   va_start(args, argc);
-   for(S32 i = 0; i < argc; i++)
-      argv[i+1] = va_arg(args, const char *);
-   va_end(args);
-   argv[0] = argv[1];
-   argc++;
-
-   return execute(object, argc, argv);
-}
-
-//------------------------------------------------------------------------------
-const char *executef(S32 argc, ...)
-{
-   const char *argv[128];
-
-   va_list args;
-   va_start(args, argc);
-   for(S32 i = 0; i < argc; i++)
-      argv[i] = va_arg(args, const char *);
-   va_end(args);
-   return execute(argc, argv);
+   return KorkApi::ConsoleValue();
 }
 
 //------------------------------------------------------------------------------

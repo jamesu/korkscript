@@ -517,28 +517,6 @@ namespace Con
    /// Returns true when called from the main thread, false otherwise
    bool isMainThread();
 
-
-   /// @name Console Execution
-   ///
-   /// These are functions relating to the execution of script code.
-   ///
-   /// @{
-
-   /// Call a script function from C/C++ code.
-   ///
-   /// @param argc      Number of elements in the argv parameter
-   /// @param argv      A character string array containing the name of the function
-   ///                  to call followed by the arguments to that function.
-   /// @code
-   /// // Call a Torque script function called mAbs, having one parameter.
-   /// char* argv[] = {"abs", "-9"};
-   /// char* result = execute(2, argv);
-   /// @endcode
-   const char *execute(S32 argc, const char* argv[]);
-
-   /// @see execute(S32 argc, const char* argv[])
-   const char *executef(S32 argc, ...);
-
    /// Call a Torque Script member function of a SimObject from C/C++ code.
    /// @param object    Object on which to execute the method call.
    /// @param argc      Number of elements in the argv parameter (must be >2, see argv)
@@ -551,12 +529,69 @@ namespace Con
    /// char* argv[] = {"setMode", "", "2"};
    /// char* result = execute(mysimobject, 3, argv);
    /// @endcode
-   // [neo, 5/10/2007 - #3010]
-   // Added flag thisCallOnly to bypass dynamic method calls
-   const char *execute(SimObject *object, S32 argc, const char *argv[], bool thisCallOnly = false);
+   KorkApi::ConsoleValue execute(SimObject *object, S32 argc, KorkApi::ConsoleValue argv[], bool thisCallOnly = false);
 
-   /// @see execute(SimObject *, S32 argc, const char *argv[])
-   const char *executef(SimObject *, S32 argc, ...);
+   template <class... Ts>
+   inline constexpr bool all_console_values_v =
+      (std::is_same_v<std::decay_t<Ts>, KorkApi::ConsoleValue> && ...);
+
+   /// @name Console Execution
+   ///
+   /// These are functions relating to the execution of script code.
+   ///
+   /// @{
+
+   /// Call a script function from C/C++ code.
+   ///
+   /// @param argv      A character string array containing the name of the function
+   ///                  to call followed by the arguments to that function.
+   /// @code
+   /// // Call a Torque script function called mAbs, having one parameter.
+   /// char* argv[] = {"abs", "-9"};
+   /// char* result = execute(2, argv);
+   /// @endcode
+   KorkApi::ConsoleValue execute(S32 argc, KorkApi::ConsoleValue argv[]);
+
+   template <class... Args,
+             std::enable_if_t<all_console_values_v<Args...>, int> = 0>
+   KorkApi::ConsoleValue executef(const char* funcName, Args&&... args)
+   {
+      constexpr S32 argc = 1 + (S32)sizeof...(Args);
+
+      KorkApi::ConsoleValue argv[argc];
+
+      // argv[0] = function name
+      argv[0] = KorkApi::ConsoleValue::makeString(funcName);
+
+      // argv[1..] = provided ConsoleValue args
+      S32 i = 1;
+      ((argv[i++] = args), ...);
+
+      return execute(argc, argv);
+   }
+
+
+
+   /// @see execute(S32 argc, const char* argv[])
+   template <class... Args,
+             std::enable_if_t<all_console_values_v<Args...>, int> = 0>
+   KorkApi::ConsoleValue executef(SimObject* object, const char* funcName, Args&&... args)
+   {
+      // +2 because argv[0] and argv[1] are both the function name (Torque method-call convention)
+      constexpr S32 argc = 2 + (S32)sizeof...(Args);
+
+      KorkApi::ConsoleValue argv[argc];
+
+      // Duplicate function name in [0] and [1] (same behavior as your original varargs version)
+      argv[0] = KorkApi::ConsoleValue::makeString(funcName);
+      argv[1] = KorkApi::ConsoleValue::makeString(funcName);
+
+      // argv[2..] = provided ConsoleValue args
+      S32 i = 2;
+      ((argv[i++] = args), ...);
+
+      return execute(object, argc, argv);
+   }
 
    /// Evaluate an arbitrary chunk of code.
    ///

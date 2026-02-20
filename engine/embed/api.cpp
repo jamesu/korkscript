@@ -2181,6 +2181,13 @@ bool Vm::initReturnTypeStorage(U32 minSize, U16 typeId, TypeStorageInterface* ou
    return true;
 }
 
+bool Vm::initRegisterTypeStorage(U32 argc, KorkApi::ConsoleValue* argv, TypeStorageInterface* outInterface)
+{
+   *outInterface = KorkApi::CreateRegisterStorageFromArgs(mInternal, argc, argv);
+   return true;
+}
+
+
 
 const char* FiberRunResult::stateAsString(State inState)
 {

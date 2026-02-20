@@ -509,7 +509,7 @@ bool SimObject::registerObject(KorkApi::Vm* inVm, KorkApi::VMObject* evalObject)
    AssertFatal(!ret || isProperlyAdded(), "Object did not call SimObject::onAdd()");
    
    if ( isMethod( "onAdd" ) )
-      Con::executef( this, 1, "onAdd" );
+      Con::executef( this, "onAdd" );
    
    return ret;
 }
@@ -522,7 +522,7 @@ void SimObject::unregisterObject()
    AssertISV( getScriptCallbackGuard() == 0, "SimObject::unregisterObject: Object is being unregistered whilst performing a script callback!" );
    
    if ( isMethod( "onRemove" ) )
-      Con::executef( this, 1, "onRemove" );
+      Con::executef( this, "onRemove" );
    
    mSimFlags |= Removed;
    

@@ -165,7 +165,8 @@ class SimConsoleEvent : public SimEvent
 {
 protected:
    S32 mArgc;
-   char **mArgv;
+   KorkApi::ConsoleValue mArgv[KorkApi::MaxArgs];
+   std::vector<U8> mArgData;
    bool mOnObject;
   public:
 
@@ -182,37 +183,68 @@ protected:
    ///
    /// @see Con::execute(S32 argc, const char *argv[])
    /// @see Con::execute(SimObject *object, S32 argc, const char *argv[])
-   SimConsoleEvent(S32 argc, const char **argv, bool onObject);
+   SimConsoleEvent(S32 argc, KorkApi::ConsoleValue* argv, bool onObject);
 
    ~SimConsoleEvent();
    virtual void process(SimObject *object);
 };
 // END T2D BLOCK
 
-// BEGIN T2D BLOCK
-/// Used by Con::threadSafeExecute()
-struct SimConsoleThreadExecCallback
+template <class F>
+class FunctorSimEvent final : public SimEvent
 {
-   void *sem;
-   const char *retVal;
-
-   SimConsoleThreadExecCallback();
-   ~SimConsoleThreadExecCallback();
-
-   void handleCallback(const char *ret);
-   const char *waitForResult();
-};
-
-class SimConsoleThreadExecEvent : public SimConsoleEvent
-{
-   SimConsoleThreadExecCallback *cb;
-
 public:
-   SimConsoleThreadExecEvent(S32 argc, const char **argv, bool onObject, SimConsoleThreadExecCallback *callback);
+  explicit FunctorSimEvent(F&& f) : fn(std::move(f)) {}
+  void process(SimObject* object) override { fn(object); }
 
-   virtual void process(SimObject *object);
+private:
+  F fn;
 };
-// END T2D BLOCK
+
+// helper for type deduction
+template <class F>
+FunctorSimEvent<std::decay_t<F>>* makeFunctorEvent(F&& f)
+{
+  return new FunctorSimEvent<std::decay_t<F>>(std::forward<F>(f));
+}
+
+struct SimEventCompletion
+{
+  std::mutex m;
+  std::condition_variable cv;
+  bool done;
+  
+  void* userData;
+   
+  SimEventCompletion() : done(false), userData(nullptr) {;}
+};
+
+#ifdef TORQUE_MULTITHREAD
+
+class WaitableLambdaSimEvent final : public SimEvent
+{
+public:
+  using Fn = std::function<void(SimObject*, SimEventCompletion&)>;
+
+  WaitableLambdaSimEvent(Fn fn, std::shared_ptr<SimEventCompletion> c)
+    : mFn(std::move(fn)), comp(std::move(c)) {}
+
+  void process(SimObject* object) override
+  {
+    mFn(object, *comp);
+    {
+      std::lock_guard<std::mutex> lk(comp->m);
+      comp->done = true;
+    }
+    comp->cv.notify_all();
+  }
+
+private:
+  Fn mFn;
+  std::shared_ptr<SimEventCompletion> comp;
+};
+
+#endif
 
 // BEGIN T2D BLOCK
 //---------------------------------------------------------------------------
@@ -1406,7 +1438,7 @@ public:
 
    /// @}
 
-   void callOnChildren( const char * method, S32 argc, const char *argv[], bool executeOnChildGroups = true );
+   void callOnChildren( const char * method, S32 argc, KorkApi::ConsoleValue argv[], bool executeOnChildGroups = true );
 
    virtual void write(Stream &stream, U32 tabStop, U32 flags = 0);
 

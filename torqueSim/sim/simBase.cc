@@ -730,14 +730,14 @@ ConsoleFunction(getTimeSinceStart, S32, 2, 2, "eventID")
  @boundto
  Sim::postEvent
  */
-ConsoleFunction(schedule, S32, 4, 0, "t , objID || 0 , functionName, arg0, ... , argN" )
+ConsoleFunctionValue(schedule, 4, 0, "t , objID || 0 , functionName, arg0, ... , argN" )
 {
-   U32 timeDelta = U32(dAtof(argv[1]));
+   U32 timeDelta = U32(vmPtr->valueAsFloat(argv[1]));
    SimObject *refObject = Sim::findObject(argv[2]);
    if(!refObject)
    {
-      if(argv[2][0] != '0')
-         return 0;
+      if(vmPtr->valueAsInt(argv[2]) != 0)
+         return KorkApi::ConsoleValue::makeUnsigned(0);
       
       refObject = Sim::getRootGroup();
    }
@@ -746,9 +746,9 @@ ConsoleFunction(schedule, S32, 4, 0, "t , objID || 0 , functionName, arg0, ... ,
    S32 ret = Sim::postEvent(refObject, evt, Sim::getCurrentTime() + timeDelta);
    // #ifdef DEBUG
    //    Con::printf("ref %s schedule(%s) = %d", argv[2], argv[3], ret);
-   //    Con::executef(1, "backtrace");
+   //    Con::executef( "backtrace");
    // #endif
-   return ret;
+   return KorkApi::ConsoleValue::makeUnsigned(ret);
 }
 
 ConsoleFunctionGroupEnd( SimFunctions );
@@ -1128,7 +1128,7 @@ ConsoleMethod(SimObject, setSuperClassNamespace, void, 2, 3, "")
  %object.call(%method, %newNamespace);
  @endcode
  */
-ConsoleMethod( SimObject, call, const char*, 2, 0, "methodName, [args]*")
+ConsoleMethodValue( SimObject, call, 2, 0, "methodName, [args]*")
 {
    argv[1] = argv[2];
    return Con::execute( object, argc - 1, argv + 1 );
@@ -1275,18 +1275,18 @@ ConsoleMethod(SimObject, delete, void, 2, 2, "")
  
  @see ::schedule
  */
-ConsoleMethod(SimObject,schedule, S32, 4, 0, "time , command , [arg]* ")
+ConsoleMethodValue(SimObject,schedule, 4, 0, "time , command , [arg]* ")
 {
-   U32 timeDelta = U32(dAtof(argv[2]));
+   SimTime timeDelta = (SimTime)vmPtr->valueAsInt(argv[2]);
    argv[2] = argv[3];
    argv[3] = argv[1];
    SimConsoleEvent *evt = new SimConsoleEvent(argc - 2, argv + 2, true);
-   S32 ret = Sim::postEvent(object, evt, Sim::getCurrentTime() + timeDelta);
+   U32 ret = Sim::postEvent(object, evt, Sim::getCurrentTime() + timeDelta);
    // #ifdef DEBUG
    //    Con::printf("obj %s schedule(%s) = %d", argv[3], argv[2], ret);
-   //    Con::executef(1, "backtrace");
+   //    Con::executef( "backtrace");
    // #endif
-   return ret;
+   return KorkApi::ConsoleValue::makeUnsigned(ret);
 }
 
 static bool compareFields(const AbstractClassRep::Field* fa,
@@ -2636,22 +2636,26 @@ void SimSet::popObject()
 
 //-----------------------------------------------------------------------------
 
-void SimSet::callOnChildren( const char * method, S32 argc, const char *argv[], bool executeOnChildGroups )
+void SimSet::callOnChildren( const char * method, S32 argc, KorkApi::ConsoleValue argv[], bool executeOnChildGroups )
 {
    // Prep the arguments for the console exec...
    // Make sure and leave args[1] empty.
-   const char* args[21];
-   args[0] = method;
+   KorkApi::ConsoleValue args[21];
+   args[0] = KorkApi::ConsoleValue::makeString(method);
    for (S32 i = 0; i < argc; i++)
+   {
       args[i + 2] = argv[i];
-
+   }
+   
    for( iterator i = begin(); i != end(); i++ )
    {
       SimObject *childObj = static_cast<SimObject*>(*i);
 
       if( childObj->isMethod( method ) )
+      {
          Con::execute(childObj, argc + 2, args);
-
+      }
+      
       if( executeOnChildGroups )
       {
          SimSet* childSet = dynamic_cast<SimSet*>(*i);
@@ -3122,9 +3126,10 @@ ConsoleMethod(SimSet, reorder, void, 4,4,  "SimObject child1, SimObject child2")
    @note This method recurses into all SimSets that are children to the set.
    @see callOnChildrenNoRecurse" )
 */
-ConsoleMethod(SimSet, callOnChildren, void, 3, 0, "string method, [string args]* ")
+ConsoleMethodValue(SimSet, callOnChildren, 3, 0, "string method, [string args]* ")
 {
-   object->callOnChildren( argv[2], argc - 3, argv + 3 );
+   object->callOnChildren( vmPtr->internString((const char*)argv[2].evaluatePtr(vmPtr->getAllocBase())), argc - 3, argv + 3 );
+   return KorkApi::ConsoleValue();
 }
 
 IMPLEMENT_CONOBJECT_CHILDREN(SimSet);
@@ -3366,55 +3371,93 @@ IMPLEMENT_CONOBJECT(SimGroup);
 
 //-----------------------------------------------------------------------------
 
-SimConsoleEvent::SimConsoleEvent(S32 argc, const char **argv, bool onObject)
+SimConsoleEvent::SimConsoleEvent(S32 argc, KorkApi::ConsoleValue* argv, bool onObject)
 {
    mOnObject = onObject;
    mArgc = argc;
-   U32 totalSize = 0;
-   S32 i;
-   for(i = 0; i < argc; i++)
-      totalSize += dStrlen(argv[i]) + 1;
-   totalSize += sizeof(char *) * argc;
-
-   mArgv = (char **) malloc(totalSize);
-   char *argBase = (char *) &mArgv[argc];
-
-   for(i = 0; i < argc; i++)
+   mArgData.reserve(64);
+   
+   KorkApi::TypeStorageInterface outStorage = {};
+   KorkApi::TypeStorageInterface inArg = {};
+   
+   for (U32 i=0; i<argc; i++)
    {
-      mArgv[i] = argBase;
-      dStrcpy(mArgv[i], argv[i]);
-      argBase += dStrlen(argv[i]) + 1;
+      if (!sVM->initReturnTypeStorage(4096, argv[i].typeId, &outStorage) ||
+          !sVM->initRegisterTypeStorage(1, argv+i, &inArg) ||
+          !sVM->castValue(argv[i].typeId, &inArg, &outStorage, NULL, 0))
+      {
+         mArgv[i] = KorkApi::ConsoleValue();
+         return;
+      }
+      
+      if ((argv[i].typeId == KorkApi::ConsoleValue::TypeInternalString ||
+          argv[i].typeId >= KorkApi::ConsoleValue::TypeBeginCustom) &&
+          argv[i].zoneId != KorkApi::ConsoleValue::ZonePacked)
+      {
+         // Figure out storage required
+         U32 curOffset = (U32)mArgData.size();
+         U32 argSize = outStorage.data.size;
+         mArgData.resize(mArgData.size() + argSize);
+         
+         // Copy data to output
+         void* inData = outStorage.data.storageAddress.evaluatePtr(sVM->getAllocBase());
+         memcpy(&mArgData[curOffset], inData, argSize);
+         mArgData.push_back(0);
+         
+         // Assign type
+         mArgv[i] = KorkApi::ConsoleValue::makeRaw(curOffset, argv[i].typeId);
+      }
+      else
+      {
+         // Just directly copy
+         mArgv[i] = argv[i];
+      }
    }
 }
 
 SimConsoleEvent::~SimConsoleEvent()
 {
-   free(mArgv);
 }
 
 void SimConsoleEvent::process(SimObject* object)
 {
-// #ifdef DEBUG
-//    Con::printf("Executing schedule: %d", sequenceCount);
-// #endif
-    if(mOnObject)
-      Con::execute(object, mArgc, const_cast<const char**>( mArgv ));
+   // #ifdef DEBUG
+   //    Con::printf("Executing schedule: %d", sequenceCount);
+   // #endif
+   
+   // Unpack pointers
+   for (U32 i=0; i<mArgc; i++)
+   {
+      if ((mArgv[i].typeId == KorkApi::ConsoleValue::TypeInternalString ||
+           mArgv[i].typeId >= KorkApi::ConsoleValue::TypeBeginCustom) &&
+          mArgv[i].zoneId != KorkApi::ConsoleValue::ZonePacked)
+      {
+         mArgv[i].cvalue += (U64)mArgData.data();
+      }
+   }
+   
+   if(mOnObject)
+   {
+      Con::execute(object, mArgc, mArgv);
+   }
    else
    {
+      char* funcName = (char*)mArgv[0].evaluatePtr(sVM->getAllocBase());
+      
       // Grab the function name. If '::' doesn't exist, then the schedule is
       // on a global function.
-      char* func = dStrstr( mArgv[0], (char*)"::" );
-      if( func )
+      char* func = strstr(funcName, (char*)"::");
+      if (func)
       {
          // Set the first colon to nullptr, so we can reference the namespace.
          // This is okay because events are deleted immediately after
          // processing. Maybe a bad idea anyway?
          func[0] = '\0';
-
+         
          // Move the pointer forward to the function name.
          func += 2;
          
-         KorkApi::NamespaceId nsId = sVM->findNamespace(sVM->internString(mArgv[0]));
+         KorkApi::NamespaceId nsId = sVM->findNamespace(sVM->internString(funcName));
          if (nsId != 0)
          {
             KorkApi::ConsoleValue localArgv[KorkApi::MaxArgs];
@@ -3426,68 +3469,12 @@ void SimConsoleEvent::process(SimObject* object)
       }
       else
       {
-         KorkApi::ConsoleValue localArgv[KorkApi::MaxArgs];
-         KorkApi::ConsoleValue::convertArgsReverse(mArgc, (const char**)mArgv, localArgv);
          KorkApi::ConsoleValue retV = KorkApi::ConsoleValue();
-         sVM->callNamespaceFunction(sVM->getGlobalNamespace(), sVM->internString(func), mArgc, localArgv, retV);
-         Con::execute(mArgc, const_cast<const char**>( mArgv ));
+         sVM->callNamespaceFunction(sVM->getGlobalNamespace(), sVM->internString(func), mArgc, mArgv, retV);
       }
    }
 }
 
-// END T2D BLOCK
-
-//-----------------------------------------------------------------------------
-
-// BEGIN T2D BLOCK
-
-SimConsoleThreadExecCallback::SimConsoleThreadExecCallback() : retVal(nullptr)
-{
-   sem = Semaphore::createSemaphore(0);
-}
-
-SimConsoleThreadExecCallback::~SimConsoleThreadExecCallback()
-{
-   Semaphore::destroySemaphore(sem);
-}
-
-void SimConsoleThreadExecCallback::handleCallback(const char *ret)
-{
-   retVal = ret;
-   Semaphore::releaseSemaphore(sem);
-}
-
-const char *SimConsoleThreadExecCallback::waitForResult()
-{
-   if(Semaphore::acquireSemaphore(sem, true))
-   {
-      return retVal;
-   }
-
-   return nullptr;
-}
-
-//-----------------------------------------------------------------------------
-
-SimConsoleThreadExecEvent::SimConsoleThreadExecEvent(S32 argc, const char **argv, bool onObject, SimConsoleThreadExecCallback *callback) : 
-   SimConsoleEvent(argc, argv, onObject),
-   cb(callback)
-{
-}
-
-void SimConsoleThreadExecEvent::process(SimObject* object)
-{
-   const char *retVal;
-   if(mOnObject)
-      retVal = Con::execute(object, mArgc, const_cast<const char**>( mArgv ));
-   else
-      retVal = Con::execute(mArgc, const_cast<const char**>( mArgv ));
-
-   if(cb)
-      cb->handleCallback(retVal);
-}
-
-// END T2D BLOCK
 
 
 // BEGIN T2D BLOCK

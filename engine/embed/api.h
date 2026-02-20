@@ -612,6 +612,7 @@ public:
    // Storage helpers
    bool initFixedTypeStorage(void* ptr, U16 typeId, bool isField, TypeStorageInterface* outInterface);
    bool initReturnTypeStorage(U32 minSize, U16 typeId, TypeStorageInterface* outInterface);
+   bool initRegisterTypeStorage(U32 argc, KorkApi::ConsoleValue* argv, TypeStorageInterface* outInterface);
 };
 
 Vm* createVM(Config* cfg);
