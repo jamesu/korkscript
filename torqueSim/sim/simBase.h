@@ -208,6 +208,11 @@ FunctorSimEvent<std::decay_t<F>>* makeFunctorEvent(F&& f)
   return new FunctorSimEvent<std::decay_t<F>>(std::forward<F>(f));
 }
 
+#ifdef TORQUE_MULTITHREAD
+#include <mutex>
+#include <condition_variable>
+#include <functional>
+
 struct SimEventCompletion
 {
   std::mutex m;
@@ -218,8 +223,6 @@ struct SimEventCompletion
    
   SimEventCompletion() : done(false), userData(nullptr) {;}
 };
-
-#ifdef TORQUE_MULTITHREAD
 
 class WaitableLambdaSimEvent final : public SimEvent
 {
