@@ -180,7 +180,7 @@ void AbstractClassRep::registerClassWithVm(KorkApi::Vm* vm)
       mClassInfo.name = vm->internString(mClassName);
       mClassInfo.userPtr = this;
       mClassInfo.numFields = mFieldList.size();
-      mClassInfo.fields = &mFieldList[0];
+      mClassInfo.fields = mFieldList.empty() ? nullptr : &mFieldList[0];
       // Create & Destroy
       mClassInfo.iCreate.CreateClassFn = [](void* user, KorkApi::Vm* vm, KorkApi::CreateClassReturn* outP){
          AbstractClassRep* rep = static_cast<AbstractClassRep*>(user);
