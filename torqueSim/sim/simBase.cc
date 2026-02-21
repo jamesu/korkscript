@@ -1972,11 +1972,11 @@ void SimObject::initPersistFields()
    //registerClassNameFields(); // TGE compat - this should only be allowed on GameBase or ScriptObjectxw
 }
 
-void SimObject::registerClassNameFields()
+void SimObject::registerClassNameFields(bool includeSuper)
 {
    addGroup("Namespace Linking");
+   addField("class",  TypeString,              Offset(mClassName,  SimObject)); // tgemit - compat
    //addProtectedField("superclass", TypeString, Offset(mSuperClassName, SimObject), &setSuperClass, nullptr, &writeSuperclass, "Script Class of object.");
-   //addProtectedField("className",      TypeString, Offset(mClassName,      SimObject), &setClass,      nullptr, &writeClass, "Script SuperClass of object.");
    endGroup("Namespace Linking");
 }
 

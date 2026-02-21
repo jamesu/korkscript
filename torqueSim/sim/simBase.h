@@ -1013,7 +1013,7 @@ public:
     virtual void        dumpClassHierarchy();
 
     static void initPersistFields();
-    static void registerClassNameFields();
+    static void registerClassNameFields(bool includeSuper);
     SimObject* clone( const bool copyDynamicFields );
     virtual void copyTo(SimObject* object);
 

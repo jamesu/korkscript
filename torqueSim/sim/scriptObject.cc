@@ -46,8 +46,7 @@ IMPLEMENT_CONOBJECT(ScriptObject);
 
 void ScriptObject::initPersistFields()
 {
-   addField("class",  TypeString,              Offset(mClassName,  ScriptObject)); // tgemit - compat
-   registerClassNameFields();
+   registerClassNameFields(true);
    Parent::initPersistFields();
 }
 
