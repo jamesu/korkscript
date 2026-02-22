@@ -625,7 +625,7 @@ bool Vm::isNamespaceFunction(NamespaceId nsId, StringTableEntry name)
 {
    VmAllocTLS::Scope memScope(mInternal);
    Namespace* ns = (Namespace*)nsId;
-   return ns->lookup(name) != nullptr;
+   return ns ? (ns->lookup(name) != nullptr) : false;
 }
 
 void Vm::markNamespaceGroup(NamespaceId nsId, StringTableEntry groupName, StringTableEntry usage)
