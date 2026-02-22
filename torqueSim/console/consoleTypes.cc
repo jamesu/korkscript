@@ -1166,6 +1166,7 @@ ConsoleGetType( TypeSimObjectPtr )
 {
    SimObject* valueObject = nullptr;
    SimObjectId value = 0;
+   const char* valueStr = nullptr;
    
    if (inputStorage->isField)
    {
@@ -1183,9 +1184,16 @@ ConsoleGetType( TypeSimObjectPtr )
       }
       else
       {
-         value = (SimObjectId)vmPtr->valueAsInt(inputStorage->data.storageRegister[0]);
+         valueStr = (const char*)vmPtr->valueAsString(inputStorage->data.storageRegister[0]);
       }
-      Sim::findObject(value, valueObject);
+      
+      if (valueStr)
+      {
+         if (Sim::findObject(valueStr, valueObject))
+         {
+            value = valueObject->getId();
+         }
+      }
    }
    
    if (requestedType == KorkApi::ConsoleValue::TypeInternalString)
