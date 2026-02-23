@@ -256,6 +256,7 @@ void SimFiberManager::execFibers(U64 tickAdvance)
 void SimFiberManager::setSuspendMode(U64 flags)
 {
    mUserWaitFiberFlags = flags;
+   recalculateSuspendFlags();
 }
 
 void SimFiberManager::recalculateSuspendFlags()
