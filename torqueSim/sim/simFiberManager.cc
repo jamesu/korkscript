@@ -311,3 +311,78 @@ void SimFiberManager::cleanupFibers()
    }
 }
 
+void SimFiberManager::throwWithMask(U64 fiberMask, U32 catchMask)
+{
+   KorkApi::Vm* vm = getVM();
+   
+   for (S32 i = (S32)mFiberSchedules.size() - 1; i >= 0; --i)
+   {
+      ScheduleInfo &info = mFiberSchedules[i];
+      
+      if (info.fiberId != 0 &&
+          (info.param.flagMask & fiberMask) != 0)
+      {
+         KorkApi::FiberRunResult::State currentState = getVM()->getFiberState(info.fiberId);
+         if (currentState == KorkApi::FiberRunResult::SUSPENDED)
+         {
+            // Now we can throw
+            vm->setCurrentFiber(info.fiberId);
+            vm->throwFiber(catchMask);
+            
+            // Run throw handler now to get it out of the way
+            KorkApi::ConsoleValue inValue = KorkApi::ConsoleValue();
+            KorkApi::FiberRunResult result = vm->resumeCurrentFiber(inValue);
+            
+            // NOTE: technically we should only get suspended here; RUNNING is only possible if
+            // we call execFibers from a fiber which isn't possible.
+            if (result.state != KorkApi::FiberRunResult::SUSPENDED)
+            {
+               vm->cleanupFiber(info.fiberId);
+               info.fiberId = 0;
+               info.waitMode = WAIT_REMOVE;
+            }
+         }
+      }
+   }
+   
+   vm->setCurrentFiberMain();
+}
+
+void SimFiberManager::throwWithObject(SimObjectId objectId, U32 catchMask)
+{
+   KorkApi::Vm* vm = getVM();
+   
+   for (S32 i = (S32)mFiberSchedules.size() - 1; i >= 0; --i)
+   {
+      ScheduleInfo &info = mFiberSchedules[i];
+      
+      if (info.fiberId != 0 &&
+          info.thisId == objectId)
+      {
+         KorkApi::FiberRunResult::State currentState = getVM()->getFiberState(info.fiberId);
+         if (currentState == KorkApi::FiberRunResult::SUSPENDED)
+         {
+            // Now we can throw
+            vm->setCurrentFiber(info.fiberId);
+            vm->throwFiber(catchMask);
+            
+            // Run throw handler now to get it out of the way
+            KorkApi::ConsoleValue inValue = KorkApi::ConsoleValue();
+            KorkApi::FiberRunResult result = vm->resumeCurrentFiber(inValue);
+            
+            // NOTE: technically we should only get suspended here; RUNNING is only possible if
+            // we call execFibers from a fiber which isn't possible.
+            if (result.state != KorkApi::FiberRunResult::SUSPENDED)
+            {
+               vm->cleanupFiber(info.fiberId);
+               info.fiberId = 0;
+               info.waitMode = WAIT_REMOVE;
+            }
+         }
+      }
+   }
+   
+   vm->setCurrentFiberMain();
+}
+
+
