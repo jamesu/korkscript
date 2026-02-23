@@ -1287,6 +1287,11 @@ void VmInternal::setCurrentFiber(FiberId fiber)
    }
 }
 
+bool VmInternal::isFiberMain()
+{
+   return mCurrentFiberState == mFiberStates.mItems[0];
+}
+
 FiberId VmInternal::createFiber(void* userPtr)
 {
    ExprEvalState* newState = New<ExprEvalState>(this);
@@ -2023,6 +2028,11 @@ FiberId Vm::getCurrentFiber()
 {
    VmAllocTLS::Scope memScope(mInternal);
    return mInternal->getCurrentFiber();
+}
+
+bool Vm::isFiberMain()
+{
+   return mInternal->isFiberMain();
 }
 
 void Vm::cleanupFiber(FiberId fiber)

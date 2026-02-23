@@ -149,6 +149,7 @@ struct VmInternal
    // Fiber API
    void setCurrentFiberMain();
    void setCurrentFiber(FiberId fiber);
+   bool isFiberMain();
    FiberId createFiber(void* userPtr); // needs exec too
    ExprEvalState* createFiberPtr(void* userPtr); // needs exec too
    FiberId getCurrentFiber();

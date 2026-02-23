@@ -580,6 +580,7 @@ public:
    void setCurrentFiber(FiberId fiber);
    FiberId createFiber(void* userPtr = nullptr); // needs exec too
    FiberId getCurrentFiber();
+   bool isFiberMain();
    FiberRunResult::State getFiberState(KorkApi::FiberId fid);
    FiberRunResult::State getCurrentFiberState();
    void clearCurrentFiberError();

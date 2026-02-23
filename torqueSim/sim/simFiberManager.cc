@@ -21,6 +21,8 @@ bool SimFiberManager::onAdd()
    mFiberSchedules.clear();
    mFiberGlobalFlags = 0;
    mWaitFiberFlags = 0;
+   mUserWaitFiberFlags = 0;
+   memset(mWaitFlagStack, 0, sizeof(mWaitFlagStack));
 
    return true;
 }
@@ -136,6 +138,7 @@ void SimFiberManager::cleanupFiber(KorkApi::FiberId fid)
       if (getVM()->getFiberState(fid) != KorkApi::FiberRunResult::RUNNING)
       {
          getVM()->cleanupFiber(fid);
+         cleanupFiberSuspendFlags(fid);
          itr->fiberId = 0;
       }
       itr->waitMode = WAIT_REMOVE;
@@ -240,6 +243,7 @@ void SimFiberManager::execFibers(U64 tickAdvance)
       if (result.state != KorkApi::FiberRunResult::SUSPENDED)
       {
          vm->cleanupFiber(info.fiberId);
+         cleanupFiberSuspendFlags(info.fiberId);
          info.fiberId = 0;
          info.waitMode = WAIT_REMOVE;
       }
@@ -251,7 +255,127 @@ void SimFiberManager::execFibers(U64 tickAdvance)
 
 void SimFiberManager::setSuspendMode(U64 flags)
 {
-   mWaitFiberFlags = flags;
+   mUserWaitFiberFlags = flags;
+}
+
+void SimFiberManager::recalculateSuspendFlags()
+{
+   mWaitFiberFlags = 0;
+   for (U32 i=0; i<WaitFlagStackSize; i++)
+   {
+      if (mWaitFlagStack[i].used)
+      {
+         mWaitFiberFlags |= mWaitFlagStack[i].flag;
+      }
+   }
+   mWaitFiberFlags |= mUserWaitFiberFlags;
+}
+
+void SimFiberManager::pushFiberSuspendFlags(U64 flags)
+{
+   if (getVM()->isFiberMain())
+   {
+      // Can't do this on main fiber
+      Con::errorf("Cant push suspend flags on main fiber");
+      return;
+   }
+   KorkApi::FiberId currentFiber = getVM()->getCurrentFiber();
+   
+   WaitFlagStack* availItem = nullptr;
+   for (S32 i=0; i<WaitFlagStackSize; i++)
+   {
+      if (!mWaitFlagStack[i].used)
+      {
+         availItem = mWaitFlagStack + i;
+      }
+      else if (mWaitFlagStack[i].fiberId == currentFiber)
+      {
+         availItem = mWaitFlagStack + i;
+         break;
+      }
+   }
+   
+   if (availItem == nullptr)
+   {
+      Con::errorf("Suspend flag stack overflow, ignoring extra flags");
+   }
+   else if (availItem->stackPos >= WaitFlagFiberStackSize)
+   {
+      Con::errorf("Suspens flag fiber stack overflow, ignoring extra flags");
+      availItem->overflow++;
+   }
+   else
+   {
+      availItem->used = true;
+      availItem->fiberId = currentFiber;
+      availItem->flagStack[availItem->stackPos++] = flags;
+      availItem->flag |= flags;
+      availItem->stackPos++;
+      mWaitFiberFlags |= flags;
+   }
+}
+
+void SimFiberManager::popFiberSuspendFlags(U64 flags)
+{
+   if (getVM()->isFiberMain())
+   {
+      // Can't do this on main fiber
+      Con::errorf("Cant pop suspend flags on main fiber");
+      return;
+   }
+   KorkApi::FiberId currentFiber = getVM()->getCurrentFiber();
+   
+   WaitFlagStack* availItem = nullptr;
+   for (S32 i=0; i<WaitFlagStackSize; i++)
+   {
+      if (mWaitFlagStack[i].used &&
+          mWaitFlagStack[i].fiberId == currentFiber)
+      {
+         availItem = mWaitFlagStack + i;
+      }
+   }
+   
+   if (availItem != nullptr)
+   {
+      if (availItem->overflow > 0)
+      {
+         availItem->overflow--;
+      }
+      else if (availItem->stackPos > 0)
+      {
+         availItem->stackPos--;
+      }
+      else
+      {
+         Con::errorf("Suspend flag stack underoverflow, ignoring extra flags");
+      }
+      
+      if (availItem->stackPos == 0)
+      {
+         memset(availItem, 0, sizeof(WaitFlagStack));
+      }
+      
+      recalculateSuspendFlags();
+   }
+}
+
+void SimFiberManager::cleanupFiberSuspendFlags(KorkApi::FiberId fid)
+{
+   WaitFlagStack* availItem = nullptr;
+   for (S32 i=0; i<WaitFlagStackSize; i++)
+   {
+      if (mWaitFlagStack[i].used &&
+          mWaitFlagStack[i].fiberId == fid)
+      {
+         availItem = mWaitFlagStack + i;
+      }
+   }
+   
+   if (availItem != nullptr)
+   {
+      memset(availItem, 0, sizeof(WaitFlagStack));
+      recalculateSuspendFlags();
+   }
 }
 
 void SimFiberManager::cleanupWithFlags(U64 flags)
@@ -266,6 +390,7 @@ void SimFiberManager::cleanupWithFlags(U64 flags)
          if (getVM()->getFiberState(info.fiberId) != KorkApi::FiberRunResult::RUNNING)
          {
             getVM()->cleanupFiber(info.fiberId);
+            cleanupFiberSuspendFlags(info.fiberId);
             info.fiberId = 0;
          }
          info.waitMode = WAIT_REMOVE;
@@ -285,6 +410,7 @@ void SimFiberManager::cleanupWithObjectId(SimObjectId objectId)
          if (getVM()->getFiberState(info.fiberId) != KorkApi::FiberRunResult::RUNNING)
          {
             getVM()->cleanupFiber(info.fiberId);
+            cleanupFiberSuspendFlags(info.fiberId);
             info.fiberId = 0;
          }
          info.waitMode = WAIT_REMOVE;
@@ -304,6 +430,7 @@ void SimFiberManager::cleanupFibers()
          if (info.fiberId != 0)
          {
             getVM()->cleanupFiber(info.fiberId);
+            cleanupFiberSuspendFlags(info.fiberId);
          }
          mFiberSchedules.erase(mFiberSchedules.begin() + i);
          continue;
@@ -340,6 +467,7 @@ void SimFiberManager::throwWithMask(U64 fiberMask, U32 catchMask)
                vm->cleanupFiber(info.fiberId);
                info.fiberId = 0;
                info.waitMode = WAIT_REMOVE;
+               cleanupFiberSuspendFlags(info.fiberId);
             }
          }
       }
@@ -377,6 +505,7 @@ void SimFiberManager::throwWithObject(SimObjectId objectId, U32 catchMask)
                vm->cleanupFiber(info.fiberId);
                info.fiberId = 0;
                info.waitMode = WAIT_REMOVE;
+               cleanupFiberSuspendFlags(info.fiberId);
             }
          }
       }
