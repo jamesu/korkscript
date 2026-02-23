@@ -568,6 +568,7 @@ ExprEvalState::ExprEvalState(KorkApi::VmInternal* vm): mSTR(&vm->mAllocBase, &vm
    
    mState = KorkApi::FiberRunResult::INACTIVE;
    mUserPtr = nullptr;
+   mLastFiberValue = KorkApi::ConsoleValue();
 }
 
 ExprEvalState::~ExprEvalState()

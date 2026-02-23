@@ -73,6 +73,9 @@ KorkApi::FiberId SimFiberManager::spawnFiber(SimObject* thisObject,
 
    KorkApi::ConsoleValue ret;
 
+   initialInfo.fiberId  = fid;
+   mFiberSchedules.push_back(initialInfo);
+   
    if (thisObject)
    {
       initialInfo.thisId = thisObject->getId();
@@ -302,7 +305,7 @@ void SimFiberManager::pushFiberSuspendFlags(U64 flags)
    }
    else if (availItem->stackPos >= WaitFlagFiberStackSize)
    {
-      Con::errorf("Suspens flag fiber stack overflow, ignoring extra flags");
+      Con::errorf("Suspend flag fiber stack overflow, ignoring extra flags");
       availItem->overflow++;
    }
    else
@@ -311,12 +314,11 @@ void SimFiberManager::pushFiberSuspendFlags(U64 flags)
       availItem->fiberId = currentFiber;
       availItem->flagStack[availItem->stackPos++] = flags;
       availItem->flag |= flags;
-      availItem->stackPos++;
       mWaitFiberFlags |= flags;
    }
 }
 
-void SimFiberManager::popFiberSuspendFlags(U64 flags)
+void SimFiberManager::popFiberSuspendFlags()
 {
    if (getVM()->isFiberMain())
    {

@@ -53,8 +53,8 @@ public:
       FLAG_VISITED = BIT(0),
       // Flag to mark object call
       FLAG_OBJECT = BIT(1),
-      // These flags can never be set from user code
-      STICKY_FLAGS_MASK = BIT(1) | BIT(2) | BIT(3) | BIT(4)
+      // These flags can never be set as wait flags from user code
+      STICKY_FLAGS_MASK = BIT(1) | BIT(2) | BIT(3) | BIT(4) | BIT(5) | BIT(6) | BIT(7)
    };
    
    enum
@@ -109,7 +109,7 @@ public:
    void setSuspendMode(U64 flags);
    void recalculateSuspendFlags();
    void pushFiberSuspendFlags(U64 flags);
-   void popFiberSuspendFlags(U64 flags);
+   void popFiberSuspendFlags();
    void cleanupFiberSuspendFlags(KorkApi::FiberId fid);
    
    void cleanupWithFlags(U64 flags);
