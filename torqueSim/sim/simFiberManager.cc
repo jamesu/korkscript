@@ -72,9 +72,6 @@ KorkApi::FiberId SimFiberManager::spawnFiber(SimObject* thisObject,
    vm->setCurrentFiber(fid);
 
    KorkApi::ConsoleValue ret;
-
-   initialInfo.fiberId  = fid;
-   mFiberSchedules.push_back(initialInfo);
    
    if (thisObject)
    {
