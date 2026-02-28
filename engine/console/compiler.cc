@@ -346,6 +346,7 @@ U32 CompilerIdentTable::addNoAddress(StringTableEntry ste)
       patchEntry->steName = ste;
       patchEntry->offset = index;
       patchEntry->next = nullptr;
+      patchEntry->numInstances = 0;
       
       if (tail == nullptr)
       {

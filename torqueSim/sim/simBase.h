@@ -726,6 +726,9 @@ public:
 
     /// Check if a method exists in the objects current namespace.
     virtual bool isMethod( const char* methodName );
+   
+   /// Get defined namespace of a method
+    StringTableEntry getMethodNamespace( const char* methodName );
     /// @}
 
     /// @name Initialization

@@ -515,6 +515,7 @@ public:
    void addNamespaceFunction(NamespaceId nsId, StringTableEntry name,  BoolFuncCallback, void* userPtr, const char *usage, S32 minArgs, S32 maxArgs);
    void addNamespaceFunction(NamespaceId nsId, StringTableEntry name,  ValueFuncCallback, void* userPtr, const char *usage, S32 minArgs, S32 maxArgs);
    bool isNamespaceFunction(NamespaceId nsId, StringTableEntry name);
+   StringTableEntry getMethodNamespaceName(NamespaceId nsId, StringTableEntry name);
    void markNamespaceGroup(NamespaceId nsId, StringTableEntry groupName, StringTableEntry usage);
 
 

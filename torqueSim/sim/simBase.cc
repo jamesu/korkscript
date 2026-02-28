@@ -1476,6 +1476,23 @@ bool SimObject::isMethod( const char* methodName )
    return false;
 }
 
+//---------------------------------------------------------------------------
+
+StringTableEntry SimObject::getMethodNamespace( const char* methodName )
+{
+   if( !methodName || !methodName[0] )
+      return StringTable->EmptyString;
+
+   StringTableEntry stname = StringTable->insert( methodName );
+
+   if (getVM())
+      return getVM()->getMethodNamespaceName(getNamespace(), stname);
+   
+   return StringTable->EmptyString;
+}
+
+//---------------------------------------------------------------------------
+
 /*! Returns wether the method exists for this object.
  
  @returns true if the method exists; false otherwise
@@ -1486,6 +1503,12 @@ bool SimObject::isMethod( const char* methodName )
 ConsoleMethod(SimObject, isMethod, bool, 3, 3, "string methodName")
 {
    return object->isMethod( argv[2] );
+}
+
+// Function to get the defined namespace of a method
+ConsoleMethod(SimObject, getMethodNamespace, bool, 3, 3, "string methodName")
+{
+   return object->getMethodNamespace( argv[2] );
 }
 
 /*! return the number of static ("built-in") fields.

@@ -361,6 +361,7 @@ void Dictionary::setEntryTypeValue(Dictionary::Entry* e, U32 inputTypeId, KorkAp
       return;
    }
    
+   
    ConsoleVarRef cv;
    cv.dictionary = this;
    cv.var = e;
@@ -368,6 +369,13 @@ void Dictionary::setEntryTypeValue(Dictionary::Entry* e, U32 inputTypeId, KorkAp
    // Setup storage for conversion
    U32 outputTypeId = e->mEnforcedType != 0 ? e->mEnforcedType : inputTypeId;
    KorkApi::TypeStorageInterface outputStorage;
+   
+   if (outputTypeId >= mVm->mTypes.size() ||
+       inputTypeId >= mVm->mTypes.size())
+   {
+      // invalid type
+      return;
+   }
    
    if (!e->mIsRegistered)
    {
@@ -421,6 +429,14 @@ void Dictionary::setEntryValues(Entry* e, U32 argc, KorkApi::ConsoleValue* value
    
    // Setup storage for conversion
    U32 outputTypeId = e->mEnforcedType != 0 ? e->mEnforcedType : KorkApi::ConsoleValue::TypeInternalString;
+   
+   if (outputTypeId >= mVm->mTypes.size())
+   {
+      // invalid type
+      return;
+   }
+   
+   
    KorkApi::TypeStorageInterface outputStorage = KorkApi::CreateConsoleVarTypeStorage(mVm,
                                                                                        cv,
                                                                                        outputTypeId);
