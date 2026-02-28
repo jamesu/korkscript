@@ -69,7 +69,7 @@ namespace Compiler
          return 0;
       else if(file)
       {
-         res->printf(0, "%s (%d): string always evaluates to 0.", file, line);
+         res->printf(0, "%s (%d): string \"%s\" always evaluates to 0.", file, line, str);
          return 0;
       }
       return 0;
@@ -167,7 +167,7 @@ namespace Compiler
       va_list argptr;
       va_start(argptr, fmt);
       char buf[8192];
-      snprintf(buf, sizeof(buf), fmt, argptr);
+      vsnprintf(buf, sizeof(buf), fmt, argptr);
       logFn(level, buf, logUser);
       va_end(argptr);
    }

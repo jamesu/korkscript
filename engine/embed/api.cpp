@@ -1108,6 +1108,8 @@ VmInternal::VmInternal(Vm* vm, Config* cfg) : mGlobalVars(this)
    else
    {
       mCompilerResources = New<Compiler::Resources>();
+      mCompilerResources->logFn = cfg->logFn;
+      mCompilerResources->logUser = cfg->logUser;
       mOwnsResources = true;
    }
 
