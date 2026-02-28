@@ -729,18 +729,18 @@ bool CodeBlock::compileToStream(Stream &st, StringTableEntry fileName, const cha
    
    try
    {
-      astGen.processTokens();
-      rootNode = astGen.parseProgram();
+      if (!astGen.processTokens())
+      {
+         mVM->printf(0, "Invalid token (%s) at %i:%i", lex.toString(astGen.mErrorToken).c_str(), astGen.mErrorToken.pos.line, astGen.mErrorToken.pos.col);
+      }
+      else
+      {
+         rootNode = astGen.parseProgram();
+      }
    }
    catch (SimpleParser::TokenError& e)
    {
       mVM->printf(0, "Error parsing (\"%s\"; token is %s) at %i:%i", e.what(), lex.toString(e.token()).c_str(), e.token().pos.line, e.token().pos.col);
-   }
-   
-   if(!rootNode)
-   {
-      mVM->Delete(this);
-      return "";
    }
    
    if(!rootNode)
@@ -877,7 +877,10 @@ bool CodeBlock::compileToStream(Stream &st, StringTableEntry fileName, const cha
       {
          mVM->printf(0, "Invalid token (%s) at %i:%i", lex.toString(astGen.mErrorToken).c_str(), astGen.mErrorToken.pos.line, astGen.mErrorToken.pos.col);
       }
-      rootNode = astGen.parseProgram();
+      else
+      {
+         rootNode = astGen.parseProgram();
+      }
    }
    catch (SimpleParser::TokenError& e)
    {

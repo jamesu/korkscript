@@ -545,26 +545,32 @@ bool printAST(const char* buf, const char* filename)
       
       try
       {
-         astGen.processTokens();
-         
-         if (gPrintLexer)
+         if (!astGen.processTokens())
          {
-            std::stringbuf buf;
-            astGen.emitTokens(buf);
-            printf("%s\n", buf.str().c_str());
-         }
-         
-         rootNode = astGen.parseProgram();
-         
-         if (gPrintBytecode)
-         {
-            // Convert AST to bytecode
-            printf("== Parser Bytecode ==\n");
-            dumpToInstructionsPrint(res, rootNode);
+            printf("Invalid token (%s) at %i:%i\n", lex.toString(astGen.mErrorToken).c_str(), astGen.mErrorToken.pos.line, astGen.mErrorToken.pos.col);
          }
          else
          {
-            astprint::printTree(rootNode);
+            
+            if (gPrintLexer)
+            {
+               std::stringbuf buf;
+               astGen.emitTokens(buf);
+               printf("%s\n", buf.str().c_str());
+            }
+            
+            rootNode = astGen.parseProgram();
+            
+            if (gPrintBytecode)
+            {
+               // Convert AST to bytecode
+               printf("== Parser Bytecode ==\n");
+               dumpToInstructionsPrint(res, rootNode);
+            }
+            else
+            {
+               astprint::printTree(rootNode);
+            }
          }
       }
       catch (SimpleParser::TokenError& e)
