@@ -267,6 +267,8 @@ namespace Con
    bool isBasePath( const char* SrcPath, const char* pBasePath );
    void ensureTrailingSlash( char* pDstPath, const char* pSrcPath );
    bool stripRepeatSlashes( char* pDstPath, const char* pSrcPath, S32 dstSize );
+
+   bool exec(const char* fileName, bool noCalls=false, bool inJournal=false);
    
    void addPathExpando( const char* pExpandoName, const char* pPath );
    void removePathExpando( const char* pExpandoName );
@@ -577,16 +579,13 @@ namespace Con
              std::enable_if_t<all_console_values_v<Args...>, int> = 0>
    KorkApi::ConsoleValue executef(SimObject* object, const char* funcName, Args&&... args)
    {
-      // +2 because argv[0] and argv[1] are both the function name (Torque method-call convention)
       constexpr S32 argc = 2 + (S32)sizeof...(Args);
 
       KorkApi::ConsoleValue argv[argc];
 
-      // Duplicate function name in [0] and [1] (same behavior as your original varargs version)
       argv[0] = KorkApi::ConsoleValue::makeString(funcName);
       argv[1] = KorkApi::ConsoleValue::makeString(funcName);
 
-      // argv[2..] = provided ConsoleValue args
       S32 i = 2;
       ((argv[i++] = args), ...);
 

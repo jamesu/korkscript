@@ -12,7 +12,7 @@
 bool LinkConsoleFunctions = false;
 
 // Buffer for expanding script filenames.
-static char scriptFilenameBuffer[1024];
+char scriptFilenameBuffer[1024];
 
 extern KorkApi::Vm* sVM;
 
@@ -765,223 +765,17 @@ ConsoleFunctionValue(call, 2, 0, "call(funcName [,args ...])")
    return result;
 }
 
-static U32 execDepth = 0;
-static U32 journalDepth = 1;
-
-ConsoleFunction(exec, bool, 2, 4, "exec(fileName [, nocalls [,journalScript]])")
+ConsoleFunctionValue(exec, 2, 4, "exec(fileName [, nocalls [,journalScript]])")
 {
-   bool journal = false;
-
-   execDepth++;
-   if(journalDepth >= execDepth)
-      journalDepth = execDepth + 1;
-   else
-      journal = true;
-
-   bool noCalls = false;
-   bool ret = false;
-
-   if(argc >= 3 && dAtoi(argv[2]))
-      noCalls = true;
-
-   if(argc >= 4 && dAtoi(argv[3]) && !journal)
-   {
-      journal = true;
-      journalDepth = execDepth;
-   }
-
-   // Determine the filename we actually want...
-   Con::expandScriptFilename(scriptFilenameBuffer, sizeof(scriptFilenameBuffer), argv[1], vmPtr->getCurrentFiberFrameInfo().fullPath);
-
-   const char *ext = dStrrchr(scriptFilenameBuffer, '.');
-
-   if(!ext)
-   {
-      // We need an extension!
-      Con::errorf(ConsoleLogEntry::Script, "exec: invalid script file name %s.", scriptFilenameBuffer);
-      execDepth--;
-      return false;
-   }
-
-   StringTableEntry scriptFileName = vmPtr->internString(scriptFilenameBuffer);
-   StringTableEntry compiledScriptFileName = nullptr;
-
-   // Is this a file we should compile?
-   bool compiled = dStricmp(ext, ".mis") && !journal && !Con::getBoolVariable("Scripts::ignoreDSOs");
-
-   // Ok, we let's try to load and compile the script.
-   bool scriptExists = Platform::isFile(scriptFileName);
-   bool compiledScriptExists = false;
-
-   char nameBuffer[512];
-   char* script = nullptr;
-   U32 scriptSize = 0;
-   U32 version;
-
-   FileStream compiledStream;
-   FileTime comModifyTime, scrModifyTime;
-
-   // If we're supposed to be compiling this file, check to see if there's a DSO
-   if(compiled)
-   {
-      dStrcpyl(nameBuffer, sizeof(nameBuffer), scriptFileName, ".dso", nullptr);
-      compiledScriptFileName = vmPtr->internString(nameBuffer);
-      compiledScriptExists = Platform::isFile(compiledScriptFileName);
-
-      if(compiledScriptExists)
-         Platform::getFileTimes(compiledScriptFileName, nullptr, &comModifyTime);
-      if(scriptExists)
-         Platform::getFileTimes(scriptFileName, nullptr, &scrModifyTime);
-   }
-
-   KorkApi::CompiledBlock loadedBlock = {};
-   KorkApi::CompiledBlock compiledBlock = {};
-
-   // If we had a DSO, let's check to see if we should be reading from it.
-   if(compiled && compiledScriptExists && 
-      (!scriptExists || Platform::compareFileTimes(comModifyTime, scrModifyTime) >= 0))
-   {
-      if (compiledStream.open(nameBuffer, FileStream::Read))
-      {
-         // Check the version!
-         compiledStream.read(&version);
-         if(version != KorkApi::DSOVersion)
-         {
-            Con::warnf("exec: Found an old DSO (%s, ver %d < %d), ignoring.", 
-                       nameBuffer, version, KorkApi::DSOVersion);
-            compiledStream.close();
-         }
-         else
-         {
-            compiledStream.setPosition(0);
-            loadedBlock.size = compiledStream.getStreamSize();
-            loadedBlock.data = (U8*)malloc(loadedBlock.size);
-            compiledStream.read(loadedBlock.size, loadedBlock.data);
-         }
-      }
-   }
-
-   if(scriptExists && compiledStream.getStatus() == Stream::Closed)
-   {
-      // If we have source but no compiled version, then we need to compile
-      // (and journal as we do so, if that's required).
-
-      FileStream s;
-
-      if(s.open(scriptFileName, FileStream::Read))
-      {
-         scriptSize = s.getStreamSize();
-         script = new char [scriptSize+1];
-         s.read(scriptSize, script);
-
-         s.close();
-         script[scriptSize] = 0;
-      }
-
-      if (!scriptSize || !script)
-      {
-         delete [] script;
-         Con::errorf(ConsoleLogEntry::Script, "exec: invalid script file %s.", scriptFileName);
-         execDepth--;
-         return false;
-      }
-
-      if(compiled)
-      {
-         // compile this baddie.
-         Con::printf("Compiling %s...", scriptFileName);
-
-         bool errorCond = true;
-
-         if (vmPtr->compileCodeBlock(script, scriptFileName, &compiledBlock))
-         {
-            errorCond = false;
-            if (compiledStream.open(nameBuffer, FileStream::Write))
-            {
-               compiledStream.write(compiledBlock.size, compiledBlock.data);
-               compiledStream.close();
-            }
-            else
-            {
-               Con::errorf("Couldn't write compiled codeblock %s", nameBuffer);
-            }
-         }
-
-         if (errorCond)
-         {
-            // We have to exit out here, as otherwise we get double error reports.
-            delete [] script;
-            execDepth--;
-
-            if (compiledBlock.data)
-            {
-               vmPtr->freeCompiledBlock(compiledBlock);
-               compiledBlock = {};
-            }
-            return false;
-         }
-      }
-   }
-
-   KorkApi::CompiledBlock* correctBlock = compiledBlock.data ? &compiledBlock : &loadedBlock;
-
-   if (correctBlock->data)
-   {
-      // Delete the script object first to limit memory used
-      // during recursive execs.
-      delete [] script;
-      script = 0;
-
-      // We're all compiled, so let's run it.
-      Con::printf("Loading compiled script %s.", scriptFileName);
-      vmPtr->execCodeBlock(correctBlock->size, correctBlock->data, scriptFileName, "", noCalls, 0);
-      vmPtr->clearCurrentFiberError();
-
-      vmPtr->freeCompiledBlock(*correctBlock);
-      *correctBlock = {};
-      ret = true;
-   }
-   else if(script)
-   {
-      // No compiled script,  let's just try executing it
-      // directly... this is either a mission file, or maybe
-      // we're on a readonly volume.
-      Con::printf("Executing %s.", scriptFileName);
-
-      if (vmPtr->compileCodeBlock(script, scriptFileName, &compiledBlock))
-      {
-         vmPtr->execCodeBlock(compiledBlock.size, compiledBlock.data, scriptFileName, "", noCalls, 0);
-         vmPtr->clearCurrentFiberError();
-         vmPtr->freeCompiledBlock(compiledBlock);
-         compiledBlock = {};
-         ret = true;
-      }
-   }
-   else
-   {
-      // Don't have anything.
-      Con::warnf(ConsoleLogEntry::Script, "Missing file: %s!", scriptFileName);
-      ret = false;
-   }
-
-   // This is likely not needed, but here just in case someone screws up
-   if (loadedBlock.data)
-   {
-      free(loadedBlock.data);
-   }
-   if (compiledBlock.data)
-   {
-      vmPtr->freeCompiledBlock(compiledBlock);
-   }
-
-   delete [] script;
-   execDepth--;
-   return ret;
+   bool journal = argc > 3 ? vmPtr->valueAsBool(argv[3]) : false;
+   bool noCalls = argc > 2 ? vmPtr->valueAsBool(argv[2]) : false;
+   const char* fileName = vmPtr->valueAsString(argv[1]);
+   
+   return KorkApi::ConsoleValue::makeUnsigned(Con::exec(fileName, noCalls, journal));
 }
 
 ConsoleFunction(eval, const char *, 2, 2, "eval(consoleString)")
 {
-   argc;
    const char* returnValue = Con::evaluate(argv[1], false, nullptr);
    vmPtr->clearCurrentFiberError();
    return returnValue;
