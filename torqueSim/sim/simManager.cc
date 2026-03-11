@@ -387,7 +387,7 @@ SimObject* findObject(KorkApi::ConsoleValue cv)
 {
    if (cv.isFloat() || cv.isUnsigned())
    {
-      return findObject(cv.getInt());
+      return findObject(cv.quickCastToNumeric());
    }
    else
    {
@@ -395,6 +395,10 @@ SimObject* findObject(KorkApi::ConsoleValue cv)
       if (str && *str)
       {
          return findObject(str);
+      }
+      else
+      {
+         return nullptr;
       }
    }
 }
