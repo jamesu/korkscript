@@ -335,7 +335,7 @@ static VMObject* Enum_GetAtIndexThunk(VMObject* object, U32 index);
 // iCustomFields
 //
 
-static ConsoleValue CF_GetFieldByNameThunk(Vm* vm, VMObject* object, const char* name);
+static ConsoleValue CF_GetFieldByNameThunk(Vm* vm, VMObject* object, const char* name, KorkApi::ConsoleValue array);
 static void CF_SetFieldByNameThunk(Vm* vm, VMObject* object, const char* name, const char* array, ConsoleValue value);
 
 //
@@ -1239,7 +1239,7 @@ static VMObject* Enum_GetAtIndexThunk(VMObject* object, U32 index)
 // iCustomFields
 //
 
-static ConsoleValue CF_GetFieldByNameThunk(Vm* vm, VMObject* object, const char* name)
+static ConsoleValue CF_GetFieldByNameThunk(Vm* vm, VMObject* object, const char* name, KorkApi::ConsoleValue array)
 {
    ConsoleValue cv;
    auto* ob = static_cast<ObjBinding*>(object ? object->userPtr : nullptr);

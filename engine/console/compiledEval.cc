@@ -1412,7 +1412,7 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
             if(frame.curObject)
             {
                typeId = frame.codeBlock->getRealTypeID((U16)typeId);
-               frame.curObject->klass->iCustomFields.SetCustomFieldType(vmPublic, frame.curObject, frame.curField, frame.curFieldArray, typeId);
+               frame.curObject->klass->iCustomFields.SetCustomFieldType(vmPublic, frame.curObject, frame.curField, KorkApi::ConsoleValue::makeString(frame.curFieldArray), typeId);
             }
             
             break;

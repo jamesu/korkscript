@@ -225,6 +225,33 @@ ConsoleValue Vm::castToReturn(U32 argc, KorkApi::ConsoleValue* argv, U32 inputTy
    }
 }
 
+bool Vm::castToField(U32 argc, KorkApi::ConsoleValue* argv, void* outPtr, U32 inputTypeId, U32 outputTypeId)
+{
+   VmAllocTLS::Scope memScope(mInternal);
+   KorkApi::TypeStorageInterface inputStorage = KorkApi::CreateRegisterStorageFromArgs(mInternal, argc, argv);
+   
+   KorkApi::TypeStorageInterface outputStorage = KorkApi::CreateFixedTypeStorage(mInternal,
+                                                                                       outPtr,
+                                                                                          outputTypeId,
+                                                                                 true);
+
+   // NOTE: types should set head of stack to value if data pointer is nullptr in this case
+   if (mInternal->mTypes[outputTypeId].iFuncs.CastValueFn(mInternal->mTypes[outputTypeId].userPtr,
+                                           this,
+                                                    &inputStorage,
+                                                    &outputStorage,
+                                                    nullptr,
+                                                    0,
+                                                    outputTypeId))
+   {
+      return true;
+   }
+   else
+   {
+      return false;
+   }
+}
+
 ClassId Vm::registerClass(ClassInfo& info)
 {
    VmAllocTLS::Scope memScope(mInternal);
@@ -300,18 +327,18 @@ ClassId Vm::registerClass(ClassInfo& info)
    }
    if (chkFunc.iCustomFields.GetFieldByName == nullptr)
    {
-      chkFunc.iCustomFields.GetFieldByName = [](KorkApi::Vm* vm, VMObject* object, const char* name){
+      chkFunc.iCustomFields.GetFieldByName = [](KorkApi::Vm* vm, VMObject* object, const char* name, ConsoleValue array){
          return ConsoleValue();
       };
    }
    if (chkFunc.iCustomFields.SetCustomFieldByName == nullptr)
    {
-      chkFunc.iCustomFields.SetCustomFieldByName = [](KorkApi::Vm* vm, VMObject* object, const char* name, const char* array, U32 argc, ConsoleValue* argv){
+      chkFunc.iCustomFields.SetCustomFieldByName = [](KorkApi::Vm* vm, VMObject* object, const char* name, ConsoleValue array, U32 argc, ConsoleValue* argv){
       };
    }
    if (chkFunc.iCustomFields.SetCustomFieldType == nullptr)
    {
-      chkFunc.iCustomFields.SetCustomFieldType = [](KorkApi::Vm* vm, VMObject* object, const char* name, const char* array, U32 typeId){
+      chkFunc.iCustomFields.SetCustomFieldType = [](KorkApi::Vm* vm, VMObject* object, const char* name, ConsoleValue array, U32 typeId){
          return false;
       };
    }
@@ -1557,7 +1584,7 @@ bool VmInternal::setObjectFieldTuple(VMObject* obj, StringTableEntry fieldName, 
 
    if ((obj->flags & KorkApi::ModDynamicFields) != 0)
    {
-      obj->klass->iCustomFields.SetCustomFieldByName(mVM, obj, fieldName, valueAsString(arrayIndex), argc, argv);
+      obj->klass->iCustomFields.SetCustomFieldByName(mVM, obj, fieldName, arrayIndex, argc, argv);
       return true;
    }
    
@@ -1614,7 +1641,7 @@ ConsoleValue VmInternal::getObjectField(VMObject* obj, StringTableEntry name, Ko
       // Add requested type
       if ((requestedType & KorkApi::TypeDirectCopy) != 0)
       {
-         requestedType |= f.type;
+         requestedType = f.type;
       }
 
       TypeStorageInterface outputStorage = KorkApi::CreateExprEvalReturnTypeStorage(this, 0, 0);
@@ -1643,7 +1670,7 @@ ConsoleValue VmInternal::getObjectField(VMObject* obj, StringTableEntry name, Ko
    }
 
    // Try dynamic fields
-   return obj->klass->iCustomFields.GetFieldByName(mVM, obj, name);
+   return obj->klass->iCustomFields.GetFieldByName(mVM, obj, name, array);
 }
 
 U16 VmInternal::getObjectFieldType(VMObject* obj, StringTableEntry name, KorkApi::ConsoleValue array)
