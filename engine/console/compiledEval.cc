@@ -54,6 +54,13 @@ struct LocalRefTrack
    KorkApi::VMObject* obj;
 
    LocalRefTrack(KorkApi::VmInternal* _vm) : vm(_vm), obj(nullptr) {;}
+   LocalRefTrack(const LocalRefTrack& other)
+       : vm(other.vm), obj(other.obj)
+   {
+       if (obj)
+           vm->incVMRef(obj);
+   }
+   
    ~LocalRefTrack()
    {
       if (obj)
@@ -93,7 +100,7 @@ struct LocalRefTrack
    operator KorkApi::VMObject*() const { return obj; }
    explicit operator bool() const { return obj != nullptr; }
    
-   bool isValid()
+   bool isValid() const
    {
       return obj;
    }
