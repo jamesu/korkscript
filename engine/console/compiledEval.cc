@@ -2414,7 +2414,7 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
             }
             else
             {
-               KorkApi::ConsoleValue cv = KorkApi::ConsoleValue::makeUnsigned(evalState.floatStack[frame._UINT--]);
+               KorkApi::ConsoleValue cv = KorkApi::ConsoleValue::makeUnsigned(evalState.intStack[frame._UINT--]);
                evalState.mSTR.setConsoleValue(vmInternal, cv);
             }
             break;
