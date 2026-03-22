@@ -478,12 +478,12 @@ ConsoleValue VmInternal::getTypeInZone(U16 zone, TypeId typeId, U32 heapSize)
    U32 size = mTypes[typeId].valueSize == UINT_MAX ? heapSize : mTypes[typeId].valueSize;
    if (zone == ConsoleValue::ZoneReturn)
    {
-      return getStringReturnBuffer(size);
+      return getTypeReturn(typeId, heapSize);
    }
    else if (zone >= ConsoleValue::ZoneFiberStart)
    {
       U16 fiberId = (zone - ConsoleValue::ZoneFiberStart) >> 1;
-      return getStringFuncBuffer(fiberId, size);
+      return getTypeFunc(fiberId, typeId, heapSize);
    }
    else
    {
@@ -524,7 +524,7 @@ ConsoleValue VmInternal::getTypeReturn(TypeId typeId, U32 heapSize)
    KorkApi::ConsoleValue ret;
    U32 size = mTypes[typeId].valueSize == UINT_MAX ? heapSize : mTypes[typeId].valueSize;
    validateReturnBufferSize(size);
-   ret.setTyped(0, KorkApi::ConsoleValue::TypeInternalString, KorkApi::ConsoleValue::ZoneReturn);
+   ret.setTyped(0, typeId, KorkApi::ConsoleValue::ZoneReturn);
    return ret;
 }
 
@@ -2305,5 +2305,3 @@ void  freeBytes(void* p)
 
 
 } // namespace KorkApi
-
-

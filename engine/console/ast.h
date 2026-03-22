@@ -517,6 +517,7 @@ struct FuncCallExprNode : ExprNode
   
    U32 compile(CodeStream &codeStream, U32 ip, TypeReq type);
    TypeReq getPreferredType();
+   TypeReq getReturnLoadType();
    bool canBeTyped();
    DBG_STMT_TYPE(FuncCallExprNode);
 };

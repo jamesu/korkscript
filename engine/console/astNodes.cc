@@ -1493,14 +1493,24 @@ U32 FuncCallExprNode::compile(CodeStream &codeStream, U32 ip, TypeReq type)
    codeStream.emitSTE(nameSpace);
    
    codeStream.emit(callType | (callNumber << 16));
-   if(type != TypeReqString)
-      emitStackConversion(codeStream, TypeReqString, type);
+
+   TypeReq returnLoadType = getReturnLoadType();
+   if (returnLoadType == TypeReqNone)
+      returnLoadType = TypeReqString;
+
+   if (type != returnLoadType)
+      emitStackConversion(codeStream, returnLoadType, type);
    return codeStream.tell();
 }
 
 TypeReq FuncCallExprNode::getPreferredType()
 {
    return TypeReqString;
+}
+
+TypeReq FuncCallExprNode::getReturnLoadType()
+{
+   return disableTypes ? TypeReqString : TypeReqTypedString;
 }
 
 bool FuncCallExprNode::canBeTyped()
