@@ -178,7 +178,7 @@ void Dictionary::remove(Dictionary::Entry *ent)
    
    *walk = (ent->nextEntry);
    clearEntry(ent);
-   delete ent;
+   mVm->Delete(ent);
    mHashTable->count--;
 }
 
@@ -219,8 +219,8 @@ Dictionary::~Dictionary()
    if ( mHashTable->owner == this )
    {
       reset();
-      delete [] mHashTable->data;
-      delete mHashTable;
+      mVm->DeleteArray(mHashTable->data);
+      mVm->Delete(mHashTable);
    }
 }
 
@@ -236,7 +236,7 @@ void Dictionary::reset()
       {
          temp = walk->nextEntry;
          clearEntry(walk);
-         delete walk;
+         mVm->Delete(walk);
          walk = temp;
       }
       mHashTable->data[i] = nullptr;

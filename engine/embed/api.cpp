@@ -1268,9 +1268,7 @@ VmInternal::VmInternal(Vm* vm, Config* cfg) : mGlobalVars(this)
 
 VmInternal::~VmInternal()
 {
-   ExprEvalState* mCurrentFiberState;
-   InternalFiberList mFiberStates;
-   ClassChunker<ExprEvalState> mFiberAllocator;
+   mGlobalVars.reset();
 
    Delete(mAllocBase.func);
    
@@ -1293,9 +1291,11 @@ VmInternal::~VmInternal()
    mFiberStates.clear();
    mFiberAllocator.freeBlocks();
 
-   for (ConsoleHeapAlloc* alloc = mHeapAllocs; alloc; alloc = alloc->next)
+   for (ConsoleHeapAlloc* alloc = mHeapAllocs; alloc; )
    {
+      ConsoleHeapAlloc* next = alloc->next;
       mConfig.freeFn(alloc, mConfig.allocUser);
+      alloc = next;
    }
    mHeapAllocs = nullptr;
 
