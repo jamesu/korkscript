@@ -2315,7 +2315,7 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
             break;
          case OP_LOADFIELD_TYPED:
             // field -> typed
-            tmpVal = vmInternal->getObjectField(frame.curObject, frame.curField, KorkApi::ConsoleValue::makeString(frame.curFieldArray), KorkApi::ConsoleValue::TypeInternalUnsigned, KorkApi::ConsoleValue::ZoneFunc);
+            tmpVal = vmInternal->getObjectField(frame.curObject, frame.curField, KorkApi::ConsoleValue::makeString(frame.curFieldArray), KorkApi::TypeDirectCopy, KorkApi::ConsoleValue::ZoneFunc);
             evalState.mSTR.setConsoleValue(vmInternal, tmpVal);
             break;
          case OP_SAVEVAR_TYPED:

@@ -741,21 +741,6 @@ ConsoleFunctionGroupEnd( Output );
 
 //----------------------------------------------------------------
 
-ConsoleFunction(quit, void, 1, 1, "quit() End execution of Torque.")
-{
-   argc; argv;
-   Platform::postQuitMessage(0);
-}
-
-ConsoleFunction(quitWithErrorMessage, void, 2, 2, "quitWithErrorMessage(msg)"
-                " - Quit, showing the provided error message. This is equivalent"
-                " to an AssertISV.")
-{
-   AssertISV(false, argv[1]);
-}
-
-//----------------------------------------------------------------
-
 ConsoleFunctionGroupBegin(MetaScripting, "Functions that let you manipulate the scripting engine programmatically.");
 
 ConsoleFunctionValue(call, 2, 0, "call(funcName [,args ...])")
