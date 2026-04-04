@@ -1397,33 +1397,6 @@ void VmInternal::throwFiber(U32 mask)
    mCurrentFiberState->throwMask(mask);
 }
 
-bool Vm::currentFiberHasExceptionHandler(U32 mask)
-{
-   VmAllocTLS::Scope memScope(mInternal);
-   ExprEvalState* evalState = mInternal->mCurrentFiberState;
-   if (evalState == nullptr || evalState->vmFrames.size() == 0)
-   {
-      return false;
-   }
-
-   ConsoleFrame& frame = evalState->getCurrentFrame();
-   for (S32 i = frame._TRY - 1; i >= 0; --i)
-   {
-      ExprEvalState::TryItem& item = evalState->tryStack[i];
-      if ((S32)item.frameDepth <= evalState->getMinStackDepth())
-      {
-         break;
-      }
-
-      if ((mask & item.mask) != 0)
-      {
-         return true;
-      }
-   }
-
-   return false;
-}
-
 S32 Vm::getCurrentFiberFrameDepth()
 {
    return mInternal->mCurrentFiberState ? mInternal->mCurrentFiberState->vmFrames.size()-1 : -1;

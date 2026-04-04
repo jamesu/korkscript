@@ -4073,5 +4073,33 @@ bool KorkApi::Vm::enumLocals(void* userPtr, EnumFuncCallback callback, S32 frame
    return true;
 }
 
+
+bool KorkApi::Vm::currentFiberHasExceptionHandler(U32 mask)
+{
+   VmAllocTLS::Scope memScope(mInternal);
+   ExprEvalState* evalState = mInternal->mCurrentFiberState;
+   if (evalState == nullptr || evalState->vmFrames.size() == 0)
+   {
+      return false;
+   }
+
+   ConsoleFrame& frame = evalState->getCurrentFrame();
+   for (S32 i = frame._TRY - 1; i >= 0; --i)
+   {
+      ExprEvalState::TryItem& item = evalState->tryStack[i];
+      if ((S32)item.frameDepth <= evalState->getMinStackDepth())
+      {
+         break;
+      }
+
+      if ((mask & item.mask) != 0)
+      {
+         return true;
+      }
+   }
+
+   return false;
+}
+
 //------------------------------------------------------------
 
