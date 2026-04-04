@@ -92,6 +92,7 @@ public:
 	U64 mFiberGlobalFlags;
    U64 mWaitFiberFlags;
    U64 mUserWaitFiberFlags;
+   U64 mThrowResumeGuardFlags;
 	U64 mNowTick;
    WaitFlagStack mWaitFlagStack[WaitFlagStackSize];
 
@@ -107,6 +108,7 @@ public:
 	void execFibers(U64 tickAdvance);
    
    void setSuspendMode(U64 flags);
+   void setThrowResumeGuardFlags(U64 flags);
    void recalculateSuspendFlags();
    void pushFiberSuspendFlags(U64 flags);
    void popFiberSuspendFlags();

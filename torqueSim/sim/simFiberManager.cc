@@ -5,7 +5,7 @@
 IMPLEMENT_CONOBJECT(SimFiberManager);
 
 SimFiberManager::SimFiberManager()
-   : mFiberGlobalFlags(0), mNowTick(0)
+   : mFiberGlobalFlags(0), mWaitFiberFlags(0), mUserWaitFiberFlags(0), mThrowResumeGuardFlags(0), mNowTick(0)
 {
 }
 
@@ -22,6 +22,7 @@ bool SimFiberManager::onAdd()
    mFiberGlobalFlags = 0;
    mWaitFiberFlags = 0;
    mUserWaitFiberFlags = 0;
+   mThrowResumeGuardFlags = 0;
    memset(mWaitFlagStack, 0, sizeof(mWaitFlagStack));
 
    return true;
@@ -51,6 +52,7 @@ void SimFiberManager::initPersistFields()
 {
    Parent::initPersistFields();
    addField("flags", TypeS32, Offset(mFiberGlobalFlags, SimFiberManager));
+   addField("throwResumeGuardFlags", TypeS32, Offset(mThrowResumeGuardFlags, SimFiberManager));
 }
 
 KorkApi::FiberId SimFiberManager::spawnFiber(SimObject* thisObject,
@@ -257,6 +259,11 @@ void SimFiberManager::setSuspendMode(U64 flags)
 {
    mUserWaitFiberFlags = flags;
    recalculateSuspendFlags();
+}
+
+void SimFiberManager::setThrowResumeGuardFlags(U64 flags)
+{
+   mThrowResumeGuardFlags = flags;
 }
 
 void SimFiberManager::recalculateSuspendFlags()
@@ -551,6 +558,16 @@ void SimFiberManager::throwWithSuspendFlags(U32 catchMask)
       KorkApi::FiberId thrownFiberId = info.fiberId;
       vm->setCurrentFiber(thrownFiberId);
       vm->throwFiber(catchMask);
+
+      const bool isScheduleWait = (info.waitMode == WAIT_FLAGS ||
+                                   info.waitMode == WAIT_FLAGS_CLEAR ||
+                                   info.waitMode == WAIT_LOCAL_CLEAR) &&
+                                  (info.param.flagMask & mThrowResumeGuardFlags) != 0;
+      if (isScheduleWait &&
+          !vm->currentFiberHasExceptionHandler(catchMask))
+      {
+         break;
+      }
 
       KorkApi::ConsoleValue inValue = KorkApi::ConsoleValue();
       KorkApi::FiberRunResult result = vm->resumeCurrentFiber(inValue);

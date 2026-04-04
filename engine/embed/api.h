@@ -590,6 +590,7 @@ public:
    void cleanupFiber(FiberId fiber);
    void suspendCurrentFiber();
    void throwFiber(U32 mask);
+   bool currentFiberHasExceptionHandler(U32 mask);
    bool getCurrentFiberFileLine(StringTableEntry* outFile, U32* outLine);
    FiberRunResult resumeCurrentFiber(ConsoleValue value);
    S32 getCurrentFiberFrameDepth();
