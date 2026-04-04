@@ -198,8 +198,8 @@ void AbstractClassRep::registerClassWithVm(KorkApi::Vm* vm)
       };
       mClassInfo.iCreate.RemoveObjectFn = [](void* user, KorkApi::Vm* vm, KorkApi::VMObject* object){
          AbstractClassRep* rep = static_cast<AbstractClassRep*>(user);
-         ConsoleObject* consoleObject = rep->create();
-         SimObject* simObject = dynamic_cast<SimObject*>(consoleObject);
+         ConsoleObject* obj = static_cast<ConsoleObject*>(object->userPtr);
+         SimObject* simObject = dynamic_cast<SimObject*>(obj);
          simObject->unregisterObject();
       };
       mClassInfo.iCreate.ProcessArgsFn = [](KorkApi::Vm* vm, void* createdPtr, const char* name, bool isDatablock, bool internalName, int argc, const char** argv){

@@ -203,7 +203,7 @@ public:
       , scopePackage( nullptr )
       , scopeNamespace( nullptr )
       , codeBlock( nullptr )
-      , thisObject( nullptr )
+      , thisObject( vm )
       , ip( 0 )
       , dynTypeId( 0 )
       , _FLT(0)
@@ -4102,4 +4102,3 @@ bool KorkApi::Vm::currentFiberHasExceptionHandler(U32 mask)
 }
 
 //------------------------------------------------------------
-
