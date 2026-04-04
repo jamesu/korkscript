@@ -685,7 +685,8 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
       }
    };
    
-   lastThrow = 0;
+   lastThrow = nextThrow;
+   nextThrow = 0;
 
    bool checkExtraStack = true;
    KorkApi::ConsoleValue tmpVal = KorkApi::ConsoleValue();
@@ -2782,7 +2783,7 @@ bool ExprEvalState::handleThrow(S32 throwIdx, TryItem* info, S32 minStackPos)
 
 void ExprEvalState::throwMask(U32 mask)
 {
-   lastThrow = mask; // should get caught by loop setup
+   lastThrow = nextThrow = mask; // should get caught by loop setup
    
    if (traceOn)
    {

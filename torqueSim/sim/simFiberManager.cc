@@ -452,8 +452,9 @@ void SimFiberManager::throwWithMask(U64 fiberMask, U32 catchMask)
          KorkApi::FiberRunResult::State currentState = getVM()->getFiberState(info.fiberId);
          if (currentState == KorkApi::FiberRunResult::SUSPENDED)
          {
+            KorkApi::FiberId thrownFiberId = info.fiberId;
             // Now we can throw
-            vm->setCurrentFiber(info.fiberId);
+            vm->setCurrentFiber(thrownFiberId);
             vm->throwFiber(catchMask);
             
             // Run throw handler now to get it out of the way
@@ -464,10 +465,10 @@ void SimFiberManager::throwWithMask(U64 fiberMask, U32 catchMask)
             // we call execFibers from a fiber which isn't possible.
             if (result.state != KorkApi::FiberRunResult::SUSPENDED)
             {
-               vm->cleanupFiber(info.fiberId);
+               vm->cleanupFiber(thrownFiberId);
                info.fiberId = 0;
                info.waitMode = WAIT_REMOVE;
-               cleanupFiberSuspendFlags(info.fiberId);
+               cleanupFiberSuspendFlags(thrownFiberId);
             }
          }
       }
@@ -490,8 +491,9 @@ void SimFiberManager::throwWithObject(SimObjectId objectId, U32 catchMask)
          KorkApi::FiberRunResult::State currentState = getVM()->getFiberState(info.fiberId);
          if (currentState == KorkApi::FiberRunResult::SUSPENDED)
          {
+            KorkApi::FiberId thrownFiberId = info.fiberId;
             // Now we can throw
-            vm->setCurrentFiber(info.fiberId);
+            vm->setCurrentFiber(thrownFiberId);
             vm->throwFiber(catchMask);
             
             // Run throw handler now to get it out of the way
@@ -502,10 +504,10 @@ void SimFiberManager::throwWithObject(SimObjectId objectId, U32 catchMask)
             // we call execFibers from a fiber which isn't possible.
             if (result.state != KorkApi::FiberRunResult::SUSPENDED)
             {
-               vm->cleanupFiber(info.fiberId);
+               vm->cleanupFiber(thrownFiberId);
                info.fiberId = 0;
                info.waitMode = WAIT_REMOVE;
-               cleanupFiberSuspendFlags(info.fiberId);
+               cleanupFiberSuspendFlags(thrownFiberId);
             }
          }
       }
@@ -514,4 +516,53 @@ void SimFiberManager::throwWithObject(SimObjectId objectId, U32 catchMask)
    vm->setCurrentFiberMain();
 }
 
+void SimFiberManager::throwWithSuspendFlags(U32 catchMask)
+{
+   KorkApi::Vm* vm = getVM();
+   WaitFlagStack* topItem = nullptr;
 
+   for (S32 i = 0; i < WaitFlagStackSize; ++i)
+   {
+      if (mWaitFlagStack[i].used)
+      {
+         topItem = mWaitFlagStack + i;
+      }
+   }
+
+   if (topItem == nullptr)
+   {
+      vm->setCurrentFiberMain();
+      return;
+   }
+
+   for (S32 i = (S32)mFiberSchedules.size() - 1; i >= 0; --i)
+   {
+      ScheduleInfo &info = mFiberSchedules[i];
+      if (info.fiberId != topItem->fiberId)
+      {
+         continue;
+      }
+
+      if (vm->getFiberState(info.fiberId) != KorkApi::FiberRunResult::SUSPENDED)
+      {
+         continue;
+      }
+
+      KorkApi::FiberId thrownFiberId = info.fiberId;
+      vm->setCurrentFiber(thrownFiberId);
+      vm->throwFiber(catchMask);
+
+      KorkApi::ConsoleValue inValue = KorkApi::ConsoleValue();
+      KorkApi::FiberRunResult result = vm->resumeCurrentFiber(inValue);
+      if (result.state != KorkApi::FiberRunResult::SUSPENDED)
+      {
+         vm->cleanupFiber(thrownFiberId);
+         info.fiberId = 0;
+         info.waitMode = WAIT_REMOVE;
+         cleanupFiberSuspendFlags(thrownFiberId);
+      }
+      break;
+   }
+
+   vm->setCurrentFiberMain();
+}

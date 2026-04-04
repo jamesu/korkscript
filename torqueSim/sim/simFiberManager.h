@@ -115,14 +115,14 @@ public:
    void cleanupWithFlags(U64 flags);
    void cleanupWithObjectId(SimObjectId objectId);
    
-	void cleanupFibers();
+   void cleanupFibers();
 	void cleanupFiber(KorkApi::FiberId fid);
    
    void throwWithMask(U64 fiberMask, U32 catchMask);
    void throwWithObject(SimObjectId objectId, U32 catchMask);
+   void throwWithSuspendFlags(U32 catchMask);
    
    inline U64 getCurrentTick() { return mNowTick; }
 
 	DECLARE_CONOBJECT(SimFiberManager);
 };
-

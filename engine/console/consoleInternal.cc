@@ -568,6 +568,7 @@ ExprEvalState::ExprEvalState(KorkApi::VmInternal* vm): mSTR(&vm->mAllocBase, &vm
    traceOn = false;
    traceBuffer[0] = '\0';
    lastThrow = 0;
+   nextThrow = 0;
    mStackPopBreakIndex = -1;
    
    memset(iterStack, 0, sizeof(iterStack));
