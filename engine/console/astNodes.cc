@@ -2218,6 +2218,13 @@ U32 TupleExprNode::compile(CodeStream &codeStream, U32 ip, TypeReq type)
             case TypeReqTypedString:
                codeStream.emit(OP_PUSH_TYPED);
                break;
+            case TypeReqVar:
+               codeStream.emit(OP_PUSH_VAR);
+               break;
+            case TypeReqField:
+               codeStream.emit(OP_LOADFIELD_TYPED);
+               codeStream.emit(OP_PUSH_TYPED);
+               break;
             default:
                codeStream.emit(OP_PUSH);
                break;
