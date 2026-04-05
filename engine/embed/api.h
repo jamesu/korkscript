@@ -215,8 +215,41 @@ typedef S32 ClassId;
 
 typedef void (*ConsumerCallback)(U32 level, const char *consoleLine, void* userPtr);
 typedef U32 (*AddTaggedStringCallback)(const char* vmString, void* userPtr);
+enum NamespaceEntryKind
+{
+   NamespaceEntryInvalid,
+   NamespaceEntryFunction,
+   NamespaceEntrySignal,
+   NamespaceEntryGroup
+};
 
-typedef void(*NamespaceEnumerationCallback)(void* userPtr, StringTableEntry funcName, const char* usage);
+struct NamespaceInfo
+{
+   NamespaceId nsId;
+   StringTableEntry name;
+   StringTableEntry package;
+   NamespaceId parentId;
+   StringTableEntry parentName;
+   const char* usage;
+   void* userPtr;
+};
+
+struct NamespaceEntryInfo
+{
+   NamespaceId ownerNamespaceId;
+   StringTableEntry ownerNamespaceName;
+   StringTableEntry ownerPackage;
+   StringTableEntry name;
+   const char* usage;
+   void* userPtr;
+   S32 minArgs;
+   S32 maxArgs;
+   NamespaceEntryKind kind;
+   bool isScript;
+};
+
+typedef void(*NamespaceInfoEnumerationCallback)(void* userPtr, const NamespaceInfo* info);
+typedef void(*NamespaceEntryInfoEnumerationCallback)(void* userPtr, const NamespaceEntryInfo* info);
 
 struct Vm;
 
@@ -463,6 +496,7 @@ public:
 	NamespaceId findNamespace(StringTableEntry name, StringTableEntry package = nullptr);
    NamespaceId lookupNamespace(StringTableEntry name, StringTableEntry package = nullptr);
    NamespaceId getGlobalNamespace();
+   void enumerateNamespaces(void* userPtr, NamespaceInfoEnumerationCallback funcPtr);
    void setNamespaceUsage(NamespaceId ns, const char* usage);
    void setNamespaceUserPtr(NamespaceId ns, void* userPtr);
 	void activatePackage(StringTableEntry pkgName);
@@ -472,7 +506,7 @@ public:
    bool unlinkNamespace(StringTableEntry parent, StringTableEntry child);
    bool linkNamespaceById(NamespaceId parent, NamespaceId child);
    bool unlinkNamespaceById(NamespaceId parent, NamespaceId child);
-   void enumerateNamespace(NamespaceId nsId, void* userPtr, NamespaceEnumerationCallback funcPtr);
+   void enumerateNamespaceEntries(NamespaceId nsId, void* userPtr, NamespaceEntryInfoEnumerationCallback funcPtr);
    
 
     const char* tabCompleteNamespace(NamespaceId nsId, const char *prevText, S32 baseLen, bool fForward);

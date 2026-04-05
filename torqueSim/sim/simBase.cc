@@ -1479,8 +1479,22 @@ void SimObject::dump()
    Con::printf("Methods:");
    KorkApi::NamespaceId nsId = getNamespace();
 
-   getVM()->enumerateNamespace(nsId, getVM(), [](void* userPtr, StringTableEntry funcName, const char* usage){
-      Con::printf("  %s() - %s", funcName, usage);
+   getVM()->enumerateNamespaceEntries(nsId, getVM(), [](void* userPtr, const KorkApi::NamespaceEntryInfo* info){
+      const char* usage = info->usage ? info->usage : "";
+      switch (info->kind)
+      {
+         case KorkApi::NamespaceEntrySignal:
+            Con::printf("  [signal] %s() - %s", info->name, usage);
+            break;
+         case KorkApi::NamespaceEntryGroup:
+            Con::printf("  [group] %s - %s", info->name, usage);
+            break;
+         case KorkApi::NamespaceEntryFunction:
+            Con::printf("  %s() - %s", info->name, usage);
+            break;
+         default:
+            break;
+      }
    });
 }
 

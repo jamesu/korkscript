@@ -302,6 +302,41 @@ void cEcho(void* object, void* userPtr, int argc, const char** argv)
    printf("\n");
 }
 
+struct NamespaceApiCapture
+{
+   bool foundPlayerNamespace;
+   bool foundJumpFunction;
+   bool foundJumpSignal;
+};
+
+static void CaptureNamespaceInfo(void* userPtr, const NamespaceInfo* info)
+{
+   auto* capture = static_cast<NamespaceApiCapture*>(userPtr);
+   if (info && info->name && strcmp(info->name, "Player") == 0)
+   {
+      capture->foundPlayerNamespace = true;
+   }
+}
+
+static void CaptureNamespaceEntry(void* userPtr, const NamespaceEntryInfo* info)
+{
+   auto* capture = static_cast<NamespaceApiCapture*>(userPtr);
+   if (!info || !info->name)
+   {
+      return;
+   }
+
+   if (strcmp(info->name, "jump") == 0 && info->kind == NamespaceEntryFunction)
+   {
+      capture->foundJumpFunction = true;
+   }
+
+   if (strcmp(info->name, "jumped") == 0 && info->kind == NamespaceEntrySignal)
+   {
+      capture->foundJumpSignal = true;
+   }
+}
+
 int testScript(char* script, const char* filename)
 {
    Config cfg{};
@@ -312,6 +347,7 @@ int testScript(char* script, const char* filename)
       free(ptr);
    };
    cfg.logFn = MyLogger;
+   cfg.enableSignals = true;
    cfg.iFind = { &FindByName, &FindByPath, nullptr, &FindById };
    Vm* vm = createVM(&cfg);
    gVM = vm;
@@ -373,6 +409,15 @@ int testScript(char* script, const char* filename)
    
    vm->addNamespaceFunction(vm->getGlobalNamespace(), vm->internString("echo"), cEcho, nullptr, "", 1, 32);
    vm->addNamespaceFunction(playerNS, vm->internString("jump"), (KorkApi::VoidFuncCallback)cPlayerJump, nullptr, "()", 2, 2);
+   vm->addNamespaceSignal(playerNS, vm->internString("jumped"), nullptr, "(amount)", 1, 1);
+
+   NamespaceApiCapture nsCapture = {};
+   vm->enumerateNamespaces(&nsCapture, &CaptureNamespaceInfo);
+   vm->enumerateNamespaceEntries(playerNS, &nsCapture, &CaptureNamespaceEntry);
+   AssertFatal(nsCapture.foundPlayerNamespace, "Player namespace should be enumerable");
+   AssertFatal(nsCapture.foundJumpFunction, "Player::jump should be enumerable as a function");
+   AssertFatal(nsCapture.foundJumpSignal, "Player::jumped should be enumerable as a signal");
+
    vm->evalCode(script, filename, "");
    
    VMObject* found = cfg.iFind.FindObjectByNameFn(cfg.findUser, "player1", nullptr);

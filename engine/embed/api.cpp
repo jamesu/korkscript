@@ -19,10 +19,32 @@
 
 #include "core/simpleIntern.h"
 
+#include <algorithm>
 #include <cinttypes>
 
 namespace KorkApi
 {
+
+static NamespaceEntryKind getNamespaceEntryKind(const Namespace::Entry* ent)
+{
+   switch (ent ? ent->mType : Namespace::Entry::InvalidFunctionType)
+   {
+      case Namespace::Entry::ScriptFunctionType:
+      case Namespace::Entry::StringCallbackType:
+      case Namespace::Entry::IntCallbackType:
+      case Namespace::Entry::FloatCallbackType:
+      case Namespace::Entry::VoidCallbackType:
+      case Namespace::Entry::BoolCallbackType:
+      case Namespace::Entry::ValueCallbackType:
+         return NamespaceEntryFunction;
+      case Namespace::Entry::SignalType:
+         return NamespaceEntrySignal;
+      case Namespace::Entry::GroupMarker:
+         return NamespaceEntryGroup;
+      default:
+         return NamespaceEntryInvalid;
+   }
+}
 
 
 NamespaceId Vm::findNamespace(StringTableEntry name, StringTableEntry package)
@@ -57,6 +79,49 @@ void Vm::setNamespaceUserPtr(NamespaceId nsId, void* userPtr)
 NamespaceId Vm::getGlobalNamespace()
 {
     return mInternal->mNSState.mGlobalNamespace;
+}
+
+void Vm::enumerateNamespaces(void* userPtr, NamespaceInfoEnumerationCallback funcPtr)
+{
+   VmAllocTLS::Scope memScope(mInternal);
+   if (!funcPtr)
+   {
+      return;
+   }
+
+   KorkApi::Vector<Namespace*> vec;
+   for (Namespace* walk = mInternal->mNSState.mNamespaceList; walk; walk = walk->mNext)
+   {
+      vec.push_back(walk);
+   }
+
+   std::sort(vec.begin(), vec.end(), [](const Namespace* a, const Namespace* b) {
+      const char* aName = a->mName ? a->mName : "";
+      const char* bName = b->mName ? b->mName : "";
+      const S32 nameCmp = strcasecmp(aName, bName);
+      if (nameCmp != 0)
+      {
+         return nameCmp < 0;
+      }
+
+      const char* aPkg = a->mPackage ? a->mPackage : "";
+      const char* bPkg = b->mPackage ? b->mPackage : "";
+
+      return strcasecmp(aPkg, bPkg) < 0;
+   });
+
+   for (Namespace* ns : vec)
+   {
+      NamespaceInfo info = {};
+      info.nsId = ns;
+      info.name = ns->mName;
+      info.package = ns->mPackage;
+      info.parentId = ns->mParent;
+      info.parentName = ns->mParent ? ns->mParent->mName : nullptr;
+      info.usage = ns->getUsage() ? ns->getUsage() : "";
+      info.userPtr = ns->mUserPtr;
+      funcPtr(userPtr, &info);
+   }
 }
 
 void Vm::activatePackage(StringTableEntry pkgName)
@@ -99,16 +164,36 @@ bool Vm::unlinkNamespace(StringTableEntry parent, StringTableEntry child)
    return false;
 }
 
-void Vm::enumerateNamespace(NamespaceId nsId, void* userPtr, NamespaceEnumerationCallback funcPtr)
+void Vm::enumerateNamespaceEntries(NamespaceId nsId, void* userPtr, NamespaceEntryInfoEnumerationCallback funcPtr)
 {
    VmAllocTLS::Scope memScope(mInternal);
+   if (!funcPtr)
+   {
+      return;
+   }
+
    KorkApi::Vector<Namespace::Entry*> vec;
    Namespace* ns = (Namespace*)nsId;
+   if (!ns)
+   {
+      return;
+   }
    ns->getEntryList(&vec);
 
    for (Namespace::Entry* ent : vec)
    {
-      funcPtr(userPtr, ent->mFunctionName, ent->getUsage() ? ent->getUsage() : "");
+      NamespaceEntryInfo info = {};
+      info.ownerNamespaceId = ent->mNamespace;
+      info.ownerNamespaceName = ent->mNamespace ? ent->mNamespace->mName : nullptr;
+      info.ownerPackage = ent->mPackage;
+      info.name = ent->mType == Namespace::Entry::GroupMarker ? ent->cb.mGroupName : ent->mFunctionName;
+      info.usage = ent->getUsage() ? ent->getUsage() : "";
+      info.userPtr = ent->mUserPtr;
+      info.minArgs = ent->mMinArgs;
+      info.maxArgs = ent->mMaxArgs;
+      info.kind = getNamespaceEntryKind(ent);
+      info.isScript = ent->mType == Namespace::Entry::ScriptFunctionType;
+      funcPtr(userPtr, &info);
    }
 }
 
