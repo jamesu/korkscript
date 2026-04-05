@@ -208,7 +208,10 @@ bool SimObject::hasAnySignalListenerRef(SimObject* listener) const
 {
    for (const SignalListenerList& list : mSignalListeners)
    {
-      if (std::find(list.listeners.begin(), list.listeners.end(), listener) != list.listeners.end())
+      auto itr = std::find_if(list.listeners.begin(), list.listeners.end(), [listener](const SignalListenerList::ListenerBinding& binding) {
+         return binding.listener == listener;
+      });
+      if (itr != list.listeners.end())
          return true;
    }
    return false;
@@ -1160,18 +1163,20 @@ ConsoleMethodValue( SimObject, call, 2, 0, "methodName, [args]*")
    return Con::execute( object, argc - 1, argv + 1 );
 }
 
-ConsoleMethod(SimObject, addListener, bool, 4, 4, "signalName, listenerObject")
+ConsoleMethod(SimObject, addListener, bool, 4, 5, "signalName, listenerObject, [listenerMethodName]")
 {
    StringTableEntry signalName = StringTable->insert(argv[2]);
    SimObject* listener = Sim::findObject(argv[3]);
-   return object->addSignalListener(signalName, listener);
+   StringTableEntry methodName = argc > 4 ? StringTable->insert(argv[4]) : nullptr;
+   return object->addSignalListener(signalName, listener, methodName);
 }
 
-ConsoleMethod(SimObject, removeListener, bool, 4, 4, "signalName, listenerObject")
+ConsoleMethod(SimObject, removeListener, bool, 4, 5, "signalName, listenerObject, [listenerMethodName]")
 {
    StringTableEntry signalName = StringTable->insert(argv[2]);
    SimObject* listener = Sim::findObject(argv[3]);
-   return object->removeSignalListener(signalName, listener);
+   StringTableEntry methodName = argc > 4 ? StringTable->insert(argv[4]) : nullptr;
+   return object->removeSignalListener(signalName, listener, methodName);
 }
 
 /*! Write the class hierarchy of an object to the console.
@@ -1828,7 +1833,9 @@ void SimObject::onDeleteNotify(SimObject* object)
    for (auto listItr = mSignalListeners.begin(); listItr != mSignalListeners.end(); )
    {
       auto& listeners = listItr->listeners;
-      listeners.erase(std::remove(listeners.begin(), listeners.end(), object), listeners.end());
+      listeners.erase(std::remove_if(listeners.begin(), listeners.end(), [object](const SignalListenerList::ListenerBinding& binding) {
+         return binding.listener == object;
+      }), listeners.end());
       if (listeners.empty())
          listItr = mSignalListeners.erase(listItr);
       else
@@ -1842,9 +1849,10 @@ void SimObject::triggerSignal(void* userPtr, StringTableEntry signalName, int ar
    if (!list || !vm)
       return;
 
-   SimObjectList listeners = list->listeners;
-   for (SimObject* listener : listeners)
+   std::vector<SignalListenerList::ListenerBinding> listeners = list->listeners;
+   for (const SignalListenerList::ListenerBinding& binding : listeners)
    {
+      SimObject* listener = binding.listener;
       if (!listener || listener->isDeleted() || !listener->getVMObject())
          continue;
 
@@ -1860,7 +1868,7 @@ void SimObject::triggerSignal(void* userPtr, StringTableEntry signalName, int ar
 
       KorkApi::ConsoleValue retValue;
       listener->pushScriptCallbackGuard();
-      vm->callObjectFunction(listener->getVMObject(), signalName, callArgc, callArgv, retValue);
+      vm->callObjectFunction(listener->getVMObject(), binding.methodName ? binding.methodName : signalName, callArgc, callArgv, retValue);
       listener->popScriptCallbackGuard();
    }
 }
@@ -1891,11 +1899,12 @@ bool SimObject::hasSignal(StringTableEntry signalName) const
    return vm->isNamespaceSignal(vm->getObjectNamespace(vmObject), signalName);
 }
 
-bool SimObject::addSignalListener(StringTableEntry signalName, SimObject* listener)
+bool SimObject::addSignalListener(StringTableEntry signalName, SimObject* listener, StringTableEntry methodName)
 {
    if (!listener || !hasSignal(signalName))
       return false;
 
+   StringTableEntry resolvedMethodName = methodName ? methodName : signalName;
    SignalListenerList* list = findSignalListenerList(signalName);
    if (!list)
    {
@@ -1903,17 +1912,20 @@ bool SimObject::addSignalListener(StringTableEntry signalName, SimObject* listen
       list = &mSignalListeners.back();
    }
 
-   if (std::find(list->listeners.begin(), list->listeners.end(), listener) != list->listeners.end())
+   auto itr = std::find_if(list->listeners.begin(), list->listeners.end(), [listener, resolvedMethodName](const SignalListenerList::ListenerBinding& binding) {
+      return binding.listener == listener && binding.methodName == resolvedMethodName;
+   });
+   if (itr != list->listeners.end())
       return true;
 
    const bool needsDeleteNotify = !hasAnySignalListenerRef(listener);
-   list->listeners.push_back(listener);
+   list->listeners.push_back({listener, resolvedMethodName});
    if (needsDeleteNotify)
       deleteNotify(listener);
    return true;
 }
 
-bool SimObject::removeSignalListener(StringTableEntry signalName, SimObject* listener)
+bool SimObject::removeSignalListener(StringTableEntry signalName, SimObject* listener, StringTableEntry methodName)
 {
    if (!listener)
       return false;
@@ -1922,11 +1934,15 @@ bool SimObject::removeSignalListener(StringTableEntry signalName, SimObject* lis
    if (!list)
       return false;
 
-   auto itr = std::find(list->listeners.begin(), list->listeners.end(), listener);
-   if (itr == list->listeners.end())
+   U32 oldSize = list->listeners.size();
+   list->listeners.erase(std::remove_if(list->listeners.begin(), list->listeners.end(), [listener, methodName](const SignalListenerList::ListenerBinding& binding) {
+      if (binding.listener != listener)
+         return false;
+      return methodName == nullptr || binding.methodName == methodName;
+   }), list->listeners.end());
+   if (oldSize == list->listeners.size())
       return false;
-
-   list->listeners.erase(itr);
+   
    if (list->listeners.empty())
    {
       auto listItr = std::find_if(mSignalListeners.begin(), mSignalListeners.end(), [signalName](const SignalListenerList& entry) {

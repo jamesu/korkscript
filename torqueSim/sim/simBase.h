@@ -541,8 +541,14 @@ public:
 
     struct SignalListenerList
     {
+        struct ListenerBinding
+        {
+            SimObject* listener;
+            StringTableEntry methodName;
+        };
+
         StringTableEntry signalName;
-        SimObjectList listeners;
+        std::vector<ListenerBinding> listeners;
     };
 
     /// @}
@@ -738,8 +744,8 @@ public:
 
     /// Check if a method exists in the objects current namespace.
     virtual bool isMethod( const char* methodName );
-    bool addSignalListener(StringTableEntry signalName, SimObject* listener);
-    bool removeSignalListener(StringTableEntry signalName, SimObject* listener);
+    bool addSignalListener(StringTableEntry signalName, SimObject* listener, StringTableEntry methodName = nullptr);
+    bool removeSignalListener(StringTableEntry signalName, SimObject* listener, StringTableEntry methodName = nullptr);
     bool hasSignal(StringTableEntry signalName) const;
    
     /// Get defined namespace of a method

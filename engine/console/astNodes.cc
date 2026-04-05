@@ -2041,8 +2041,16 @@ U32 FunctionDeclStmtNode::compileStmt(CodeStream &codeStream, U32 ip)
       codeStream.mResources->setCurrentFloatTable(&codeStream.mResources->getFunctionFloatTable());
 
       argc = 0;
+      bool skippedImplicitThis = false;
       for(VarNode *walk = args; walk; walk = (VarNode *)((StmtNode*)walk)->getNext())
+      {
+         if (!skippedImplicitThis && walk->varName && strcmp(walk->varName, "%this") == 0)
+         {
+            skippedImplicitThis = true;
+            continue;
+         }
          argc++;
+      }
 
       codeStream.mResources->precompileIdent(fnName);
       codeStream.mResources->precompileIdent(nameSpace);
