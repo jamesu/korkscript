@@ -346,7 +346,7 @@ struct StringStack
       mStart = mStartOffsets[--mStartStackSize];
       mType = mStartTypes[mStartStackSize];
       mValue = mStartValues[mStartStackSize];
-      mLen = mStartLengths[mStartStackSize];
+      mLen = getHeadLength();
    }
 
    // Terminate the current string, and pop the start stack.
@@ -356,7 +356,7 @@ struct StringStack
       mStart = mStartOffsets[--mStartStackSize];
       mType = mStartTypes[mStartStackSize];
       mValue = mStartValues[mStartStackSize];
-      mLen = mStartLengths[mStartStackSize];
+      mLen = getHeadLength();
    }
 
    U32 getHeadLength() const
