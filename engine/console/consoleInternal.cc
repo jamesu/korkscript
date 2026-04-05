@@ -663,7 +663,7 @@ static void Resize_ExprEval(TypeStorageInterface* state, U32 newSize)
    if (!stack)
       return;
 
-   stack->validateBufferSize(newSize);
+   stack->validateBufferSize(stack->mStart + newSize);
 
    state->data.size = newSize;
 }
@@ -674,7 +674,7 @@ static void Finalize_ExprEval(TypeStorageInterface* state, U32 newSize)
    if (!stack)
       return;
 
-   stack->validateBufferSize(newSize);
+   stack->validateBufferSize(stack->mStart + newSize);
    stack->setConsoleValueSize(state->data.storageAddress.typeId, newSize);
    state->data.size = newSize;
 }

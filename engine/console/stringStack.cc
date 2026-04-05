@@ -176,6 +176,10 @@ void StringStack::setConsoleValue(KorkApi::VmInternal* vmInternal, KorkApi::Cons
             mValue = v.cvalue;
          }
       }
+      else if (v.typeId == KorkApi::ConsoleValue::TypeInternalString)
+      {
+         mLen = (U32)strlen((const char*)valueBase);
+      }
       mType = v.typeId;
    }
 }

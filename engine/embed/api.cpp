@@ -464,7 +464,7 @@ ConsoleValue VmInternal::getStringInZone(U16 zone, U32 size)
    }
    else if (zone >= ConsoleValue::ZoneFiberStart)
    {
-      U16 fiberId = (zone - ConsoleValue::ZoneFiberStart) >> 1;
+      U16 fiberId = (zone - ConsoleValue::ZoneFiberStart);
       return getStringFuncBuffer(fiberId, size);
    }
    else
@@ -482,7 +482,7 @@ ConsoleValue VmInternal::getTypeInZone(U16 zone, TypeId typeId, U32 heapSize)
    }
    else if (zone >= ConsoleValue::ZoneFiberStart)
    {
-      U16 fiberId = (zone - ConsoleValue::ZoneFiberStart) >> 1;
+      U16 fiberId = (zone - ConsoleValue::ZoneFiberStart);
       return getTypeFunc(fiberId, typeId, heapSize);
    }
    else

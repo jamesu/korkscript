@@ -71,6 +71,7 @@ struct StringStack
    KorkApi::ConsoleValue mArgV[MaxArgs];
    U32 mFrameOffsets[MaxFrameDepth]; // this is FRAME offset
    U32 mStartOffsets[MaxStackDepth]; // this is FUNCTION PARAM offset
+   U32 mStartLengths[MaxStackDepth]; // byte length for stacked values
    U16 mStartTypes[MaxStackDepth];   // this is annotated type
    U64 mStartValues[MaxStackDepth];  // this is the cv value
    U64 mValue; // current cv value
@@ -295,6 +296,7 @@ struct StringStack
       AssertFatal(mStartStackSize < MaxStackDepth-1, "Stack overflow!");
       mStartTypes[mStartStackSize] = mType;
       mStartValues[mStartStackSize] = mValue;
+      mStartLengths[mStartStackSize] = mLen;
       mStartOffsets[mStartStackSize++] = mStart;
       mStart += mLen;
       mLen = 0;
@@ -311,6 +313,7 @@ struct StringStack
       AssertFatal(mStartStackSize < MaxStackDepth-1, "Stack overflow!");
       mStartTypes[mStartStackSize] = mType;
       mStartValues[mStartStackSize] = mValue;
+      mStartLengths[mStartStackSize] = mLen;
       mStartOffsets[mStartStackSize++] = mStart;
       mStart += mLen;
       mBuffer[mStart] = c;
@@ -343,7 +346,7 @@ struct StringStack
       mStart = mStartOffsets[--mStartStackSize];
       mType = mStartTypes[mStartStackSize];
       mValue = mStartValues[mStartStackSize];
-      mLen = getHeadLength();
+      mLen = mStartLengths[mStartStackSize];
    }
 
    // Terminate the current string, and pop the start stack.
@@ -353,7 +356,7 @@ struct StringStack
       mStart = mStartOffsets[--mStartStackSize];
       mType = mStartTypes[mStartStackSize];
       mValue = mStartValues[mStartStackSize];
-      mLen = getHeadLength();
+      mLen = mStartLengths[mStartStackSize];
    }
 
    U32 getHeadLength() const
@@ -400,11 +403,15 @@ struct StringStack
       mFrameOffsets[mNumFrames++] = mStartStackSize;
       mStartTypes[mStartStackSize] = mType;
       mStartValues[mStartStackSize] = mValue;
+      mStartLengths[mStartStackSize] = mLen;
       mStartOffsets[mStartStackSize++] = mStart;
       mStart += ReturnBufferSpace;
       validateBufferSize(mStart+1);
       // terminate start just in case we get an early exit
       mBuffer[mStart] = '\0';
+      mType = KorkApi::ConsoleValue::TypeInternalString;
+      mValue = 0;
+      mLen = 0;
       //Con::printf("StringStack::pushFrame");
    }
 
@@ -413,7 +420,7 @@ struct StringStack
       AssertFatal(mNumFrames > 0, "Stack underflow!");
       mStartStackSize = mFrameOffsets[--mNumFrames];
       mStart = mStartOffsets[mStartStackSize];
-      mLen = 0;
+      mLen = mStartLengths[mStartStackSize];
       mType = mStartTypes[mStartStackSize]; // reset
       mValue = mStartValues[mStartStackSize];
       //Con::printf("StringStack::popFrame");

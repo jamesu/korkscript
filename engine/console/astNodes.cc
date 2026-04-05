@@ -2189,6 +2189,20 @@ U32 TupleExprNode::compile(CodeStream &codeStream, U32 ip, TypeReq type)
       for(ExprNode *walk = items; walk; walk = (ExprNode *) walk->getNext())
       {
          TypeReq walkType = walk->getPreferredType();
+         TypeReq loadType = walk->getReturnLoadType();
+
+         if (codeStream.mResources->allowTypes)
+         {
+            if (loadType == TypeReqVar)
+               walkType = TypeReqVar;
+            else if (loadType == TypeReqField)
+               walkType = TypeReqField;
+            else if (loadType == TypeReqTypedString)
+               walkType = TypeReqTypedString;
+            else if (walkType == TypeReqNone && walk->canBeTyped())
+               walkType = TypeReqTypedString;
+         }
+
          if (walkType == TypeReqNone) walkType = TypeReqString;
          ip = walk->compile(codeStream, ip, walkType);
          // TODO: could do with a VarNode short-circuit here
