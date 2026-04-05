@@ -253,6 +253,11 @@ struct EnumerateObjectInterface
 	VMObject* (*GetObjectAtIndex)(VMObject* object, U32 index);
 };
 
+struct ObjectSignalsInterface
+{
+   void (*TriggerSignal)(void* userPtr, VMObject* object, StringTableEntry signalName, int argc, ConsoleValue* argv);
+};
+
 // handles field get & set
 struct CustomFieldsInterface
 {
@@ -271,6 +276,7 @@ struct ClassInfo {
    FieldInfo* fields;
    CreateObjectInterface iCreate;
 	EnumerateObjectInterface iEnum;
+   ObjectSignalsInterface iSignals;
 	CustomFieldsInterface iCustomFields;
 };
 
@@ -363,6 +369,7 @@ struct Config {
    bool enableExceptions;
    bool enableTuples;
    bool enableTypes;
+   bool enableSignals;
    bool enableStringInterpolation;
    bool initTelnet;
    
@@ -515,7 +522,9 @@ public:
    void addNamespaceFunction(NamespaceId nsId, StringTableEntry name,  VoidFuncCallback, void* userPtr, const char *usage, S32 minArgs, S32 maxArgs);
    void addNamespaceFunction(NamespaceId nsId, StringTableEntry name,  BoolFuncCallback, void* userPtr, const char *usage, S32 minArgs, S32 maxArgs);
    void addNamespaceFunction(NamespaceId nsId, StringTableEntry name,  ValueFuncCallback, void* userPtr, const char *usage, S32 minArgs, S32 maxArgs);
+   void addNamespaceSignal(NamespaceId nsId, StringTableEntry name, void* userPtr, const char *usage, S32 minArgs, S32 maxArgs);
    bool isNamespaceFunction(NamespaceId nsId, StringTableEntry name);
+   bool isNamespaceSignal(NamespaceId nsId, StringTableEntry name);
    StringTableEntry getMethodNamespaceName(NamespaceId nsId, StringTableEntry name);
    void markNamespaceGroup(NamespaceId nsId, StringTableEntry groupName, StringTableEntry usage);
 
@@ -530,6 +539,7 @@ public:
 
    bool callNamespaceFunction(NamespaceId nsId, StringTableEntry name, int argc, ConsoleValue* argv, ConsoleValue& retValue, bool startSuspended=false);
    bool callObjectFunction(VMObject* self, StringTableEntry name, int argc, ConsoleValue* argv, ConsoleValue& retValue, bool startSuspended=false);
+   void triggerNamespaceSignal(VMObject* h, StringTableEntry name, int argc, ConsoleValue* argv);
 
    // Helpers (should call into user funcs)
    VMObject* findObjectByName(const char* name);

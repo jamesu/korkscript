@@ -456,7 +456,7 @@ ObjectDeclNode *ObjectDeclNode::alloc( Compiler::Resources* res, S32 lineNumber,
    return ret;
 }
 
-FunctionDeclStmtNode *FunctionDeclStmtNode::alloc( Compiler::Resources* res, S32 lineNumber, StringTableEntry fnName, StringTableEntry nameSpace, VarNode *args, StmtNode *stmts, StringTableEntry retTypeName )
+FunctionDeclStmtNode *FunctionDeclStmtNode::alloc( Compiler::Resources* res, S32 lineNumber, StringTableEntry fnName, StringTableEntry nameSpace, VarNode *args, StmtNode *stmts, StringTableEntry retTypeName, bool isSignal )
 {
    FunctionDeclStmtNode *ret = (FunctionDeclStmtNode *) res->consoleAlloc(sizeof(FunctionDeclStmtNode));
    constructInPlace(ret);
@@ -468,6 +468,7 @@ FunctionDeclStmtNode *FunctionDeclStmtNode::alloc( Compiler::Resources* res, S32
    ret->package = nullptr;
    ret->argc = 0;
    ret->returnTypeName = retTypeName;
+   ret->isSignal = isSignal;
    return ret;
 }
 
@@ -509,4 +510,3 @@ TupleExprNode *TupleExprNode::alloc( Compiler::Resources* res, S32 lineNumber, E
    ret->items         = inItems;
    return ret;
 }
-

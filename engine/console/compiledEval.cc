@@ -820,6 +820,22 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
             }
             ip = code[ip + 7];
             break;
+
+         case OP_SIGNAL_DECL:
+            if(!frame.noCalls)
+            {
+               tmpFnName       = Compiler::CodeToSTE(nullptr, identStrings, code, ip);
+               tmpFnNamespace  = Compiler::CodeToSTE(nullptr, identStrings, code, ip+2);
+               tmpFnPackage    = Compiler::CodeToSTE(nullptr, identStrings, code, ip+4);
+               U32 argc = code[ip + 6];
+
+               vmInternal->mNSState.unlinkPackages();
+               tmpNs = vmInternal->mNSState.find(tmpFnNamespace, tmpFnPackage);
+               tmpNs->addSignal(tmpFnName, nullptr, "", argc, argc);
+               vmInternal->mNSState.relinkPackages();
+            }
+            ip += 7;
+            break;
             
          case OP_CREATE_OBJECT:
          {
@@ -1822,7 +1838,8 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
             }
             else
             {
-               if((tmpNsEntry->mMinArgs && S32(callArgc) < tmpNsEntry->mMinArgs) || (tmpNsEntry->mMaxArgs && S32(callArgc) > tmpNsEntry->mMaxArgs))
+               const S32 effectiveArgc = tmpNsEntry->mType == Namespace::Entry::SignalType ? S32(callArgc) - 2 : S32(callArgc);
+               if((tmpNsEntry->mMinArgs && effectiveArgc < tmpNsEntry->mMinArgs) || (tmpNsEntry->mMaxArgs && effectiveArgc > tmpNsEntry->mMaxArgs))
                {
                   const char* nsName = tmpNs? tmpNs->mName: "";
                   vmInternal->printf(0, "%s: %s::%s - wrong number of arguments.", frame.codeBlock->getFileLine(ip-4), nsName, tmpFnName);
@@ -1843,9 +1860,24 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
                   // Handle calling
                   // NOTE regarding yielding:
                   //   Yielded value should match the type of the function in this case.
-                  
                   switch(tmpNsEntry->mType)
                   {
+                     case Namespace::Entry::SignalType:
+                     {
+                        if (frame.lastCallType != FuncCallExprNode::MethodCall)
+                        {
+                           vmInternal->printf(0, "%s::%s - signal requires an object instance.", tmpNs ? tmpNs->mName : "", tmpFnName);
+                        }
+                        else if (tmpNsEntry->validateArgCount(callArgc - 2, &evalState))
+                        {
+                           frame.inNativeFunction = true;
+                           frame.thisObject->klass->iSignals.TriggerSignal(tmpNsEntry->mUserPtr, frame.thisObject.obj, tmpFnName, callArgc - 2, callArgv + 2);
+                        }
+                        mLastFiberValue = KorkApi::ConsoleValue();
+                        loopFrameSetup = true;
+                        goto execFinished;
+                        break;
+                     }
                      case Namespace::Entry::StringCallbackType:
                      {
                         frame.inNativeFunction = true;

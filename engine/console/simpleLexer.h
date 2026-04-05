@@ -44,7 +44,7 @@ enum class TokenType : U32
    
    // Keywords (subset taken from the Flex rules)
    rwIN, rwCASEOR, rwBREAK, rwRETURN, rwELSE, rwASSERT, rwWHILE, rwDO,
-   rwIF, rwFOREACHSTR, rwFOREACH, rwFOR, rwCONTINUE, rwDEFINE, rwDECLARE,
+   rwIF, rwFOREACHSTR, rwFOREACH, rwFOR, rwCONTINUE, rwDEFINE, rwSIGNAL, rwDECLARE,
    rwDECLARESINGLETON, rwDATABLOCK, rwCASE, rwSWITCHSTR, rwSWITCH,
    rwDEFAULT, rwPACKAGE, rwNAMESPACE,
    rwTRY, rwCATCH,
@@ -207,7 +207,7 @@ public:
          
          // Keywords
          "rwIN", "rwCASEOR", "rwBREAK", "rwRETURN", "rwELSE", "rwASSERT", "rwWHILE", "rwDO",
-         "rwIF", "rwFOREACHSTR", "rwFOREACH", "rwFOR", "rwCONTINUE", "rwDEFINE", "rwDECLARE",
+         "rwIF", "rwFOREACHSTR", "rwFOREACH", "rwFOR", "rwCONTINUE", "rwDEFINE", "rwSIGNAL", "rwDECLARE",
          "rwDECLARESINGLETON", "rwDATABLOCK", "rwCASE", "rwSWITCHSTR", "rwSWITCH",
          "rwDEFAULT", "rwPACKAGE", "rwNAMESPACE",
          "rwTRY", "rwCATCH",
@@ -1224,6 +1224,7 @@ private:
          {"for",        TokenType::rwFOR},
          {"continue",   TokenType::rwCONTINUE},
          {"function",   TokenType::rwDEFINE},
+         {"signal",     TokenType::rwSIGNAL},
          {"new",        TokenType::rwDECLARE},
          {"singleton",  TokenType::rwDECLARESINGLETON},
          {"datablock",  TokenType::rwDATABLOCK},

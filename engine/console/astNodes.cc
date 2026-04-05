@@ -2035,6 +2035,30 @@ TypeReq ObjectDeclNode::getPreferredType()
 
 U32 FunctionDeclStmtNode::compileStmt(CodeStream &codeStream, U32 ip)
 {
+   if (isSignal)
+   {
+      codeStream.mResources->setCurrentStringTable(&codeStream.mResources->getFunctionStringTable());
+      codeStream.mResources->setCurrentFloatTable(&codeStream.mResources->getFunctionFloatTable());
+
+      argc = 0;
+      for(VarNode *walk = args; walk; walk = (VarNode *)((StmtNode*)walk)->getNext())
+         argc++;
+
+      codeStream.mResources->precompileIdent(fnName);
+      codeStream.mResources->precompileIdent(nameSpace);
+      codeStream.mResources->precompileIdent(package);
+
+      codeStream.emit(OP_SIGNAL_DECL);
+      codeStream.emitSTE(fnName);
+      codeStream.emitSTE(nameSpace);
+      codeStream.emitSTE(package);
+      codeStream.emit(argc);
+
+      codeStream.mResources->setCurrentStringTable(&codeStream.mResources->getGlobalStringTable());
+      codeStream.mResources->setCurrentFloatTable(&codeStream.mResources->getGlobalFloatTable());
+      return codeStream.tell();
+   }
+
    // OP_FUNC_DECL
    // func name
    // namespace

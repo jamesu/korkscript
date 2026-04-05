@@ -1032,6 +1032,20 @@ void CodeBlock::dumpInstructions( U32 startIp, bool upToReturn, bool downcaseStr
             inFunction = true;
             break;
          }
+
+         case OP_SIGNAL_DECL:
+         {
+            StringTableEntry fnName       = codeToSte(nullptr, code, ip);
+            StringTableEntry fnNamespace  = codeToSte(nullptr, code, ip+2);
+            StringTableEntry fnPackage    = codeToSte(nullptr, code, ip+4);
+            U32 argc = code[ip + 6];
+
+            mVM->printf(0, "%i: OP_SIGNAL_DECL name=%s nspace=%s package=%s argc=%i",
+               ip - 1, fnName, fnNamespace, fnPackage, argc );
+
+            ip += 7;
+            break;
+         }
             
          case OP_CREATE_OBJECT:
          {

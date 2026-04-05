@@ -231,6 +231,7 @@ private:
       switch (LA().kind)
       {
          case TT::rwDEFINE:   // "function"
+         case TT::rwSIGNAL:
             return parseFnDeclStmt();
          case TT::rwPACKAGE:  // "package"
             return parsePackageDecl();
@@ -941,7 +942,20 @@ private:
    StmtNode* parseFnDeclStmt()
    {
       S32 line = 0;
-      expect(TT::rwDEFINE, "'function' expected"); // "function"
+      bool isSignal = false;
+      if (match(TT::rwSIGNAL, &line))
+      {
+         if (!mResources->allowSignals)
+         {
+            errorHere(mTokens[mTokenPos - 1], "signals not enabled");
+            return nullptr;
+         }
+         isSignal = true;
+      }
+      else
+      {
+         expect(TT::rwDEFINE, "'function' expected"); // "function"
+      }
       
       // [Namespace::]Ident
       TOK a = expect(TT::IDENT, "identifier expected");
@@ -964,16 +978,23 @@ private:
 
       // Type decl (optional)
       StringTableEntry retTypeName = nullptr;
-      if (matchChar(':'))
+      if (!isSignal && matchChar(':'))
       {
          auto typeTok = expect(SimpleLexer::TokenType::IDENT, "return type expected");
          retTypeName = typeTok.stString;
       }
-      
-      // { ... }
-      StmtNode* body = parseBlockStmt();
-      
-      FunctionDeclStmtNode* stmt = FunctionDeclStmtNode::alloc(mResources, line ? line : a.pos.line, fn, ns, args, body, retTypeName);
+
+      StmtNode* body = nullptr;
+      if (isSignal)
+      {
+         expectChar(';', "';' expected");
+      }
+      else
+      {
+         body = parseBlockStmt();
+      }
+
+      FunctionDeclStmtNode* stmt = FunctionDeclStmtNode::alloc(mResources, line ? line : a.pos.line, fn, ns, args, body, retTypeName, isSignal);
       mResources->popLocalVarContext();
       
       return stmt;
@@ -987,7 +1008,7 @@ private:
       // fn_decl_list : fn_decl_stmt | fn_decl_list fn_decl_stmt
       StmtNode* head = parseFnDeclStmt();
       StmtNode* tail = head;
-      while (LA().kind == TT::rwDEFINE)
+      while (LA().kind == TT::rwDEFINE || LA().kind == TT::rwSIGNAL)
       {
          StmtNode* nxt = parseFnDeclStmt();
          tail->append(nxt);
@@ -1668,4 +1689,3 @@ private:
 };
 
 }
-

@@ -241,6 +241,7 @@ void init()
    config.enableExceptions = true;
    config.enableTuples = true;
    config.enableTypes = true;
+   config.enableSignals = true;
    config.enableStringInterpolation = true;
 
 
@@ -2025,4 +2026,3 @@ bool exec(const char* fileName, bool noCalls, bool inJournal)
 
 
 } // end of Console namespace
-

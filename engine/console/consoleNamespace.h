@@ -66,7 +66,8 @@ class Namespace
          FloatCallbackType,
          VoidCallbackType,
          BoolCallbackType,
-         ValueCallbackType
+         ValueCallbackType,
+         SignalType
       };
 
       Namespace *mNamespace;
@@ -93,6 +94,8 @@ class Namespace
       } cb;
       Entry();
       void clear();
+      bool isSignal() const { return mType == SignalType; }
+      bool validateArgCount(S32 argc, ExprEvalState *state);
 
       KorkApi::ConsoleValue execute(S32 argc, KorkApi::ConsoleValue* argv, ExprEvalState *state, KorkApi::VMObject* resolvedThis, bool startSuspended=false);
       
@@ -119,6 +122,7 @@ class Namespace
    void addCommand(StringTableEntry name, KorkApi::VoidFuncCallback, void* userPtr, const char* usage, S32 minArgs, S32 maxArgs);
    void addCommand(StringTableEntry name, KorkApi::BoolFuncCallback, void* userPtr, const char* usage, S32 minArgs, S32 maxArgs);
    void addCommand(StringTableEntry name, KorkApi::ValueFuncCallback, void* userPtr, const char* usage, S32 minArgs, S32 maxArgs);
+   void addSignal(StringTableEntry name, void* userPtr, const char* usage, S32 minArgs, S32 maxArgs);
 
    void markGroup(const char* name, const char* usage);
    char * lastUsage;
@@ -181,4 +185,3 @@ struct NamespaceState
    void init(KorkApi::VmInternal* vmInternal);
    void shutdown();
 };
-

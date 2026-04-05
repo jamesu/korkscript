@@ -647,8 +647,9 @@ struct FunctionDeclStmtNode : StmtNode
    StringTableEntry returnTypeName;
    U32 endOffset;
    U32 argc;
+   bool isSignal;
 
-   static FunctionDeclStmtNode *alloc( Compiler::Resources* res, S32 lineNumber, StringTableEntry fnName, StringTableEntry nameSpace, VarNode *args, StmtNode *stmts, StringTableEntry returnType = nullptr );
+   static FunctionDeclStmtNode *alloc( Compiler::Resources* res, S32 lineNumber, StringTableEntry fnName, StringTableEntry nameSpace, VarNode *args, StmtNode *stmts, StringTableEntry returnType = nullptr, bool isSignal = false );
    
    U32 compileStmt(CodeStream &codeStream, U32 ip);
    void setPackage(StringTableEntry packageName);

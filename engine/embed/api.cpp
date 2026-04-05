@@ -311,6 +311,12 @@ ClassId Vm::registerClass(ClassInfo& info)
    {
       chkFunc.iEnum.GetObjectAtIndex = [](VMObject* object, U32 index) { return (VMObject*)nullptr; };
    }
+
+   if (chkFunc.iSignals.TriggerSignal == nullptr)
+   {
+      chkFunc.iSignals.TriggerSignal = [](void* userPtr, VMObject* object, StringTableEntry signalName, int argc, ConsoleValue* argv) {
+      };
+   }
    
    // iCustomFields stubs
    if (chkFunc.iCustomFields.IterateFields == nullptr)
@@ -648,11 +654,27 @@ void Vm::addNamespaceFunction(NamespaceId nsId, StringTableEntry name, ValueFunc
    ns->addCommand(name, cb, userPtr, usage, minArgs, maxArgs);
 }
 
+void Vm::addNamespaceSignal(NamespaceId nsId, StringTableEntry name, void* userPtr, const char* usage, S32 minArgs, S32 maxArgs)
+{
+   VmAllocTLS::Scope memScope(mInternal);
+   Namespace* ns = (Namespace*)nsId;
+   ns->addSignal(name, userPtr, usage, minArgs, maxArgs);
+}
+
 bool Vm::isNamespaceFunction(NamespaceId nsId, StringTableEntry name)
 {
    VmAllocTLS::Scope memScope(mInternal);
    Namespace* ns = (Namespace*)nsId;
-   return ns ? (ns->lookup(name) != nullptr) : false;
+   Namespace::Entry* ent = ns ? ns->lookup(name) : nullptr;
+   return ent ? !ent->isSignal() : false;
+}
+
+bool Vm::isNamespaceSignal(NamespaceId nsId, StringTableEntry name)
+{
+   VmAllocTLS::Scope memScope(mInternal);
+   Namespace* ns = (Namespace*)nsId;
+   Namespace::Entry* ent = ns ? ns->lookup(name) : nullptr;
+   return ent ? ent->isSignal() : false;
 }
 
 StringTableEntry Vm::getMethodNamespaceName(NamespaceId nsId, StringTableEntry name)
@@ -793,6 +815,26 @@ bool Vm::callObjectFunction(VMObject* self, StringTableEntry funcName, int argc,
    mInternal->mCurrentFiberState->mSTR.clearFunctionOffset();
 
    return true;
+}
+
+void Vm::triggerNamespaceSignal(VMObject* h, StringTableEntry name, int argc, ConsoleValue* argv)
+{
+   VmAllocTLS::Scope memScope(mInternal);
+   if (!h || !h->ns)
+      return;
+
+   Namespace::Entry* ent = h->ns->lookup(name);
+   if (!ent || !ent->isSignal())
+      return;
+
+   if ((ent->mMinArgs && argc < ent->mMinArgs) || (ent->mMaxArgs && argc > ent->mMaxArgs))
+   {
+      mInternal->printf(0, "%s::%s - wrong number of arguments.", ent->mNamespace->mName, ent->mFunctionName);
+      mInternal->printf(0, "usage: %s", ent->getUsage());
+      return;
+   }
+
+   h->klass->iSignals.TriggerSignal(ent->mUserPtr, h, name, argc, argv);
 }
 
 bool Vm::callNamespaceFunction(NamespaceId nsId, StringTableEntry name, int argc, KorkApi::ConsoleValue* argv, ConsoleValue& retValue, bool startSuspended)
@@ -1145,6 +1187,7 @@ VmInternal::VmInternal(Vm* vm, Config* cfg) : mGlobalVars(this)
    mCompilerResources->allowExceptions = cfg->enableExceptions;
    mCompilerResources->allowTuples = cfg->enableTuples;
    mCompilerResources->allowTypes = cfg->enableTypes;
+   mCompilerResources->allowSignals = cfg->enableSignals;
    mCompilerResources->allowStringInterpolation = cfg->enableStringInterpolation;
    mLastExceptionInfo = {};
    

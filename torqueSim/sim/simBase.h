@@ -539,6 +539,12 @@ public:
         Notify *next;     ///< Next notification in the linked list.
     };
 
+    struct SignalListenerList
+    {
+        StringTableEntry signalName;
+        SimObjectList listeners;
+    };
+
     /// @}
 
     enum WriteFlags {
@@ -587,6 +593,7 @@ private:
     /// @}
 
     std::vector<StringTableEntry> mFieldFilter;
+    std::vector<SignalListenerList> mSignalListeners;
 
 protected:
     SimObjectId mId;         ///< Id number for this object.
@@ -644,6 +651,11 @@ protected:
     inline void pushScriptCallbackGuard( void )  { mScriptCallbackGuard++; }
     inline void popScriptCallbackGuard( void )   { mScriptCallbackGuard--; AssertFatal( mScriptCallbackGuard >= 0, "Invalid script callback guard." ); }
     inline S32 getScriptCallbackGuard( void )    { return mScriptCallbackGuard; }
+
+private:
+    SignalListenerList* findSignalListenerList(StringTableEntry signalName);
+    const SignalListenerList* findSignalListenerList(StringTableEntry signalName) const;
+    bool hasAnySignalListenerRef(SimObject* listener) const;
 
 protected:
     // By setting the value of mNSLinkMask in the constructor of a class that 
@@ -726,8 +738,11 @@ public:
 
     /// Check if a method exists in the objects current namespace.
     virtual bool isMethod( const char* methodName );
+    bool addSignalListener(StringTableEntry signalName, SimObject* listener);
+    bool removeSignalListener(StringTableEntry signalName, SimObject* listener);
+    bool hasSignal(StringTableEntry signalName) const;
    
-   /// Get defined namespace of a method
+    /// Get defined namespace of a method
     StringTableEntry getMethodNamespace( const char* methodName );
     /// @}
 
@@ -775,6 +790,7 @@ public:
     /// When you are on the notification list for another object
     /// and it is deleted, this method is called.
     virtual void onDeleteNotify(SimObject *object);
+    virtual void triggerSignal(void* userPtr, StringTableEntry signalName, int argc, KorkApi::ConsoleValue* argv);
 
     /// Called when the editor is activated.
     virtual void onEditorEnable(){};

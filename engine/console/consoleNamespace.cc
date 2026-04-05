@@ -548,6 +548,18 @@ void Namespace::addCommand(StringTableEntry name, KorkApi::ValueFuncCallback cb,
    ent->cb.mValueCallbackFunc = cb;
 }
 
+void Namespace::addSignal(StringTableEntry name, void* userPtr, const char* usage, S32 minArgs, S32 maxArgs)
+{
+   Entry *ent = createLocalEntry(name);
+   mVmInternal->mNSState.trashCache();
+
+   ent->mUsage = usage;
+   ent->mMinArgs = minArgs;
+   ent->mMaxArgs = maxArgs;
+   ent->mUserPtr = userPtr;
+   ent->mType = Entry::SignalType;
+}
+
 void Namespace::markGroup(const char* name, const char* usage)
 {
    char buffer[1024];
@@ -576,8 +588,35 @@ inline void* safeObjectUserPtr(KorkApi::VMObject* obj)
    return obj ? obj->userPtr : nullptr;
 }
 
+bool Namespace::Entry::validateArgCount(S32 argc, ExprEvalState *state)
+{
+   if((mMinArgs && argc < mMinArgs) || (mMaxArgs && argc > mMaxArgs))
+   {
+      state->vmInternal->printf(0, "%s::%s - wrong number of arguments.", mNamespace->mName, mFunctionName);
+      state->vmInternal->printf(0, "usage: %s", getUsage());
+      return false;
+   }
+
+   return true;
+}
+
 KorkApi::ConsoleValue Namespace::Entry::execute(S32 argc, KorkApi::ConsoleValue* argv, ExprEvalState *state, KorkApi::VMObject* resolvedThis, bool startSuspended)
 {
+   if (mType == SignalType)
+   {
+      if (!resolvedThis)
+      {
+         state->vmInternal->printf(0, "%s::%s - signal requires an object instance.", mNamespace->mName, mFunctionName);
+         return KorkApi::ConsoleValue();
+      }
+
+      if (!validateArgCount(argc - 2, state))
+         return KorkApi::ConsoleValue();
+
+      resolvedThis->klass->iSignals.TriggerSignal(mUserPtr, resolvedThis, mFunctionName, argc - 2, argv + 2);
+      return KorkApi::ConsoleValue();
+   }
+
    if(mType == ScriptFunctionType)
    {
       if(mFunctionOffset)
@@ -591,12 +630,8 @@ KorkApi::ConsoleValue Namespace::Entry::execute(S32 argc, KorkApi::ConsoleValue*
       }
    }
 
-   if((mMinArgs && argc < mMinArgs) || (mMaxArgs && argc > mMaxArgs))
-   {
-      state->vmInternal->printf(0, "%s::%s - wrong number of arguments.", mNamespace->mName, mFunctionName);
-      state->vmInternal->printf(0, "usage: %s", getUsage());
+   if(!validateArgCount(argc, state))
       return KorkApi::ConsoleValue();
-   }
 
    const char* localArgv[StringStack::MaxArgs];
 

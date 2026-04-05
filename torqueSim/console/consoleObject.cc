@@ -398,6 +398,13 @@ void AbstractClassRep::registerClassWithVm(KorkApi::Vm* vm)
          SimSet* object = dynamic_cast<SimSet*>(consoleObject);
          return object ? object->at(index)->getVMObject() : (KorkApi::VMObject*)nullptr;
       };
+      mClassInfo.iSignals = {};
+      mClassInfo.iSignals.TriggerSignal = [](void* userPtr, KorkApi::VMObject* vmObject, StringTableEntry signalName, int argc, KorkApi::ConsoleValue* argv) {
+         ConsoleObject* consoleObject = static_cast<ConsoleObject*>(vmObject->userPtr);
+         SimObject* object = dynamic_cast<SimObject*>(consoleObject);
+         if (object)
+            object->triggerSignal(userPtr, signalName, argc, argv);
+      };
    }
    
    mLastRegisteredVmId = vm->registerClass(mClassInfo);
@@ -843,4 +850,3 @@ void AbstractClassRep::registerWithVM(KorkApi::Vm* vm)
       walk->linkClassWithParent(vm);
    }
 }
-

@@ -203,7 +203,9 @@ namespace Compiler
       OP_SAVEVAR_MULTIPLE_TYPED,   // i.e. %var : type = 1,2,3
       OP_SAVEFIELD_MULTIPLE,       // i.e. obj.field = 1,2,3 OR field = 1,2,3; inside decl
 
+      // Signals
+      OP_SIGNAL_DECL,
+
       OP_INVALID   // 90
    };
 }
-
