@@ -69,6 +69,11 @@ struct LocalRefTrack
    
    LocalRefTrack& operator=(const LocalRefTrack& other)
    {
+      if (obj == other.obj)
+      {
+         return *this;
+      }
+
       if (obj && obj != other.obj)
       {
          vm->decVMRef(obj);
@@ -83,6 +88,11 @@ struct LocalRefTrack
 
    LocalRefTrack& operator=(KorkApi::VMObject* object)
    {
+      if (obj == object)
+      {
+         return *this;
+      }
+
       if (obj && obj != object)
       {
          vm->decVMRef(obj);
