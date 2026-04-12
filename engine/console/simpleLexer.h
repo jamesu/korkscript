@@ -1185,6 +1185,7 @@ private:
    {
       Token t = make(TokenType::NONE);
       t.stringValue.offset = (U32)mBytePos;
+      const U32 identOffset = t.stringValue.offset;
       const char* startStr = &mSource[mBytePos];
       bool addedStar = false;
       SrcPos starPos;
@@ -1251,18 +1252,17 @@ private:
             {
                t.ivalue = (startStr[0] == 't') ? 1 : 0;
             }
-            else
-            {
-               t.ivalue = 0;
-            }
-
-            if (t.kind == TokenType::rwCLASS && !mEnableScriptClasses)
+            else if (t.kind == TokenType::rwCLASS && !mEnableScriptClasses)
             {
                t.kind = TokenType::NONE;
             }
             else if (t.kind == TokenType::rwCLASS)
             {
                t.stString = mStringIntern.intern("class");
+            }
+            else
+            {
+               t.ivalue = 0;
             }
             break;
          }
@@ -1279,7 +1279,7 @@ private:
          
          // Default to IDENT
          t.kind = TokenType::IDENT;
-         t.stString = mStringIntern.internN(&mSource[t.stringValue.offset], (U32)(mBytePos - t.stringValue.offset));
+         t.stString = mStringIntern.internN(&mSource[identOffset], (U32)(mBytePos - identOffset));
       }
       
       return t;

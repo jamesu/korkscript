@@ -25,6 +25,11 @@ function LegacySharedClass::classOnly(%this)
    return "classOnly";
 }
 
+function LegacyAssignedClass::assignedMethod(%this)
+{
+   return "assigned";
+}
+
 function LegacyParentA::superOnly(%this)
 {
    return "superOnly";
@@ -43,6 +48,17 @@ testString("legacyNamespace.link.chain", %legacyOkChain, "SimObject -> ScriptObj
 testString("legacyNamespace.link.classOnly", %legacyOk.classOnly(), "classOnly");
 testString("legacyNamespace.link.superOnly", %legacyOk.superOnly(), "superOnly");
 testString("legacyNamespace.link.nativeMethod", %legacyOk.getClassName(), "ScriptObject");
+
+%legacyAssigned = new ScriptObject()
+{
+   class = "LegacyAssignedClass";
+};
+%legacyAssignedChain = getObjectNamespaceChain(%legacyAssigned);
+echo("legacy assigned chain: " @ %legacyAssignedChain);
+
+testString("legacyNamespace.assigned.className", %legacyAssigned.getClassNamespace(), "LegacyAssignedClass");
+testString("legacyNamespace.assigned.chain", %legacyAssignedChain, "SimObject -> ScriptObject -> LegacyAssignedClass");
+testString("legacyNamespace.assigned.method", %legacyAssigned.assignedMethod(), "assigned");
 
 %legacyConflict = new ScriptObject()
 {

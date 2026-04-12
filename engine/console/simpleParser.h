@@ -714,25 +714,14 @@ private:
       
       // IDENT ... (maybe typed)
       // DATABLOCK ... (maybe typed)
-      TOK startToken;
-      if (LA().kind == K::rwCLASS)
+      if (LA().kind == K::rwDATABLOCK)
       {
-         startToken = mTokens[mTokenPos++];
-      }
-      else
-      {
-         startToken = expectEither(K::rwDATABLOCK, K::IDENT, "ident, 'class' or 'datablock' expected");
-      }
-      if (startToken.kind == K::rwDATABLOCK)
-      {
+         mTokenPos++;
          slotName = mTokenizer->mStringIntern.intern("datablock");
       }
-      else if (startToken.kind == K::rwCLASS)
-      {
-         slotName = mTokenizer->mStringIntern.intern("class");
-      }
       else
       {
+         TOK startToken = expectIdentLike("ident, 'class' or 'datablock' expected");
          // NOTE: for now ignoring typed fields
          slotName = startToken.stString;
       }
