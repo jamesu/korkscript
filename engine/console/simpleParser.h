@@ -1074,13 +1074,31 @@ private:
       }
       
       // [Namespace::]Ident
-      TOK a = expect(TT::IDENT, "identifier expected");
+      TOK a;
+      if (LA().kind == TT::rwCLASS)
+      {
+         a = mTokens[mTokenPos++];
+         a.stString = mTokenizer->mStringIntern.intern("class");
+      }
+      else
+      {
+         a = expect(TT::IDENT, "identifier expected");
+      }
       StringTableEntry ns  = 0;
       StringTableEntry fn  = a.stString;
       
       if (match(TT::opCOLONCOLON))
       {
-         TOK b = expect(TT::IDENT, "identifier expected after '::'");
+         TOK b;
+         if (LA().kind == TT::rwCLASS)
+         {
+            b = mTokens[mTokenPos++];
+            b.stString = mTokenizer->mStringIntern.intern("class");
+         }
+         else
+         {
+            b = expect(TT::IDENT, "identifier expected after '::'");
+         }
          ns = a.stString;  // first is namespace
          fn = b.stString;  // second is function name
       }
@@ -1616,7 +1634,16 @@ private:
             else if (op.asChar() == '.') // Member access '.'  -> SlotAccessNode(left, array?, IDENT)
             {
                // IDENT after '.'
-               TOK id = expect(TT::IDENT, "identifier expected after '.'");
+               TOK id;
+               if (LA().kind == TT::rwCLASS)
+               {
+                  id = mTokens[mTokenPos++];
+                  id.stString = mTokenizer->mStringIntern.intern("class");
+               }
+               else
+               {
+                  id = expect(TT::IDENT, "identifier expected after '.'");
+               }
                
                // Method call: .IDENT '(' ... ')'
                if (LA().kind == TT::opCHAR && LA().asChar() == '(')
@@ -1758,7 +1785,16 @@ private:
             {
                TOK nsTok = t;                // first IDENT = namespace
                mTokenPos++;                   // consume '::'
-               TOK fnTok = expect(TT::IDENT, "identifier expected after '::'");
+               TOK fnTok;
+               if (LA().kind == TT::rwCLASS)
+               {
+                  fnTok = mTokens[mTokenPos++];
+                  fnTok.stString = mTokenizer->mStringIntern.intern("class");
+               }
+               else
+               {
+                  fnTok = expect(TT::IDENT, "identifier expected after '::'");
+               }
                expectChar('(', "'(' expected");
                ExprNode* args = parseExprListOptUntil(')');
                expectChar(')', "')' expected");
