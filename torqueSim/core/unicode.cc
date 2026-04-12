@@ -24,8 +24,7 @@
 #include "platform/platformString.h"
 #include "platform/platformAssert.h"
 #include "core/unicode.h"
-#include "console/stlTypes.h"
-#include <stdio.h>
+#include <vector>
 
 //-----------------------------------------------------------------------------
 /// replacement character. Standard correct value is 0xFFFD.
@@ -231,7 +230,7 @@ UTF16* convertUTF8toUTF16( const UTF8* unistring)
    nCodepoints++;
    
    // allocate the return buffer, copy over, and return it.
-   UTF16 *ret = KorkApi::VMem::NewArray<UTF16>(nCodepoints);
+   UTF16 *ret = (UTF16*)malloc(sizeof(UTF16) * nCodepoints);
    memcpy(ret, buf, nCodepoints * sizeof(UTF16));
    
    PROFILE_END();
@@ -253,7 +252,7 @@ UTF32* convertUTF8toUTF32( const UTF8* unistring)
    nCodepoints++;
    
    // allocate the return buffer, copy over, and return it.
-   UTF32 *ret = KorkApi::VMem::NewArray<UTF32>(nCodepoints);
+   UTF32 *ret = (UTF32*)malloc(sizeof(UTF32) * nCodepoints);
    memcpy(ret, buf, nCodepoints * sizeof(UTF32));
    
    PROFILE_END();
@@ -276,7 +275,7 @@ UTF8*  convertUTF16toUTF8( const UTF16* unistring)
    nCodeunits++;
    
    // allocate the return buffer, copy over, and return it.
-   UTF8 *ret = KorkApi::VMem::NewArray<UTF8>(nCodeunits);
+   UTF8 *ret = (UTF8*)malloc(sizeof(UTF8) * nCodeunits);
    memcpy(ret, buf, nCodeunits * sizeof(UTF8));
 
    PROFILE_END();
@@ -298,7 +297,7 @@ UTF32* convertUTF16toUTF32(const UTF16* unistring)
    nCodepoints++;
    
    // allocate the return buffer, copy over, and return it.
-   UTF32 *ret = KorkApi::VMem::NewArray<UTF32>(nCodepoints);
+   UTF32 *ret = (UTF32*)malloc(sizeof(UTF32) * nCodepoints);
    memcpy(ret, buf, nCodepoints * sizeof(UTF32));
 
    PROFILE_END();
@@ -320,7 +319,7 @@ UTF8*  convertUTF32toUTF8( const UTF32* unistring)
    nCodeunits++;
    
    // allocate the return buffer, copy over, and return it.
-   UTF8 *ret = KorkApi::VMem::NewArray<UTF8>(nCodeunits);
+   UTF8 *ret = (UTF8*)malloc(sizeof(UTF8) * nCodeunits);
    memcpy(ret, buf, nCodeunits * sizeof(UTF8));
 
    PROFILE_END();
@@ -342,7 +341,7 @@ UTF16* convertUTF32toUTF16(const UTF32* unistring)
    nCodepoints++;
    
    // allocate the return buffer, copy over, and return it.
-   UTF16 *ret = KorkApi::VMem::NewArray<UTF16>(nCodepoints);
+   UTF16 *ret = (UTF16*)malloc(sizeof(UTF16) * nCodepoints);
    memcpy(ret, buf, nCodepoints * sizeof(UTF16));
 
    PROFILE_END();
