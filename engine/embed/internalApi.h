@@ -77,7 +77,7 @@ struct VmInternal
    ClassChunker<ExprEvalState> mFiberAllocator;
 
    Vector<TypeInfo> mTypes;
-   Vector<ClassInfo> mClassList;
+   Vector<ClassInfo*> mClassList;
 
    KorkApi::ConsoleHeapAlloc* mHeapAllocs;
    Config mConfig;
@@ -102,6 +102,7 @@ struct VmInternal
 
    SimpleStringInterner* mLocalIntern;
    StringTableEntry mEmptyString;
+   StringTableEntry mDefaultScriptClassName;
 
    VmInternal(KorkApi::Vm* vm, Config* cfg);
    ~VmInternal();
@@ -185,6 +186,11 @@ struct VmInternal
    CodeBlock *findCodeBlock(StringTableEntry name);
 
    ClassInfo* getClassInfoByName(StringTableEntry name);
+   ScriptClassInfo* getScriptClassInfoByName(StringTableEntry name);
+   bool registerScriptClass(StringTableEntry name, StringTableEntry parentName, StringTableEntry ctorName,
+      U32 fieldCount, const ScriptClassFieldInfo* fields, ScriptClassInfo** outInfo = nullptr);
+   bool invokeScriptClassConstructor(VMObject* object);
+   bool getScriptClassFieldInfo(VMObject* object, StringTableEntry name, ScriptClassFieldInfo** outField = nullptr);
 
    const char* tempFloatConv(F64 val);
    const char* tempIntConv(U64 val);

@@ -243,6 +243,7 @@ void init()
    config.enableTypes = true;
    config.enableSignals = true;
    config.enableStringInterpolation = true;
+   config.defaultScriptClass = "ScriptObject";
 
 
    config.mallocFn = [](size_t size, void*){

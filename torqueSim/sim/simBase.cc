@@ -1693,8 +1693,6 @@ void SimObject::setDataFieldDynamic(StringTableEntry slotName, const char *array
    }
 }
 
-//-----------------------------------------------------------------------------
-
 void  SimObject::dumpClassHierarchy()
 {
    AbstractClassRep* pRep = getClassRep();
@@ -1739,8 +1737,6 @@ const char *SimObject::getDataFieldDynamic(StringTableEntry slotName, const char
    
    return "";
 }
-
-//-----------------------------------------------------------------------------
 
 SimObject::~SimObject()
 {
@@ -2318,8 +2314,12 @@ void SimObject::linkNamespaces()
    if( mVMNameSpace )
       unlinkNamespaces();
    
-   StringTableEntry parent = StringTable->insert( getClassName() );
-   if( ( mNSLinkMask & LinkSuperClassName ) && mSuperClassName && mSuperClassName[0] )
+   bool isScriptClassObject = vmObject && vmObject->klass && vmObject->klass->scriptClass;
+   StringTableEntry parent = isScriptClassObject
+      ? vmObject->klass->scriptClass->name
+      : StringTable->insert( getClassName() );
+
+   if( !isScriptClassObject && ( mNSLinkMask & LinkSuperClassName ) && mSuperClassName && mSuperClassName[0] )
    {
       if( Con::linkNamespaces( parent, mSuperClassName ) )
          parent = mSuperClassName;
@@ -2334,7 +2334,7 @@ void SimObject::linkNamespaces()
    }
 
    // ClassName -> SuperClassName
-   if ( ( mNSLinkMask & LinkClassName ) && mClassName && mClassName[0] )
+   if ( !isScriptClassObject && ( mNSLinkMask & LinkClassName ) && mClassName && mClassName[0] )
    {
       if( Con::linkNamespaces( parent, mClassName ) )
          parent = mClassName;
@@ -2363,25 +2363,32 @@ void SimObject::unlinkNamespaces()
    if (!mVMNameSpace)
       return;
 
+   bool isScriptClassObject = vmObject && vmObject->klass && vmObject->klass->scriptClass;
+
    // Restore NameSpace's
    StringTableEntry child = getName();
    if( child && child[0] )
    {
-      if( ( mNSLinkMask & LinkClassName ) && mClassName && mClassName[0])
+      if( isScriptClassObject )
+      {
+         Con::unlinkNamespaces( vmObject->klass->scriptClass->name, child );
+      }
+      else if( ( mNSLinkMask & LinkClassName ) && mClassName && mClassName[0])
       {
          if( Con::unlinkNamespaces( mClassName, child ) )
             child = mClassName;
       }
 
-      if( ( mNSLinkMask & LinkSuperClassName ) && mSuperClassName && mSuperClassName[0] )
+      if( !isScriptClassObject && ( mNSLinkMask & LinkSuperClassName ) && mSuperClassName && mSuperClassName[0] )
       {
          if( Con::unlinkNamespaces( mSuperClassName, child ) )
             child = mSuperClassName;
       }
 
-      Con::unlinkNamespaces( getClassName(), child );
+      if( !isScriptClassObject )
+         Con::unlinkNamespaces( getClassName(), child );
    }
-   else
+   else if( !isScriptClassObject )
    {
       child = mClassName;
       if( child && child[0] )

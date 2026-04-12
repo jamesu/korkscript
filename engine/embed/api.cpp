@@ -337,15 +337,9 @@ bool Vm::castToField(U32 argc, KorkApi::ConsoleValue* argv, void* outPtr, U32 in
    }
 }
 
-ClassId Vm::registerClass(ClassInfo& info)
+static void ensureClassInfoStubs(ClassInfo& chkFunc)
 {
-   VmAllocTLS::Scope memScope(mInternal);
-   mInternal->mClassList.push_back(info);
-   
-   ClassInfo& chkFunc = mInternal->mClassList.back();
-   
    // iCreate stubs
-   
    if (chkFunc.iCreate.CreateClassFn == nullptr)
    {
       chkFunc.iCreate.CreateClassFn = [](void* user, Vm* vm, CreateClassReturn* outP) {
@@ -385,9 +379,8 @@ ClassId Vm::registerClass(ClassInfo& info)
          return (StringTableEntry)nullptr;
       };
    }
-   
+
    // iEnum stubs
-   
    if (chkFunc.iEnum.GetSize == nullptr)
    {
       chkFunc.iEnum.GetSize = [](VMObject* object) { return (U32)0; };
@@ -402,7 +395,7 @@ ClassId Vm::registerClass(ClassInfo& info)
       chkFunc.iSignals.TriggerSignal = [](void* userPtr, VMObject* object, StringTableEntry signalName, int argc, ConsoleValue* argv) {
       };
    }
-   
+
    // iCustomFields stubs
    if (chkFunc.iCustomFields.IterateFields == nullptr)
    {
@@ -433,8 +426,19 @@ ClassId Vm::registerClass(ClassInfo& info)
          return false;
       };
    }
-      
-   
+}
+
+ClassId Vm::registerClass(ClassInfo& info)
+{
+   VmAllocTLS::Scope memScope(mInternal);
+   ClassInfo* storedInfo = mInternal->New<ClassInfo>();
+   *storedInfo = info;
+   storedInfo->nativeRootClassId = info.nativeRootClassId >= 0 ? info.nativeRootClassId : (ClassId)mInternal->mClassList.size();
+   storedInfo->scriptClass = info.scriptClass;
+   mInternal->mClassList.push_back(storedInfo);
+
+   ensureClassInfoStubs(*storedInfo);
+
    return mInternal->mClassList.size()-1;
 }
 
@@ -443,12 +447,35 @@ ClassId Vm::getClassId(const char* name)
    StringTableEntry klassST = mInternal->internString(name, false);
    for (U32 i=0; i<mInternal->mClassList.size(); i++)
    {
-      if (mInternal->mClassList[i].name == klassST)
+      if (mInternal->mClassList[i] && mInternal->mClassList[i]->name == klassST)
       {
          return i;
       }
    }
    return -1;
+}
+
+bool Vm::registerScriptClass(StringTableEntry name, StringTableEntry parentName, StringTableEntry ctorName,
+   U32 fieldCount, const ScriptClassFieldInfo* fields, ScriptClassInfo** outInfo)
+{
+   VmAllocTLS::Scope memScope(mInternal);
+   return mInternal->registerScriptClass(name, parentName, ctorName, fieldCount, fields, outInfo);
+}
+
+bool Vm::invokeScriptClassConstructor(VMObject* object)
+{
+   VmAllocTLS::Scope memScope(mInternal);
+   return mInternal->invokeScriptClassConstructor(object);
+}
+
+bool Vm::getScriptClassFieldInfo(VMObject* object, StringTableEntry fieldName, ScriptClassFieldInfo* outInfo)
+{
+   VmAllocTLS::Scope memScope(mInternal);
+   ScriptClassFieldInfo* foundInfo = nullptr;
+   const bool found = mInternal->getScriptClassFieldInfo(object, fieldName, outInfo ? &foundInfo : nullptr);
+   if (found && outInfo && foundInfo)
+      *outInfo = *foundInfo;
+   return found;
 }
 
 ConsoleHeapAllocRef Vm::createHeapRef(U32 size)
@@ -636,7 +663,7 @@ void Vm::popValueFrame()
 // Public
 VMObject* Vm::constructObject(ClassId klassId, const char* name, int argc, const char** argv)
 {
-   ClassInfo* ci = &mInternal->mClassList[klassId];
+   ClassInfo* ci = mInternal->mClassList[klassId];
    VMObject* object = mInternal->New<VMObject>();
    mInternal->incVMRef(object);
 
@@ -679,7 +706,7 @@ VMObject* Vm::createVMObject(ClassId klassId, void* klassPtr)
    VmAllocTLS::Scope memScope(mInternal);
    VMObject* object = mInternal->New<VMObject>();
    mInternal->incVMRef(object);
-   object->klass = &mInternal->mClassList[klassId];
+   object->klass = mInternal->mClassList[klassId];
    object->ns = nullptr;
    object->userPtr = klassPtr;
    return object;
@@ -1383,6 +1410,7 @@ VmInternal::VmInternal(Vm* vm, Config* cfg) : mGlobalVars(this)
    // Init empty string
 
    mEmptyString = internString("", false);
+   mDefaultScriptClassName = internString(cfg->defaultScriptClass ? cfg->defaultScriptClass : "ScriptObject", false);
    
    // Setup base fiber
 
@@ -1409,6 +1437,18 @@ VmInternal::~VmInternal()
       Delete(mCompilerResources);
    }
    mNSState.shutdown();
+
+   for (ClassInfo* info : mClassList)
+   {
+      if (info && info->scriptClass)
+      {
+         if (info->scriptClass->fields)
+            DeleteArray(info->scriptClass->fields);
+         Delete(info->scriptClass);
+      }
+      Delete(info);
+   }
+   mClassList.clear();
    
    // Cleanup remaining fibers
    for (Vector<ExprEvalState*>::iterator itr = mFiberStates.mItems.begin(), itrEnd = mFiberStates.mItems.end(); itr != itrEnd; itr++)
@@ -1599,19 +1639,237 @@ CodeBlock *VmInternal::findCodeBlock(StringTableEntry name)
 
 ClassInfo* VmInternal::getClassInfoByName(StringTableEntry name)
 {
-   auto itr = std::find_if(mClassList.begin(), mClassList.end(), [name](ClassInfo& info){
-      return info.name == name;
+   auto itr = std::find_if(mClassList.begin(), mClassList.end(), [name](ClassInfo* info){
+      return info && info->name == name;
    });
 
    if (itr != mClassList.end())
    {
-      return &*itr;
+      return *itr;
    }
    else
    {
       return nullptr;
    }
 }
+
+ScriptClassInfo* VmInternal::getScriptClassInfoByName(StringTableEntry name)
+{
+   auto itr = std::find_if(mClassList.begin(), mClassList.end(), [name](ClassInfo* info){
+      return info && info->scriptClass && info->name == name;
+   });
+
+   return itr != mClassList.end() ? (*itr)->scriptClass : nullptr;
+}
+
+bool VmInternal::registerScriptClass(StringTableEntry name, StringTableEntry parentName, StringTableEntry ctorName,
+   U32 fieldCount, const ScriptClassFieldInfo* fields, ScriptClassInfo** outInfo)
+{
+   if (!name || !name[0])
+      return false;
+
+   ClassInfo* existingClass = getClassInfoByName(name);
+   if (existingClass && !existingClass->scriptClass)
+   {
+      printf(0, "Unable to register script class %s: a native class already exists with that name.", name);
+      return false;
+   }
+
+   ScriptClassInfo* info = existingClass ? existingClass->scriptClass : nullptr;
+   ClassInfo* scriptClass = existingClass;
+   ClassInfo* parentClass = nullptr;
+   ClassInfo* rootClass = nullptr;
+   StringTableEntry rootClassName = nullptr;
+   StringTableEntry parentScriptName = mEmptyString;
+
+   if (parentName && parentName[0])
+   {
+      parentClass = getClassInfoByName(parentName);
+      if (parentClass && parentClass->scriptClass)
+      {
+         rootClass = mClassList[parentClass->nativeRootClassId];
+         rootClassName = parentClass->scriptClass->rootClassName;
+         parentScriptName = parentClass->name;
+      }
+      else
+      {
+         rootClass = parentClass;
+         rootClassName = rootClass ? rootClass->name : nullptr;
+      }
+   }
+   else
+   {
+      rootClass = getClassInfoByName(mDefaultScriptClassName);
+      rootClassName = rootClass ? rootClass->name : nullptr;
+   }
+
+   if (!rootClass)
+   {
+      printf(0, "Unable to register script class %s: root class %s was not found.",
+         name, parentName && parentName[0] ? parentName : mDefaultScriptClassName);
+      return false;
+   }
+
+   ClassId rootClassId = -1;
+   for (U32 i = 0; i < mClassList.size(); ++i)
+   {
+      if (mClassList[i] == rootClass)
+      {
+         rootClassId = i;
+         break;
+      }
+   }
+
+   if (rootClassId < 0)
+      return false;
+
+   ClassId parentClassId = parentClass ? -1 : rootClassId;
+   if (parentClass)
+   {
+      for (U32 i = 0; i < mClassList.size(); ++i)
+      {
+         if (mClassList[i] == parentClass)
+         {
+            parentClassId = i;
+            break;
+         }
+      }
+   }
+
+   if (!info)
+      info = New<ScriptClassInfo>();
+
+   info->name = name;
+   info->parentName = parentName ? parentName : mEmptyString;
+    info->parentScriptName = parentScriptName ? parentScriptName : mEmptyString;
+   info->rootClassName = rootClassName;
+   info->ctorName = ctorName ? ctorName : mEmptyString;
+   info->rootClassId = rootClassId;
+   info->nameSpace = mVM->findNamespace(name);
+   info->numFields = fieldCount;
+
+   if (info->fields)
+      DeleteArray(info->fields);
+
+   info->fields = fieldCount ? NewArray<ScriptClassFieldInfo>(fieldCount) : nullptr;
+   for (U32 i = 0; i < fieldCount; ++i)
+   {
+      info->fields[i] = fields[i];
+      if (info->fields[i].typeName && info->fields[i].typeName[0])
+      {
+         const S32 typeId = lookupTypeId(info->fields[i].typeName);
+         info->fields[i].typeId = typeId >= 0 ? (U16)typeId : ConsoleValue::TypeInternalString;
+      }
+      else
+      {
+         info->fields[i].typeId = ConsoleValue::TypeInternalString;
+      }
+   }
+
+   if (!scriptClass)
+   {
+      scriptClass = New<ClassInfo>();
+      *scriptClass = *rootClass;
+      scriptClass->name = name;
+      scriptClass->parentKlassId = parentClassId;
+      scriptClass->nativeRootClassId = rootClassId;
+      scriptClass->scriptClass = info;
+      mClassList.push_back(scriptClass);
+   }
+   else
+   {
+      const ClassInfo rootSnapshot = *rootClass;
+      scriptClass->userPtr = rootSnapshot.userPtr;
+      scriptClass->numFields = rootSnapshot.numFields;
+      scriptClass->fields = rootSnapshot.fields;
+      scriptClass->iCreate = rootSnapshot.iCreate;
+      scriptClass->iEnum = rootSnapshot.iEnum;
+      scriptClass->iSignals = rootSnapshot.iSignals;
+      scriptClass->iCustomFields = rootSnapshot.iCustomFields;
+      scriptClass->parentKlassId = parentClassId;
+      scriptClass->nativeRootClassId = rootClassId;
+      scriptClass->scriptClass = info;
+   }
+
+   ensureClassInfoStubs(*scriptClass);
+
+   Namespace* classNs = (Namespace*)info->nameSpace;
+   Namespace* parentNs = (Namespace*)mVM->findNamespace((parentClass && parentClass->scriptClass) ? parentClass->name : rootClassName);
+   if (classNs && parentNs && classNs->mParent != parentNs)
+   {
+      if (classNs->mParent && classNs->mParent != parentNs)
+      {
+         printf(0, "Unable to register script class %s: namespace is already linked to %s.",
+            name, classNs->mParent->mName);
+         return false;
+      }
+
+      classNs->classLinkTo(parentNs);
+   }
+
+   if (outInfo)
+      *outInfo = info;
+
+   return true;
+}
+
+bool VmInternal::invokeScriptClassConstructor(VMObject* object)
+{
+   ScriptClassInfo* scriptClass = (object && object->klass) ? object->klass->scriptClass : nullptr;
+   if (!scriptClass)
+      return true;
+
+   if ((object->flags & ModScriptCtorInvoked) != 0)
+      return true;
+
+   object->flags |= ModScriptClassObject;
+
+   if (!scriptClass->ctorName || !scriptClass->ctorName[0])
+   {
+      object->flags |= ModScriptCtorInvoked;
+      return true;
+   }
+
+   if (!object->ns)
+      object->ns = (Namespace*)scriptClass->nameSpace;
+
+   ConsoleValue argv[2];
+   argv[0] = ConsoleValue::makeString(scriptClass->ctorName);
+   argv[1] = ConsoleValue::makeUnsigned(object->klass->iCreate.GetIdFn(object));
+
+   ConsoleValue retValue;
+   if (!mVM->callObjectFunction(object, scriptClass->ctorName, 2, argv, retValue))
+      return false;
+
+   object->flags |= ModScriptCtorInvoked;
+   return true;
+}
+
+bool VmInternal::getScriptClassFieldInfo(VMObject* object, StringTableEntry name, ScriptClassFieldInfo** outField)
+{
+   if (outField)
+      *outField = nullptr;
+
+   if (!object || !object->klass || !object->klass->scriptClass)
+      return false;
+
+   for (ClassInfo* walk = object->klass; walk && walk->scriptClass; walk = (walk->parentKlassId >= 0 && walk->parentKlassId < (S32)mClassList.size()) ? mClassList[walk->parentKlassId] : nullptr)
+   {
+      for (U32 i = 0; i < walk->scriptClass->numFields; ++i)
+      {
+         ScriptClassFieldInfo& field = walk->scriptClass->fields[i];
+         if (field.name == name)
+         {
+            if (outField)
+               *outField = &field;
+            return true;
+         }
+      }
+   }
+
+   return false;
+}
+
 
 
 const char* VmInternal::tempFloatConv(F64 val)
@@ -1656,6 +1914,13 @@ bool VmInternal::setObjectField(VMObject* obj, StringTableEntry name, KorkApi::C
 
 bool VmInternal::setObjectFieldTuple(VMObject* obj, StringTableEntry fieldName, KorkApi::ConsoleValue arrayIndex, U32 argc, ConsoleValue* argv)
 {
+   ScriptClassFieldInfo* scriptField = nullptr;
+   if (getScriptClassFieldInfo(obj, fieldName, &scriptField))
+   {
+      obj->klass->iCustomFields.SetCustomFieldByName(mVM, obj, fieldName, arrayIndex, argc, argv);
+      return true;
+   }
+
    if ((obj->flags & KorkApi::ModStaticFields) != 0)
    {
       for (U32 i=0; i<obj->klass->numFields; i++)
@@ -1723,7 +1988,18 @@ ConsoleValue VmInternal::getObjectField(VMObject* obj, StringTableEntry name, Ko
 {
    // Default result if nothing matches.
    ConsoleValue def;
-   if (!obj || !obj->klass || !obj->klass->fields)
+   if (!obj || !obj->klass)
+      return def;
+
+   ScriptClassFieldInfo* scriptField = nullptr;
+   if (getScriptClassFieldInfo(obj, name, &scriptField))
+   {
+      if ((requestedType & KorkApi::TypeDirectCopy) != 0 && scriptField)
+         requestedType = scriptField->typeId;
+      return obj->klass->iCustomFields.GetFieldByName(mVM, obj, name, array);
+   }
+
+   if (!obj->klass->fields)
       return def;
    
    for (U32 i = 0; i < obj->klass->numFields; ++i)
@@ -1804,7 +2080,14 @@ ConsoleValue VmInternal::getObjectField(VMObject* obj, StringTableEntry name, Ko
 U16 VmInternal::getObjectFieldType(VMObject* obj, StringTableEntry name, KorkApi::ConsoleValue array)
 {
    // Default result if nothing matches.
-   if (!obj || !obj->klass || !obj->klass->fields)
+   if (!obj || !obj->klass)
+      return 0;
+
+   ScriptClassFieldInfo* scriptField = nullptr;
+   if (getScriptClassFieldInfo(obj, name, &scriptField))
+      return scriptField ? scriptField->typeId : 0;
+
+   if (!obj->klass->fields)
       return 0;
    
    for (U32 i = 0; i < obj->klass->numFields; ++i)
@@ -1861,7 +2144,29 @@ void* Vm::getUserPtr() const
 
 void VmInternal::assignFieldsFromTo(VMObject* from, VMObject* to)
 {
-   // TODO
+   if (!from || !to || !from->klass || !to->klass)
+      return;
+
+   for (U32 i = 0; i < from->klass->numFields; ++i)
+   {
+      FieldInfo& field = from->klass->fields[i];
+      if (!field.pFieldname)
+         continue;
+
+      ConsoleValue value = getObjectField(from, field.pFieldname, ConsoleValue(), TypeDirectCopy, ConsoleValue::ZoneFunc);
+      setObjectField(to, field.pFieldname, ConsoleValue(), value);
+   }
+
+   VMIterator state = {};
+   StringTableEntry fieldName = nullptr;
+   while (from->klass->iCustomFields.IterateFields(mVM, from, state, &fieldName))
+   {
+      if (!fieldName)
+         continue;
+
+      ConsoleValue value = from->klass->iCustomFields.GetFieldByIterator(mVM, from, state);
+      setObjectField(to, fieldName, ConsoleValue(), value);
+   }
 }
 
 F64 VmInternal::valueAsFloat(ConsoleValue v)

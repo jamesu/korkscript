@@ -46,7 +46,7 @@ enum class TokenType : U32
    rwIN, rwCASEOR, rwBREAK, rwRETURN, rwELSE, rwASSERT, rwWHILE, rwDO,
    rwIF, rwFOREACHSTR, rwFOREACH, rwFOR, rwCONTINUE, rwDEFINE, rwSIGNAL, rwDECLARE,
    rwDECLARESINGLETON, rwDATABLOCK, rwCASE, rwSWITCHSTR, rwSWITCH,
-   rwDEFAULT, rwPACKAGE, rwNAMESPACE,
+   rwDEFAULT, rwPACKAGE, rwNAMESPACE, rwCLASS,
    rwTRY, rwCATCH,
    
    // Booleans become INTCONST in the original; we keep explicit ops below.
@@ -209,7 +209,7 @@ public:
          "rwIN", "rwCASEOR", "rwBREAK", "rwRETURN", "rwELSE", "rwASSERT", "rwWHILE", "rwDO",
          "rwIF", "rwFOREACHSTR", "rwFOREACH", "rwFOR", "rwCONTINUE", "rwDEFINE", "rwSIGNAL", "rwDECLARE",
          "rwDECLARESINGLETON", "rwDATABLOCK", "rwCASE", "rwSWITCHSTR", "rwSWITCH",
-         "rwDEFAULT", "rwPACKAGE", "rwNAMESPACE",
+         "rwDEFAULT", "rwPACKAGE", "rwNAMESPACE", "rwCLASS",
          "rwTRY", "rwCATCH",
          
          "opEQ", "opNE", "opGE", "opLE", "opAND", "opOR", "opCOLONCOLON",
@@ -1234,6 +1234,7 @@ private:
          {"default",    TokenType::rwDEFAULT},
          {"package",    TokenType::rwPACKAGE},
          {"namespace",  TokenType::rwNAMESPACE},
+         {"class",      TokenType::rwCLASS},
          {"true",       TokenType::INTCONST},
          {"false",      TokenType::INTCONST}
       };

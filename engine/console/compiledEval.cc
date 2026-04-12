@@ -283,6 +283,7 @@ inline void ConsoleFrame::copyFrom(ConsoleFrame* other, bool includeScope)
    _ITER = other->_ITER;
    _OBJ = _STARTOBJ = other->_OBJ;
    _TRY = other->_TRY;
+   currentNewObject = other->currentNewObject;
    
    if (includeScope)
    {
@@ -290,6 +291,7 @@ inline void ConsoleFrame::copyFrom(ConsoleFrame* other, bool includeScope)
       scopePackage = other->scopePackage;
       scopeNamespace = other->scopeNamespace;
    }
+
 }
 
 inline void ConsoleFrame::setCurVarName(StringTableEntry name)
@@ -836,6 +838,38 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
             }
             ip += 7;
             break;
+
+         case OP_CLASS_DECL:
+            if (!frame.noCalls)
+            {
+               StringTableEntry className = Compiler::CodeToSTE(nullptr, identStrings, code, ip);
+               StringTableEntry parentName = Compiler::CodeToSTE(nullptr, identStrings, code, ip + 2);
+               StringTableEntry ctorName = Compiler::CodeToSTE(nullptr, identStrings, code, ip + 4);
+               U32 fieldCount = code[ip + 6];
+
+               KorkApi::Vector<KorkApi::ScriptClassFieldInfo> fields;
+               fields.reserve(fieldCount);
+
+               U32 walkIp = ip + 7;
+               for (U32 i = 0; i < fieldCount; ++i)
+               {
+                  KorkApi::ScriptClassFieldInfo fieldInfo = {};
+                  fieldInfo.name = Compiler::CodeToSTE(nullptr, identStrings, code, walkIp);
+                  fieldInfo.typeName = Compiler::CodeToSTE(nullptr, identStrings, code, walkIp + 2);
+                  fieldInfo.typeId = 0;
+                  fields.push_back(fieldInfo);
+                  walkIp += 4;
+               }
+
+               vmPublic->registerScriptClass(className, parentName, ctorName, fieldCount, fieldCount ? &fields[0] : nullptr);
+               ip = walkIp;
+            }
+            else
+            {
+               U32 fieldCount = code[ip + 6];
+               ip += 7 + (fieldCount * 4);
+            }
+            break;
             
          case OP_CREATE_OBJECT:
          {
@@ -924,7 +958,8 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
             if(!frame.currentNewObject.isValid())
             {
                // Well, looks like we have to create a new object.
-               KorkApi::ClassInfo* klassInfo = vmInternal->getClassInfoByName(vmInternal->internString(callArgvS[1], false));
+               StringTableEntry className = vmInternal->internString(callArgvS[1], false);
+               KorkApi::ClassInfo* klassInfo = vmInternal->getClassInfoByName(className);
                KorkApi::VMObject *object = nullptr;
 
                if (klassInfo)
@@ -937,6 +972,13 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
                   klassInfo->iCreate.CreateClassFn(klassInfo->userPtr,  vmPublic, &ret);
                   object->userPtr = ret.userPtr;
                   object->flags = ret.initialFlags;
+
+                  if (klassInfo->scriptClass && object->userPtr)
+                  {
+                     object->flags |= KorkApi::ModScriptClassObject;
+                     object->ns = (KorkApi::VMNamespace*)klassInfo->scriptClass->nameSpace;
+                     vmPublic->setObjectFieldString(object, vmInternal->internString("class", false), klassInfo->name, KorkApi::ConsoleValue());
+                  }
 
                   if (object->userPtr == nullptr)
                   {
@@ -961,6 +1003,13 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
                {
                   vmInternal->printf(0, "%s: Unable to instantiate non-SimObject class %s.", frame.codeBlock->getFileLine(ip-1), callArgvS[1]);
                   delete object;
+                  ip = frame.failJump;
+                  break;
+               }
+
+               if (!vmPublic->invokeScriptClassConstructor(frame.currentNewObject))
+               {
+                  frame.currentNewObject = nullptr;
                   ip = frame.failJump;
                   break;
                }
@@ -2373,7 +2422,6 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
                //setFieldComponent( prevObject, prevField, prevFieldArray, curField );
                frame.prevObject = nullptr;
             }
-
             break;
          case OP_STR_TO_TYPED:
             if (frame.dynTypeId != 0)

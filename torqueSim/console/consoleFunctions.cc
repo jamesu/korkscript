@@ -1169,5 +1169,3 @@ ConsoleFunction(deactivatePackage, void,2,2,"deactivatePackage(packageName)")
 }
 
 ConsoleFunctionGroupEnd( Packages );
-
-

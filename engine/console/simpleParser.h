@@ -233,6 +233,8 @@ private:
          case TT::rwDEFINE:   // "function"
          case TT::rwSIGNAL:
             return parseFnDeclStmt();
+         case TT::rwCLASS:
+            return parseClassDecl();
          case TT::rwPACKAGE:  // "package"
             return parsePackageDecl();
          default:
@@ -649,6 +651,7 @@ private:
       using K = TT;
       const TOK& t = LA();
       if (t.kind == K::rwDATABLOCK) return true;
+      if (t.kind == K::rwCLASS) return true;
       if (t.kind != K::IDENT)       return false;
       
       // IDENT can be either:   IDENT '=' expr ';'
@@ -696,10 +699,22 @@ private:
       
       // IDENT ... (maybe typed)
       // DATABLOCK ... (maybe typed)
-      TOK startToken = expectEither(K::rwDATABLOCK, K::IDENT, "ident or 'datablock' expected");
+      TOK startToken;
+      if (LA().kind == K::rwCLASS)
+      {
+         startToken = mTokens[mTokenPos++];
+      }
+      else
+      {
+         startToken = expectEither(K::rwDATABLOCK, K::IDENT, "ident, 'class' or 'datablock' expected");
+      }
       if (startToken.kind == K::rwDATABLOCK)
       {
          slotName = mTokenizer->mStringIntern.intern("datablock");
+      }
+      else if (startToken.kind == K::rwCLASS)
+      {
+         slotName = mTokenizer->mStringIntern.intern("class");
       }
       else
       {
@@ -936,6 +951,102 @@ private:
       
       return ObjectDeclNode::alloc(mResources, line, klassNameNode, nameExpr, nullptr, parentObject, slotAssignNode, nullptr, /*isDatablock*/true, /*isSingleton*/false, /*isNewExpr*/false);
    }
+
+   ScriptClassFieldDecl* parseClassFieldList()
+   {
+      ScriptClassFieldDecl* head = nullptr;
+      ScriptClassFieldDecl* tail = nullptr;
+
+      while (!atEnd() && !(LA().kind == TT::opCHAR && LA().asChar() == '}'))
+      {
+         TOK nameTok = expect(TT::IDENT, "field name expected");
+         StringTableEntry typeName = nullptr;
+         ExprNode* defaultExpr = nullptr;
+
+         if (matchChar(':'))
+         {
+            if (!mResources->allowTypes)
+            {
+               errorHere(LA(), "Types not enabled");
+               return nullptr;
+            }
+            typeName = expect(TT::IDENT, "type name expected").stString;
+         }
+
+         if (matchChar('='))
+         {
+            defaultExpr = parseExprNode();
+            defaultExpr = handleExpressionTuples(defaultExpr, true);
+         }
+
+         expectChar(';', "';' expected");
+
+         ScriptClassFieldDecl* field = ScriptClassFieldDecl::alloc(mResources, nameTok.pos.line, nameTok.stString, typeName, defaultExpr);
+         if (!head)
+            head = tail = field;
+         else
+         {
+            tail->next = field;
+            tail = field;
+         }
+      }
+
+      return head;
+   }
+
+   FunctionDeclStmtNode* buildScriptClassCtor(S32 line, StringTableEntry className, StringTableEntry parentName, ScriptClassFieldDecl* fields)
+   {
+      StringTableEntry ctorName = mTokenizer->mStringIntern.intern("__kork_ctor");
+      StringTableEntry thisName = mTokenizer->mStringIntern.intern("%this");
+
+      VarNode* args = VarNode::alloc(mResources, line, thisName, nullptr);
+      StmtNode* body = nullptr;
+      StmtNode* tail = nullptr;
+
+      if (parentName && parentName[0])
+      {
+         ExprNode* parentArgs = VarNode::alloc(mResources, line, thisName, nullptr);
+         StmtNode* parentCall = FuncCallExprNode::alloc(mResources, line, ctorName, mTokenizer->mStringIntern.intern("Parent"), parentArgs, false);
+         body = tail = parentCall;
+      }
+
+      for (ScriptClassFieldDecl* walk = fields; walk; walk = walk->next)
+      {
+         if (!walk->defaultExpr)
+            continue;
+
+         StmtNode* assignStmt = SlotAssignNode::alloc(mResources, walk->dbgLineNumber, nullptr, nullptr, walk->fieldName, walk->defaultExpr, walk->typeName);
+
+         if (!body)
+            body = tail = assignStmt;
+         else
+         {
+            tail->append(assignStmt);
+            tail = assignStmt;
+         }
+      }
+
+      return FunctionDeclStmtNode::alloc(mResources, line, ctorName, className, args, body, nullptr, false);
+   }
+
+   StmtNode* parseClassDecl()
+   {
+      S32 line = 0;
+      expect(TT::rwCLASS, "'class' expected");
+      TOK classTok = expect(TT::IDENT, "class name expected");
+      StringTableEntry parentName = nullptr;
+
+      if (matchChar(':'))
+         parentName = expect(TT::IDENT, "parent class name expected").stString;
+
+      expectChar('{', "'{' expected");
+      ScriptClassFieldDecl* fields = parseClassFieldList();
+      expectChar('}', "'}' expected");
+      expectChar(';', "';' expected");
+
+      FunctionDeclStmtNode* ctorDecl = buildScriptClassCtor(line ? line : classTok.pos.line, classTok.stString, parentName, fields);
+      return ClassDeclStmtNode::alloc(mResources, line ? line : classTok.pos.line, classTok.stString, parentName, fields, ctorDecl);
+   }
    
    // Handles function definitions such as function foo(...) { ... }
    //
@@ -1080,6 +1191,9 @@ private:
             
          case TT::rwDATABLOCK:
             return parseDatablockDecl();
+
+         case TT::rwCLASS:
+            return parseClassDecl();
             
          case TT::rwDECLARE:             // 'new'
          case TT::rwDECLARESINGLETON:  { // 'singleton'

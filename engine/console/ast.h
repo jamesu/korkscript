@@ -63,6 +63,7 @@ enum TypeReq
 };
 
 struct BaseAssignExprNode;
+struct FunctionDeclStmtNode;
 
 /// Representation of a node for the scripting language parser.
 ///
@@ -629,6 +630,30 @@ struct ObjectDeclNode : ExprNode
    U32 compileSubObject(CodeStream &codeStream, U32 ip, bool);
    TypeReq getPreferredType();
    DBG_STMT_TYPE(ObjectDeclNode);
+};
+
+struct ScriptClassFieldDecl
+{
+   ScriptClassFieldDecl* next;
+   StringTableEntry fieldName;
+   StringTableEntry typeName;
+   ExprNode* defaultExpr;
+   S32 dbgLineNumber;
+
+   static ScriptClassFieldDecl* alloc( Compiler::Resources* res, S32 lineNumber, StringTableEntry fieldName, StringTableEntry typeName, ExprNode* defaultExpr );
+};
+
+struct ClassDeclStmtNode : StmtNode
+{
+   StringTableEntry className;
+   StringTableEntry parentName;
+   ScriptClassFieldDecl* fields;
+   FunctionDeclStmtNode* ctorDecl;
+
+   static ClassDeclStmtNode* alloc( Compiler::Resources* res, S32 lineNumber, StringTableEntry className, StringTableEntry parentName, ScriptClassFieldDecl* fields, FunctionDeclStmtNode* ctorDecl );
+
+   U32 compileStmt(CodeStream &codeStream, U32 ip);
+   DBG_STMT_TYPE(ClassDeclStmtNode);
 };
 
 struct ObjectBlockDecl

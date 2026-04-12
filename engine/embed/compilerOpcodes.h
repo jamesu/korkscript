@@ -206,6 +206,9 @@ namespace Compiler
       // Signals
       OP_SIGNAL_DECL,
 
+      // Script classes
+      OP_CLASS_DECL,
+
       OP_INVALID   // 90
    };
 }

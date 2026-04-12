@@ -456,6 +456,29 @@ ObjectDeclNode *ObjectDeclNode::alloc( Compiler::Resources* res, S32 lineNumber,
    return ret;
 }
 
+ScriptClassFieldDecl* ScriptClassFieldDecl::alloc( Compiler::Resources* res, S32 lineNumber, StringTableEntry fieldName, StringTableEntry typeName, ExprNode* defaultExpr )
+{
+   ScriptClassFieldDecl* ret = (ScriptClassFieldDecl*) res->consoleAlloc(sizeof(ScriptClassFieldDecl));
+   ret->next = nullptr;
+   ret->dbgLineNumber = lineNumber;
+   ret->fieldName = fieldName;
+   ret->typeName = typeName;
+   ret->defaultExpr = defaultExpr;
+   return ret;
+}
+
+ClassDeclStmtNode* ClassDeclStmtNode::alloc( Compiler::Resources* res, S32 lineNumber, StringTableEntry className, StringTableEntry parentName, ScriptClassFieldDecl* fields, FunctionDeclStmtNode* ctorDecl )
+{
+   ClassDeclStmtNode* ret = (ClassDeclStmtNode*) res->consoleAlloc(sizeof(ClassDeclStmtNode));
+   constructInPlace(ret);
+   ret->dbgLineNumber = lineNumber;
+   ret->className = className;
+   ret->parentName = parentName ? parentName : res->emptyString;
+   ret->fields = fields;
+   ret->ctorDecl = ctorDecl;
+   return ret;
+}
+
 FunctionDeclStmtNode *FunctionDeclStmtNode::alloc( Compiler::Resources* res, S32 lineNumber, StringTableEntry fnName, StringTableEntry nameSpace, VarNode *args, StmtNode *stmts, StringTableEntry retTypeName, bool isSignal )
 {
    FunctionDeclStmtNode *ret = (FunctionDeclStmtNode *) res->consoleAlloc(sizeof(FunctionDeclStmtNode));

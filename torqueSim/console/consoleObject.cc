@@ -315,19 +315,25 @@ void AbstractClassRep::registerClassWithVm(KorkApi::Vm* vm)
       mClassInfo.iCustomFields = {};
       mClassInfo.iCustomFields.IterateFields = [](KorkApi::Vm* vm, KorkApi::VMObject* vmObject, KorkApi::VMIterator& state, StringTableEntry* name){
          SimObject* object = nullptr;
-         
+         ConsoleObject* consoleObject = static_cast<ConsoleObject*>(vmObject->userPtr);
+         object = dynamic_cast<SimObject*>(consoleObject);
+
          if (state.userObject == nullptr)
          {
-            // New Iterator
-            ConsoleObject* consoleObject = static_cast<ConsoleObject*>(vmObject->userPtr);
-            object = dynamic_cast<SimObject*>(consoleObject);
-
-            SimFieldDictionaryIterator itr(object->getFieldDictionary());
-            itr.toVMItr(state);
+            if (object && object->getFieldDictionary())
+            {
+               SimFieldDictionaryIterator itr(object->getFieldDictionary());
+               itr.toVMItr(state);
+            }
+            else
+            {
+               state.userObject = nullptr;
+               state.internalEntry = nullptr;
+               state.count = -1;
+            }
          }
          else
          {
-            // Advance iterator
             SimFieldDictionaryIterator itr(state);
             itr.operator++();
             itr.toVMItr(state);
@@ -363,8 +369,14 @@ void AbstractClassRep::registerClassWithVm(KorkApi::Vm* vm)
          KorkApi::ConsoleValue cv = KorkApi::ConsoleValue();
          ConsoleObject* consoleObject = static_cast<ConsoleObject*>(vmObject->userPtr);
          SimObject* object = dynamic_cast<SimObject*>(consoleObject);
+         StringTableEntry steName = StringTable->insert(name);
+         const char* arrayValue = (const char*)array.evaluatePtr(vm->getAllocBase());
          U32 typeId = 0;
-         const char* val = object->getDataFieldDynamic(StringTable->insert(name), (const char*)array.evaluatePtr(vm->getAllocBase()), &typeId);
+         const char* val = object->getDataFieldDynamic(steName, arrayValue, &typeId);
+         KorkApi::ScriptClassFieldInfo scriptField = {};
+         if (vm->getScriptClassFieldInfo(vmObject, steName, &scriptField))
+            typeId = scriptField.typeId;
+
          // This will be a string, so we need to convert it
          KorkApi::ConsoleValue strValue = KorkApi::ConsoleValue::makeString(val);
          return vm->castToReturn(1, &strValue, typeId, typeId); // loaded as typeId, stored as typeid
@@ -372,17 +384,29 @@ void AbstractClassRep::registerClassWithVm(KorkApi::Vm* vm)
       mClassInfo.iCustomFields.SetCustomFieldByName = [](KorkApi::Vm* vm, KorkApi::VMObject* vmObject, const char* name, KorkApi::ConsoleValue array, U32 argc, KorkApi::ConsoleValue* argv){
          ConsoleObject* consoleObject = static_cast<ConsoleObject*>(vmObject->userPtr);
          SimObject* object = dynamic_cast<SimObject*>(consoleObject);
-         
-         U32 typeId = 0;
          StringTableEntry steName = StringTable->insert(name);
-         const char* val = object->getDataFieldDynamic(StringTable->insert(name), (const char*)array.evaluatePtr(vm->getAllocBase()), &typeId);
+         const char* arrayValue = (const char*)array.evaluatePtr(vm->getAllocBase());
+         U32 typeId = 0;
+         KorkApi::ScriptClassFieldInfo scriptField = {};
+         const bool isScriptField = vm->getScriptClassFieldInfo(vmObject, steName, &scriptField);
+         if (isScriptField)
+            typeId = scriptField.typeId;
+
+         if (!isScriptField)
+            object->getDataFieldDynamic(steName, arrayValue, &typeId);
+
          KorkApi::ConsoleValue castValue = vm->castToReturn(argc, argv, typeId, KorkApi::ConsoleValue::TypeInternalString);  // loaded as typeId, stored as string
-         object->setDataFieldDynamic(StringTable->insert(name), (const char*)array.evaluatePtr(vm->getAllocBase()), (const char*)castValue.evaluatePtr(vm->getAllocBase()), UINT_MAX);
+         object->setDataFieldDynamic(steName, arrayValue, (const char*)castValue.evaluatePtr(vm->getAllocBase()), isScriptField ? typeId : UINT_MAX);
       };
       mClassInfo.iCustomFields.SetCustomFieldType = [](KorkApi::Vm* vm, KorkApi::VMObject* vmObject, const char* name, KorkApi::ConsoleValue array, U32 typeId){
          ConsoleObject* consoleObject = static_cast<ConsoleObject*>(vmObject->userPtr);
          SimObject* object = dynamic_cast<SimObject*>(consoleObject);
-         object->setDataFieldDynamic(StringTable->insert(name), (const char*)array.evaluatePtr(vm->getAllocBase()), "", typeId);
+         StringTableEntry steName = StringTable->insert(name);
+         const char* arrayValue = (const char*)array.evaluatePtr(vm->getAllocBase());
+         KorkApi::ScriptClassFieldInfo scriptField = {};
+         const bool isScriptField = vm->getScriptClassFieldInfo(vmObject, steName, &scriptField);
+
+         object->setDataFieldDynamic(steName, arrayValue, "", isScriptField ? typeId : typeId);
          return true;
       };
       

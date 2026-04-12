@@ -2033,6 +2033,38 @@ TypeReq ObjectDeclNode::getPreferredType()
 
 //------------------------------------------------------------
 
+U32 ClassDeclStmtNode::compileStmt(CodeStream &codeStream, U32 ip)
+{
+   if (ctorDecl)
+      ip = ctorDecl->compileStmt(codeStream, ip);
+
+   codeStream.mResources->precompileIdent(className);
+   codeStream.mResources->precompileIdent(parentName);
+   codeStream.mResources->precompileIdent(ctorDecl ? ctorDecl->fnName : codeStream.mResources->emptyString);
+
+   codeStream.emit(OP_CLASS_DECL);
+   codeStream.emitSTE(className);
+   codeStream.emitSTE(parentName);
+   codeStream.emitSTE(ctorDecl ? ctorDecl->fnName : codeStream.mResources->emptyString);
+
+   U32 fieldCount = 0;
+   for (ScriptClassFieldDecl* walk = fields; walk; walk = walk->next)
+      fieldCount++;
+   codeStream.emit(fieldCount);
+
+   for (ScriptClassFieldDecl* walk = fields; walk; walk = walk->next)
+   {
+      codeStream.mResources->precompileIdent(walk->fieldName);
+      codeStream.mResources->precompileIdent(walk->typeName ? walk->typeName : codeStream.mResources->emptyString);
+      codeStream.emitSTE(walk->fieldName);
+      codeStream.emitSTE(walk->typeName ? walk->typeName : codeStream.mResources->emptyString);
+   }
+
+   return codeStream.tell();
+}
+
+//------------------------------------------------------------
+
 U32 FunctionDeclStmtNode::compileStmt(CodeStream &codeStream, U32 ip)
 {
    if (isSignal)

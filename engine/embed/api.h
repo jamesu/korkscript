@@ -178,11 +178,14 @@ struct FieldInfo
 //
 
 struct ClassInfo;
+struct ScriptClassInfo;
 
 enum ObjectFlags : U16
 {
-    ModStaticFields  = BIT(0),
-    ModDynamicFields = BIT(1)
+    ModStaticFields      = BIT(0),
+    ModDynamicFields     = BIT(1),
+    ModScriptClassObject = BIT(2),
+    ModScriptCtorInvoked = BIT(3)
 };
 
 enum TypeFlags : U32
@@ -306,11 +309,33 @@ struct ClassInfo {
 	void* userPtr;
 	U32 numFields;
    ClassId parentKlassId;
+   ClassId nativeRootClassId;
    FieldInfo* fields;
+   ScriptClassInfo* scriptClass;
    CreateObjectInterface iCreate;
 	EnumerateObjectInterface iEnum;
    ObjectSignalsInterface iSignals;
 	CustomFieldsInterface iCustomFields;
+};
+
+struct ScriptClassFieldInfo
+{
+   StringTableEntry name;
+   StringTableEntry typeName;
+   U16 typeId;
+};
+
+struct ScriptClassInfo
+{
+   StringTableEntry name;
+   StringTableEntry parentName;
+   StringTableEntry parentScriptName;
+   StringTableEntry rootClassName;
+   StringTableEntry ctorName;
+   ClassId rootClassId;
+   NamespaceId nameSpace;
+   U32 numFields;
+   ScriptClassFieldInfo* fields;
 };
 
 // Sim Apis
@@ -405,6 +430,7 @@ struct Config {
    bool enableSignals;
    bool enableStringInterpolation;
    bool initTelnet;
+   const char* defaultScriptClass;
    
    U16 maxFibers;
 };
@@ -513,7 +539,11 @@ public:
     const char* tabCompleteVariable(const char *prevText, S32 baseLen, bool fForward);
 
 	TypeId registerType(TypeInfo& info);
-	ClassId registerClass(ClassInfo& info);
+   ClassId registerClass(ClassInfo& info);
+   bool registerScriptClass(StringTableEntry name, StringTableEntry parentName, StringTableEntry ctorName,
+      U32 fieldCount, const ScriptClassFieldInfo* fields, ScriptClassInfo** outInfo = nullptr);
+   bool invokeScriptClassConstructor(VMObject* object);
+   bool getScriptClassFieldInfo(VMObject* object, StringTableEntry fieldName, ScriptClassFieldInfo* outInfo = nullptr);
     ClassId getClassId(const char* name);
     TypeInfo* getTypeInfo(TypeId ident);
 
