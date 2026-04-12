@@ -169,15 +169,22 @@ private:
       return mTokens[mTokenPos++];
    }
 
-   TOK expectIdentLike(const char* what, bool allowClassKeyword = true)
+   TOK expectIdentLike(const char* what, bool allowKeywordIdentifiers = true)
    {
       if (LA().kind == TT::IDENT)
          return mTokens[mTokenPos++];
 
-      if (allowClassKeyword && LA().kind == TT::rwCLASS)
+      if (allowKeywordIdentifiers && LA().kind == TT::rwCLASS)
       {
          TOK tok = mTokens[mTokenPos++];
          tok.stString = mTokenizer->mStringIntern.intern("class");
+         return tok;
+      }
+
+      if (allowKeywordIdentifiers && LA().kind == TT::rwDATABLOCK)
+      {
+         TOK tok = mTokens[mTokenPos++];
+         tok.stString = mTokenizer->mStringIntern.intern("datablock");
          return tok;
       }
 
@@ -1756,10 +1763,13 @@ private:
             
             // Names
          case TT::IDENT:
-         case TT::rwCLASS: {
+         case TT::rwCLASS:
+         case TT::rwDATABLOCK: {
             TOK identTok = t;
             if (identTok.kind == TT::rwCLASS)
                identTok.stString = mTokenizer->mStringIntern.intern("class");
+            else if (identTok.kind == TT::rwDATABLOCK)
+               identTok.stString = mTokenizer->mStringIntern.intern("datablock");
             
             // namespace::func( ... )
             if (LA().kind == TT::opCOLONCOLON)

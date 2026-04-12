@@ -1260,6 +1260,10 @@ private:
             {
                t.stString = mStringIntern.intern("class");
             }
+            else if (t.kind == TokenType::rwDATABLOCK)
+            {
+               t.stString = mStringIntern.intern("datablock");
+            }
             else
             {
                t.ivalue = 0;

@@ -172,9 +172,23 @@ function test_controlFlow()
    testInt("switch.string", %x, 2);
 }
 
+function test_keywordFieldNames()
+{
+   %obj = new ScriptObject()
+   {
+      datablock = "SlotValue";
+   };
+
+   %obj.datablock = "MemberValue";
+
+   testString("keywordField.datablock.slotAssign", %obj.getFieldValue("datablock"), "MemberValue");
+   testString("keywordField.datablock.memberAssign", %obj.datablock, "MemberValue");
+}
+
 
 test_coreIntExpr();
 test_coreFloatExpr();
 test_precedence();
 test_coreStringExpr();
 test_controlFlow();
+test_keywordFieldNames();
