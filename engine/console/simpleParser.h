@@ -168,6 +168,21 @@ private:
       }
       return mTokens[mTokenPos++];
    }
+
+   TOK expectIdentLike(const char* what, bool allowClassKeyword = true)
+   {
+      if (LA().kind == TT::IDENT)
+         return mTokens[mTokenPos++];
+
+      if (allowClassKeyword && LA().kind == TT::rwCLASS)
+      {
+         TOK tok = mTokens[mTokenPos++];
+         tok.stString = mTokenizer->mStringIntern.intern("class");
+         return tok;
+      }
+
+      throw TokenError(LA(), TT::IDENT, what);
+   }
    
    TOK expectChar(char c, const char* what)
    {
@@ -738,7 +753,7 @@ private:
             return nullptr;
          }
 
-         TOK typeNameTok = expect(TT::IDENT, "type name expected");
+         TOK typeNameTok = expectIdentLike("type name expected", false);
          typeName = typeNameTok.stString;
       }
       
@@ -842,7 +857,7 @@ private:
          }
          
          if (matchChar(':')) {
-            TOK p = expect(K::IDENT, "identifier expected after ':' (parent object)");
+            TOK p = expectIdentLike("identifier expected after ':' (parent object)", false);
             parentObject = p.stString;
          }
          
@@ -910,7 +925,7 @@ private:
       else
       {
          TOK identName = LA();
-         expect(TT::IDENT, "expected ident");
+         expectIdentLike("expected ident", false);
          return ConstantNode::alloc(mResources, identName.pos.line, identName.stString);
       }
    }
@@ -938,7 +953,7 @@ private:
       ExprNode* nameExpr = parseExprNode();
       if (matchChar(':'))
       {
-         TOK p = expect(TT::IDENT, "identifier expected after ':' (parent datablock name)");
+         TOK p = expectIdentLike("identifier expected after ':' (parent datablock name)", false);
          parentObject = p.stString;
       }
       expectChar(')', "')' expected");
@@ -959,7 +974,7 @@ private:
 
       while (!atEnd() && !(LA().kind == TT::opCHAR && LA().asChar() == '}'))
       {
-         TOK nameTok = expect(TT::IDENT, "field name expected");
+         TOK nameTok = expectIdentLike("field name expected");
          StringTableEntry typeName = nullptr;
          ExprNode* defaultExpr = nullptr;
 
@@ -970,7 +985,7 @@ private:
                errorHere(LA(), "Types not enabled");
                return nullptr;
             }
-            typeName = expect(TT::IDENT, "type name expected").stString;
+            typeName = expectIdentLike("type name expected", false).stString;
          }
 
          if (matchChar('='))
@@ -1038,11 +1053,11 @@ private:
          return nullptr;
       }
       expect(TT::rwCLASS, "'class' expected");
-      TOK classTok = expect(TT::IDENT, "class name expected");
+      TOK classTok = expectIdentLike("class name expected", false);
       StringTableEntry parentName = nullptr;
 
       if (matchChar(':'))
-         parentName = expect(TT::IDENT, "parent class name expected").stString;
+         parentName = expectIdentLike("parent class name expected", false).stString;
 
       expectChar('{', "'{' expected");
       ScriptClassFieldDecl* fields = parseClassFieldList();
@@ -1074,31 +1089,13 @@ private:
       }
       
       // [Namespace::]Ident
-      TOK a;
-      if (LA().kind == TT::rwCLASS)
-      {
-         a = mTokens[mTokenPos++];
-         a.stString = mTokenizer->mStringIntern.intern("class");
-      }
-      else
-      {
-         a = expect(TT::IDENT, "identifier expected");
-      }
+      TOK a = expectIdentLike("identifier expected");
       StringTableEntry ns  = 0;
       StringTableEntry fn  = a.stString;
       
       if (match(TT::opCOLONCOLON))
       {
-         TOK b;
-         if (LA().kind == TT::rwCLASS)
-         {
-            b = mTokens[mTokenPos++];
-            b.stString = mTokenizer->mStringIntern.intern("class");
-         }
-         else
-         {
-            b = expect(TT::IDENT, "identifier expected after '::'");
-         }
+         TOK b = expectIdentLike("identifier expected after '::'");
          ns = a.stString;  // first is namespace
          fn = b.stString;  // second is function name
       }
@@ -1114,7 +1111,7 @@ private:
       StringTableEntry retTypeName = nullptr;
       if (!isSignal && matchChar(':'))
       {
-         auto typeTok = expect(SimpleLexer::TokenType::IDENT, "return type expected");
+         auto typeTok = expectIdentLike("return type expected", false);
          retTypeName = typeTok.stString;
       }
 
@@ -1158,7 +1155,7 @@ private:
    {
       S32 line = 0;
       expect(TT::rwPACKAGE, "'package' expected");
-      TOK nameTok = expect(TT::IDENT, "package name expected");
+      TOK nameTok = expectIdentLike("package name expected", false);
       
       expectChar('{', "'{' expected");
       StmtNode* fns = nullptr;
@@ -1634,16 +1631,7 @@ private:
             else if (op.asChar() == '.') // Member access '.'  -> SlotAccessNode(left, array?, IDENT)
             {
                // IDENT after '.'
-               TOK id;
-               if (LA().kind == TT::rwCLASS)
-               {
-                  id = mTokens[mTokenPos++];
-                  id.stString = mTokenizer->mStringIntern.intern("class");
-               }
-               else
-               {
-                  id = expect(TT::IDENT, "identifier expected after '.'");
-               }
+               TOK id = expectIdentLike("identifier expected after '.'");
                
                // Method call: .IDENT '(' ... ')'
                if (LA().kind == TT::opCHAR && LA().asChar() == '(')
@@ -1785,16 +1773,7 @@ private:
             {
                TOK nsTok = t;                // first IDENT = namespace
                mTokenPos++;                   // consume '::'
-               TOK fnTok;
-               if (LA().kind == TT::rwCLASS)
-               {
-                  fnTok = mTokens[mTokenPos++];
-                  fnTok.stString = mTokenizer->mStringIntern.intern("class");
-               }
-               else
-               {
-                  fnTok = expect(TT::IDENT, "identifier expected after '::'");
-               }
+               TOK fnTok = expectIdentLike("identifier expected after '::'");
                expectChar('(', "'(' expected");
                ExprNode* args = parseExprListOptUntil(')');
                expectChar(')', "')' expected");
