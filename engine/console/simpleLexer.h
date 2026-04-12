@@ -1260,6 +1260,10 @@ private:
             {
                t.kind = TokenType::NONE;
             }
+            else if (t.kind == TokenType::rwCLASS)
+            {
+               t.stString = mStringIntern.intern("class");
+            }
             break;
          }
       }
