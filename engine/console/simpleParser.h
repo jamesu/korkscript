@@ -1766,12 +1766,16 @@ private:
          }
             
             // Names
-         case TT::IDENT: {
+         case TT::IDENT:
+         case TT::rwCLASS: {
+            TOK identTok = t;
+            if (identTok.kind == TT::rwCLASS)
+               identTok.stString = mTokenizer->mStringIntern.intern("class");
             
             // namespace::func( ... )
             if (LA().kind == TT::opCOLONCOLON)
             {
-               TOK nsTok = t;                // first IDENT = namespace
+               TOK nsTok = identTok;                // first IDENT = namespace
                mTokenPos++;                   // consume '::'
                TOK fnTok = expectIdentLike("identifier expected after '::'");
                expectChar('(', "'(' expected");
@@ -1786,11 +1790,11 @@ private:
                expectChar('(', "'(' expected");
                ExprNode* args = parseExprListOptUntil(')');
                expectChar(')', "')' expected");
-               return FuncCallExprNode::alloc(mResources, t.pos.line, t.stString, /*nameSpace*/0, args, /*dot*/false);
+               return FuncCallExprNode::alloc(mResources, identTok.pos.line, identTok.stString, /*nameSpace*/0, args, /*dot*/false);
             }
             
             // bare name
-            return ConstantNode::alloc(mResources, t.pos.line, t.stString);
+            return ConstantNode::alloc(mResources, identTok.pos.line, identTok.stString);
          }
          case TT::VAR:        return VarNode::alloc(mResources, t.pos.line, t.stString, nullptr);
             
