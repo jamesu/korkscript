@@ -4,6 +4,7 @@
 #include "console/console.h"
 
 #include "core/fileStream.h"
+#include "sim/simBase.h"
 
 #include <vector>
 
@@ -24,6 +25,71 @@ ConsoleFunction(expandFilename, const char*, 2, 2, "(string filename)")
    KorkApi::ConsoleValue retV = Con::getReturnBuffer( 1024 );
    char *ret = (char*)retV.evaluatePtr(vmPtr->getAllocBase());
    Con::expandScriptFilename(ret, 1024, argv[1]);
+   return ret;
+}
+
+ConsoleFunction(getObjectNamespaceChain, const char*, 2, 2, "(SimObject object)")
+{
+   SimObject* object = Sim::findObject(argv[1]);
+   if (!object || !sVM)
+      return "";
+
+   KorkApi::NamespaceId nsId = object->getNamespace();
+   if (!nsId)
+      return "";
+
+   struct NamespaceChainEntry
+   {
+      KorkApi::NamespaceId id;
+      KorkApi::NamespaceId parentId;
+      const char* name;
+   };
+
+   std::vector<NamespaceChainEntry> entries;
+   sVM->enumerateNamespaces(&entries, [](void* userPtr, const KorkApi::NamespaceInfo* info) {
+      auto* out = static_cast<std::vector<NamespaceChainEntry>*>(userPtr);
+      out->push_back({ info->nsId, info->parentId, info->name ? info->name : "" });
+   });
+
+   std::vector<const char*> chain;
+   KorkApi::NamespaceId walkId = nsId;
+   while (walkId)
+   {
+      const NamespaceChainEntry* found = nullptr;
+      for (const NamespaceChainEntry& entry : entries)
+      {
+         if (entry.id == walkId)
+         {
+            found = &entry;
+            break;
+         }
+      }
+
+      if (!found)
+         break;
+
+      chain.push_back(found->name ? found->name : "");
+      walkId = found->parentId;
+   }
+
+   if (chain.empty())
+      return "";
+
+   U32 totalSize = 1;
+   for (const char* name : chain)
+      totalSize += dStrlen(name) + 4;
+
+   KorkApi::ConsoleValue retV = Con::getReturnBuffer(totalSize);
+   char* ret = (char*)retV.evaluatePtr(vmPtr->getAllocBase());
+   ret[0] = 0;
+
+   for (S32 i = (S32)chain.size() - 1; i >= 0; --i)
+   {
+      dStrcat(ret, chain[i]);
+      if (i > 0)
+         dStrcat(ret, " -> ");
+   }
+
    return ret;
 }
 

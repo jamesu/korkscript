@@ -1550,8 +1550,6 @@ StringTableEntry SimObject::getMethodNamespace( const char* methodName )
    return StringTable->EmptyString;
 }
 
-//---------------------------------------------------------------------------
-
 /*! Returns wether the method exists for this object.
  
  @returns true if the method exists; false otherwise
@@ -2160,7 +2158,8 @@ void SimObject::registerClassNameFields(bool includeSuper)
 {
    addGroup("Namespace Linking");
    addField("class",  TypeString,              Offset(mClassName,  SimObject)); // tgemit - compat
-   //addProtectedField("superclass", TypeString, Offset(mSuperClassName, SimObject), &setSuperClass, nullptr, &writeSuperclass, "Script Class of object.");
+   if (includeSuper)
+      addField("superclass", TypeString, Offset(mSuperClassName, SimObject), &writeSuperclass, "Script superclass namespace.");
    endGroup("Namespace Linking");
 }
 
