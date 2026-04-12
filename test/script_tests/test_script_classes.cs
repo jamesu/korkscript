@@ -30,6 +30,16 @@ class TestScriptTupleHolder
    point : TypeMyPoint3F = 1,2,3;
 };
 
+class TestFieldEnumBase
+{
+   baseField : string = "base";
+};
+
+class TestFieldEnumChild : TestFieldEnumBase
+{
+   childField : string = "child";
+};
+
 %baseObj = new TestScriptBase();
 testNumber("scriptClass.base.default", %baseObj.value, 3);
 testString("scriptClass.base.label", %baseObj.label, "base");
@@ -74,3 +84,14 @@ class TestScriptChild : TestScriptBase
 %redefinedChild = new TestScriptChild();
 testNumber("scriptClass.redefine.newDefault", %redefinedChild.value, 42);
 testNumber("scriptClass.redefine.newSeed", %redefinedChild.seeded, 21);
+
+%fieldListLocal = getClassFieldList("TestFieldEnumChild", false);
+%fieldListFull = getClassFieldList("TestFieldEnumChild", true);
+echo("script class local field list:\n" @ %fieldListLocal);
+echo("script class full field list:\n" @ %fieldListFull);
+
+testNumber("scriptClass.fieldEnum.local.hasChild", strstr(%fieldListLocal, "TestFieldEnumChild\tscript\tchildField\tstring") >= 0, 1);
+testNumber("scriptClass.fieldEnum.local.noParent", strstr(%fieldListLocal, "TestFieldEnumBase\tscript\tbaseField\tstring"), -1);
+testNumber("scriptClass.fieldEnum.full.hasChild", strstr(%fieldListFull, "TestFieldEnumChild\tscript\tchildField\tstring") >= 0, 1);
+testNumber("scriptClass.fieldEnum.full.hasParent", strstr(%fieldListFull, "TestFieldEnumBase\tscript\tbaseField\tstring") >= 0, 1);
+testNumber("scriptClass.fieldEnum.full.hasNative", strstr(%fieldListFull, "SimObject\tnative\tinternalName\t") >= 0, 1);

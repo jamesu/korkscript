@@ -254,6 +254,29 @@ struct NamespaceEntryInfo
 typedef void(*NamespaceInfoEnumerationCallback)(void* userPtr, const NamespaceInfo* info);
 typedef void(*NamespaceEntryInfoEnumerationCallback)(void* userPtr, const NamespaceEntryInfo* info);
 
+enum ClassFieldEnumerationFlags : U32
+{
+   EnumerateClassFieldsNone = 0,
+   EnumerateClassFieldsIncludeParents = BIT(0)
+};
+
+struct ClassFieldEnumerationInfo
+{
+   StringTableEntry fieldName;
+   StringTableEntry typeName;
+   const char* groupName;
+   const char* fieldDocs;
+   void* fieldUserPtr;
+   S32 elementCount;
+   U32 offset;
+   BitSet32 flag;
+   U16 typeId;
+   bool groupExpand;
+   bool isScriptField;
+};
+
+typedef bool(*ClassFieldEnumerationCallback)(void* userPtr, ClassId ownerClassId, const ClassFieldEnumerationInfo* info);
+
 struct Vm;
 
 struct CreateClassReturn
@@ -544,6 +567,8 @@ public:
       U32 fieldCount, const ScriptClassFieldInfo* fields, ScriptClassInfo** outInfo = nullptr);
    bool invokeScriptClassConstructor(VMObject* object);
    bool getScriptClassFieldInfo(VMObject* object, StringTableEntry fieldName, ScriptClassFieldInfo* outInfo = nullptr);
+   void enumerateClassFields(ClassId classId, U32 flags, void* userPtr, ClassFieldEnumerationCallback funcPtr);
+   StringTableEntry getClassName(ClassId classId);
     ClassId getClassId(const char* name);
     TypeInfo* getTypeInfo(TypeId ident);
 

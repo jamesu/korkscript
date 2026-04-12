@@ -93,6 +93,72 @@ ConsoleFunction(getObjectNamespaceChain, const char*, 2, 2, "(SimObject object)"
    return ret;
 }
 
+ConsoleFunction(getClassFieldList, const char*, 2, 3, "(string className, bool includeParents = true)")
+{
+   if (!sVM)
+      return "";
+
+   const KorkApi::ClassId classId = sVM->getClassId(argv[1]);
+   if (classId < 0)
+      return "";
+
+   const bool includeParents = argc <= 2 ? true : dAtob(argv[2]);
+
+   struct FieldEntry
+   {
+      KorkApi::ClassId ownerClassId;
+      const char* ownerClassName;
+      const char* fieldName;
+      const char* typeName;
+      bool isScriptField;
+   };
+
+   std::vector<FieldEntry> entries;
+   sVM->enumerateClassFields(classId,
+      includeParents ? KorkApi::EnumerateClassFieldsIncludeParents : KorkApi::EnumerateClassFieldsNone,
+      &entries,
+      [](void* userPtr, KorkApi::ClassId ownerClassId, const KorkApi::ClassFieldEnumerationInfo* info) -> bool {
+         auto* out = static_cast<std::vector<FieldEntry>*>(userPtr);
+         const char* ownerClassName = sVM->getClassName(ownerClassId);
+         out->push_back({
+            ownerClassId,
+            ownerClassName ? ownerClassName : "",
+            info->fieldName ? info->fieldName : "",
+            info->typeName ? info->typeName : "",
+            info->isScriptField
+         });
+         return true;
+      });
+
+   if (entries.empty())
+      return "";
+
+   U32 totalSize = 1;
+   for (const FieldEntry& entry : entries)
+      totalSize += dStrlen(entry.ownerClassName) + dStrlen(entry.fieldName) + dStrlen(entry.typeName) + 16;
+
+   KorkApi::ConsoleValue retV = Con::getReturnBuffer(totalSize);
+   char* ret = (char*)retV.evaluatePtr(vmPtr->getAllocBase());
+   ret[0] = 0;
+
+   for (U32 i = 0; i < entries.size(); ++i)
+   {
+      const FieldEntry& entry = entries[i];
+      dStrcat(ret, entry.ownerClassName);
+      dStrcat(ret, "\t");
+      dStrcat(ret, entry.isScriptField ? "script" : "native");
+      dStrcat(ret, "\t");
+      dStrcat(ret, entry.fieldName);
+      dStrcat(ret, "\t");
+      dStrcat(ret, entry.typeName);
+
+      if (i + 1 < entries.size())
+         dStrcat(ret, "\n");
+   }
+
+   return ret;
+}
+
 ConsoleFunctionGroupBegin(StringFunctions, "General string manipulation functions.");
 
 ConsoleFunction(strcmp, S32, 3, 3, "(string one, string two)"

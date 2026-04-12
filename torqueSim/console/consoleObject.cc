@@ -174,9 +174,13 @@ TypeStorageInterface CreateRegisterStorageFromArgs(KorkApi::VmInternal* vmIntern
 
 void AbstractClassRep::registerClassWithVm(KorkApi::Vm* vm)
 {
+   if (vm->getClassId(mClassName) >= 0)
+      return;
+
    if (mClassInfo.name == nullptr)
    {
-      
+      mClassInfo.parentKlassId = -1;
+      mClassInfo.nativeRootClassId = -1;
       mClassInfo.name = vm->internString(mClassName);
       mClassInfo.userPtr = this;
       mClassInfo.numFields = mFieldList.size();
@@ -430,8 +434,11 @@ void AbstractClassRep::registerClassWithVm(KorkApi::Vm* vm)
             object->triggerSignal(userPtr, signalName, argc, argv);
       };
    }
+
+   AbstractClassRep* parentKlass = getParentClass();
+   mClassInfo.parentKlassId = parentKlass ? vm->getClassId(parentKlass->getClassName()) : -1;
    
-   mLastRegisteredVmId = vm->registerClass(mClassInfo);
+   vm->registerClass(mClassInfo);
 }
 
 void AbstractClassRep::linkClassWithParent(KorkApi::Vm* vm)
@@ -444,6 +451,17 @@ void AbstractClassRep::linkClassWithParent(KorkApi::Vm* vm)
       vm->linkNamespace(parentKlass->mClassInfo.name,
                         mClassInfo.name);
    }
+}
+
+static void registerClassHierarchyWithVm(AbstractClassRep* rep, KorkApi::Vm* vm)
+{
+   if (!rep || vm->getClassId(rep->getClassName()) >= 0)
+      return;
+
+   if (rep->getParentClass())
+      registerClassHierarchyWithVm(rep->getParentClass(), vm);
+
+   rep->registerClassWithVm(vm);
 }
 
 //--------------------------------------
@@ -865,7 +883,7 @@ void AbstractClassRep::registerWithVM(KorkApi::Vm* vm)
 {
    for (AbstractClassRep* walk = classLinkList; walk; walk = walk->nextClass)
    {
-      walk->registerClassWithVm(vm);
+      registerClassHierarchyWithVm(walk, vm);
    }
 
    // Link parent classes

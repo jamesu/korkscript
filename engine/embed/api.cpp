@@ -21,6 +21,7 @@
 
 #include <algorithm>
 #include <cinttypes>
+#include <cstring>
 
 namespace KorkApi
 {
@@ -44,6 +45,60 @@ static NamespaceEntryKind getNamespaceEntryKind(const Namespace::Entry* ent)
       default:
          return NamespaceEntryInvalid;
    }
+}
+
+static bool emitNativeClassFields(VmInternal* vmInternal, ClassId ownerClassId, ClassInfo* klass, void* userPtr, ClassFieldEnumerationCallback funcPtr)
+{
+   if (!klass || !funcPtr)
+      return true;
+
+   for (U32 i = 0; i < klass->numFields; ++i)
+   {
+      FieldInfo& field = klass->fields[i];
+      if (!field.pFieldname || field.type == StartGroupFieldType || field.type == EndGroupFieldType || field.type == DepricatedFieldType)
+         continue;
+
+      ClassFieldEnumerationInfo info = {};
+      info.fieldName = field.pFieldname;
+      info.typeName = (field.type < vmInternal->mTypes.size()) ? vmInternal->mTypes[field.type].name : nullptr;
+      info.groupName = field.pGroupname;
+      info.fieldDocs = field.pFieldDocs;
+      info.fieldUserPtr = field.fieldUserPtr;
+      info.elementCount = field.elementCount;
+      info.offset = field.offset;
+      info.flag = field.flag;
+      info.typeId = field.type;
+      info.groupExpand = field.groupExpand;
+      info.isScriptField = false;
+
+      if (!funcPtr(userPtr, ownerClassId, &info))
+         return false;
+   }
+
+   return true;
+}
+
+static bool emitScriptClassFields(ClassId ownerClassId, ClassInfo* klass, void* userPtr, ClassFieldEnumerationCallback funcPtr)
+{
+   if (!klass || !klass->scriptClass || !funcPtr)
+      return true;
+
+   for (U32 i = 0; i < klass->scriptClass->numFields; ++i)
+   {
+      ScriptClassFieldInfo& field = klass->scriptClass->fields[i];
+
+      ClassFieldEnumerationInfo info = {};
+      info.fieldName = field.name;
+      info.typeName = field.typeName;
+      info.typeId = field.typeId;
+      info.elementCount = 1;
+      info.isScriptField = true;
+
+      if (!funcPtr(userPtr, ownerClassId, &info))
+         return false;
+   }
+
+   return true;
 }
 
 
@@ -476,6 +531,107 @@ bool Vm::getScriptClassFieldInfo(VMObject* object, StringTableEntry fieldName, S
    if (found && outInfo && foundInfo)
       *outInfo = *foundInfo;
    return found;
+}
+
+void Vm::enumerateClassFields(ClassId classId, U32 flags, void* userPtr, ClassFieldEnumerationCallback funcPtr)
+{
+   VmAllocTLS::Scope memScope(mInternal);
+
+   if (!funcPtr || classId < 0 || classId >= (ClassId)mInternal->mClassList.size())
+      return;
+
+   ClassInfo* klass = mInternal->mClassList[classId];
+   if (!klass)
+      return;
+
+   const bool includeParents = (flags & EnumerateClassFieldsIncludeParents) != 0;
+   const S32 maxDepth = (S32)mInternal->mClassList.size();
+
+   if (klass->scriptClass)
+   {
+      ClassInfo* walk = klass;
+      ClassId walkId = classId;
+      for (S32 depth = 0; walk && walk->scriptClass && depth < maxDepth; ++depth)
+      {
+         if (!emitScriptClassFields(walkId, walk, userPtr, funcPtr))
+            return;
+
+         if (!includeParents)
+            break;
+
+         const ClassId nextId = walk->parentKlassId;
+         if (nextId < 0 || nextId >= (ClassId)mInternal->mClassList.size())
+            break;
+
+         ClassInfo* next = mInternal->mClassList[nextId];
+         if (next == walk)
+            break;
+
+         walkId = nextId;
+         walk = next;
+      }
+
+      ClassId nativeId = klass->nativeRootClassId;
+      if (nativeId < 0 || nativeId >= (ClassId)mInternal->mClassList.size())
+         return;
+
+      walk = mInternal->mClassList[nativeId];
+      walkId = nativeId;
+      for (S32 depth = 0; walk && depth < maxDepth; ++depth)
+      {
+         if (!emitNativeClassFields(mInternal, walkId, walk, userPtr, funcPtr))
+            return;
+
+         if (!includeParents)
+            break;
+
+         const ClassId nextId = walk->parentKlassId;
+         if (nextId < 0 || nextId >= (ClassId)mInternal->mClassList.size())
+            break;
+
+         ClassInfo* next = mInternal->mClassList[nextId];
+         if (next == walk)
+            break;
+
+         walkId = nextId;
+         walk = next;
+      }
+
+      return;
+   }
+
+   ClassInfo* walk = klass;
+   ClassId walkId = classId;
+   for (S32 depth = 0; walk && depth < maxDepth; ++depth)
+   {
+      if (!emitNativeClassFields(mInternal, walkId, walk, userPtr, funcPtr))
+         return;
+
+      if (!includeParents)
+         break;
+
+      const ClassId nextId = walk->parentKlassId;
+      if (nextId < 0 || nextId >= (ClassId)mInternal->mClassList.size())
+         break;
+
+      ClassInfo* next = mInternal->mClassList[nextId];
+      if (next == walk)
+         break;
+
+      walkId = nextId;
+      walk = next;
+   }
+}
+
+StringTableEntry Vm::getClassName(ClassId classId)
+{
+   VmAllocTLS::Scope memScope(mInternal);
+
+   if (classId < 0 || classId >= (ClassId)mInternal->mClassList.size())
+      return nullptr;
+
+   ClassInfo* klass = mInternal->mClassList[classId];
+   return klass ? klass->name : nullptr;
 }
 
 ConsoleHeapAllocRef Vm::createHeapRef(U32 size)

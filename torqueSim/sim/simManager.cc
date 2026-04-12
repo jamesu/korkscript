@@ -497,7 +497,7 @@ bool SimObject::registerObject(KorkApi::Vm* inVm, KorkApi::VMObject* evalObject)
    {
       inVm = Con::getVM();
       vm = inVm;
-      vmObject = inVm->createVMObject(getClassRep()->getRegisteredId(), this); // NOTE: rc=1
+      vmObject = inVm->createVMObject(inVm->getClassId(getClassRep()->getClassName()), this); // NOTE: rc=1
    }
 
    mSimFlags |= ~(Deleted | Removed);
