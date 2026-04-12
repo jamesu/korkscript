@@ -476,6 +476,7 @@ void dumpToInstructionsPrint(Compiler::Resources& res, StmtNode* rootNode)
    cfg.enableTypes = gEnableExtensions;
    cfg.enableSignals = gEnableExtensions;
    cfg.enableStringInterpolation = gEnableExtensions;
+   cfg.enableScriptClasses = gEnableExtensions;
 
    KorkApi::Vm* vm = KorkApi::createVM(&cfg);
    {
@@ -529,6 +530,7 @@ bool printAST(const char* buf, const char* filename)
    cfg.enableTypes = gEnableExtensions;
    cfg.enableSignals = gEnableExtensions;
    cfg.enableStringInterpolation = gEnableExtensions;
+   cfg.enableScriptClasses = gEnableExtensions;
 
    // Need a vm around to store malloc
    KorkApi::Vm* vm = KorkApi::createVM(&cfg);

@@ -169,7 +169,7 @@ struct Token
 template<class I> class Tokenizer
 {
 public:
-   explicit Tokenizer(I it, std::string_view src, String filename, bool enableInterpolation)
+   explicit Tokenizer(I it, std::string_view src, String filename, bool enableInterpolation, bool enableScriptClasses = false)
    : mStringIntern(it), mFilename(std::move(filename))
    {
       mPos = {};
@@ -180,6 +180,7 @@ public:
       mSource[src.size()] = '\0';
       mInterpState = {};
       mInterpState.doInterp = enableInterpolation;
+      mEnableScriptClasses = enableScriptClasses;
    }
    
    inline const String& filename() const { return mFilename; }
@@ -550,6 +551,7 @@ private:
    S64 mBytePos;
    SrcPos mPos;
    InterpolationState mInterpState;
+   bool mEnableScriptClasses;
    
 public:
    I mStringIntern;
@@ -1252,6 +1254,11 @@ private:
             else
             {
                t.ivalue = 0;
+            }
+
+            if (t.kind == TokenType::rwCLASS && !mEnableScriptClasses)
+            {
+               t.kind = TokenType::NONE;
             }
             break;
          }

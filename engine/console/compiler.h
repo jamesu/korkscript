@@ -221,6 +221,7 @@ namespace Compiler
       bool allowTypes;
       bool allowSignals;
       bool allowStringInterpolation;
+      bool allowScriptClasses;
 
       void (*STEtoCode)(Resources* res, StringTableEntry ste, U32 ip, U32 *ptr);
 
@@ -266,6 +267,8 @@ namespace Compiler
          allowTuples = false;
          allowTypes = false;
          allowSignals = false;
+         allowStringInterpolation = false;
+         allowScriptClasses = false;
          currentASTGen = nullptr;
          emptyString = nullptr;
          logFn = nullptr;

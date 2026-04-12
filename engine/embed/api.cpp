@@ -1457,6 +1457,7 @@ VmInternal::VmInternal(Vm* vm, Config* cfg) : mGlobalVars(this)
    mCompilerResources->allowTypes = cfg->enableTypes;
    mCompilerResources->allowSignals = cfg->enableSignals;
    mCompilerResources->allowStringInterpolation = cfg->enableStringInterpolation;
+   mCompilerResources->allowScriptClasses = cfg->enableScriptClasses;
    mLastExceptionInfo = {};
    
    TypeInfo typeInfo = {};

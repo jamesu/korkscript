@@ -234,7 +234,7 @@ private:
          case TT::rwSIGNAL:
             return parseFnDeclStmt();
          case TT::rwCLASS:
-            return parseClassDecl();
+            return mResources->allowScriptClasses ? parseClassDecl() : parseStmtNode();
          case TT::rwPACKAGE:  // "package"
             return parsePackageDecl();
          default:
@@ -1032,6 +1032,11 @@ private:
    StmtNode* parseClassDecl()
    {
       S32 line = 0;
+      if (!mResources->allowScriptClasses)
+      {
+         errorHere(LA(), "Script classes disabled");
+         return nullptr;
+      }
       expect(TT::rwCLASS, "'class' expected");
       TOK classTok = expect(TT::IDENT, "class name expected");
       StringTableEntry parentName = nullptr;
@@ -1193,6 +1198,11 @@ private:
             return parseDatablockDecl();
 
          case TT::rwCLASS:
+            if (!mResources->allowScriptClasses)
+            {
+               errorHere(LA(), "Script classes disabled");
+               return nullptr;
+            }
             return parseClassDecl();
             
          case TT::rwDECLARE:             // 'new'

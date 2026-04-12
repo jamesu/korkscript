@@ -452,6 +452,7 @@ struct Config {
    bool enableTypes;
    bool enableSignals;
    bool enableStringInterpolation;
+   bool enableScriptClasses;
    bool initTelnet;
    const char* defaultScriptClass;
    

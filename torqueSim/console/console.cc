@@ -243,6 +243,7 @@ void init()
    config.enableTypes = true;
    config.enableSignals = true;
    config.enableStringInterpolation = true;
+   config.enableScriptClasses = true;
    config.defaultScriptClass = "ScriptObject";
 
 

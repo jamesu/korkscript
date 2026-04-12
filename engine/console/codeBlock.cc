@@ -721,7 +721,8 @@ bool CodeBlock::compileToStream(Stream &st, StringTableEntry fileName, const cha
    
    StmtNode* rootNode = nullptr;
    
-   SimpleLexer::Tokenizer<KorkApi::VMStringTable> lex(KorkApi::VMStringTable(mVM), inScript, fileName, mVM->mCompilerResources->allowStringInterpolation);
+   SimpleLexer::Tokenizer<KorkApi::VMStringTable> lex(KorkApi::VMStringTable(mVM), inScript, fileName,
+      mVM->mCompilerResources->allowStringInterpolation, mVM->mCompilerResources->allowScriptClasses);
    SimpleParser::ASTGen<KorkApi::VMStringTable> astGen(&lex, mVM->mCompilerResources);
    
    // Reset all our value tables...
@@ -865,7 +866,8 @@ bool CodeBlock::compileToStream(Stream &st, StringTableEntry fileName, const cha
    
    StmtNode* rootNode = nullptr;
    
-   SimpleLexer::Tokenizer<KorkApi::VMStringTable> lex(KorkApi::VMStringTable(mVM), inString, fileName ? fileName : "", mVM->mCompilerResources->allowStringInterpolation);
+   SimpleLexer::Tokenizer<KorkApi::VMStringTable> lex(KorkApi::VMStringTable(mVM), inString, fileName ? fileName : "",
+      mVM->mCompilerResources->allowStringInterpolation, mVM->mCompilerResources->allowScriptClasses);
    SimpleParser::ASTGen<KorkApi::VMStringTable> astGen(&lex, mVM->mCompilerResources);
     
     // Need to do this here as ast node gen stores stuff in tables
