@@ -60,6 +60,57 @@ using namespace Compiler;
 
 //-----------------------------------------------------------------------------
 
+const char* getASTNodeTypeName(ASTNodeType type)
+{
+   static const char* const names[] =
+   {
+      "Invalid",
+      "BreakStmtNode",
+      "ContinueStmtNode",
+      "ExprNode",
+      "ReturnStmtNode",
+      "IfStmtNode",
+      "LoopStmtNode",
+      "IterStmtNode",
+      "BinaryExprNode",
+      "FloatBinaryExprNode",
+      "ConditionalExprNode",
+      "IntBinaryExprNode",
+      "StreqExprNode",
+      "StrcatExprNode",
+      "CommaCatExprNode",
+      "IntUnaryExprNode",
+      "FloatUnaryExprNode",
+      "VarNode",
+      "IntNode",
+      "FloatNode",
+      "StrConstNode",
+      "ConstantNode",
+      "BaseAssignExprNode",
+      "AssignExprNode",
+      "AssignOpExprNode",
+      "TTagSetStmtNode",
+      "TTagDerefNode",
+      "TTagExprNode",
+      "FuncCallExprNode",
+      "AssertCallExprNode",
+      "SlotAccessNode",
+      "InternalSlotAccessNode",
+      "SlotAssignNode",
+      "SlotAssignOpNode",
+      "ObjectDeclNode",
+      "ScriptClassFieldDecl",
+      "ClassDeclStmtNode",
+      "FunctionDeclStmtNode",
+      "TryStmtNode",
+      "CatchStmtNode",
+      "TupleExprNode"
+   };
+
+   const U32 index = (U32)type;
+   return index < (sizeof(names) / sizeof(names[0])) ? names[index] : "Unknown";
+}
+
 void StmtNode::addBreakLine(CodeStream &code)
 {
    code.addBreakLine(dbgLineNumber, code.tell());
@@ -70,6 +121,7 @@ void StmtNode::addBreakLine(CodeStream &code)
 StmtNode::StmtNode()
 {
    next = nullptr;
+   astType = ASTNodeInvalid;
 }
 
 void StmtNode::setPackage(StringTableEntry)

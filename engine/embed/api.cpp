@@ -140,11 +140,17 @@ static AstEnumerationResult walkStmtNode(const StmtNode* node, const void* paren
    AstEnumerationInfo info = {};
    info.kind = AstEnumerationNodeStmt;
    info.parentKind = parentKind;
+   info.nodeType = node ? node->getASTNodeType() : ASTNodeInvalid;
+   info.parentNodeType = ASTNodeInvalid;
    info.node = node;
    info.parentNode = parentNode;
    info.stmtNode = node;
    info.parentStmtNode = parentKind == AstEnumerationNodeStmt ? static_cast<const StmtNode*>(parentNode) : nullptr;
    info.parentScriptClassFieldNode = parentKind == AstEnumerationNodeScriptClassField ? static_cast<const ScriptClassFieldDecl*>(parentNode) : nullptr;
+   if (info.parentStmtNode)
+      info.parentNodeType = info.parentStmtNode->getASTNodeType();
+   else if (info.parentScriptClassFieldNode)
+      info.parentNodeType = info.parentScriptClassFieldNode->astType;
    info.depth = depth;
 
    bool skipChildren = false;
@@ -316,11 +322,17 @@ static AstEnumerationResult walkScriptClassFieldNode(const ScriptClassFieldDecl*
    AstEnumerationInfo info = {};
    info.kind = AstEnumerationNodeScriptClassField;
    info.parentKind = parentKind;
+   info.nodeType = node ? node->astType : ASTNodeInvalid;
+   info.parentNodeType = ASTNodeInvalid;
    info.node = node;
    info.parentNode = parentNode;
    info.parentStmtNode = parentKind == AstEnumerationNodeStmt ? static_cast<const StmtNode*>(parentNode) : nullptr;
    info.scriptClassFieldNode = node;
    info.parentScriptClassFieldNode = parentKind == AstEnumerationNodeScriptClassField ? static_cast<const ScriptClassFieldDecl*>(parentNode) : nullptr;
+   if (info.parentStmtNode)
+      info.parentNodeType = info.parentStmtNode->getASTNodeType();
+   else if (info.parentScriptClassFieldNode)
+      info.parentNodeType = info.parentScriptClassFieldNode->astType;
    info.depth = depth;
 
    bool skipChildren = false;

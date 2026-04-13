@@ -69,6 +69,53 @@ enum TypeReq
    TypeReqTuple     // not used in bytecode; acts as function call params, special case.
 };
 
+enum ASTNodeType : U16
+{
+   ASTNodeInvalid = 0,
+   ASTNodeBreakStmt,
+   ASTNodeContinueStmt,
+   ASTNodeExpr,
+   ASTNodeReturnStmt,
+   ASTNodeIfStmt,
+   ASTNodeLoopStmt,
+   ASTNodeIterStmt,
+   ASTNodeBinaryExpr,
+   ASTNodeFloatBinaryExpr,
+   ASTNodeConditionalExpr,
+   ASTNodeIntBinaryExpr,
+   ASTNodeStreqExpr,
+   ASTNodeStrcatExpr,
+   ASTNodeCommaCatExpr,
+   ASTNodeIntUnaryExpr,
+   ASTNodeFloatUnaryExpr,
+   ASTNodeVar,
+   ASTNodeInt,
+   ASTNodeFloat,
+   ASTNodeStrConst,
+   ASTNodeConstant,
+   ASTNodeBaseAssignExpr,
+   ASTNodeAssignExpr,
+   ASTNodeAssignOpExpr,
+   ASTNodeTTagSetStmt,
+   ASTNodeTTagDeref,
+   ASTNodeTTagExpr,
+   ASTNodeFuncCallExpr,
+   ASTNodeAssertCallExpr,
+   ASTNodeSlotAccess,
+   ASTNodeInternalSlotAccess,
+   ASTNodeSlotAssign,
+   ASTNodeSlotAssignOp,
+   ASTNodeObjectDecl,
+   ASTNodeScriptClassFieldDecl,
+   ASTNodeClassDeclStmt,
+   ASTNodeFunctionDeclStmt,
+   ASTNodeTryStmt,
+   ASTNodeCatchStmt,
+   ASTNodeTupleExpr
+};
+
+const char* getASTNodeTypeName(ASTNodeType type);
+
 struct BaseAssignExprNode;
 struct FunctionDeclStmtNode;
 
@@ -82,6 +129,7 @@ struct FunctionDeclStmtNode;
 struct StmtNode
 {
    StmtNode *next;   ///< Next entry in parse tree.
+   ASTNodeType astType;
 
    StmtNode();
    virtual ~StmtNode() {}
@@ -125,6 +173,7 @@ struct StmtNode
    
    // Answers "does the result of this node load a field or var we can copy out?"
    virtual TypeReq getReturnLoadType() { return TypeReqNone; }
+   ASTNodeType getASTNodeType() const { return astType; }
 
    void emitStackConversion(CodeStream& codeStream, TypeReq inputType, TypeReq outputType);
 };
@@ -642,6 +691,7 @@ struct ObjectDeclNode : ExprNode
 struct ScriptClassFieldDecl
 {
    ScriptClassFieldDecl* next;
+   ASTNodeType astType;
    StringTableEntry fieldName;
    StringTableEntry typeName;
    ExprNode* defaultExpr;

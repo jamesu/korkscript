@@ -9,14 +9,13 @@
 #include "platform/types.h"
 #include "embed/compilerOpcodes.h"
 #include "console/consoleValue.h"
+#include "console/ast.h"
 #include "core/bitSet.h"
 
 class Namespace;
 struct EnumTable;
 class CodeBlock;
 struct ConsoleVarRef;
-struct StmtNode;
-struct ScriptClassFieldDecl;
 
 namespace Compiler
 {
@@ -281,6 +280,8 @@ struct AstEnumerationInfo
 {
    AstEnumerationNodeKind kind;
    AstEnumerationNodeKind parentKind;
+   ASTNodeType nodeType;
+   ASTNodeType parentNodeType;
    const void* node;
    const void* parentNode;
    const StmtNode* stmtNode;
