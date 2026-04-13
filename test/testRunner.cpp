@@ -267,7 +267,7 @@ ConsoleFunction(testString, void, 4, 4, "msg, value, expected")
    }
 }
 
-ConsoleFunction(getAstNodeList, const char*, 2, 3, "(string source, string mode = \"continue\")")
+ConsoleFunction(getAstNodeList, const char*, 2, 5, "(string source, string mode = \"continue\", string errorCallback = \"\")")
 {
    if (!sVM)
       return "";
@@ -276,9 +276,11 @@ ConsoleFunction(getAstNodeList, const char*, 2, 3, "(string source, string mode 
    {
       std::string text;
       const char* mode;
+      const char* errorCallback;
       bool sawNode;
-   } out = { "", argc > 2 ? argv[2] : "continue", false };
+   } out = { "", argc > 2 ? argv[2] : "continue", argc > 3 ? argv[3] : "", false };
 
+   KorkApi::AstParseErrorInfo errorInfo = {};
    const KorkApi::AstEnumerationResult result = sVM->enumerateAst(argv[1], "getAstNodeList",
       &out,
       [](void* userPtr, const KorkApi::AstEnumerationInfo* info) -> KorkApi::AstEnumerationControl {
@@ -317,10 +319,33 @@ ConsoleFunction(getAstNodeList, const char*, 2, 3, "(string source, string mode 
             return KorkApi::AstEnumerationSkipChildren;
 
          return KorkApi::AstEnumerationContinue;
-      });
+      },
+      &errorInfo);
 
    if (result == KorkApi::AstEnumerationParseFailed)
+   {
+      if (out.errorCallback && out.errorCallback[0])
+      {
+         const char* stage = "none";
+         if (errorInfo.stage == KorkApi::AstParseErrorLexer)
+            stage = "lexer";
+         else if (errorInfo.stage == KorkApi::AstParseErrorParser)
+            stage = "parser";
+
+         char lineBuf[32];
+         char colBuf[32];
+         dSprintf(lineBuf, sizeof(lineBuf), "%u", errorInfo.line);
+         dSprintf(colBuf, sizeof(colBuf), "%u", errorInfo.column);
+
+         Con::executef(out.errorCallback,
+            KorkApi::ConsoleValue::makeString(stage),
+            KorkApi::ConsoleValue::makeString(lineBuf),
+            KorkApi::ConsoleValue::makeString(colBuf),
+            KorkApi::ConsoleValue::makeString(errorInfo.tokenText ? errorInfo.tokenText : ""),
+            KorkApi::ConsoleValue::makeString(errorInfo.message ? errorInfo.message : ""));
+      }
       return "";
+   }
 
    if (out.text.empty())
       return "";

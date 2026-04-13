@@ -112,6 +112,29 @@ struct AstWalkContext
 static AstEnumerationResult walkStmtList(const StmtNode* head, const void* parentNode, AstEnumerationNodeKind parentKind, U32 depth, AstWalkContext& ctx);
 static AstEnumerationResult walkScriptClassFieldList(const ScriptClassFieldDecl* head, const void* parentNode, AstEnumerationNodeKind parentKind, U32 depth, AstWalkContext& ctx);
 
+static void clearAstParseError(AstParseErrorInfo* outError)
+{
+   if (!outError)
+      return;
+
+   *outError = {};
+   outError->stage = AstParseErrorNone;
+}
+
+static void setAstParseError(VmInternal* vmInternal, AstParseErrorInfo* outError, AstParseErrorStage stage,
+   StringTableEntry filename, const char* message, const char* tokenText, U32 line, U32 column)
+{
+   if (!outError)
+      return;
+
+   outError->stage = stage;
+   outError->filename = filename;
+   outError->message = message ? vmInternal->internString(message, false) : nullptr;
+   outError->tokenText = tokenText ? vmInternal->internString(tokenText, false) : nullptr;
+   outError->line = line;
+   outError->column = column;
+}
+
 static AstEnumerationResult emitAstCallback(AstWalkContext& ctx, AstEnumerationInfo& info, bool* skipChildren)
 {
    if (!ctx.funcPtr)
@@ -1244,12 +1267,17 @@ void Vm::freeCompiledBlock(CompiledBlock block)
    }
 }
 
-AstEnumerationResult Vm::enumerateAst(const char* code, const char* filename, void* userPtr, AstEnumerationCallback funcPtr)
+AstEnumerationResult Vm::enumerateAst(const char* code, const char* filename, void* userPtr, AstEnumerationCallback funcPtr, AstParseErrorInfo* outError)
 {
    VmAllocTLS::Scope memScope(mInternal);
+   clearAstParseError(outError);
 
    if (!code || !funcPtr)
+   {
+      setAstParseError(mInternal, outError, AstParseErrorParser, filename ? mInternal->internString(filename, false) : nullptr,
+         "invalid ast enumeration arguments", nullptr, 0, 0);
       return AstEnumerationParseFailed;
+   }
 
    Compiler::Resources res;
    res.logFn = mInternal->mConfig.logFn;
@@ -1265,7 +1293,8 @@ AstEnumerationResult Vm::enumerateAst(const char* code, const char* filename, vo
    res.resetTables();
 
    std::string scriptSource(code);
-   const char* parseFilename = filename ? filename : "";
+   StringTableEntry parseFilenameSte = filename ? mInternal->internString(filename, false) : nullptr;
+   const char* parseFilename = parseFilenameSte ? parseFilenameSte : "";
    SimpleLexer::Tokenizer<KorkApi::VMStringTable> lex(KorkApi::VMStringTable(mInternal), scriptSource, parseFilename,
       res.allowStringInterpolation, res.allowScriptClasses);
    SimpleParser::ASTGen<KorkApi::VMStringTable> astGen(&lex, &res);
@@ -1274,8 +1303,11 @@ AstEnumerationResult Vm::enumerateAst(const char* code, const char* filename, vo
    {
       if (!astGen.processTokens())
       {
+         const String tokenText = lex.toString(astGen.mErrorToken);
          mInternal->printf(0, "Invalid token (%s) at %i:%i",
-            lex.toString(astGen.mErrorToken).c_str(), astGen.mErrorToken.pos.line, astGen.mErrorToken.pos.col);
+            tokenText.c_str(), astGen.mErrorToken.pos.line, astGen.mErrorToken.pos.col);
+         setAstParseError(mInternal, outError, AstParseErrorLexer, parseFilenameSte,
+            "invalid token", tokenText.c_str(), astGen.mErrorToken.pos.line, astGen.mErrorToken.pos.col);
          return AstEnumerationParseFailed;
       }
 
@@ -1285,8 +1317,11 @@ AstEnumerationResult Vm::enumerateAst(const char* code, const char* filename, vo
    }
    catch (SimpleParser::TokenError& e)
    {
+      const String tokenText = lex.toString(e.token());
       mInternal->printf(0, "Error parsing (\"%s\"; token is %s) at %i:%i",
-         e.what(), lex.toString(e.token()).c_str(), e.token().pos.line, e.token().pos.col);
+         e.what(), tokenText.c_str(), e.token().pos.line, e.token().pos.col);
+      setAstParseError(mInternal, outError, AstParseErrorParser, parseFilenameSte,
+         e.what(), tokenText.c_str(), e.token().pos.line, e.token().pos.col);
       return AstEnumerationParseFailed;
    }
 }

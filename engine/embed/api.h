@@ -269,6 +269,23 @@ enum AstEnumerationResult : U32
    AstEnumerationParseFailed
 };
 
+enum AstParseErrorStage : U32
+{
+   AstParseErrorNone = 0,
+   AstParseErrorLexer,
+   AstParseErrorParser
+};
+
+struct AstParseErrorInfo
+{
+   AstParseErrorStage stage;
+   StringTableEntry filename;
+   StringTableEntry message;
+   StringTableEntry tokenText;
+   U32 line;
+   U32 column;
+};
+
 enum AstEnumerationNodeKind : U32
 {
    AstEnumerationNodeNone = 0,
@@ -661,7 +678,7 @@ public:
    bool compileCodeBlock(const char* code, const char* filename, CompiledBlock* outBlock);
    ConsoleValue execCodeBlock(U32 codeSize, U8* code, const char* filename, const char* modPath, bool noCalls, int setFrame);
    void freeCompiledBlock(CompiledBlock block);
-   AstEnumerationResult enumerateAst(const char* code, const char* filename, void* userPtr, AstEnumerationCallback funcPtr);
+   AstEnumerationResult enumerateAst(const char* code, const char* filename, void* userPtr, AstEnumerationCallback funcPtr, AstParseErrorInfo* outError = nullptr);
 
    ConsoleValue evalCode(const char* code, const char* filename, const char* modPath, S32 setFrame=-1);
    ConsoleValue call(int argc, ConsoleValue* argv, bool startSuspended=false);
