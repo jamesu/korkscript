@@ -101,6 +101,8 @@ static inline const char* show(const char* s)
 
     return buf.c_str();
 }
+
+static void printScriptClassFieldList(const ScriptClassFieldDecl* head, int pad);
 static void printNode(const StmtNode* n, int pad = 0);
 
 template <class T>
@@ -138,6 +140,30 @@ static void printList(const char* key, const T* head, int pad) {
       if (it) puts("");
    }
    indent(pad); puts("}");
+}
+
+static void printScriptClassFieldList(const ScriptClassFieldDecl* head, int pad) {
+   if (!head) {
+      indent(pad);
+      puts("fields = null");
+      return;
+   }
+
+   indent(pad);
+   puts("fields = {");
+   for (const ScriptClassFieldDecl* it = head; it; it = it->next) {
+      indent(pad + 2);
+      puts("ScriptClassFieldDecl {");
+      indent(pad + 4); printf("fieldName = \"%s\"\n", show(it->fieldName));
+      indent(pad + 4); printf("typeName = \"%s\"\n", show(it->typeName));
+      indent(pad + 4); printf("dbgLineNumber = %d\n", it->dbgLineNumber);
+      printChild("defaultExpr", it->defaultExpr, pad + 4);
+      indent(pad + 2);
+      puts("}");
+      if (it->next) puts("");
+   }
+   indent(pad);
+   puts("}");
 }
 
 static const char* typeReqName(TypeReq t) {
@@ -222,6 +248,10 @@ static void printNode(const StmtNode* n, int pad) {
       indent(pad + 2); printf("nameSpace = \"%s\"\n", show(x->nameSpace));
       indent(pad + 2); printf("package = \"%s\"\n",   show(x->package));
       indent(pad + 2); printf("argc = %i\n", x->argc);
+      if (gEnableExtensions) {
+         indent(pad + 2); printf("returnTypeName = \"%s\"\n", show(x->returnTypeName));
+         indent(pad + 2); printf("isSignal = %s\n", yesno(x->isSignal));
+      }
       printList("args",  x->args,  pad + 2);
       printList("stmts", x->stmts, pad + 2);
       close(n, pad);
@@ -364,13 +394,27 @@ static void printNode(const StmtNode* n, int pad) {
       indent(pad + 2); printf("funcName = \"%s\"\n", show(x->funcName));
       indent(pad + 2); printf("nameSpace = \"%s\"\n", show(x->nameSpace));
       indent(pad + 2); printf("callType = %i\n", x->callType);
+      if (gEnableExtensions) {
+         indent(pad + 2); printf("disableTypes = %s\n", yesno(x->disableTypes));
+      }
       printList("args", x->args, pad + 2);
+      close(n, pad);
+      return;
+   }
+   if (auto x = dynamic_cast<const AssertCallExprNode*>(n)) {
+      open("AssertCallExprNode", pad);
+      indent(pad + 2); printf("message = \"%s\"\n", show(x->message));
+      indent(pad + 2); printf("messageIndex = %u\n", x->messageIndex);
+      printChild("testExpr", x->testExpr, pad + 2);
       close(n, pad);
       return;
    }
    if (auto x = dynamic_cast<const SlotAccessNode*>(n)) {
       open("SlotAccessNode", pad);
       indent(pad + 2); printf("slotName = \"%s\"\n", show(x->slotName));
+      if (gEnableExtensions) {
+         indent(pad + 2); printf("disableTypes = %s\n", yesno(x->disableTypes));
+      }
       printChild("objectExpr", x->objectExpr, pad + 2);
       printChild("arrayExpr",  x->arrayExpr,  pad + 2);
       close(n, pad);
@@ -387,7 +431,13 @@ static void printNode(const StmtNode* n, int pad) {
    if (auto x = dynamic_cast<const SlotAssignNode*>(n)) {
       open("SlotAssignNode", pad);
       indent(pad + 2); printf("slotName = \"%s\"\n", show(x->slotName));
-      indent(pad + 2); printf("typeID = %i\n", -1); // NOTE: uses integer for compat for the moment.
+      if (gEnableExtensions) {
+         indent(pad + 2); printf("varType = \"%s\"\n", show(x->varType));
+         indent(pad + 2); printf("disableTypes = %s\n", yesno(x->disableTypes));
+      }
+      else {
+         indent(pad + 2); printf("typeID = %i\n", -1); // NOTE: uses integer for compat for the moment.
+      }
       printChild("objectExpr", x->objectExpr, pad + 2);
       printChild("arrayExpr",  x->arrayExpr,  pad + 2);
       printChild("valueExpr",  x->rhsExpr,  pad + 2);
@@ -412,11 +462,33 @@ static void printNode(const StmtNode* n, int pad) {
       indent(pad + 2); printf("isDatablock = %s\n", yesno(x->isDatablock));
       indent(pad + 2); printf("isClassNameInternal = %s\n", yesno(x->isClassNameInternal));
       indent(pad + 2); printf("isSingleton = %s\n", yesno(x->isSingleton));
+      if (gEnableExtensions) {
+         indent(pad + 2); printf("failOffset = %u\n", x->failOffset);
+      }
       printChild("classNameExpr", x->classNameExpr, pad + 2);
       printChild("objectNameExpr", x->objectNameExpr, pad + 2);
       printList ("argList",       x->argList,       pad + 2);
       printList ("slotDecls",     x->slotDecls,     pad + 2);
       printList ("subObjects",    x->subObjects,    pad + 2);
+      close(n, pad);
+      return;
+   }
+   if (auto x = dynamic_cast<const ClassDeclStmtNode*>(n)) {
+      open("ClassDeclStmtNode", pad);
+      indent(pad + 2); printf("className = \"%s\"\n", show(x->className));
+      indent(pad + 2); printf("parentName = \"%s\"\n", show(x->parentName));
+      printScriptClassFieldList(x->fields, pad + 2);
+      printChild("ctorDecl", x->ctorDecl, pad + 2);
+      close(n, pad);
+      return;
+   }
+   if (typeid(*n) == typeid(ClassDeclStmtNode)) {
+      const ClassDeclStmtNode* x = static_cast<const ClassDeclStmtNode*>(n);
+      open("ClassDeclStmtNode", pad);
+      indent(pad + 2); printf("className = \"%s\"\n", show(x->className));
+      indent(pad + 2); printf("parentName = \"%s\"\n", show(x->parentName));
+      printScriptClassFieldList(x->fields, pad + 2);
+      printChild("ctorDecl", x->ctorDecl, pad + 2);
       close(n, pad);
       return;
    }
@@ -545,6 +617,7 @@ bool printAST(const char* buf, const char* filename)
       res.allowTypes = gEnableExtensions;
       res.allowSignals = gEnableExtensions;
       res.allowStringInterpolation = gEnableExtensions;
+      res.allowScriptClasses = gEnableExtensions;
       
       StmtNode* rootNode = nullptr;
       
