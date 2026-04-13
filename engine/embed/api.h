@@ -15,6 +15,8 @@ class Namespace;
 struct EnumTable;
 class CodeBlock;
 struct ConsoleVarRef;
+struct StmtNode;
+struct ScriptClassFieldDecl;
 
 namespace Compiler
 {
@@ -253,6 +255,42 @@ struct NamespaceEntryInfo
 
 typedef void(*NamespaceInfoEnumerationCallback)(void* userPtr, const NamespaceInfo* info);
 typedef void(*NamespaceEntryInfoEnumerationCallback)(void* userPtr, const NamespaceEntryInfo* info);
+
+enum AstEnumerationControl : U32
+{
+   AstEnumerationContinue = 0,
+   AstEnumerationSkipChildren,
+   AstEnumerationAbort
+};
+
+enum AstEnumerationResult : U32
+{
+   AstEnumerationCompleted = 0,
+   AstEnumerationAborted,
+   AstEnumerationParseFailed
+};
+
+enum AstEnumerationNodeKind : U32
+{
+   AstEnumerationNodeNone = 0,
+   AstEnumerationNodeStmt,
+   AstEnumerationNodeScriptClassField
+};
+
+struct AstEnumerationInfo
+{
+   AstEnumerationNodeKind kind;
+   AstEnumerationNodeKind parentKind;
+   const void* node;
+   const void* parentNode;
+   const StmtNode* stmtNode;
+   const StmtNode* parentStmtNode;
+   const ScriptClassFieldDecl* scriptClassFieldNode;
+   const ScriptClassFieldDecl* parentScriptClassFieldNode;
+   U32 depth;
+};
+
+typedef AstEnumerationControl(*AstEnumerationCallback)(void* userPtr, const AstEnumerationInfo* info);
 
 enum ClassFieldEnumerationFlags : U32
 {
@@ -622,6 +660,7 @@ public:
    bool compileCodeBlock(const char* code, const char* filename, CompiledBlock* outBlock);
    ConsoleValue execCodeBlock(U32 codeSize, U8* code, const char* filename, const char* modPath, bool noCalls, int setFrame);
    void freeCompiledBlock(CompiledBlock block);
+   AstEnumerationResult enumerateAst(const char* code, const char* filename, void* userPtr, AstEnumerationCallback funcPtr);
 
    ConsoleValue evalCode(const char* code, const char* filename, const char* modPath, S32 setFrame=-1);
    ConsoleValue call(int argc, ConsoleValue* argv, bool startSuspended=false);

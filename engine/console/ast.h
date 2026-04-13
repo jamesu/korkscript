@@ -30,6 +30,13 @@
 #ifndef _AST_H_
 #define _AST_H_
 
+#include "platform/types.h"
+
+namespace SimpleLexer
+{
+enum class TokenType : U32;
+}
+
 class ExprEvalState;
 class Namespace;
 class SimObject;

@@ -8,7 +8,9 @@
 #include "platform/platform.h"
 #include "platform/platformString.h"
 #include "console/console.h"
+#include "console/ast.h"
 #include <stdio.h>
+#include <string>
 #include "sim/simBase.h"
 #include "sim/dynamicTypes.h"
 #include "core/fileStream.h"
@@ -17,6 +19,8 @@
 S32 gReturnCode = 0;
 U32 gNumPasses = 0;
 U32 gNumFails = 0;
+
+extern KorkApi::Vm* sVM;
 
 
 // Hack until we define these properly in the API
@@ -263,6 +267,116 @@ ConsoleFunction(testString, void, 4, 4, "msg, value, expected")
    }
 }
 
+static const char* getAstStmtNodeName(const StmtNode* node)
+{
+   if (!node)
+      return "null";
+
+   if (dynamic_cast<const BreakStmtNode*>(node)) return "BreakStmtNode";
+   if (dynamic_cast<const ContinueStmtNode*>(node)) return "ContinueStmtNode";
+   if (dynamic_cast<const ReturnStmtNode*>(node)) return "ReturnStmtNode";
+   if (dynamic_cast<const IfStmtNode*>(node)) return "IfStmtNode";
+   if (dynamic_cast<const LoopStmtNode*>(node)) return "LoopStmtNode";
+   if (dynamic_cast<const IterStmtNode*>(node)) return "IterStmtNode";
+   if (dynamic_cast<const TTagSetStmtNode*>(node)) return "TTagSetStmtNode";
+   if (dynamic_cast<const FunctionDeclStmtNode*>(node)) return "FunctionDeclStmtNode";
+   if (dynamic_cast<const ConditionalExprNode*>(node)) return "ConditionalExprNode";
+   if (dynamic_cast<const FloatBinaryExprNode*>(node)) return "FloatBinaryExprNode";
+   if (dynamic_cast<const IntBinaryExprNode*>(node)) return "IntBinaryExprNode";
+   if (dynamic_cast<const StreqExprNode*>(node)) return "StreqExprNode";
+   if (dynamic_cast<const StrcatExprNode*>(node)) return "StrcatExprNode";
+   if (dynamic_cast<const CommaCatExprNode*>(node)) return "CommaCatExprNode";
+   if (dynamic_cast<const IntUnaryExprNode*>(node)) return "IntUnaryExprNode";
+   if (dynamic_cast<const FloatUnaryExprNode*>(node)) return "FloatUnaryExprNode";
+   if (dynamic_cast<const VarNode*>(node)) return "VarNode";
+   if (dynamic_cast<const IntNode*>(node)) return "IntNode";
+   if (dynamic_cast<const FloatNode*>(node)) return "FloatNode";
+   if (dynamic_cast<const StrConstNode*>(node)) return "StrConstNode";
+   if (dynamic_cast<const ConstantNode*>(node)) return "ConstantNode";
+   if (dynamic_cast<const AssignExprNode*>(node)) return "AssignExprNode";
+   if (dynamic_cast<const AssignOpExprNode*>(node)) return "AssignOpExprNode";
+   if (dynamic_cast<const TTagDerefNode*>(node)) return "TTagDerefNode";
+   if (dynamic_cast<const TTagExprNode*>(node)) return "TTagExprNode";
+   if (dynamic_cast<const FuncCallExprNode*>(node)) return "FuncCallExprNode";
+   if (dynamic_cast<const AssertCallExprNode*>(node)) return "AssertCallExprNode";
+   if (dynamic_cast<const SlotAccessNode*>(node)) return "SlotAccessNode";
+   if (dynamic_cast<const InternalSlotAccessNode*>(node)) return "InternalSlotAccessNode";
+   if (dynamic_cast<const SlotAssignNode*>(node)) return "SlotAssignNode";
+   if (dynamic_cast<const SlotAssignOpNode*>(node)) return "SlotAssignOpNode";
+   if (dynamic_cast<const ObjectDeclNode*>(node)) return "ObjectDeclNode";
+   if (dynamic_cast<const ClassDeclStmtNode*>(node)) return "ClassDeclStmtNode";
+   if (dynamic_cast<const TryStmtNode*>(node)) return "TryStmtNode";
+   if (dynamic_cast<const CatchStmtNode*>(node)) return "CatchStmtNode";
+   if (dynamic_cast<const TupleExprNode*>(node)) return "TupleExprNode";
+
+   return typeid(*node).name();
+}
+
+ConsoleFunction(getAstNodeList, const char*, 2, 3, "(string source, string mode = \"continue\")")
+{
+   if (!sVM)
+      return "";
+
+   struct AstNodeList
+   {
+      std::string text;
+      const char* mode;
+      bool sawNode;
+   } out = { "", argc > 2 ? argv[2] : "continue", false };
+
+   const KorkApi::AstEnumerationResult result = sVM->enumerateAst(argv[1], "getAstNodeList",
+      &out,
+      [](void* userPtr, const KorkApi::AstEnumerationInfo* info) -> KorkApi::AstEnumerationControl {
+         AstNodeList* out = static_cast<AstNodeList*>(userPtr);
+         out->sawNode = true;
+
+         for (U32 i = 0; i < info->depth; ++i)
+            out->text += "  ";
+
+         if (info->kind == KorkApi::AstEnumerationNodeStmt)
+         {
+            out->text += getAstStmtNodeName(info->stmtNode);
+         }
+         else if (info->kind == KorkApi::AstEnumerationNodeScriptClassField)
+         {
+            out->text += "ScriptClassFieldDecl";
+            if (info->scriptClassFieldNode && info->scriptClassFieldNode->fieldName)
+            {
+               out->text += "(";
+               out->text += info->scriptClassFieldNode->fieldName;
+               out->text += ")";
+            }
+         }
+         else
+         {
+            out->text += "Unknown";
+         }
+
+         out->text += "\n";
+
+         if (!dStricmp(out->mode, "abortAfterFirst"))
+            return KorkApi::AstEnumerationAbort;
+
+         if (!dStricmp(out->mode, "skipClassChildren") &&
+             info->kind == KorkApi::AstEnumerationNodeStmt &&
+             dynamic_cast<const ClassDeclStmtNode*>(info->stmtNode))
+            return KorkApi::AstEnumerationSkipChildren;
+
+         return KorkApi::AstEnumerationContinue;
+      });
+
+   if (result == KorkApi::AstEnumerationParseFailed)
+      return "";
+
+   if (out.text.empty())
+      return "";
+
+   KorkApi::ConsoleValue retV = Con::getReturnBuffer(out.text.size() + 1);
+   char* ret = (char*)retV.evaluatePtr(vmPtr->getAllocBase());
+   dStrcpy(ret, out.text.c_str());
+   return ret;
+}
+
 ConsoleFunction(yieldFiber, S32, 2, 2, "value")
 {
    vmPtr->suspendCurrentFiber();
@@ -449,4 +563,3 @@ int main(int argc, char **argv)
 
 	return gReturnCode;
 }
-

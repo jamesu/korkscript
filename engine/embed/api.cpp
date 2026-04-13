@@ -10,12 +10,14 @@
 #include "console/consoleNamespace.h"
 
 #include "core/memStream.h"
+#include "console/ast.h"
 #include "console/consoleInternal.h"
 #include "console/telnetDebugger.h"
 #include "console/telnetConsole.h"
 
 #include "console/compiler.h"
 #include "console/codeBlock.h"
+#include "console/simpleParser.h"
 
 #include "core/simpleIntern.h"
 
@@ -99,6 +101,246 @@ static bool emitScriptClassFields(ClassId ownerClassId, ClassInfo* klass, void* 
    }
 
    return true;
+}
+
+struct AstWalkContext
+{
+   void* userPtr;
+   AstEnumerationCallback funcPtr;
+};
+
+static AstEnumerationResult walkStmtList(const StmtNode* head, const void* parentNode, AstEnumerationNodeKind parentKind, U32 depth, AstWalkContext& ctx);
+static AstEnumerationResult walkScriptClassFieldList(const ScriptClassFieldDecl* head, const void* parentNode, AstEnumerationNodeKind parentKind, U32 depth, AstWalkContext& ctx);
+
+static AstEnumerationResult emitAstCallback(AstWalkContext& ctx, AstEnumerationInfo& info, bool* skipChildren)
+{
+   if (!ctx.funcPtr)
+      return AstEnumerationCompleted;
+
+   const AstEnumerationControl control = ctx.funcPtr(ctx.userPtr, &info);
+   switch (control)
+   {
+      case AstEnumerationContinue:
+         *skipChildren = false;
+         return AstEnumerationCompleted;
+      case AstEnumerationSkipChildren:
+         *skipChildren = true;
+         return AstEnumerationCompleted;
+      case AstEnumerationAbort:
+         *skipChildren = true;
+         return AstEnumerationAborted;
+      default:
+         *skipChildren = false;
+         return AstEnumerationCompleted;
+   }
+}
+
+static AstEnumerationResult walkStmtNode(const StmtNode* node, const void* parentNode, AstEnumerationNodeKind parentKind, U32 depth, AstWalkContext& ctx)
+{
+   AstEnumerationInfo info = {};
+   info.kind = AstEnumerationNodeStmt;
+   info.parentKind = parentKind;
+   info.node = node;
+   info.parentNode = parentNode;
+   info.stmtNode = node;
+   info.parentStmtNode = parentKind == AstEnumerationNodeStmt ? static_cast<const StmtNode*>(parentNode) : nullptr;
+   info.parentScriptClassFieldNode = parentKind == AstEnumerationNodeScriptClassField ? static_cast<const ScriptClassFieldDecl*>(parentNode) : nullptr;
+   info.depth = depth;
+
+   bool skipChildren = false;
+   AstEnumerationResult result = emitAstCallback(ctx, info, &skipChildren);
+   if (result != AstEnumerationCompleted || skipChildren)
+      return result;
+
+   auto walkChild = [&](const StmtNode* child) -> AstEnumerationResult {
+      return child ? walkStmtList(child, node, AstEnumerationNodeStmt, depth + 1, ctx) : AstEnumerationCompleted;
+   };
+   auto walkFields = [&](const ScriptClassFieldDecl* child) -> AstEnumerationResult {
+      return child ? walkScriptClassFieldList(child, node, AstEnumerationNodeStmt, depth + 1, ctx) : AstEnumerationCompleted;
+   };
+
+   if (auto x = dynamic_cast<const ReturnStmtNode*>(node))
+      return walkChild(x->expr);
+   if (auto x = dynamic_cast<const IfStmtNode*>(node))
+   {
+      result = walkChild(x->testExpr);
+      if (result != AstEnumerationCompleted) return result;
+      result = walkChild(x->ifBlock);
+      if (result != AstEnumerationCompleted) return result;
+      return walkChild(x->elseBlock);
+   }
+   if (auto x = dynamic_cast<const LoopStmtNode*>(node))
+   {
+      result = walkChild(x->testExpr);
+      if (result != AstEnumerationCompleted) return result;
+      result = walkChild(x->initExpr);
+      if (result != AstEnumerationCompleted) return result;
+      result = walkChild(x->endLoopExpr);
+      if (result != AstEnumerationCompleted) return result;
+      return walkChild(x->loopBlock);
+   }
+   if (auto x = dynamic_cast<const IterStmtNode*>(node))
+   {
+      result = walkChild(x->containerExpr);
+      if (result != AstEnumerationCompleted) return result;
+      return walkChild(x->body);
+   }
+   if (auto x = dynamic_cast<const TTagSetStmtNode*>(node))
+   {
+      result = walkChild(x->valueExpr);
+      if (result != AstEnumerationCompleted) return result;
+      return walkChild(x->stringExpr);
+   }
+   if (auto x = dynamic_cast<const FunctionDeclStmtNode*>(node))
+   {
+      result = walkChild(x->args);
+      if (result != AstEnumerationCompleted) return result;
+      return walkChild(x->stmts);
+   }
+   if (auto x = dynamic_cast<const ConditionalExprNode*>(node))
+   {
+      result = walkChild(x->testExpr);
+      if (result != AstEnumerationCompleted) return result;
+      result = walkChild(x->trueExpr);
+      if (result != AstEnumerationCompleted) return result;
+      return walkChild(x->falseExpr);
+   }
+   if (auto x = dynamic_cast<const BinaryExprNode*>(node))
+   {
+      result = walkChild(x->left);
+      if (result != AstEnumerationCompleted) return result;
+      return walkChild(x->right);
+   }
+   if (auto x = dynamic_cast<const IntUnaryExprNode*>(node))
+      return walkChild(x->expr);
+   if (auto x = dynamic_cast<const FloatUnaryExprNode*>(node))
+      return walkChild(x->expr);
+   if (auto x = dynamic_cast<const VarNode*>(node))
+      return walkChild(x->arrayIndex);
+   if (auto x = dynamic_cast<const AssignExprNode*>(node))
+   {
+      result = walkChild(x->arrayIndex);
+      if (result != AstEnumerationCompleted) return result;
+      return walkChild(x->rhsExpr);
+   }
+   if (auto x = dynamic_cast<const AssignOpExprNode*>(node))
+   {
+      result = walkChild(x->arrayIndex);
+      if (result != AstEnumerationCompleted) return result;
+      return walkChild(x->rhsExpr);
+   }
+   if (auto x = dynamic_cast<const TTagDerefNode*>(node))
+      return walkChild(x->expr);
+   if (auto x = dynamic_cast<const FuncCallExprNode*>(node))
+      return walkChild(x->args);
+   if (auto x = dynamic_cast<const AssertCallExprNode*>(node))
+      return walkChild(x->testExpr);
+   if (auto x = dynamic_cast<const SlotAccessNode*>(node))
+   {
+      result = walkChild(x->objectExpr);
+      if (result != AstEnumerationCompleted) return result;
+      return walkChild(x->arrayExpr);
+   }
+   if (auto x = dynamic_cast<const InternalSlotAccessNode*>(node))
+   {
+      result = walkChild(x->objectExpr);
+      if (result != AstEnumerationCompleted) return result;
+      return walkChild(x->slotExpr);
+   }
+   if (auto x = dynamic_cast<const SlotAssignNode*>(node))
+   {
+      result = walkChild(x->objectExpr);
+      if (result != AstEnumerationCompleted) return result;
+      result = walkChild(x->arrayExpr);
+      if (result != AstEnumerationCompleted) return result;
+      return walkChild(x->rhsExpr);
+   }
+   if (auto x = dynamic_cast<const SlotAssignOpNode*>(node))
+   {
+      result = walkChild(x->objectExpr);
+      if (result != AstEnumerationCompleted) return result;
+      result = walkChild(x->arrayExpr);
+      if (result != AstEnumerationCompleted) return result;
+      return walkChild(x->rhsExpr);
+   }
+   if (auto x = dynamic_cast<const ObjectDeclNode*>(node))
+   {
+      result = walkChild(x->classNameExpr);
+      if (result != AstEnumerationCompleted) return result;
+      result = walkChild(x->objectNameExpr);
+      if (result != AstEnumerationCompleted) return result;
+      result = walkChild(x->argList);
+      if (result != AstEnumerationCompleted) return result;
+      result = walkChild(x->slotDecls);
+      if (result != AstEnumerationCompleted) return result;
+      return walkChild(x->subObjects);
+   }
+   if (auto x = dynamic_cast<const ClassDeclStmtNode*>(node))
+   {
+      result = walkFields(x->fields);
+      if (result != AstEnumerationCompleted) return result;
+      return walkChild(x->ctorDecl);
+   }
+   if (auto x = dynamic_cast<const TryStmtNode*>(node))
+   {
+      result = walkChild(x->tryBlock);
+      if (result != AstEnumerationCompleted) return result;
+      return walkChild(x->catchBlocks);
+   }
+   if (auto x = dynamic_cast<const CatchStmtNode*>(node))
+   {
+      result = walkChild(x->testExpr);
+      if (result != AstEnumerationCompleted) return result;
+      return walkChild(x->catchBlock);
+   }
+   if (auto x = dynamic_cast<const TupleExprNode*>(node))
+      return walkChild(x->items);
+
+   return AstEnumerationCompleted;
+}
+
+static AstEnumerationResult walkStmtList(const StmtNode* head, const void* parentNode, AstEnumerationNodeKind parentKind, U32 depth, AstWalkContext& ctx)
+{
+   for (const StmtNode* node = head; node; node = node->getNext())
+   {
+      AstEnumerationResult result = walkStmtNode(node, parentNode, parentKind, depth, ctx);
+      if (result != AstEnumerationCompleted)
+         return result;
+   }
+
+   return AstEnumerationCompleted;
+}
+
+static AstEnumerationResult walkScriptClassFieldNode(const ScriptClassFieldDecl* node, const void* parentNode, AstEnumerationNodeKind parentKind, U32 depth, AstWalkContext& ctx)
+{
+   AstEnumerationInfo info = {};
+   info.kind = AstEnumerationNodeScriptClassField;
+   info.parentKind = parentKind;
+   info.node = node;
+   info.parentNode = parentNode;
+   info.parentStmtNode = parentKind == AstEnumerationNodeStmt ? static_cast<const StmtNode*>(parentNode) : nullptr;
+   info.scriptClassFieldNode = node;
+   info.parentScriptClassFieldNode = parentKind == AstEnumerationNodeScriptClassField ? static_cast<const ScriptClassFieldDecl*>(parentNode) : nullptr;
+   info.depth = depth;
+
+   bool skipChildren = false;
+   AstEnumerationResult result = emitAstCallback(ctx, info, &skipChildren);
+   if (result != AstEnumerationCompleted || skipChildren)
+      return result;
+
+   return node->defaultExpr ? walkStmtList(node->defaultExpr, node, AstEnumerationNodeScriptClassField, depth + 1, ctx) : AstEnumerationCompleted;
+}
+
+static AstEnumerationResult walkScriptClassFieldList(const ScriptClassFieldDecl* head, const void* parentNode, AstEnumerationNodeKind parentKind, U32 depth, AstWalkContext& ctx)
+{
+   for (const ScriptClassFieldDecl* node = head; node; node = node->next)
+   {
+      AstEnumerationResult result = walkScriptClassFieldNode(node, parentNode, parentKind, depth, ctx);
+      if (result != AstEnumerationCompleted)
+         return result;
+   }
+
+   return AstEnumerationCompleted;
 }
 
 
@@ -987,6 +1229,53 @@ void Vm::freeCompiledBlock(CompiledBlock block)
    if (block.data)
    {
       mInternal->DeleteArray(block.data);
+   }
+}
+
+AstEnumerationResult Vm::enumerateAst(const char* code, const char* filename, void* userPtr, AstEnumerationCallback funcPtr)
+{
+   VmAllocTLS::Scope memScope(mInternal);
+
+   if (!code || !funcPtr)
+      return AstEnumerationParseFailed;
+
+   Compiler::Resources res;
+   res.logFn = mInternal->mConfig.logFn;
+   res.logUser = mInternal->mConfig.logUser;
+   res.emptyString = mInternal->getEmptyString();
+   res.allowExceptions = mInternal->mCompilerResources->allowExceptions;
+   res.allowTuples = mInternal->mCompilerResources->allowTuples;
+   res.allowTypes = mInternal->mCompilerResources->allowTypes;
+   res.allowSignals = mInternal->mCompilerResources->allowSignals;
+   res.allowStringInterpolation = mInternal->mCompilerResources->allowStringInterpolation;
+   res.allowScriptClasses = mInternal->mCompilerResources->allowScriptClasses;
+   res.consoleAllocReset();
+   res.resetTables();
+
+   std::string scriptSource(code);
+   const char* parseFilename = filename ? filename : "";
+   SimpleLexer::Tokenizer<KorkApi::VMStringTable> lex(KorkApi::VMStringTable(mInternal), scriptSource, parseFilename,
+      res.allowStringInterpolation, res.allowScriptClasses);
+   SimpleParser::ASTGen<KorkApi::VMStringTable> astGen(&lex, &res);
+
+   try
+   {
+      if (!astGen.processTokens())
+      {
+         mInternal->printf(0, "Invalid token (%s) at %i:%i",
+            lex.toString(astGen.mErrorToken).c_str(), astGen.mErrorToken.pos.line, astGen.mErrorToken.pos.col);
+         return AstEnumerationParseFailed;
+      }
+
+      StmtNode* rootNode = astGen.parseProgram();
+      AstWalkContext ctx = { userPtr, funcPtr };
+      return walkStmtList(rootNode, nullptr, AstEnumerationNodeNone, 0, ctx);
+   }
+   catch (SimpleParser::TokenError& e)
+   {
+      mInternal->printf(0, "Error parsing (\"%s\"; token is %s) at %i:%i",
+         e.what(), lex.toString(e.token()).c_str(), e.token().pos.line, e.token().pos.col);
+      return AstEnumerationParseFailed;
    }
 }
 

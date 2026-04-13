@@ -587,6 +587,8 @@ bool printAST(const char* buf, const char* filename)
 {
    std::string theBuf(buf);
    Compiler::Resources res;
+   res.consoleAllocReset();
+   res.resetTables();
    
    KorkApi::Config cfg{};
    cfg.mallocFn = [](size_t sz, void* user) {
@@ -655,6 +657,8 @@ bool printAST(const char* buf, const char* filename)
       {
          printf("Error parsing (\"%s\"; token is %s) at %i:%i\n", e.what(), lex.toString(e.token()).c_str(), e.token().pos.line, e.token().pos.col);
       }
+
+      res.consoleAllocReset();
    }
    
    KorkApi::destroyVM(vm);
