@@ -121,6 +121,7 @@ public:
       virtual StringTableEntry getTypePrefix( void ) const { return StringTable->insert( typePrefix ); }\
       void exportToVm(KorkApi::Vm* vm) { exportTypeToVm(this, vm); } \
       virtual KorkApi::ConsoleValue performOp(KorkApi::Vm* vm, U32 op, KorkApi::ConsoleValue lhs, KorkApi::ConsoleValue rhs); \
+      virtual bool resolveField(KorkApi::Vm* vmPtr, KorkApi::TypeStorageInterface* baseStorage, StringTableEntry fieldName, KorkApi::ConsoleValue arrayIndex, KorkApi::TypeStorageInterface* outStorage, bool wantWrite); \
    }; \
    S32 type = -1; \
    ConsoleType##type gConsoleType##type##Instance(size,vsize,&type,#type); \
@@ -136,6 +137,7 @@ public:
       virtual StringTableEntry getTypePrefix( void ) const { return StringTable->insert( typePrefix ); }\
       void exportToVm(KorkApi::Vm* vm) { exportTypeToVm(this, vm); } \
       virtual KorkApi::ConsoleValue performOp(KorkApi::Vm* vm, U32 op, KorkApi::ConsoleValue lhs, KorkApi::ConsoleValue rhs); \
+      virtual bool resolveField(KorkApi::Vm* vmPtr, KorkApi::TypeStorageInterface* baseStorage, StringTableEntry fieldName, KorkApi::ConsoleValue arrayIndex, KorkApi::TypeStorageInterface* outStorage, bool wantWrite); \
    }; \
    S32 type = -1; \
    ConsoleType##type gConsoleType##type##Instance(size,&type,#type); \
@@ -148,6 +150,15 @@ public:
 
 #define ConsoleGetType( type ) \
    bool ConsoleType##type::getData(KorkApi::Vm* vmPtr, KorkApi::TypeStorageInterface *inputStorage, KorkApi::TypeStorageInterface *outputStorage, void* fieldUserPtr, BitSet32 flag, U32 requestedType)
+
+#define ConsoleResolveField( type ) \
+   bool ConsoleType##type::resolveField(KorkApi::Vm* vmPtr, KorkApi::TypeStorageInterface* baseStorage, StringTableEntry fieldName, KorkApi::ConsoleValue arrayIndex, KorkApi::TypeStorageInterface* outStorage, bool wantWrite)
+
+#define ConsoleResolveFieldDefault( type ) \
+   bool ConsoleType##type::resolveField(KorkApi::Vm* vmPtr, KorkApi::TypeStorageInterface* baseStorage, StringTableEntry fieldName, KorkApi::ConsoleValue arrayIndex, KorkApi::TypeStorageInterface* outStorage, bool wantWrite) \
+   { \
+      return ConsoleBaseType::resolveField(vmPtr, baseStorage, fieldName, arrayIndex, outStorage, wantWrite); \
+   }
 
 #define ConsoleTypeOp( type ) \
    KorkApi::ConsoleValue ConsoleType##type::performOp(KorkApi::Vm* vmPtr, U32 op, KorkApi::ConsoleValue lhs, KorkApi::ConsoleValue rhs)

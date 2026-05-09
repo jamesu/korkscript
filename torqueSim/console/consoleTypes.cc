@@ -461,7 +461,7 @@ ConsoleTypeOpDefaultNumeric( TypeS32 )
 
 ConsoleGetType( TypeF32 )
 {
-   S32 value = 0;
+   F32 value = 0;
    
    if (inputStorage->isField)
    {
@@ -500,8 +500,6 @@ ConsoleGetType( TypeF32 )
          F32* dst = (F32*)ConsoleGetOutputStoragePtr();
          *dst = value;
       }
-      
-      if (requestedType == KorkApi::ConsoleValue::TypeInternalUnsigned)
       
       if (outputStorage->data.storageRegister)
       {
@@ -751,6 +749,56 @@ ConsoleGetType( TypeS32Vector )
 
 ConsoleTypeOpDefaultNumeric( TypeS32Vector )
 
+ConsoleResolveField( TypeS32Vector )
+{
+   if (fieldName || arrayIndex.isNull())
+   {
+      return false;
+   }
+
+   const S64 signedIndex = vmPtr->valueAsInt(arrayIndex);
+   if (signedIndex < 0)
+   {
+      return false;
+   }
+
+   const U32 index = static_cast<U32>(signedIndex);
+   S32* element = nullptr;
+
+   if (baseStorage->isField)
+   {
+      std::vector<S32>* vec = static_cast<std::vector<S32>*>(baseStorage->data.storageAddress.evaluatePtr(vmPtr->getAllocBase()));
+      if (!vec)
+      {
+         return false;
+      }
+
+      if (index >= vec->size())
+      {
+         if (!wantWrite)
+         {
+            return false;
+         }
+         vec->resize(index + 1);
+      }
+
+      element = &(*vec)[index];
+   }
+   else
+   {
+      U32* packed = static_cast<U32*>(baseStorage->data.storageAddress.evaluatePtr(vmPtr->getAllocBase()));
+      if (!packed || index >= packed[0])
+      {
+         return false;
+      }
+
+      S32* data = reinterpret_cast<S32*>(packed + 1);
+      element = data + index;
+   }
+
+   return vmPtr->initFixedTypeStorage(element, TypeS32, true, outStorage);
+}
+
 ConsoleGetType( TypeF32Vector )
 {
    std::vector<F32> *vec = nullptr;
@@ -916,6 +964,56 @@ ConsoleGetType( TypeF32Vector )
 }
 
 ConsoleTypeOpDefaultNumeric( TypeF32Vector )
+
+ConsoleResolveField( TypeF32Vector )
+{
+   if (fieldName || arrayIndex.isNull())
+   {
+      return false;
+   }
+
+   const S64 signedIndex = vmPtr->valueAsInt(arrayIndex);
+   if (signedIndex < 0)
+   {
+      return false;
+   }
+
+   const U32 index = static_cast<U32>(signedIndex);
+   F32* element = nullptr;
+
+   if (baseStorage->isField)
+   {
+      std::vector<F32>* vec = static_cast<std::vector<F32>*>(baseStorage->data.storageAddress.evaluatePtr(vmPtr->getAllocBase()));
+      if (!vec)
+      {
+         return false;
+      }
+
+      if (index >= vec->size())
+      {
+         if (!wantWrite)
+         {
+            return false;
+         }
+         vec->resize(index + 1);
+      }
+
+      element = &(*vec)[index];
+   }
+   else
+   {
+      U32* packed = static_cast<U32*>(baseStorage->data.storageAddress.evaluatePtr(vmPtr->getAllocBase()));
+      if (!packed || index >= packed[0])
+      {
+         return false;
+      }
+
+      F32* data = reinterpret_cast<F32*>(packed + 1);
+      element = data + index;
+   }
+
+   return vmPtr->initFixedTypeStorage(element, TypeF32, true, outStorage);
+}
 
 ConsoleGetType( TypeBoolVector )
 {
@@ -1278,3 +1376,14 @@ ConsoleGetType( TypeSimObjectId )
 }
 
 #endif
+
+ConsoleResolveFieldDefault( TypeString )
+ConsoleResolveFieldDefault( TypeStringTableEntryVector )
+ConsoleResolveFieldDefault( TypeCaseString )
+ConsoleResolveFieldDefault( TypeS8 )
+ConsoleResolveFieldDefault( TypeS32 )
+ConsoleResolveFieldDefault( TypeF32 )
+ConsoleResolveFieldDefault( TypeBool )
+ConsoleResolveFieldDefault( TypeEnum )
+ConsoleResolveFieldDefault( TypeBoolVector )
+ConsoleResolveFieldDefault( TypeSimObjectPtr )

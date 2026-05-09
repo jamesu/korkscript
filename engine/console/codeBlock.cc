@@ -1909,16 +1909,17 @@ void CodeBlock::dumpInstructions( U32 startIp, bool upToReturn, bool downcaseStr
          case OP_LOAD_ADVANCED_FIELD:
          {
             StringTableEntry fieldName = Compiler::CodeToSTE(nullptr, identStrings, code, ip);
-            mVM->printf(0, "%i: OP_LOAD_ADVANCED_FIELD field=%s", ip - 1, fieldName ? fieldName : "");
+            mVM->printf(0, "%i: OP_LOAD_ADVANCED_FIELD field=%s hasArray=%u", ip - 1, fieldName ? fieldName : "", code[ip + 2]);
             ip += 2;
+            ++ip;
             break;
          }
          case OP_SAVE_ADVANCED_FIELD:
          {
             StringTableEntry fieldName = Compiler::CodeToSTE(nullptr, identStrings, code, ip);
-            mVM->printf(0, "%i: OP_SAVE_ADVANCED_FIELD field=%s writeBack=%u", ip - 1, fieldName ? fieldName : "", code[ip + 2]);
+            mVM->printf(0, "%i: OP_SAVE_ADVANCED_FIELD field=%s hasArray=%u writeBack=%u", ip - 1, fieldName ? fieldName : "", code[ip + 2], code[ip + 3]);
             ip += 2;
-            ++ip;
+            ip += 2;
             break;
          }
          case OP_SET_DYNAMIC_TYPE_FROM_VAR:

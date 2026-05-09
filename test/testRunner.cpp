@@ -8,6 +8,7 @@
 #include "platform/platform.h"
 #include "platform/platformString.h"
 #include "console/console.h"
+#include "console/consoleTypes.h"
 #include "console/ast.h"
 #include <stdio.h>
 #include <string>
@@ -142,6 +143,35 @@ ConsoleGetType( TypeMyPoint3F )
 
       return vmPtr->castValue(requestedType, &castInput, outputStorage, fieldUserPtr, flag);
    }
+}
+
+ConsoleResolveField( TypeMyPoint3F )
+{
+   if (!fieldName || !arrayIndex.isNull())
+   {
+      return false;
+   }
+
+   MyPoint3F* point = static_cast<MyPoint3F*>(baseStorage->data.storageAddress.evaluatePtr(vmPtr->getAllocBase()));
+   if (!point)
+   {
+      return false;
+   }
+
+   F32* component = nullptr;
+   if (!dStrcmp(fieldName, "x"))
+      component = &point->x;
+   else if (!dStrcmp(fieldName, "y"))
+      component = &point->y;
+   else if (!dStrcmp(fieldName, "z"))
+      component = &point->z;
+
+   if (!component)
+   {
+      return false;
+   }
+
+   return vmPtr->initFixedTypeStorage(component, TypeF32, true, outStorage);
 }
 
 ConsoleTypeOp( TypeMyPoint3F )
