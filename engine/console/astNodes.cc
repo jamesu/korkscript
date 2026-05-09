@@ -96,6 +96,8 @@ const char* getASTNodeTypeName(ASTNodeType type)
       "FuncCallExprNode",
       "AssertCallExprNode",
       "SlotAccessNode",
+      "AdvancedFieldAccessNode",
+      "AdvancedFieldAssignNode",
       "InternalSlotAccessNode",
       "SlotAssignNode",
       "SlotAssignOpNode",
@@ -1678,6 +1680,93 @@ TypeReq SlotAccessNode::getReturnLoadType()
 bool SlotAccessNode::canBeTyped()
 {
    return !disableTypes;
+}
+
+//-----------------------------------------------------------------------------
+
+U32 AdvancedFieldAccessNode::compile(CodeStream &codeStream, U32 ip, TypeReq type)
+{
+   if (type == TypeReqNone)
+      return ip;
+
+   if (fieldName)
+      codeStream.mResources->precompileIdent(fieldName);
+
+   ip = baseExpr->compile(codeStream, ip, TypeReqTypedString);
+   codeStream.emit(OP_PUSH_TYPED);
+
+   if (arrayExpr)
+      ip = arrayExpr->compile(codeStream, ip, TypeReqTypedString);
+
+   codeStream.emit(OP_LOAD_ADVANCED_FIELD);
+   codeStream.emitSTE(fieldName);
+
+   if (type != TypeReqTypedString)
+      emitStackConversion(codeStream, TypeReqTypedString, type);
+
+   return codeStream.tell();
+}
+
+TypeReq AdvancedFieldAccessNode::getPreferredType()
+{
+   return TypeReqTypedString;
+}
+
+TypeReq AdvancedFieldAccessNode::getReturnLoadType()
+{
+   return TypeReqTypedString;
+}
+
+bool AdvancedFieldAccessNode::canBeTyped()
+{
+   return true;
+}
+
+//-----------------------------------------------------------------------------
+
+U32 AdvancedFieldAssignNode::compile(CodeStream &codeStream, U32 ip, TypeReq type)
+{
+   if (fieldName)
+      codeStream.mResources->precompileIdent(fieldName);
+
+   TypeReq subType = rhsExpr->canBeTyped() ? TypeReqTypedString : rhsExpr->getPreferredType();
+   if (subType == TypeReqNone)
+      subType = TypeReqTypedString;
+
+   ip = rhsExpr->compile(codeStream, ip, subType);
+   if (subType != TypeReqTypedString)
+      emitStackConversion(codeStream, subType, TypeReqTypedString);
+
+   codeStream.emit(OP_PUSH_TYPED);
+
+   const bool writeBackBase = dynamic_cast<VarNode*>(baseExpr) != nullptr;
+
+   ip = baseExpr->compile(codeStream, ip, TypeReqTypedString);
+   if (writeBackBase)
+      codeStream.emit(OP_LOADVAR_VAR);
+   codeStream.emit(OP_PUSH_TYPED);
+
+   if (arrayExpr)
+      ip = arrayExpr->compile(codeStream, ip, TypeReqTypedString);
+
+   codeStream.emit(OP_SAVE_ADVANCED_FIELD);
+   codeStream.emitSTE(fieldName);
+   codeStream.emit(writeBackBase ? 1 : 0);
+
+   if (type != TypeReqTypedString)
+      emitStackConversion(codeStream, TypeReqTypedString, type);
+
+   return codeStream.tell();
+}
+
+TypeReq AdvancedFieldAssignNode::getPreferredType()
+{
+   return TypeReqTypedString;
+}
+
+TypeReq AdvancedFieldAssignNode::getReturnLoadType()
+{
+   return TypeReqTypedString;
 }
 
 //-----------------------------------------------------------------------------

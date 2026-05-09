@@ -28,6 +28,7 @@ public:
          std::free(ptr);
       };
       cfg.enableTypes = true;
+      cfg.enableAdvancedFields = true;
       cfg.maxFibers = 16;
       vm = KorkApi::createVM(&cfg);
       internal = vm->mInternal;

@@ -244,6 +244,7 @@ void init()
    config.enableSignals = true;
    config.enableStringInterpolation = true;
    config.enableScriptClasses = true;
+   config.enableAdvancedFields = true;
    config.defaultScriptClass = "ScriptObject";
 
 

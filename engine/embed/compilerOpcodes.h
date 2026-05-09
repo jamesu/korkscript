@@ -203,6 +203,10 @@ namespace Compiler
       OP_SAVEVAR_MULTIPLE_TYPED,   // i.e. %var : type = 1,2,3
       OP_SAVEFIELD_MULTIPLE,       // i.e. obj.field = 1,2,3 OR field = 1,2,3; inside decl
 
+      // Advanced typed field/index access
+      OP_LOAD_ADVANCED_FIELD,
+      OP_SAVE_ADVANCED_FIELD,
+
       // Signals
       OP_SIGNAL_DECL,
 

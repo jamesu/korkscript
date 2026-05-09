@@ -590,6 +590,19 @@ TypeId Vm::registerType(TypeInfo& info)
          return lhs;
       };
    }
+
+   if (chkFunc.iFuncs.ResolveFieldFn == nullptr)
+   {
+      chkFunc.iFuncs.ResolveFieldFn = [](void* userPtr,
+                                         Vm* vm,
+                                         TypeStorageInterface* baseStorage,
+                                         StringTableEntry fieldName,
+                                         ConsoleValue arrayIndex,
+                                         TypeStorageInterface* outStorage,
+                                         bool wantWrite){
+         return false;
+      };
+   }
    
    return mInternal->mTypes.size()-1;
 }
@@ -1313,6 +1326,7 @@ AstEnumerationResult Vm::enumerateAst(const char* code, const char* filename, vo
    res.allowSignals = mInternal->mCompilerResources->allowSignals;
    res.allowStringInterpolation = mInternal->mCompilerResources->allowStringInterpolation;
    res.allowScriptClasses = mInternal->mCompilerResources->allowScriptClasses;
+   res.allowAdvancedFields = mInternal->mCompilerResources->allowAdvancedFields;
    res.consoleAllocReset();
    res.resetTables();
 
@@ -1819,6 +1833,7 @@ VmInternal::VmInternal(Vm* vm, Config* cfg) : mGlobalVars(this)
    mCompilerResources->allowSignals = cfg->enableSignals;
    mCompilerResources->allowStringInterpolation = cfg->enableStringInterpolation;
    mCompilerResources->allowScriptClasses = cfg->enableScriptClasses;
+   mCompilerResources->allowAdvancedFields = cfg->enableAdvancedFields;
    mLastExceptionInfo = {};
    
    TypeInfo typeInfo = {};

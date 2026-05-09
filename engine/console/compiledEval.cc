@@ -732,6 +732,85 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
    KorkApi::Vm* vmPublic = vmInternal->mVM;
    bool loopFrameSetup = false;
    StringTableEntry* identStrings = frame.codeBlock->identStrings;
+
+   auto resolveAdvancedField = [&](KorkApi::ConsoleValue baseValue,
+                                   StringTableEntry fieldName,
+                                   KorkApi::ConsoleValue arrayValue,
+                                   KorkApi::TypeStorageInterface* outStorage,
+                                   bool wantWrite) -> bool
+   {
+      if (!baseValue.isCustom() || baseValue.typeId >= vmInternal->mTypes.size())
+      {
+         return false;
+      }
+
+      KorkApi::TypeInfo& baseType = vmInternal->mTypes[baseValue.typeId];
+      KorkApi::TypeStorageInterface baseStorage = KorkApi::CreateRegisterStorageFromArg(vmInternal, baseValue);
+      return baseType.iFuncs.ResolveFieldFn(baseType.userPtr,
+                                            vmPublic,
+                                            &baseStorage,
+                                            fieldName,
+                                            arrayValue,
+                                            outStorage,
+                                            wantWrite);
+   };
+
+   auto loadAdvancedField = [&](StringTableEntry fieldName)
+   {
+      KorkApi::ConsoleValue arrayValue = evalState.mSTR.getConsoleValue();
+      KorkApi::ConsoleValue baseValue = evalState.mSTR.getStackConsoleValue(evalState.mSTR.mStartStackSize - 1);
+      KorkApi::TypeStorageInterface fieldStorage = {};
+      const bool resolved = resolveAdvancedField(baseValue, fieldName, arrayValue, &fieldStorage, false);
+
+      evalState.mSTR.rewind();
+      if (!resolved || fieldStorage.storageType >= vmInternal->mTypes.size())
+      {
+         evalState.mSTR.setConsoleValue(vmInternal, KorkApi::ConsoleValue());
+         return;
+      }
+
+      KorkApi::TypeStorageInterface outputStorage =
+         KorkApi::CreateExprStringStackStorage(vmInternal, evalState.mSTR, fieldStorage.data.size, fieldStorage.storageType);
+      KorkApi::TypeInfo& fieldType = vmInternal->mTypes[fieldStorage.storageType];
+      fieldType.iFuncs.CastValueFn(fieldType.userPtr,
+                                   vmPublic,
+                                   &fieldStorage,
+                                   &outputStorage,
+                                   nullptr,
+                                   0,
+                                   fieldStorage.storageType);
+   };
+
+   auto saveAdvancedField = [&](StringTableEntry fieldName, bool writeBackBase)
+   {
+      KorkApi::ConsoleValue arrayValue = evalState.mSTR.getConsoleValue();
+      KorkApi::ConsoleValue baseValue = evalState.mSTR.getStackConsoleValue(evalState.mSTR.mStartStackSize - 1);
+      KorkApi::ConsoleValue rhsValue = evalState.mSTR.getStackConsoleValue(evalState.mSTR.mStartStackSize - 2);
+      KorkApi::TypeStorageInterface fieldStorage = {};
+      const bool resolved = resolveAdvancedField(baseValue, fieldName, arrayValue, &fieldStorage, true);
+
+      if (resolved && fieldStorage.storageType < vmInternal->mTypes.size())
+      {
+         KorkApi::TypeStorageInterface inputStorage = KorkApi::CreateRegisterStorageFromArg(vmInternal, rhsValue);
+         KorkApi::TypeInfo& fieldType = vmInternal->mTypes[fieldStorage.storageType];
+         fieldType.iFuncs.CastValueFn(fieldType.userPtr,
+                                      vmPublic,
+                                      &inputStorage,
+                                      &fieldStorage,
+                                      nullptr,
+                                      0,
+                                      fieldStorage.storageType);
+
+         if (writeBackBase && frame.copyVar.var)
+         {
+            frame.copyVar.dictionary->setEntryValue(frame.copyVar.var, baseValue);
+         }
+      }
+
+      evalState.mSTR.rewind();
+      evalState.mSTR.rewind();
+      evalState.mSTR.setConsoleValue(vmInternal, rhsValue);
+   };
    
    // Ensure we are using correct codeblock (NOTE: refcount is handled by frame push)
    vmInternal->mCurrentCodeBlock = frame.codeBlock;
@@ -2341,6 +2420,23 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
             frame.pushStringStackCount--;
          }
             break;
+
+         case OP_LOAD_ADVANCED_FIELD:
+         {
+            StringTableEntry fieldName = Compiler::CodeToSTE(nullptr, identStrings, code, ip);
+            ip += 2;
+            loadAdvancedField(fieldName);
+            break;
+         }
+
+         case OP_SAVE_ADVANCED_FIELD:
+         {
+            StringTableEntry fieldName = Compiler::CodeToSTE(nullptr, identStrings, code, ip);
+            ip += 2;
+            const bool writeBackBase = code[ip++] != 0;
+            saveAdvancedField(fieldName, writeBackBase);
+            break;
+         }
             
          case OP_PUSH_TYPED:
             evalState.mSTR.push();

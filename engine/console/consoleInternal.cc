@@ -698,6 +698,7 @@ TypeStorageInterface CreateFixedTypeStorage(KorkApi::VmInternal* vmInternal,
    
    TypeInfo& info = vmInternal->mTypes[typeId];
    s.vmInternal = vmInternal;
+   s.storageType = typeId;
    s.ResizeStorage = &Resize_Fixed;
    s.FinalizeStorage = &Finalize_Fixed;
    s.data.size = isField ? info.fieldSize : info.valueSize;
@@ -724,6 +725,7 @@ TypeStorageInterface CreateConsoleVarTypeStorage(KorkApi::VmInternal* vmInternal
    s.FinalizeStorage = &Finalize_ConsoleVar;
    s.userPtr1 = ref.dictionary;
    s.userPtr2 = ref.var;
+   s.storageType = typeId;
    s.isField = false;
 
    if (ref.var)
@@ -755,6 +757,7 @@ TypeStorageInterface CreateExprStringStackStorage(KorkApi::VmInternal* vmInterna
 {
    TypeStorageInterface s{};
    s.vmInternal = vmInternal;
+   s.storageType = typeId;
    s.ResizeStorage = &Resize_ExprEval;
    s.FinalizeStorage = &Finalize_ExprEval;
    
@@ -777,6 +780,7 @@ TypeStorageInterface CreateExprEvalReturnTypeStorage(KorkApi::VmInternal* vmInte
 {
    TypeStorageInterface s{};
    s.vmInternal = vmInternal;
+   s.storageType = typeId;
    s.ResizeStorage = &Resize_ReturnEval;
    s.FinalizeStorage = &Resize_ReturnEval;
    s.userPtr1 = vmInternal;
@@ -802,6 +806,7 @@ TypeStorageInterface CreateRegisterStorage(KorkApi::VmInternal* vmInternal, U16 
 {
    TypeStorageInterface s{};
    s.vmInternal = vmInternal;
+   s.storageType = typeId;
    s.ResizeStorage = &Resize_Fixed;
    s.FinalizeStorage = &Resize_Fixed;
    s.userPtr1 = vmInternal;
@@ -826,6 +831,7 @@ TypeStorageInterface CreateRegisterStorageFromArg(KorkApi::VmInternal* vmInterna
 {
    TypeStorageInterface s{};
    s.vmInternal = vmInternal;
+   s.storageType = arg.typeId;
    s.ResizeStorage = &Resize_Fixed;
    s.FinalizeStorage = &Resize_Fixed;
    s.userPtr1 = vmInternal;
@@ -845,6 +851,7 @@ TypeStorageInterface CreateRegisterStorageFromArgs(KorkApi::VmInternal* vmIntern
 {
    TypeStorageInterface s{};
    s.vmInternal = vmInternal;
+   s.storageType = argc > 0 && argv ? argv[0].typeId : KorkApi::ConsoleValue::TypeInternalString;
    s.ResizeStorage = &Resize_Fixed;
    s.FinalizeStorage = &Resize_Fixed;
    s.userPtr1 = vmInternal;

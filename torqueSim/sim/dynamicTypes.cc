@@ -106,6 +106,16 @@ void ConsoleBaseType::registerTypeWithVm(KorkApi::Vm* vm)
       ConsoleBaseType* typeInfo = (ConsoleBaseType*)userPtr;
       return typeInfo->performOp(vm, op, lhs, rhs);
    };
+   info.iFuncs.ResolveFieldFn = [](void* userPtr,
+                                   KorkApi::Vm* vm,
+                                   KorkApi::TypeStorageInterface* baseStorage,
+                                   StringTableEntry fieldName,
+                                   KorkApi::ConsoleValue arrayIndex,
+                                   KorkApi::TypeStorageInterface* outStorage,
+                                   bool wantWrite){
+      ConsoleBaseType* typeInfo = (ConsoleBaseType*)userPtr;
+      return typeInfo->resolveField(vm, baseStorage, fieldName, arrayIndex, outStorage, wantWrite);
+   };
    
    S32 vmTypeId = vm->registerType(info);
    AssertFatal(mTypeId != vmTypeId, "Type Id Mismatch");
@@ -150,6 +160,16 @@ using namespace Compiler;
 KorkApi::ConsoleValue ConsoleBaseType::performOp(KorkApi::Vm* vm, U32 op, KorkApi::ConsoleValue lhs, KorkApi::ConsoleValue rhs)
 {
    return lhs;
+}
+
+bool ConsoleBaseType::resolveField(KorkApi::Vm* vm,
+                                   KorkApi::TypeStorageInterface* baseStorage,
+                                   StringTableEntry fieldName,
+                                   KorkApi::ConsoleValue arrayIndex,
+                                   KorkApi::TypeStorageInterface* outStorage,
+                                   bool wantWrite)
+{
+   return false;
 }
 
 KorkApi::ConsoleValue ConsoleBaseType::performOpNumeric(KorkApi::Vm* vm, U32 op, KorkApi::ConsoleValue lhs, KorkApi::ConsoleValue rhs)

@@ -101,6 +101,12 @@ public:
    virtual KorkApi::ConsoleValue performOp(KorkApi::Vm* vm, U32 op, KorkApi::ConsoleValue lhs, KorkApi::ConsoleValue rhs);
    virtual KorkApi::ConsoleValue performOpNumeric(KorkApi::Vm* vm, U32 op, KorkApi::ConsoleValue lhs, KorkApi::ConsoleValue rhs);
    virtual KorkApi::ConsoleValue performOpUnsigned(KorkApi::Vm* vm, U32 op, KorkApi::ConsoleValue lhs, KorkApi::ConsoleValue rhs);
+   virtual bool resolveField(KorkApi::Vm* vm,
+                             KorkApi::TypeStorageInterface* baseStorage,
+                             StringTableEntry fieldName,
+                             KorkApi::ConsoleValue arrayIndex,
+                             KorkApi::TypeStorageInterface* outStorage,
+                             bool wantWrite);
 };
 
 #define DefineConsoleType( type ) extern S32 type;
@@ -194,6 +200,10 @@ inline KorkApi::TypeInterface buildTypeInterface()
    ti.PrepDataFn = &KorkApi::APIThunk<ConsoleBaseType,
       static_cast<const char*(ConsoleBaseType::*)(KorkApi::Vm*,const char*, char*, U32)>
       (&ConsoleBaseType::prepData)>::call;
+
+   ti.ResolveFieldFn = &KorkApi::APIThunk<ConsoleBaseType,
+      static_cast<bool(ConsoleBaseType::*)(KorkApi::Vm*, KorkApi::TypeStorageInterface*, StringTableEntry, KorkApi::ConsoleValue, KorkApi::TypeStorageInterface*, bool)>
+      (&ConsoleBaseType::resolveField)>::call;
 
    return ti;
 }

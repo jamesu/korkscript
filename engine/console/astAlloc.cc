@@ -423,6 +423,31 @@ SlotAccessNode *SlotAccessNode::alloc( Compiler::Resources* res, S32 lineNumber,
    return ret;
 }
 
+AdvancedFieldAccessNode *AdvancedFieldAccessNode::alloc( Compiler::Resources* res, S32 lineNumber, ExprNode *baseExpr, ExprNode *arrayExpr, StringTableEntry fieldName )
+{
+   AdvancedFieldAccessNode *ret = (AdvancedFieldAccessNode *) res->consoleAlloc(sizeof(AdvancedFieldAccessNode));
+   constructInPlace(ret);
+   ret->astType = ASTNodeAdvancedFieldAccess;
+   ret->dbgLineNumber = lineNumber;
+   ret->baseExpr = baseExpr;
+   ret->arrayExpr = arrayExpr;
+   ret->fieldName = fieldName;
+   return ret;
+}
+
+AdvancedFieldAssignNode *AdvancedFieldAssignNode::alloc( Compiler::Resources* res, S32 lineNumber, ExprNode *baseExpr, ExprNode *arrayExpr, StringTableEntry fieldName, ExprNode *valueExpr )
+{
+   AdvancedFieldAssignNode *ret = (AdvancedFieldAssignNode *) res->consoleAlloc(sizeof(AdvancedFieldAssignNode));
+   constructInPlace(ret);
+   ret->astType = ASTNodeAdvancedFieldAssign;
+   ret->dbgLineNumber = lineNumber;
+   ret->baseExpr = baseExpr;
+   ret->arrayExpr = arrayExpr;
+   ret->fieldName = fieldName;
+   ret->rhsExpr = valueExpr;
+   return ret;
+}
+
 InternalSlotAccessNode *InternalSlotAccessNode::alloc( Compiler::Resources* res, S32 lineNumber, ExprNode *objectExpr, ExprNode *slotExpr, bool recurse )
 {
    InternalSlotAccessNode *ret = (InternalSlotAccessNode *) res->consoleAlloc(sizeof(InternalSlotAccessNode));

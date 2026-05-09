@@ -102,6 +102,8 @@ enum ASTNodeType : U16
    ASTNodeFuncCallExpr,
    ASTNodeAssertCallExpr,
    ASTNodeSlotAccess,
+   ASTNodeAdvancedFieldAccess,
+   ASTNodeAdvancedFieldAssign,
    ASTNodeInternalSlotAccess,
    ASTNodeSlotAssign,
    ASTNodeSlotAssignOp,
@@ -614,6 +616,33 @@ struct SlotAccessNode : ExprNode
    TypeReq getReturnLoadType();
    bool canBeTyped();
    DBG_STMT_TYPE(SlotAccessNode);
+};
+
+struct AdvancedFieldAccessNode : ExprNode
+{
+   ExprNode *baseExpr, *arrayExpr;
+   StringTableEntry fieldName;
+
+   static AdvancedFieldAccessNode *alloc( Compiler::Resources* res, S32 lineNumber, ExprNode *baseExpr, ExprNode *arrayExpr, StringTableEntry fieldName );
+  
+   U32 compile(CodeStream &codeStream, U32 ip, TypeReq type);
+   TypeReq getPreferredType();
+   TypeReq getReturnLoadType();
+   bool canBeTyped();
+   DBG_STMT_TYPE(AdvancedFieldAccessNode);
+};
+
+struct AdvancedFieldAssignNode : BaseAssignExprNode
+{
+   ExprNode *baseExpr, *arrayExpr;
+   StringTableEntry fieldName;
+
+   static AdvancedFieldAssignNode *alloc( Compiler::Resources* res, S32 lineNumber, ExprNode *baseExpr, ExprNode *arrayExpr, StringTableEntry fieldName, ExprNode *valueExpr );
+  
+   U32 compile(CodeStream &codeStream, U32 ip, TypeReq type);
+   TypeReq getPreferredType();
+   TypeReq getReturnLoadType();
+   DBG_STMT_TYPE(AdvancedFieldAssignNode);
 };
 
 struct InternalSlotDecl

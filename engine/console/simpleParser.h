@@ -1474,6 +1474,7 @@ private:
                case '%': return 100;          // * / %
                case '.': return 130;          // member access .
                case '[': return 140;          // postfix indexing [  ]  (highest)
+               case '{': return mResources->allowAdvancedFields ? 140 : 0; // typed value indexing
                case ':': return 0;            // allow for ":" after expression
                default: break;
             }
@@ -1515,6 +1516,11 @@ private:
       for (;;)
       {
          const TOK& next = LA();
+         if (next.kind == TT::opCHAR && next.asChar() == '{' && !mResources->allowAdvancedFields)
+         {
+            errorHere(next, "advanced fields not enabled");
+            break;
+         }
          int bp = lbp(next);
          if (bp <= rbp)
             break;
@@ -1531,6 +1537,11 @@ private:
        for (;;)
        {
            const TOK& next = LA();
+           if (next.kind == TT::opCHAR && next.asChar() == '{' && !mResources->allowAdvancedFields)
+           {
+               errorHere(next, "advanced fields not enabled");
+               break;
+           }
            int bp = lbp(next);
            if (bp <= rbp)
                break;
@@ -1570,6 +1581,15 @@ private:
          }
          return SlotAssignOpNode::alloc(mResources, tok.pos.line, s->objectExpr, s->slotName, s->arrayExpr, processCharOp(TOK(tok)), r);
       }
+      if (AdvancedFieldAccessNode* a = dynamic_cast<AdvancedFieldAccessNode*>(l))
+      {
+         if (tok.kind == TT::opCHAR && tok.asChar() == '=')
+         {
+            return AdvancedFieldAssignNode::alloc(mResources, tok.pos.line, a->baseExpr, a->arrayExpr, a->fieldName, r);
+         }
+         errorHere(tok, "compound assignment is not supported for advanced fields");
+         return nullptr;
+      }
       errorHere(tok, "left-hand side of assignment must be a variable");
       return nullptr;
    }
@@ -1598,6 +1618,30 @@ private:
                // Generic slot/object indexing not implemented here.
                errorHere(op, "indexing allowed only on variables at this point");
                return nullptr;
+            }
+
+            // Advanced typed value indexing: expr { index }
+            if (op.asChar() == '{')
+            {
+               if (!mResources->allowAdvancedFields)
+               {
+                  errorHere(op, "advanced fields not enabled");
+                  return nullptr;
+               }
+
+               ExprNode* idx = parseAidxExprNode();
+               expectChar('}', "} expected");
+
+               if (AdvancedFieldAccessNode* a = dynamic_cast<AdvancedFieldAccessNode*>(left))
+               {
+                  if (a->arrayExpr)
+                     a->arrayExpr = CommaCatExprNode::alloc(mResources, op.pos.line, a->arrayExpr, idx);
+                  else
+                     a->arrayExpr = idx;
+                  return a;
+               }
+
+               return AdvancedFieldAccessNode::alloc(mResources, op.pos.line, left, idx, nullptr);
             }
             
             // Ternary ?:  (right-assoc)
@@ -1657,6 +1701,12 @@ private:
                   arr = parseAidxExprNode();
                   expectChar(']', "] expected");
                }
+
+               if (mResources->allowAdvancedFields && left->canBeTyped())
+               {
+                  return AdvancedFieldAccessNode::alloc(mResources, op.pos.line, left, arr, id.stString);
+               }
+
                return SlotAccessNode::alloc(mResources, op.pos.line, left, arr, id.stString);
             }
             

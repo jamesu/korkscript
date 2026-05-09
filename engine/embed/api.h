@@ -84,6 +84,7 @@ struct TypeStorageInterface
    
    KorkApi::VmInternal* vmInternal;
    BoxedTypeData data;
+   U16 storageType;
    void* userPtr1; // user code
    void* userPtr2; // user code
    void* fieldObject; // related field object
@@ -98,6 +99,14 @@ typedef bool(*CastValueFnType)(void* userPtr,
                                    void* fieldUserPtr,
                                    BitSet32 flag,
                                    U32 requestedType); // requested cast type
+
+typedef bool(*ResolveFieldFnType)(void* userPtr,
+                                  Vm* vm,
+                                  TypeStorageInterface* baseStorage,
+                                  StringTableEntry fieldName,
+                                  ConsoleValue arrayIndex,
+                                  TypeStorageInterface* outStorage,
+                                  bool wantWrite);
 
 
 struct TypeInterface
@@ -117,6 +126,9 @@ const char*(*PrepDataFn)(void* userPtr,
                                   U32 bufferLen);
 
 KorkApi::ConsoleValue (*PerformOpFn)(void* userPtr, Vm* vm, U32 op, KorkApi::ConsoleValue lhs, KorkApi::ConsoleValue rhs); // result goes on STR
+
+// Optional typed field/index resolver used by the advancedFields compiler feature.
+ResolveFieldFnType ResolveFieldFn;
 };
 
 struct TypeInfo
@@ -509,6 +521,7 @@ struct Config {
    bool enableSignals;
    bool enableStringInterpolation;
    bool enableScriptClasses;
+   bool enableAdvancedFields;
    bool initTelnet;
    const char* defaultScriptClass;
    
