@@ -29,7 +29,6 @@
 
 #include "platform/platform.h"
 
-#include "torqueSim/console/console.h"
 #include "embed/api.h"
 #include "embed/internalApi.h"
 #include "console/ast.h"
