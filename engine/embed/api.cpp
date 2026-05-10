@@ -1802,7 +1802,7 @@ VmInternal::VmInternal(Vm* vm, Config* cfg) : mGlobalVars(this)
 
    if (mConfig.iIntern.intern == nullptr) 
    {
-      mLocalIntern = new SimpleStringInterner();
+      mLocalIntern = New<SimpleStringInterner>();
       mConfig.iIntern.intern = [](void* user, const char* value, bool caseSens){
          SimpleStringInterner* localIntern = (SimpleStringInterner*)user;
          if (value == nullptr)
