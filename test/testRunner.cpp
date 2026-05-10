@@ -53,6 +53,38 @@ struct TupleProbe
 ConsoleType( TupleCapture, TypeTupleCapture, sizeof(TupleCapture), sizeof(TupleCapture), "" )
 ConsoleType( TupleProbe, TypeTupleProbe, sizeof(TupleProbe), sizeof(TupleProbe), "" )
 
+static StringTableEntry getPointXSTE()
+{
+   static StringTableEntry ste = nullptr;
+   if (!ste)
+      ste = StringTable->insert("x");
+   return ste;
+}
+
+static StringTableEntry getPointYSTE()
+{
+   static StringTableEntry ste = nullptr;
+   if (!ste)
+      ste = StringTable->insert("y");
+   return ste;
+}
+
+static StringTableEntry getPointZSTE()
+{
+   static StringTableEntry ste = nullptr;
+   if (!ste)
+      ste = StringTable->insert("z");
+   return ste;
+}
+
+static StringTableEntry getTupleProbeCaptureSTE()
+{
+   static StringTableEntry ste = nullptr;
+   if (!ste)
+      ste = StringTable->insert("capture");
+   return ste;
+}
+
 ConsoleGetType( TypeMyPoint3F )
 {
    const KorkApi::ConsoleValue* argv = nullptr;
@@ -261,11 +293,11 @@ ConsoleResolveField( TypeMyPoint3F )
    }
 
    F32* component = nullptr;
-   if (!dStrcmp(fieldName, "x"))
+   if (fieldName == getPointXSTE())
       component = &point->x;
-   else if (!dStrcmp(fieldName, "y"))
+   else if (fieldName == getPointYSTE())
       component = &point->y;
-   else if (!dStrcmp(fieldName, "z"))
+   else if (fieldName == getPointZSTE())
       component = &point->z;
 
    if (!component)
@@ -371,7 +403,7 @@ ConsoleGetType( TypeTupleProbe )
 
 ConsoleResolveField( TypeTupleProbe )
 {
-   if (!fieldName || !dStrcmp(fieldName, ""))
+   if (!fieldName || fieldName == StringTable->EmptyString)
    {
       return false;
    }
@@ -382,7 +414,7 @@ ConsoleResolveField( TypeTupleProbe )
       return false;
    }
 
-   if (dStrcmp(fieldName, "capture") != 0)
+   if (fieldName != getTupleProbeCaptureSTE())
    {
       return false;
    }
