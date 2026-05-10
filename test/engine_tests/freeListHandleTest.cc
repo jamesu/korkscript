@@ -129,6 +129,12 @@ TEST_CASE("FreeListPtr should function correctly", "[FreeListPtr]") {
    REQUIRE(item3->mGeneration == 1);
    REQUIRE(item4->mGeneration == 1);
    REQUIRE(item5->mGeneration == 1);
+
+   delete item1;
+   delete item2;
+   delete item3;
+   delete item4;
+   delete item5;
 }
 
 
