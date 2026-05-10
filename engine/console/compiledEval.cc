@@ -1144,7 +1144,7 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
 
                   if (object->userPtr == nullptr)
                   {
-                     delete object;
+                     vmInternal->Delete(object);
                      object = nullptr;
                   }
                }
@@ -1164,7 +1164,7 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
                if(!frame.currentNewObject.isValid())
                {
                   vmInternal->printf(0, "%s: Unable to instantiate non-SimObject class %s.", frame.codeBlock->getFileLine(ip-1), callArgvS[1]);
-                  delete object;
+                  vmInternal->Delete(object);
                   ip = frame.failJump;
                   break;
                }
@@ -3019,7 +3019,7 @@ void ExprEvalState::popFrame()
       AssertFatal(prevFrame->_FLT == last->_FLT && prevFrame->_UINT == last->_UINT && prevFrame->_ITER == last->_ITER, "Stack mismatch");
    }
    
-   delete last;
+   vmInternal->Delete(last);
 }
 
 bool ExprEvalState::handleThrow(S32 throwIdx, TryItem* info, S32 minStackPos)
@@ -3318,7 +3318,7 @@ ExprEvalState* ConsoleSerializer::loadEvalState()
       if (!mStream->read(sizeof(IFFBlock), &frameBlock) ||
           frameBlock.ident != CFFB_MAGIC)
       {
-         delete state;
+         mTarget->cleanupFiber(mTarget->mFiberStates.getHandleValue(state));
          return nullptr;
       }
       
@@ -3327,6 +3327,7 @@ ExprEvalState* ConsoleSerializer::loadEvalState()
       ConsoleFrame* frame = loadFrame(state);
       if (frame == nullptr)
       {
+         mTarget->cleanupFiber(mTarget->mFiberStates.getHandleValue(state));
          return nullptr;
       }
       
@@ -3902,7 +3903,7 @@ void ConsoleSerializer::reset(bool ownObjects)
    {
       if (ht->owner == nullptr)
       {
-         delete ht;
+         mTarget->Delete(ht);
       }
    }
    
@@ -4161,7 +4162,7 @@ bool ConsoleSerializer::loadRelatedObjects()
                              steModPath[0] == '\0' ? nullptr : steModPath,
                              *mStream, 0))
             {
-               delete block;
+               mTarget->Delete(block);
                return false;
             }
             block->incRefCount();
