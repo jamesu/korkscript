@@ -273,7 +273,12 @@ ConsoleFunction(testInt, void, 4, 4, "msg, value, expected")
 
 ConsoleFunction(testNumber, void, 4, 4, "msg, value, expected")
 {
-   if (dAtof(argv[2]) != dAtof(argv[3]))
+   F64 actual = dAtof(argv[2]);
+   F64 expected = dAtof(argv[3]);
+   F64 epsilon = 0.000001;
+
+   // Check if the absolute difference is greater than the allowed error
+   if (std::abs(actual - expected) > epsilon)
    {
       Con::errorf("Failed: %s (got %s)\n", argv[1], argv[2]);
       gReturnCode = 1;

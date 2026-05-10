@@ -301,6 +301,7 @@ static void LoadAdvancedField(ExprEvalState& evalState,
    const bool resolved = ResolveAdvancedField(vmInternal, vmPublic, baseValue, fieldName, arrayValue, &fieldStorage, false);
 
    evalState.mSTR.rewind();
+
    if (!resolved || fieldStorage.storageType >= vmInternal->mTypes.size())
    {
       evalState.mSTR.setStringValue("");
@@ -355,8 +356,11 @@ static void SaveAdvancedField(ExprEvalState& evalState,
       }
    }
 
-   evalState.mSTR.rewind();
-   evalState.mSTR.rewind();
+   const U32 popCount = 2;
+   for (U32 i = 0; i < popCount; ++i)
+   {
+      evalState.mSTR.rewind();
+   }
    evalState.mSTR.setConsoleValue(vmInternal, rhsValue);
 }
 
@@ -2440,19 +2444,34 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
          case OP_LOAD_ADVANCED_FIELD:
          {
             StringTableEntry fieldName = Compiler::CodeToSTE(nullptr, identStrings, code, ip);
-            ip += 2;
-            const bool hasArrayIndex = code[ip++] != 0;
-            LoadAdvancedField(evalState, vmInternal, vmPublic, fieldName, hasArrayIndex);
+            ip+=2;
+            LoadAdvancedField(evalState, vmInternal, vmPublic, fieldName, false);
+            break;
+         }
+
+         case OP_LOAD_ADVANCED_FIELD_ARR:
+         {
+            StringTableEntry fieldName = Compiler::CodeToSTE(nullptr, identStrings, code, ip);
+            ip+=2;
+            LoadAdvancedField(evalState, vmInternal, vmPublic, fieldName, true);
             break;
          }
 
          case OP_SAVE_ADVANCED_FIELD:
          {
             StringTableEntry fieldName = Compiler::CodeToSTE(nullptr, identStrings, code, ip);
-            ip += 2;
-            const bool hasArrayIndex = code[ip++] != 0;
+            ip+=2;
             const bool writeBackBase = code[ip++] != 0;
-            SaveAdvancedField(evalState, frame, vmInternal, vmPublic, fieldName, hasArrayIndex, writeBackBase);
+            SaveAdvancedField(evalState, frame, vmInternal, vmPublic, fieldName, false, writeBackBase);
+            break;
+         }
+
+         case OP_SAVE_ADVANCED_FIELD_ARR:
+         {
+            StringTableEntry fieldName = Compiler::CodeToSTE(nullptr, identStrings, code, ip);
+            ip+=2;
+            const bool writeBackBase = code[ip++] != 0;
+            SaveAdvancedField(evalState, frame, vmInternal, vmPublic, fieldName, true, writeBackBase);
             break;
          }
             

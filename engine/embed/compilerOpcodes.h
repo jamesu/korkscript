@@ -205,7 +205,9 @@ namespace Compiler
 
       // Advanced typed field/index access
       OP_LOAD_ADVANCED_FIELD,
+      OP_LOAD_ADVANCED_FIELD_ARR,
       OP_SAVE_ADVANCED_FIELD,
+      OP_SAVE_ADVANCED_FIELD_ARR,
 
       // Signals
       OP_SIGNAL_DECL,

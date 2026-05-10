@@ -549,6 +549,7 @@ void dumpToInstructionsPrint(Compiler::Resources& res, StmtNode* rootNode)
    cfg.enableSignals = gEnableExtensions;
    cfg.enableStringInterpolation = gEnableExtensions;
    cfg.enableScriptClasses = gEnableExtensions;
+   cfg.enableAdvancedFields = gEnableExtensions;
 
    KorkApi::Vm* vm = KorkApi::createVM(&cfg);
    {
@@ -620,6 +621,7 @@ bool printAST(const char* buf, const char* filename)
       res.allowSignals = gEnableExtensions;
       res.allowStringInterpolation = gEnableExtensions;
       res.allowScriptClasses = gEnableExtensions;
+      res.allowAdvancedFields = gEnableExtensions;
       
       StmtNode* rootNode = nullptr;
       

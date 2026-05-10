@@ -1698,9 +1698,8 @@ U32 AdvancedFieldAccessNode::compile(CodeStream &codeStream, U32 ip, TypeReq typ
    if (arrayExpr)
       ip = arrayExpr->compile(codeStream, ip, TypeReqTypedString);
 
-   codeStream.emit(OP_LOAD_ADVANCED_FIELD);
+   codeStream.emit(arrayExpr ? OP_LOAD_ADVANCED_FIELD_ARR : OP_LOAD_ADVANCED_FIELD);
    codeStream.emitSTE(fieldName);
-   codeStream.emit(arrayExpr ? 1 : 0);
 
    if (type != TypeReqTypedString)
       emitStackConversion(codeStream, TypeReqTypedString, type);
@@ -1750,9 +1749,8 @@ U32 AdvancedFieldAssignNode::compile(CodeStream &codeStream, U32 ip, TypeReq typ
    if (arrayExpr)
       ip = arrayExpr->compile(codeStream, ip, TypeReqTypedString);
 
-   codeStream.emit(OP_SAVE_ADVANCED_FIELD);
+   codeStream.emit(arrayExpr ? OP_SAVE_ADVANCED_FIELD_ARR : OP_SAVE_ADVANCED_FIELD);
    codeStream.emitSTE(fieldName);
-   codeStream.emit(arrayExpr ? 1 : 0);
    codeStream.emit(writeBackBase ? 1 : 0);
 
    if (type != TypeReqTypedString)
