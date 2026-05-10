@@ -592,6 +592,34 @@ static int runScriptTests(const char* path)
    char* data = new char[fs.getStreamSize() + 1];
    fs.read(fs.getStreamSize(), data);
    data[fs.getStreamSize()] = '\0';
+
+   KorkApi::AstParseErrorInfo errorInfo = {};
+   const KorkApi::AstEnumerationResult parseResult = sVM->enumerateAst(data, path,
+      nullptr,
+      [](void*, const KorkApi::AstEnumerationInfo*) -> KorkApi::AstEnumerationControl {
+         return KorkApi::AstEnumerationContinue;
+      },
+      &errorInfo);
+
+   if (parseResult == KorkApi::AstEnumerationParseFailed)
+   {
+      const char* stage = "none";
+      if (errorInfo.stage == KorkApi::AstParseErrorLexer)
+         stage = "lexer";
+      else if (errorInfo.stage == KorkApi::AstParseErrorParser)
+         stage = "parser";
+
+      Con::errorf("Parse failed in %s (%s) at %u:%u: %s [%s]",
+         path,
+         stage,
+         errorInfo.line,
+         errorInfo.column,
+         errorInfo.message ? errorInfo.message : "",
+         errorInfo.tokenText ? errorInfo.tokenText : "");
+
+      delete[] data;
+      return 1;
+   }
    
    (void)Con::evaluate(data);
 
