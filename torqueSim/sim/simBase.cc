@@ -3664,7 +3664,7 @@ void SimConsoleEvent::process(SimObject* object)
       else
       {
          KorkApi::ConsoleValue retV = KorkApi::ConsoleValue();
-         sVM->callNamespaceFunction(sVM->getGlobalNamespace(), sVM->internString(func), mArgc, mArgv, retV);
+         sVM->callNamespaceFunction(sVM->getGlobalNamespace(), sVM->internString(funcName), mArgc, mArgv, retV);
       }
    }
 }
