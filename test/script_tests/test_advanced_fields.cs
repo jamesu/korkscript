@@ -50,6 +50,35 @@ function test_advancedFieldConstructedExpressionIndexing()
    testInt("advancedFields.parenthesizedVector.read", (%vec){1}, 8);
 }
 
+function test_advancedFieldGlobalAccess()
+{
+   $globalPoint : TypeMyPoint3F = 100,200,300;
+   $globalVec : TypeS32Vector = 9,8,7;
+
+   testNumber("advancedFields.globalPoint.x.read", $globalPoint.x, 100);
+   testNumber("advancedFields.globalPoint.y.read", $globalPoint.y, 200);
+   testNumber("advancedFields.globalPoint.z.read", $globalPoint.z, 300);
+
+   $globalPoint.x = 10;
+   $globalPoint.y = 20;
+   $globalPoint.z = 30;
+
+   testString("advancedFields.globalPoint.writeback", $globalPoint, "10 20 30");
+
+   testInt("advancedFields.globalVec.read0", $globalVec{0}, 9);
+   testInt("advancedFields.globalVec.read1", $globalVec{1}, 8);
+   testInt("advancedFields.globalVec.read2", $globalVec{2}, 7);
+
+   $globalVec{1} = 42;
+   testInt("advancedFields.globalVec.write.result", $globalVec{1}, 42);
+   testString("advancedFields.globalVec.writeback", $globalVec, "9 42 7");
+
+   $globalIdx = 2;
+   $globalVec{$globalIdx} = 99;
+   testString("advancedFields.globalVec.dynamicIndex", $globalVec, "9 42 99");
+}
+
 test_advancedFieldPointComponents();
 test_advancedFieldVectorIndexing();
 test_advancedFieldConstructedExpressionIndexing();
+test_advancedFieldGlobalAccess();
