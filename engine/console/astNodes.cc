@@ -1726,18 +1726,21 @@ bool AdvancedFieldAccessNode::canBeTyped()
 
 U32 AdvancedFieldAssignNode::compile(CodeStream &codeStream, U32 ip, TypeReq type)
 {
+   TupleExprNode* tupleExpr = dynamic_cast<TupleExprNode*>(rhsExpr);
+
    if (fieldName)
       codeStream.mResources->precompileIdent(fieldName);
 
-   TypeReq subType = rhsExpr->canBeTyped() ? TypeReqTypedString : rhsExpr->getPreferredType();
+   TypeReq subType = tupleExpr ? TypeReqTuple : (rhsExpr->canBeTyped() ? TypeReqTypedString : rhsExpr->getPreferredType());
    if (subType == TypeReqNone)
       subType = TypeReqTypedString;
 
    ip = rhsExpr->compile(codeStream, ip, subType);
-   if (subType != TypeReqTypedString)
+   if (!tupleExpr && subType != TypeReqTypedString)
       emitStackConversion(codeStream, subType, TypeReqTypedString);
 
-   codeStream.emit(OP_PUSH_TYPED);
+   if (!tupleExpr)
+      codeStream.emit(OP_PUSH_TYPED);
 
    const bool writeBackBase = dynamic_cast<VarNode*>(baseExpr) != nullptr;
 
@@ -1749,7 +1752,10 @@ U32 AdvancedFieldAssignNode::compile(CodeStream &codeStream, U32 ip, TypeReq typ
    if (arrayExpr)
       ip = arrayExpr->compile(codeStream, ip, TypeReqTypedString);
 
-   codeStream.emit(arrayExpr ? OP_SAVE_ADVANCED_FIELD_ARR : OP_SAVE_ADVANCED_FIELD);
+   if (tupleExpr)
+      codeStream.emit(arrayExpr ? OP_SAVE_ADVANCED_FIELD_ARR_TUPLE : OP_SAVE_ADVANCED_FIELD_TUPLE);
+   else
+      codeStream.emit(arrayExpr ? OP_SAVE_ADVANCED_FIELD_ARR : OP_SAVE_ADVANCED_FIELD);
    codeStream.emitSTE(fieldName);
    codeStream.emit(writeBackBase ? 1 : 0);
 

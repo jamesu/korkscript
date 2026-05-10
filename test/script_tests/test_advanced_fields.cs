@@ -78,7 +78,19 @@ function test_advancedFieldGlobalAccess()
    testString("advancedFields.globalVec.dynamicIndex", $globalVec, "9 42 99");
 }
 
+function test_advancedFieldTupleRhs()
+{
+   %probe : TypeTupleProbe = "";
+
+   %probe.capture = 1,2,3;
+   testString("advancedFields.tupleCapture.writeback", %probe.capture, "3 1 2 3");
+
+   %probe.capture = 4,5;
+   testString("advancedFields.tupleCapture.writeback2", %probe.capture, "2 4 5 0");
+}
+
 test_advancedFieldPointComponents();
 test_advancedFieldVectorIndexing();
 test_advancedFieldConstructedExpressionIndexing();
 test_advancedFieldGlobalAccess();
+test_advancedFieldTupleRhs();

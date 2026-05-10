@@ -39,6 +39,20 @@ struct MyPoint3F
 
 ConsoleType( MyPoint3F, TypeMyPoint3F, sizeof(MyPoint3F), sizeof(MyPoint3F), "" )
 
+struct TupleCapture
+{
+   U32 argc;
+   F32 values[3];
+};
+
+struct TupleProbe
+{
+   TupleCapture capture;
+};
+
+ConsoleType( TupleCapture, TypeTupleCapture, sizeof(TupleCapture), sizeof(TupleCapture), "" )
+ConsoleType( TupleProbe, TypeTupleProbe, sizeof(TupleProbe), sizeof(TupleProbe), "" )
+
 ConsoleGetType( TypeMyPoint3F )
 {
    const KorkApi::ConsoleValue* argv = nullptr;
@@ -145,6 +159,94 @@ ConsoleGetType( TypeMyPoint3F )
    }
 }
 
+ConsoleGetType( TypeTupleCapture )
+{
+   const KorkApi::ConsoleValue* argv = nullptr;
+   U32 argc = inputStorage ? inputStorage->data.argc : 0;
+   bool directLoad = false;
+
+   if (argc > 0 && inputStorage->data.storageRegister)
+   {
+      argv = inputStorage->data.storageRegister;
+   }
+   else
+   {
+      argc = 1;
+      argv = &inputStorage->data.storageAddress;
+      directLoad = true;
+   }
+
+   TupleCapture v = {0, {0, 0, 0}};
+
+   if (inputStorage->isField && directLoad)
+   {
+      const TupleCapture* src = (const TupleCapture*)inputStorage->data.storageAddress.evaluatePtr(vmPtr->getAllocBase());
+      if (!src) return false;
+      v = *src;
+   }
+   else if (argc == 1 && argv[0].typeId == TypeTupleCapture)
+   {
+      const TupleCapture* src = (const TupleCapture*)argv[0].evaluatePtr(vmPtr->getAllocBase());
+      if (!src) return false;
+      v = *src;
+   }
+   else
+   {
+      v.argc = argc;
+      for (U32 i = 0; i < argc && i < 3; ++i)
+      {
+         v.values[i] = (F32)argv[i].getFloat((F64)argv[i].getInt(0));
+      }
+   }
+
+   if (requestedType == TypeTupleCapture)
+   {
+      TupleCapture* dstPtr = (TupleCapture*)outputStorage->data.storageAddress.evaluatePtr(vmPtr->getAllocBase());
+      if (!dstPtr)
+      {
+         return false;
+      }
+
+      *dstPtr = v;
+
+      if (outputStorage->data.storageRegister)
+         *outputStorage->data.storageRegister = outputStorage->data.storageAddress;
+
+      return true;
+   }
+   else if (requestedType == KorkApi::ConsoleValue::TypeInternalString)
+   {
+      const U32 bufLen = 96;
+      outputStorage->FinalizeStorage(outputStorage, bufLen);
+
+      char* out = (char*)outputStorage->data.storageAddress.evaluatePtr(vmPtr->getAllocBase());
+      if (!out) return false;
+
+      dSprintf(out, bufLen, "%u %.9g %.9g %.9g", v.argc, v.values[0], v.values[1], v.values[2]);
+
+      if (outputStorage->data.storageRegister)
+         *outputStorage->data.storageRegister = outputStorage->data.storageAddress;
+
+      return true;
+   }
+   else
+   {
+      KorkApi::ConsoleValue vals[4];
+      vals[0] = KorkApi::ConsoleValue::makeUnsigned(v.argc);
+      vals[1] = KorkApi::ConsoleValue::makeNumber(v.values[0]);
+      vals[2] = KorkApi::ConsoleValue::makeNumber(v.values[1]);
+      vals[3] = KorkApi::ConsoleValue::makeNumber(v.values[2]);
+
+      KorkApi::TypeStorageInterface castInput =
+         KorkApi::CreateRegisterStorageFromArgs(vmPtr->mInternal, 4, vals);
+
+      return vmPtr->castValue(requestedType, &castInput, outputStorage, fieldUserPtr, flag);
+   }
+}
+
+ConsoleResolveFieldDefault( TypeTupleCapture )
+ConsoleTypeOpDefault( TypeTupleCapture )
+
 ConsoleResolveField( TypeMyPoint3F )
 {
    if (!fieldName || !arrayIndex.isNull())
@@ -173,6 +275,122 @@ ConsoleResolveField( TypeMyPoint3F )
 
    return vmPtr->initFixedTypeStorage(component, TypeF32, true, outStorage);
 }
+
+ConsoleGetType( TypeTupleProbe )
+{
+   const KorkApi::ConsoleValue* argv = nullptr;
+   U32 argc = inputStorage ? inputStorage->data.argc : 0;
+   bool directLoad = false;
+
+   if (argc > 0 && inputStorage->data.storageRegister)
+   {
+      argv = inputStorage->data.storageRegister;
+   }
+   else
+   {
+      argc = 1;
+      argv = &inputStorage->data.storageAddress;
+      directLoad = true;
+   }
+
+   TupleProbe v = {};
+
+   if (inputStorage->isField && directLoad)
+   {
+      const TupleProbe* src = (const TupleProbe*)inputStorage->data.storageAddress.evaluatePtr(vmPtr->getAllocBase());
+      if (!src) return false;
+      v = *src;
+   }
+   else if (argc == 1 && argv[0].typeId == TypeTupleProbe)
+   {
+      const TupleProbe* src = (const TupleProbe*)argv[0].evaluatePtr(vmPtr->getAllocBase());
+      if (src)
+         v = *src;
+   }
+
+   if (requestedType == TypeTupleProbe)
+   {
+      TupleProbe* dstPtr = (TupleProbe*)outputStorage->data.storageAddress.evaluatePtr(vmPtr->getAllocBase());
+      if (!dstPtr)
+      {
+         return false;
+      }
+
+      *dstPtr = v;
+
+      if (outputStorage->data.storageRegister)
+         *outputStorage->data.storageRegister = outputStorage->data.storageAddress;
+
+      return true;
+   }
+   else if (requestedType == KorkApi::ConsoleValue::TypeInternalString)
+   {
+      const U32 bufLen = 96;
+      outputStorage->FinalizeStorage(outputStorage, bufLen);
+
+      char* out = (char*)outputStorage->data.storageAddress.evaluatePtr(vmPtr->getAllocBase());
+      if (!out) return false;
+
+      dSprintf(out, bufLen, "%u %.9g %.9g %.9g",
+         v.capture.argc, v.capture.values[0], v.capture.values[1], v.capture.values[2]);
+
+      if (outputStorage->data.storageRegister)
+         *outputStorage->data.storageRegister = outputStorage->data.storageAddress;
+
+      return true;
+   }
+   else if (requestedType == TypeTupleCapture)
+   {
+      TupleCapture* dstPtr = (TupleCapture*)outputStorage->data.storageAddress.evaluatePtr(vmPtr->getAllocBase());
+      if (!dstPtr)
+      {
+         return false;
+      }
+
+      *dstPtr = v.capture;
+
+      if (outputStorage->data.storageRegister)
+         *outputStorage->data.storageRegister = outputStorage->data.storageAddress;
+
+      return true;
+   }
+   else
+   {
+      KorkApi::ConsoleValue vals[4];
+      vals[0] = KorkApi::ConsoleValue::makeUnsigned(v.capture.argc);
+      vals[1] = KorkApi::ConsoleValue::makeNumber(v.capture.values[0]);
+      vals[2] = KorkApi::ConsoleValue::makeNumber(v.capture.values[1]);
+      vals[3] = KorkApi::ConsoleValue::makeNumber(v.capture.values[2]);
+
+      KorkApi::TypeStorageInterface castInput =
+         KorkApi::CreateRegisterStorageFromArgs(vmPtr->mInternal, 4, vals);
+
+      return vmPtr->castValue(requestedType, &castInput, outputStorage, fieldUserPtr, flag);
+   }
+}
+
+ConsoleResolveField( TypeTupleProbe )
+{
+   if (!fieldName || !dStrcmp(fieldName, ""))
+   {
+      return false;
+   }
+
+   TupleProbe* probe = static_cast<TupleProbe*>(baseStorage->data.storageAddress.evaluatePtr(vmPtr->getAllocBase()));
+   if (!probe)
+   {
+      return false;
+   }
+
+   if (dStrcmp(fieldName, "capture") != 0)
+   {
+      return false;
+   }
+
+   return vmPtr->initFixedTypeStorage(&probe->capture, TypeTupleCapture, true, outStorage);
+}
+
+ConsoleTypeOpDefault( TypeTupleProbe )
 
 ConsoleTypeOp( TypeMyPoint3F )
 {

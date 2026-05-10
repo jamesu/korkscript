@@ -330,12 +330,65 @@ static void SaveAdvancedField(ExprEvalState& evalState,
                               KorkApi::Vm* vmPublic,
                               StringTableEntry fieldName,
                               bool hasArrayIndex,
-                              bool writeBackBase)
+                              bool writeBackBase,
+                              bool rhsIsTuple)
 {
    KorkApi::ConsoleValue arrayValue = hasArrayIndex ? evalState.mSTR.getConsoleValue() : KorkApi::ConsoleValue();
    KorkApi::ConsoleValue baseValue = evalState.mSTR.getStackConsoleValue(evalState.mSTR.mStartStackSize - 1);
-   KorkApi::ConsoleValue rhsValue = evalState.mSTR.getStackConsoleValue(evalState.mSTR.mStartStackSize - 2);
    KorkApi::TypeStorageInterface fieldStorage = {};
+   if (rhsIsTuple)
+   {
+      U32 callArgc = 0;
+      KorkApi::ConsoleValue* callArgv = nullptr;
+      evalState.mSTR.getArgcArgv(nullptr, &callArgc, &callArgv);
+
+      const bool resolved = ResolveAdvancedField(vmInternal, vmPublic, baseValue, fieldName, arrayValue, &fieldStorage, true);
+      if (resolved && fieldStorage.storageType < vmInternal->mTypes.size() && callArgc >= 2)
+      {
+         KorkApi::TypeStorageInterface inputStorage = KorkApi::CreateRegisterStorageFromArgs(vmInternal, callArgc - 2, callArgv + 1);
+         KorkApi::TypeInfo& fieldType = vmInternal->mTypes[fieldStorage.storageType];
+         fieldType.iFuncs.CastValueFn(fieldType.userPtr,
+                                      vmPublic,
+                                      &inputStorage,
+                                      &fieldStorage,
+                                      nullptr,
+                                      0,
+                                      fieldStorage.storageType);
+
+         if (writeBackBase && frame.copyVar.var)
+         {
+            frame.copyVar.dictionary->setEntryValue(frame.copyVar.var, baseValue);
+         }
+
+         KorkApi::TypeStorageInterface outputStorage =
+            KorkApi::CreateExprStringStackStorage(vmInternal, evalState.mSTR, fieldStorage.data.size, fieldStorage.storageType);
+         fieldType.iFuncs.CastValueFn(fieldType.userPtr,
+                                      vmPublic,
+                                      &fieldStorage,
+                                      &outputStorage,
+                                      nullptr,
+                                      0,
+                                      fieldStorage.storageType);
+         if (outputStorage.data.storageRegister)
+         {
+            evalState.mSTR.setConsoleValue(vmInternal, *outputStorage.data.storageRegister);
+         }
+         else
+         {
+            evalState.mSTR.setStringValue("");
+         }
+      }
+      else
+      {
+         evalState.mSTR.setStringValue("");
+      }
+
+      evalState.mSTR.popFrame();
+      frame.pushStringStackCount--;
+      return;
+   }
+
+   KorkApi::ConsoleValue rhsValue = evalState.mSTR.getStackConsoleValue(evalState.mSTR.mStartStackSize - 2);
    const bool resolved = ResolveAdvancedField(vmInternal, vmPublic, baseValue, fieldName, arrayValue, &fieldStorage, true);
 
    if (resolved && fieldStorage.storageType < vmInternal->mTypes.size())
@@ -2462,7 +2515,7 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
             StringTableEntry fieldName = Compiler::CodeToSTE(nullptr, identStrings, code, ip);
             ip+=2;
             const bool writeBackBase = code[ip++] != 0;
-            SaveAdvancedField(evalState, frame, vmInternal, vmPublic, fieldName, false, writeBackBase);
+            SaveAdvancedField(evalState, frame, vmInternal, vmPublic, fieldName, false, writeBackBase, false);
             break;
          }
 
@@ -2471,7 +2524,25 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
             StringTableEntry fieldName = Compiler::CodeToSTE(nullptr, identStrings, code, ip);
             ip+=2;
             const bool writeBackBase = code[ip++] != 0;
-            SaveAdvancedField(evalState, frame, vmInternal, vmPublic, fieldName, true, writeBackBase);
+            SaveAdvancedField(evalState, frame, vmInternal, vmPublic, fieldName, true, writeBackBase, false);
+            break;
+         }
+
+         case OP_SAVE_ADVANCED_FIELD_TUPLE:
+         {
+            StringTableEntry fieldName = Compiler::CodeToSTE(nullptr, identStrings, code, ip);
+            ip+=2;
+            const bool writeBackBase = code[ip++] != 0;
+            SaveAdvancedField(evalState, frame, vmInternal, vmPublic, fieldName, false, writeBackBase, true);
+            break;
+         }
+
+         case OP_SAVE_ADVANCED_FIELD_ARR_TUPLE:
+         {
+            StringTableEntry fieldName = Compiler::CodeToSTE(nullptr, identStrings, code, ip);
+            ip+=2;
+            const bool writeBackBase = code[ip++] != 0;
+            SaveAdvancedField(evalState, frame, vmInternal, vmPublic, fieldName, true, writeBackBase, true);
             break;
          }
             

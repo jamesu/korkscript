@@ -1924,7 +1924,7 @@ void CodeBlock::dumpInstructions( U32 startIp, bool upToReturn, bool downcaseStr
          {
             StringTableEntry fieldName = Compiler::CodeToSTE(nullptr, identStrings, code, ip);
             U32 wb = code[ip++];
-            mVM->printf(0, "%i: OP_SAVE_ADVANCED_FIELD field=%s hasArray=%u writeBack=%u", ip - 1, fieldName ? fieldName : "", wb);
+            mVM->printf(0, "%i: OP_SAVE_ADVANCED_FIELD field=%s writeBack=%u", ip - 1, fieldName ? fieldName : "", wb);
             ip+=2;
             break;
          }
@@ -1932,8 +1932,24 @@ void CodeBlock::dumpInstructions( U32 startIp, bool upToReturn, bool downcaseStr
          {
             StringTableEntry fieldName = Compiler::CodeToSTE(nullptr, identStrings, code, ip);
             U32 wb = code[ip++];
-            mVM->printf(0, "%i: OP_SAVE_ADVANCED_FIELD_ARR field=%s hasArray=%u writeBack=%u", ip - 1, fieldName ? fieldName : "", wb);
-            ip++;
+            mVM->printf(0, "%i: OP_SAVE_ADVANCED_FIELD_ARR field=%s writeBack=%u", ip - 1, fieldName ? fieldName : "", wb);
+            ip+=2;
+            break;
+         }
+         case OP_SAVE_ADVANCED_FIELD_TUPLE:
+         {
+            StringTableEntry fieldName = Compiler::CodeToSTE(nullptr, identStrings, code, ip);
+            U32 wb = code[ip++];
+            mVM->printf(0, "%i: OP_SAVE_ADVANCED_FIELD_TUPLE field=%s writeBack=%u", ip - 1, fieldName ? fieldName : "", wb);
+            ip+=2;
+            break;
+         }
+         case OP_SAVE_ADVANCED_FIELD_ARR_TUPLE:
+         {
+            StringTableEntry fieldName = Compiler::CodeToSTE(nullptr, identStrings, code, ip);
+            U32 wb = code[ip++];
+            mVM->printf(0, "%i: OP_SAVE_ADVANCED_FIELD_ARR_TUPLE field=%s writeBack=%u", ip - 1, fieldName ? fieldName : "", wb);
+            ip+=2;
             break;
          }
          case OP_SET_DYNAMIC_TYPE_FROM_VAR:

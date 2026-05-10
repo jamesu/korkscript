@@ -1301,9 +1301,10 @@ private:
       for (BaseAssignExprNode* sn = root; sn; sn = sn->nextAssign())
       {
          SlotAssignNode* slotExpr = dynamic_cast<SlotAssignNode*>(sn);
+         AdvancedFieldAssignNode* advancedFieldExpr = dynamic_cast<AdvancedFieldAssignNode*>(sn);
          AssignExprNode* assignExpr = dynamic_cast<AssignExprNode*>(sn);
 
-         if (slotExpr == nullptr && assignExpr == nullptr)
+         if (slotExpr == nullptr && advancedFieldExpr == nullptr && assignExpr == nullptr)
          {
             errorHere(rootTok, "tuples cannot use math operators");
             return false;
