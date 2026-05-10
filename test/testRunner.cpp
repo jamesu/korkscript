@@ -277,6 +277,7 @@ ConsoleGetType( TypeTupleCapture )
 }
 
 ConsoleResolveFieldDefault( TypeTupleCapture )
+ConsoleResolveObjectRefDefault( TypeTupleCapture )
 ConsoleTypeOpDefault( TypeTupleCapture )
 
 ConsoleResolveField( TypeMyPoint3F )
@@ -307,6 +308,8 @@ ConsoleResolveField( TypeMyPoint3F )
 
    return vmPtr->initFixedTypeStorage(component, TypeF32, true, outStorage);
 }
+
+ConsoleResolveObjectRefDefault( TypeMyPoint3F )
 
 ConsoleGetType( TypeTupleProbe )
 {
@@ -421,6 +424,8 @@ ConsoleResolveField( TypeTupleProbe )
 
    return vmPtr->initFixedTypeStorage(&probe->capture, TypeTupleCapture, true, outStorage);
 }
+
+ConsoleResolveObjectRefDefault( TypeTupleProbe )
 
 ConsoleTypeOpDefault( TypeTupleProbe )
 

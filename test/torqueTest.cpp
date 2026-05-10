@@ -151,6 +151,8 @@ ConsoleResolveField( TypeMyPoint3F )
    return vmPtr->initFixedTypeStorage(component, KorkApi::ConsoleValue::TypeInternalNumber, true, outStorage);
 }
 
+ConsoleResolveObjectRefDefault( TypeMyPoint3F )
+
 class Player : public SimObject
 {
    typedef SimObject Parent;
@@ -208,4 +210,3 @@ int main(int argc, char **argv)
 
 	return 0;
 }
-

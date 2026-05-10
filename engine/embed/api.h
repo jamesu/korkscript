@@ -91,6 +91,8 @@ struct TypeStorageInterface
    bool isField;
 };
 
+struct FindObjectsInterface;
+struct VMObject;
 
 typedef bool(*CastValueFnType)(void* userPtr,
                                    Vm* vm,
@@ -107,6 +109,13 @@ typedef bool(*ResolveFieldFnType)(void* userPtr,
                                   ConsoleValue arrayIndex,
                                   TypeStorageInterface* outStorage,
                                   bool wantWrite);
+
+typedef bool(*GetObjectRefFnType)(void* userPtr,
+                                  Vm* vm,
+                                  ConsoleValue value,
+                                  const FindObjectsInterface* findInterface,
+                                  void* findUser,
+                                  VMObject** outObject);
 
 
 struct TypeInterface
@@ -129,6 +138,9 @@ KorkApi::ConsoleValue (*PerformOpFn)(void* userPtr, Vm* vm, U32 op, KorkApi::Con
 
 // Optional typed field/index resolver used by the advancedFields compiler feature.
 ResolveFieldFnType ResolveFieldFn;
+
+// Optional typed object resolver used when a typed value is used with object syntax.
+GetObjectRefFnType GetObjectRefFn;
 };
 
 struct TypeInfo

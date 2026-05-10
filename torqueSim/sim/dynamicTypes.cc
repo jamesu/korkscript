@@ -116,6 +116,15 @@ void ConsoleBaseType::registerTypeWithVm(KorkApi::Vm* vm)
       ConsoleBaseType* typeInfo = (ConsoleBaseType*)userPtr;
       return typeInfo->resolveField(vm, baseStorage, fieldName, arrayIndex, outStorage, wantWrite);
    };
+   info.iFuncs.GetObjectRefFn = [](void* userPtr,
+                                   KorkApi::Vm* vm,
+                                   KorkApi::ConsoleValue value,
+                                   const KorkApi::FindObjectsInterface* findInterface,
+                                   void* findUser,
+                                   KorkApi::VMObject** outObject){
+      ConsoleBaseType* typeInfo = (ConsoleBaseType*)userPtr;
+      return typeInfo->resolveObjectRef(vm, value, findInterface, findUser, outObject);
+   };
    
    S32 vmTypeId = vm->registerType(info);
    AssertFatal(mTypeId != vmTypeId, "Type Id Mismatch");
@@ -169,6 +178,17 @@ bool ConsoleBaseType::resolveField(KorkApi::Vm* vm,
                                    KorkApi::TypeStorageInterface* outStorage,
                                    bool wantWrite)
 {
+   return false;
+}
+
+bool ConsoleBaseType::resolveObjectRef(KorkApi::Vm* vm,
+                                       KorkApi::ConsoleValue value,
+                                       const KorkApi::FindObjectsInterface* findInterface,
+                                       void* findUser,
+                                       KorkApi::VMObject** outObject)
+{
+   if (outObject)
+      *outObject = nullptr;
    return false;
 }
 

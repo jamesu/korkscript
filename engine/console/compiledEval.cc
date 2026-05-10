@@ -1953,11 +1953,11 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
             else if(frame.lastCallType == FuncCallExprNode::MethodCall)
             {
                frame.saveObject = frame.thisObject;
-               const char* objName = vmInternal->valueAsString(callArgv[1]);
-               frame.thisObject = vmInternal->mConfig.iFind.FindObjectByPathFn(vmInternal->mConfig.findUser, objName);
+               frame.thisObject = vmInternal->resolveObjectRef(callArgv[1]);
                
                if(!frame.thisObject)
                {
+                  const char* objName = vmInternal->valueAsString(callArgv[1]);
                   frame.thisObject = 0;
                   vmInternal->printf(0,"%s: Unable to find object: '%s' attempting to call function '%s'", frame.codeBlock->getFileLine(ip-6), objName, tmpFnName);
                   evalState.mSTR.popFrame();

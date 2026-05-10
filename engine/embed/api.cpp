@@ -1459,6 +1459,36 @@ bool Vm::callObjectFunction(VMObject* self, StringTableEntry funcName, int argc,
    return true;
 }
 
+VMObject* VmInternal::resolveObjectRef(ConsoleValue value)
+{
+   if (value.typeId >= ConsoleValue::TypeBeginCustom &&
+       value.typeId < mTypes.size())
+   {
+      TypeInfo& typeInfo = mTypes[value.typeId];
+      if (typeInfo.iFuncs.GetObjectRefFn)
+      {
+         VMObject* object = nullptr;
+         if (typeInfo.iFuncs.GetObjectRefFn(typeInfo.userPtr,
+                                            mVM,
+                                            value,
+                                            &mConfig.iFind,
+                                            mConfig.findUser,
+                                            &object))
+         {
+            return object;
+         }
+      }
+   }
+
+   if (mConfig.iFind.FindObjectByPathFn)
+   {
+      return mConfig.iFind.FindObjectByPathFn(mConfig.findUser,
+                                              valueAsString(value));
+   }
+
+   return nullptr;
+}
+
 void Vm::triggerNamespaceSignal(VMObject* h, StringTableEntry name, int argc, ConsoleValue* argv)
 {
    VmAllocTLS::Scope memScope(mInternal);

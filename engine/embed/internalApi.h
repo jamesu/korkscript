@@ -170,6 +170,7 @@ struct VmInternal
    void releaseHeapRef(ConsoleHeapAllocRef value);
 
    S32 lookupTypeId(StringTableEntry typeName);
+   VMObject* resolveObjectRef(ConsoleValue value);
 
    // Heap values (like strings)
    ConsoleValue getStringFuncBuffer(FiberId fiberId, U32 size);

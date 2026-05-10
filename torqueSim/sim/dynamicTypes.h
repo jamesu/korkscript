@@ -107,6 +107,11 @@ public:
                              KorkApi::ConsoleValue arrayIndex,
                              KorkApi::TypeStorageInterface* outStorage,
                              bool wantWrite);
+   virtual bool resolveObjectRef(KorkApi::Vm* vm,
+                                 KorkApi::ConsoleValue value,
+                                 const KorkApi::FindObjectsInterface* findInterface,
+                                 void* findUser,
+                                 KorkApi::VMObject** outObject);
 };
 
 #define DefineConsoleType( type ) extern S32 type;
@@ -122,6 +127,7 @@ public:
       void exportToVm(KorkApi::Vm* vm) { exportTypeToVm(this, vm); } \
       virtual KorkApi::ConsoleValue performOp(KorkApi::Vm* vm, U32 op, KorkApi::ConsoleValue lhs, KorkApi::ConsoleValue rhs); \
       virtual bool resolveField(KorkApi::Vm* vmPtr, KorkApi::TypeStorageInterface* baseStorage, StringTableEntry fieldName, KorkApi::ConsoleValue arrayIndex, KorkApi::TypeStorageInterface* outStorage, bool wantWrite); \
+      virtual bool resolveObjectRef(KorkApi::Vm* vmPtr, KorkApi::ConsoleValue value, const KorkApi::FindObjectsInterface* findInterface, void* findUser, KorkApi::VMObject** outObject); \
    }; \
    S32 type = -1; \
    ConsoleType##type gConsoleType##type##Instance(size,vsize,&type,#type); \
@@ -138,6 +144,7 @@ public:
       void exportToVm(KorkApi::Vm* vm) { exportTypeToVm(this, vm); } \
       virtual KorkApi::ConsoleValue performOp(KorkApi::Vm* vm, U32 op, KorkApi::ConsoleValue lhs, KorkApi::ConsoleValue rhs); \
       virtual bool resolveField(KorkApi::Vm* vmPtr, KorkApi::TypeStorageInterface* baseStorage, StringTableEntry fieldName, KorkApi::ConsoleValue arrayIndex, KorkApi::TypeStorageInterface* outStorage, bool wantWrite); \
+      virtual bool resolveObjectRef(KorkApi::Vm* vmPtr, KorkApi::ConsoleValue value, const KorkApi::FindObjectsInterface* findInterface, void* findUser, KorkApi::VMObject** outObject); \
    }; \
    S32 type = -1; \
    ConsoleType##type gConsoleType##type##Instance(size,&type,#type); \
@@ -158,6 +165,15 @@ public:
    bool ConsoleType##type::resolveField(KorkApi::Vm* vmPtr, KorkApi::TypeStorageInterface* baseStorage, StringTableEntry fieldName, KorkApi::ConsoleValue arrayIndex, KorkApi::TypeStorageInterface* outStorage, bool wantWrite) \
    { \
       return ConsoleBaseType::resolveField(vmPtr, baseStorage, fieldName, arrayIndex, outStorage, wantWrite); \
+   }
+
+#define ConsoleResolveObjectRef( type ) \
+   bool ConsoleType##type::resolveObjectRef(KorkApi::Vm* vmPtr, KorkApi::ConsoleValue value, const KorkApi::FindObjectsInterface* findInterface, void* findUser, KorkApi::VMObject** outObject)
+
+#define ConsoleResolveObjectRefDefault( type ) \
+   bool ConsoleType##type::resolveObjectRef(KorkApi::Vm* vmPtr, KorkApi::ConsoleValue value, const KorkApi::FindObjectsInterface* findInterface, void* findUser, KorkApi::VMObject** outObject) \
+   { \
+      return ConsoleBaseType::resolveObjectRef(vmPtr, value, findInterface, findUser, outObject); \
    }
 
 #define ConsoleTypeOp( type ) \
@@ -215,6 +231,9 @@ inline KorkApi::TypeInterface buildTypeInterface()
    ti.ResolveFieldFn = &KorkApi::APIThunk<ConsoleBaseType,
       static_cast<bool(ConsoleBaseType::*)(KorkApi::Vm*, KorkApi::TypeStorageInterface*, StringTableEntry, KorkApi::ConsoleValue, KorkApi::TypeStorageInterface*, bool)>
       (&ConsoleBaseType::resolveField)>::call;
+   ti.GetObjectRefFn = &KorkApi::APIThunk<ConsoleBaseType,
+      static_cast<bool(ConsoleBaseType::*)(KorkApi::Vm*, KorkApi::ConsoleValue, const KorkApi::FindObjectsInterface*, void*, KorkApi::VMObject**)> 
+      (&ConsoleBaseType::resolveObjectRef)>::call;
 
    return ti;
 }
