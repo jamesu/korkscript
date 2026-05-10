@@ -86,6 +86,7 @@ public:
 
       DataBlock* newChunk = reinterpret_cast<DataBlock*>(raw);
       constructInPlace(newChunk);
+      newChunk->mCapacityBytes = chunkSize;
 
       newChunk->initWithBytes(
          reinterpret_cast<T*>(reinterpret_cast<std::byte*>(newChunk->getEnd())),
