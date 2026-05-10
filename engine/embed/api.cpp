@@ -1290,9 +1290,10 @@ bool Vm::compileCodeBlock(const char* code, const char* filename, CompiledBlock*
       mInternal->Delete(buffer); // []
       return -1;
    }
-   
+
    outBlock->data = buffer;
    outBlock->size = outS.getPosition();
+   mInternal->Delete(block);
    return true;
 }
 

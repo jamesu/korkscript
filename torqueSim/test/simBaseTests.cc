@@ -895,6 +895,7 @@ TEST_CASE("SimSet container operations and traversal", "[SimSet]") {
    REQUIRE(std::string(buffer).find("new SimSet(") != std::string::npos);
    REQUIRE(std::string(buffer).find(first->getName()) != std::string::npos);
 
+   child->deleteObject();
    nested->deleteObject();
    first->deleteObject();
    middle->deleteObject();

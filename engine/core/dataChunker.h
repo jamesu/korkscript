@@ -289,6 +289,14 @@ public:
       mChunker = new BaseDataChunker<T, Alloc>(size);
       mOwnsChunker = true;
    }
+
+   ~FreeListChunker()
+   {
+      if (mOwnsChunker)
+      {
+         delete mChunker;
+      }
+   }
    
    BaseDataChunker<T>* getChunker()
    {

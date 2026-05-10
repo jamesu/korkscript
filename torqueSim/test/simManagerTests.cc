@@ -74,6 +74,9 @@ TEST_CASE("SimManager resolves names and id-prefixed paths", "[SimManager]") {
 
    const std::string missingPath = std::to_string(group->getId()) + "/no_such_child";
    REQUIRE(Sim::findObject(missingPath.c_str()) == nullptr);
+
+   child->deleteObject();
+   group->deleteObject();
 }
 
 TEST_CASE("SimManager resolves ConsoleValue lookups by value kind", "[SimManager]") {
@@ -84,6 +87,9 @@ TEST_CASE("SimManager resolves ConsoleValue lookups by value kind", "[SimManager
    // The ConsoleValue overload should dispatch numeric values directly to id lookups.
    REQUIRE(Sim::findObject(KorkApi::ConsoleValue::makeUnsigned(group->getId())) == group);
    REQUIRE(Sim::findObject(KorkApi::ConsoleValue::makeNumber((F64)group->getId())) == group);
+
+   child->deleteObject();
+   group->deleteObject();
 }
 
 TEST_CASE("SimManager returns nullptr for missing lookup targets", "[SimManager]") {
