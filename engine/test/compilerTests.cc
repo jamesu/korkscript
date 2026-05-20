@@ -8,6 +8,8 @@
 #include "platform/platform.h"
 #include "embed/api.h"
 #include "embed/internalApi.h"
+#include "console/compiler.h"
+#include "console/simpleLexer.h"
 #include "engine/test/testVmFixture.h"
 
 #include <catch2/catch.hpp>
@@ -98,6 +100,40 @@ namespace
 
       return KorkApi::AstEnumerationContinue;
    }
+
+   std::vector<std::string> lexTokenStrings(TestVmFixture& fx, const char* source, const char* fileName)
+   {
+      KorkApi::VmAllocTLS::Scope allocScope(fx.vm->mInternal);
+      SimpleLexer::Tokenizer<KorkApi::VMStringTable> lex(
+         KorkApi::VMStringTable(fx.vm->mInternal),
+         source,
+         fileName,
+         fx.internal->mCompilerResources->allowStringInterpolation,
+         fx.internal->mCompilerResources->allowScriptClasses);
+
+      std::vector<std::string> tokens;
+      for (;;)
+      {
+         const SimpleLexer::Token tok = lex.next();
+         REQUIRE_FALSE(tok.isNone());
+         REQUIRE_FALSE(tok.isIllegal());
+         tokens.emplace_back(lex.toString(tok).c_str());
+         if (tok.isEnd())
+            break;
+      }
+      return tokens;
+   }
+
+   void requireParseStats(TestVmFixture& fx, const char* source, const char* fileName, U32 expectedFunctions, U32 expectedReturns)
+   {
+      AstStats stats;
+      KorkApi::AstParseErrorInfo parseError = {};
+      const KorkApi::AstEnumerationResult result = fx.vm->enumerateAst(source, fileName, &stats, collectAstStats, &parseError);
+      REQUIRE(result == KorkApi::AstEnumerationCompleted);
+      REQUIRE(parseError.stage == KorkApi::AstParseErrorNone);
+      REQUIRE(stats.functionDecls == expectedFunctions);
+      REQUIRE(stats.returnStmts == expectedReturns);
+   }
 }
 
 TEST_CASE_METHOD(TestVmFixture, "Compiler can parse code, emit AST, and produce bytecode", "[Compiler]") {
@@ -133,6 +169,64 @@ TEST_CASE_METHOD(TestVmFixture, "Compiler can parse code, emit AST, and produce 
    REQUIRE(compiled.size > 0);
 
    vm->freeCompiledBlock(compiled);
+}
+
+TEST_CASE_METHOD(TestVmFixture, "Lexer tokenizes 1030.dump(1) without swallowing the dot", "[Compiler]") {
+   REQUIRE(lexTokenStrings(*this, "1030.dump(1);", "numericDotCallSmoke.cs") ==
+      std::vector<std::string>{"INTCONST=INT(1030)", "opCHAR=CHAR(.)", "dump", "opCHAR=CHAR(()", "INTCONST=INT(1)", "opCHAR=CHAR())", "opCHAR=CHAR(;)", "END"});
+   requireParseStats(*this, "1030.dump(1);", "numericDotCallSmoke.cs", 0, 0);
+}
+
+TEST_CASE_METHOD(TestVmFixture, "Lexer tokenizes 1.dump() without swallowing the dot", "[Compiler]") {
+   REQUIRE(lexTokenStrings(*this, "1.dump();", "numericDotCallSmoke.cs") ==
+      std::vector<std::string>{"INTCONST=INT(1)", "opCHAR=CHAR(.)", "dump", "opCHAR=CHAR(()", "opCHAR=CHAR())", "opCHAR=CHAR(;)", "END"});
+   requireParseStats(*this, "1.dump();", "numericDotCallSmoke.cs", 0, 0);
+}
+
+TEST_CASE_METHOD(TestVmFixture, "Lexer tokenizes 1.foo() as integer field access", "[Compiler]") {
+   REQUIRE(lexTokenStrings(*this, "1.foo();", "numericFieldSmoke.cs") ==
+      std::vector<std::string>{"INTCONST=INT(1)", "opCHAR=CHAR(.)", "foo", "opCHAR=CHAR(()", "opCHAR=CHAR())", "opCHAR=CHAR(;)", "END"});
+   requireParseStats(*this, "1.foo();", "numericFieldSmoke.cs", 0, 0);
+}
+
+TEST_CASE_METHOD(TestVmFixture, "Lexer tokenizes e-prefixed names after a dot as field access", "[Compiler]") {
+   REQUIRE(lexTokenStrings(*this, "1.eFoo();", "numericFieldSmoke.cs") ==
+      std::vector<std::string>{"INTCONST=INT(1)", "opCHAR=CHAR(.)", "eFoo", "opCHAR=CHAR(()", "opCHAR=CHAR())", "opCHAR=CHAR(;)", "END"});
+   requireParseStats(*this, "1.eFoo();", "numericFieldSmoke.cs", 0, 0);
+
+   REQUIRE(lexTokenStrings(*this, "1.EFoo();", "numericFieldSmoke.cs") ==
+      std::vector<std::string>{"INTCONST=INT(1)", "opCHAR=CHAR(.)", "eFoo", "opCHAR=CHAR(()", "opCHAR=CHAR())", "opCHAR=CHAR(;)", "END"});
+   requireParseStats(*this, "1.EFoo();", "numericFieldSmoke.cs", 0, 0);
+}
+
+TEST_CASE_METHOD(TestVmFixture, "Lexer tokenizes representative floating point literals", "[Compiler]") {
+   REQUIRE(lexTokenStrings(*this, "1.;", "floatSmoke.cs") ==
+      std::vector<std::string>{"FLTCONST=FLT(1)", "opCHAR=CHAR(;)", "END"});
+   requireParseStats(*this, "1.;", "floatSmoke.cs", 0, 0);
+
+   REQUIRE(lexTokenStrings(*this, "0.5;", "floatSmoke.cs") ==
+      std::vector<std::string>{"FLTCONST=FLT(0.5)", "opCHAR=CHAR(;)", "END"});
+   requireParseStats(*this, "0.5;", "floatSmoke.cs", 0, 0);
+
+   REQUIRE(lexTokenStrings(*this, "12.34;", "floatSmoke.cs") ==
+      std::vector<std::string>{"FLTCONST=FLT(12.34)", "opCHAR=CHAR(;)", "END"});
+   requireParseStats(*this, "12.34;", "floatSmoke.cs", 0, 0);
+
+   REQUIRE(lexTokenStrings(*this, "1.0;", "floatSmoke.cs") ==
+      std::vector<std::string>{"FLTCONST=FLT(1)", "opCHAR=CHAR(;)", "END"});
+   requireParseStats(*this, "1.0;", "floatSmoke.cs", 0, 0);
+
+   REQUIRE(lexTokenStrings(*this, "1.e3;", "floatSmoke.cs") ==
+      std::vector<std::string>{"FLTCONST=FLT(1000)", "opCHAR=CHAR(;)", "END"});
+   requireParseStats(*this, "1.e3;", "floatSmoke.cs", 0, 0);
+
+   REQUIRE(lexTokenStrings(*this, "1e3;", "floatSmoke.cs") ==
+      std::vector<std::string>{"FLTCONST=FLT(1000)", "opCHAR=CHAR(;)", "END"});
+   requireParseStats(*this, "1e3;", "floatSmoke.cs", 0, 0);
+
+   REQUIRE(lexTokenStrings(*this, "1e-3;", "floatSmoke.cs") ==
+      std::vector<std::string>{"FLTCONST=FLT(0.001)", "opCHAR=CHAR(;)", "END"});
+   requireParseStats(*this, "1e-3;", "floatSmoke.cs", 0, 0);
 }
 
 TEST_CASE_METHOD(TestVmFixture, "Compiler reports parse errors for invalid input", "[Compiler]") {
