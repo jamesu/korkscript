@@ -860,6 +860,31 @@ private:
       auto isDigit = [](char c) {
          return std::isdigit((unsigned char)c)!=0;
       };
+      auto isIdentStart = [](char c) {
+         return std::isalpha((unsigned char)c) != 0 || c == '_';
+      };
+      auto hasExponentAt = [&](S64 off) {
+         const char e = peek(off);
+         if (e != 'e' && e != 'E')
+            return false;
+
+         S64 digitOff = off + 1;
+         const char sign = peek(digitOff);
+         if (sign == '+' || sign == '-')
+         {
+            ++digitOff;
+         }
+
+         if (!isDigit(peek(digitOff)))
+            return false;
+
+         while (isDigit(peek(digitOff)))
+         {
+            ++digitOff;
+         }
+
+         return !isIdentStart(peek(digitOff));
+      };
       
       if (peek()=='.')
       {
@@ -880,32 +905,44 @@ private:
       
       if (peek()=='.')
       {
-         sawDot = true;
+         const char afterDot = peek(1);
+         if (isDigit(afterDot))
+         {
+            sawDot = true;
+            advance();
+            while (isDigit(peek()))
+            {
+               advance();
+            }
+         }
+         else if (hasExponentAt(1))
+         {
+            sawDot = true;
+            advance();
+         }
+         else if (!isIdentStart(afterDot))
+         {
+            sawDot = true;
+            advance();
+         }
+      }
+      
+      if (hasExponentAt(0))
+      {
+         sawExp = true;
          advance();
+         if (beither2('+', '-'))
+         {
+            advance();
+         }
          while (isDigit(peek()))
          {
             advance();
          }
       }
-      
-      if (beither2('e', 'E'))
+      else if (beither2('e', 'E'))
       {
-         sawExp = true; advance();
-         if (beither2('+', '-'))
-         {
-            advance();
-         }
-         
-         if (!isDigit(peek())) // backtrack on bad exponent
-         {
-            mBytePos = start;
-            mPos = p;
-            return make(TokenType::NONE);
-         }
-         while (isDigit(peek()))
-         {
-            advance();
-         }
+         return illegal("invalid exponent");
       }
       
       String s = String(mSource.begin() + start,
