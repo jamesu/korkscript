@@ -77,13 +77,13 @@ public:
    F64 *globalFloats;
    F64 *functionFloats;
    
-   U32 codeSize;
    U32 *code;
+   U32 codeSize;
    
    U32 refCount;
    U32 lineBreakPairCount;
-   U32 *lineBreakPairs;
    U32 breakListSize;
+   U32 *lineBreakPairs;
    U32 *breakList;
    CodeBlock *nextFile;
    StringTableEntry mRoot;

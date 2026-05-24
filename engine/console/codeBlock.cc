@@ -45,23 +45,45 @@ using namespace Compiler;
 
 CodeBlock::CodeBlock(KorkApi::VmInternal* vm, bool _isExecBlock)
 {
+   mVM = vm;
+   mVMPublic = vm->mVM;
+
+   name = nullptr;
+   fullPath = nullptr;
+   modPath = nullptr;
+
    globalStrings = nullptr;
    functionStrings = nullptr;
+
    functionStringsMaxLen = 0;
    globalStringsMaxLen = 0;
+
    numGlobalFloats = 0;
    numFunctionFloats = 0;
+
    globalFloats = nullptr;
    functionFloats = nullptr;
+
+   code = nullptr;
+   codeSize = 0;
+
+   refCount = 0;
+   //
+
+   lineBreakPairCount = 0;
+   breakListSize = 0;
    lineBreakPairs = nullptr;
    breakList = nullptr;
-   breakListSize = 0;
+   nextFile = nullptr;
+   mRoot = vm->internString("", false);
    
    identStrings = nullptr;
    identStringOffsets = nullptr;
+   numIdentStrings = 0;
+
    numFunctionCalls = 0;
    functionCalls = nullptr;
-   numIdentStrings = 0;
+
    startTypeStrings = 0;
    numTypeStrings = 0;
    typeStringMap = nullptr;
@@ -69,15 +91,6 @@ CodeBlock::CodeBlock(KorkApi::VmInternal* vm, bool _isExecBlock)
    isExecBlock = _isExecBlock;
    inList = false;
    didFlushFunctions = false;
-   
-   refCount = 0;
-   code = nullptr;
-   name = nullptr;
-   fullPath = nullptr;
-   modPath = nullptr;
-   mRoot = vm->internString("", false);
-   mVM = vm;
-   mVMPublic = vm->mVM;
 }
 
 CodeBlock::~CodeBlock()
