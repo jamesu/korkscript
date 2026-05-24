@@ -183,7 +183,7 @@ void Dictionary::remove(Dictionary::Entry *ent)
 }
 
 Dictionary::Dictionary()
-:  mHashTable( nullptr )
+:  mHashTable( nullptr ), mVm( nullptr )
 {
 }
 
@@ -565,11 +565,7 @@ ExprEvalState::ExprEvalState(KorkApi::VmInternal* vm): mSTR(&vm->mAllocBase, &vm
    mGeneration = 0;
    
    vmInternal = vm;
-   traceOn = false;
-   traceBuffer[0] = '\0';
-   lastThrow = 0;
-   nextThrow = 0;
-   mStackPopBreakIndex = -1;
+   mUserPtr = nullptr;
    
    memset(iterStack, 0, sizeof(iterStack));
    memset(floatStack, 0, sizeof(floatStack));
@@ -579,13 +575,21 @@ ExprEvalState::ExprEvalState(KorkApi::VmInternal* vm): mSTR(&vm->mAllocBase, &vm
    memset(vmStack, 0, sizeof(vmStack));
 
    _VM = 0;
+
+   traceOn = false;
+   lastThrow = 0;
+   nextThrow = 0;
+
+   mStackPopBreakIndex = -1;
    
    mCurrentFile = nullptr;
    mCurrentRoot = nullptr;
    
    mState = KorkApi::FiberRunResult::INACTIVE;
-   mUserPtr = nullptr;
    mLastFiberValue = KorkApi::ConsoleValue();
+   mLastFiberHeapData = nullptr;
+
+   traceBuffer[0] = '\0';
 }
 
 ExprEvalState::~ExprEvalState()

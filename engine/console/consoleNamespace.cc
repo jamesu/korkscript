@@ -38,9 +38,13 @@ extern U32 HashPointer(StringTableEntry ptr);
 
 NamespaceState::NamespaceState()
 {
-   mCacheSequence = 0;
+   mVmInternal = nullptr;
    mNamespaceList = nullptr;
    mGlobalNamespace = nullptr;
+   mCacheSequence = 0;
+   mNumActivePackages = 0;
+   mOldNumActivePackages = 0;
+   memset(mActivePackages, '\0', sizeof(mActivePackages));
 }
 
 void NamespaceState::init(KorkApi::VmInternal* vmInternal)
@@ -236,17 +240,18 @@ void Namespace::Entry::clear()
 
 Namespace::Namespace()
 {
-   mPackage = nullptr;
    mName = nullptr;
+   mPackage = nullptr;
+   mVmInternal = nullptr;
    mParent = nullptr;
    mNext = nullptr;
+   mUserPtr = nullptr;
+   mUsage = nullptr;
    mEntryList = nullptr;
+   mHashTable = nullptr;
    mHashSize = 0;
-   mHashTable = 0;
    mHashSequence = 0;
    mRefCountToParent = 0;
-   mUserPtr = nullptr;
-   mVmInternal = nullptr;
 }
 
 void Namespace::initVM(KorkApi::VmInternal* vm)

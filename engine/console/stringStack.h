@@ -112,6 +112,8 @@ struct StringStack
 
    StringStack(KorkApi::ConsoleValue::AllocBase* allocBase = nullptr, KorkApi::Vector<KorkApi::TypeInfo>* typeInfos = nullptr)
    {
+      mValue= 0;
+      mType = 0;
       mFuncId = 0;
       mNumFrames = 0;
       mStart = 0;

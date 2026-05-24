@@ -39,13 +39,12 @@ static void telnetCallback(U32 level, const char *consoleLine, void* userPtr)
 
 TelnetConsole::TelnetConsole(KorkApi::VmInternal* vm)
 {
+   mAcceptPort = -1;
+   mRemoteEchoEnabled = false;
+   mClientList = nullptr;
    mVMInternal = vm;
    mVMInternal->mConfig.extraConsumers[0].cbFunc = telnetCallback;
    mVMInternal->mConfig.extraConsumers[0].cbUser = this;
-
-   mAcceptPort = -1;
-   mClientList = nullptr;
-   mRemoteEchoEnabled = false;
 
    mValid = mVMInternal->mConfig.iTelnet.StartListenFn != nullptr &&
    mVMInternal->mConfig.iTelnet.StopListenFn != nullptr &&

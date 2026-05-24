@@ -52,7 +52,6 @@ class TelnetDebugger
       MaxCommandSize = 2048
    };
 
-   char mDebuggerPassword[PasswordMaxLength+1];
    enum State
    {
       NotConnected,
@@ -60,19 +59,8 @@ class TelnetDebugger
       Initialize,
       Connected
    };
-   S32 mState;
-   S32 mAcceptPort;
-   char mLineBuffer[MaxCommandSize];
-   S32 mCurPos;
-   U32 mDebugSocket;
-   bool mValid;
-   bool mWaitForClient;
-
-   KorkApi::VmInternal* mVMInternal;
 
 public:
-   TelnetDebugger(KorkApi::VmInternal* vm);
-   ~TelnetDebugger();
 
    struct Breakpoint
    {
@@ -85,13 +73,28 @@ public:
       bool clearOnHit;
       Breakpoint *next;
    };
+
+
+   S32 mState;
+   S32 mAcceptPort;
+   char mLineBuffer[MaxCommandSize];
+   char mDebuggerPassword[PasswordMaxLength+1];
+   S32 mCurPos;
+   U32 mDebugSocket;
+
+   KorkApi::VmInternal* mVMInternal;
    Breakpoint *mBreakpoints;
-
-   Breakpoint **findBreakpoint(StringTableEntry fileName, S32 lineNumber);
-
+   ExprEvalState* mCurrentWatchFiber;
+   
+   bool mValid;
+   bool mWaitForClient;
    bool mProgramPaused;
    bool mBreakOnNextStatement;
-   ExprEvalState* mCurrentWatchFiber;
+
+   TelnetDebugger(KorkApi::VmInternal* vm);
+   ~TelnetDebugger();
+
+   Breakpoint **findBreakpoint(StringTableEntry fileName, S32 lineNumber);
 
    bool isWatchedFiber();
 

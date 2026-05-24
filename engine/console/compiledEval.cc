@@ -131,16 +131,16 @@ struct ConsoleFrame
    // Frame state (24 bytes + 20 bytes)
    F64*            curFloatTable;
    char*           curStringTable;
+   U32             failJump;
+   U32             stackStart; // string stack offset
+   U32             callArgc;
+   U32             ip;
    bool            noCalls;
    bool            isReference;
    bool            inNativeFunction;
    bool            inFunctionCall;
    bool            popMinDepth;
    U8              pushStringStackCount;
-   U32             failJump;
-   U32             stackStart; // string stack offset
-   U32             callArgc;
-   U32             ip;
    
    // Function state (24 bytes)
    StringTableEntry  thisFunctionName;
@@ -195,50 +195,48 @@ struct ConsoleFrame
 
 public:
    ConsoleFrame(KorkApi::VmInternal* vm, ExprEvalState* fiber, Dictionary::HashTableData* parentVars = nullptr)
-      : stackStart(0)
-      , dictionary(vm, parentVars)
-      , evalState(nullptr)
+      : dictionary(vm, parentVars)
+      , evalState(fiber)
       , curFloatTable(nullptr)
       , curStringTable(nullptr)
-      //, curStringTableLen(0)
-      , thisFunctionName(nullptr)
-      , pushStringStackCount(0)
+      , failJump(0)
+      , stackStart(0)
+      , callArgc(0)
+      , ip( 0 )
       , noCalls(false)
       , isReference(false)
       , inNativeFunction(false)
       , inFunctionCall(false)
       , popMinDepth(false)
-      , failJump(0)
-      , scopeName( nullptr )
-      , scopePackage( nullptr )
-      , scopeNamespace( nullptr )
-      , codeBlock( nullptr )
-      , thisObject( vm )
-      , ip( 0 )
-      , dynTypeId( 0 )
+      , pushStringStackCount(0)
+      , thisFunctionName(nullptr)
+      , curFNDocBlock(nullptr)
+      , curNSDocBlock(nullptr)
       , _FLT(0)
       , _UINT(0)
       , _ITER(0)
       , _OBJ(0)
-      , _STARTOBJ(0)
       , _TRY(0)
+      , _STARTOBJ(0)
+      , dynTypeId( 0 )
+      , lastCallType(0)
+      , nsDocBlockClassOffset(0)
+      , nsDocBlockClassNameLength(0)
+      , nsDocBlockOffset(0)
+      , nsDocBlockClassLocation(0)
+      , scopeName( nullptr )
+      , scopePackage( nullptr )
+      , scopeNamespace( nullptr )
+      , codeBlock( nullptr )
       , currentNewObject(vm)
+      , thisObject( vm )
       , prevObject(vm)
       , curObject(vm)
       , saveObject(vm)
       , curIterObject(vm)
       , prevField(nullptr)
       , curField(nullptr)
-      , curFNDocBlock(nullptr)
-      , curNSDocBlock(nullptr)
-      , callArgc(0)
-      , lastCallType(0)
-      , nsDocBlockClassOffset(0)
-      , nsDocBlockClassNameLength(0)
-      , nsDocBlockOffset(0)
-      , nsDocBlockClassLocation(0)
    {
-      evalState = fiber;
       memset(curFieldArray,   0, sizeof(curFieldArray));
       memset(prevFieldArray,  0, sizeof(prevFieldArray));
    }
@@ -3148,9 +3146,9 @@ KorkApi::FiberRunResult ExprEvalState::resume(KorkApi::ConsoleValue value)
 ConsoleSerializer::ConsoleSerializer(KorkApi::VmInternal* target, void* userPtr, bool allowId, Stream* s)
 {
    mTarget = target;
+   mStream = s;
    mUserPtr = userPtr;
    mAllowId = allowId;
-   mStream = s;
 }
 
 ConsoleSerializer::~ConsoleSerializer()

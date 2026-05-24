@@ -41,18 +41,6 @@ class VmInternal;
 class Namespace
 {
    public:
-   StringTableEntry mName;
-   StringTableEntry mPackage;
-
-   KorkApi::VmInternal* mVmInternal;
-
-   Namespace *mParent;
-   Namespace *mNext;
-   void* mUserPtr;
-   U32 mRefCountToParent;
-   
-   const char* mUsage;
-   KorkApi::String mDynamicUsage;
 
    struct Entry
    {
@@ -104,6 +92,19 @@ class Namespace
          return mUsage ? mUsage : mDynamicUsage.c_str();
       }
    };
+
+   StringTableEntry mName;
+   StringTableEntry mPackage;
+
+   KorkApi::VmInternal* mVmInternal;
+
+   Namespace *mParent;
+   Namespace *mNext;
+   void* mUserPtr;
+   
+   const char* mUsage;
+   KorkApi::String mDynamicUsage;
+
    Entry *mEntryList;
 
    Entry **mHashTable;
@@ -111,6 +112,8 @@ class Namespace
    U32 mHashSequence;  ///< @note The hash sequence is used by the autodoc console facility
                      ///        as a means of testing reference asstate.
 
+   U32 mRefCountToParent;
+   
    Namespace();
    ~Namespace();
 

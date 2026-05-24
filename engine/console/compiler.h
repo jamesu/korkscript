@@ -85,13 +85,6 @@ namespace Compiler
       FullEntry *list;
       FullEntry *tail; // so we have stable ids
       U32 numIdentStrings;
-      
-      U32 addNoAddress(StringTableEntry ste);
-      U32 add(StringTableEntry ste, U32 ip);
-      void reset();
-      void write(Stream &st);
-      void build(StringTableEntry** strings,  U32** stringOffsets, U32* numStrings);
-      U32 append(CompilerIdentTable &other);
 
       CompilerIdentTable(Resources* _res) : res(_res)
       {
@@ -99,6 +92,13 @@ namespace Compiler
          tail = nullptr;
          numIdentStrings = 0;
       }
+      
+      U32 addNoAddress(StringTableEntry ste);
+      U32 add(StringTableEntry ste, U32 ip);
+      void reset();
+      void write(Stream &st);
+      void build(StringTableEntry** strings,  U32** stringOffsets, U32* numStrings);
+      U32 append(CompilerIdentTable &other);
    };
 
    //------------------------------------------------------------
@@ -117,14 +117,14 @@ namespace Compiler
       Resources* res;
       Entry *list;
 
+      char buf[256];
+
       CompilerStringTable(Resources* _res) : res(_res)
       {
          totalLen = 0;
          list = nullptr;
          memset(buf, 0, sizeof(buf));
       }
-
-      char buf[256];
 
       U32 add(const char *str, bool caseSens = true, bool tag = false);
       U32 addIntString(U32 value);
@@ -259,22 +259,11 @@ namespace Compiler
       
       StringTableEntry emptyString;
 
-      Resources() : globalStringTable(this), functionStringTable(this), globalFloatTable(this), functionFloatTable(this), identTable(this), typeTable(this)
+      Resources() : currentStringTable(nullptr), globalStringTable(this), functionStringTable(this), currentFloatTable(nullptr), globalFloatTable(this), functionFloatTable(this), identTable(this), typeTable(this)
       {
          STEtoCode = evalSTEtoCode;
          curLocalVarStackPos = 0;
-         syntaxError = false;
-         allowExceptions = false;
-         allowTuples = false;
-         allowTypes = false;
-         allowSignals = false;
-         allowStringInterpolation = false;
-         allowScriptClasses = false;
-         allowAdvancedFields = false;
-         currentASTGen = nullptr;
          emptyString = nullptr;
-         logFn = nullptr;
-         logUser = nullptr;
          
          globalVarTypes.res = this;
          for (U32 i=0; i<VarTypeStackSize; i++)
@@ -284,6 +273,18 @@ namespace Compiler
          
          curLocalVarStackPos = 0;
          currentASTGen = nullptr;
+
+         logFn = nullptr;
+         logUser = nullptr;
+
+         syntaxError = false;
+         allowExceptions = false;
+         allowTuples = false;
+         allowTypes = false;
+         allowSignals = false;
+         allowStringInterpolation = false;
+         allowScriptClasses = false;
+         allowAdvancedFields = false;
          
          resetTables();
       }
@@ -334,25 +335,22 @@ protected:
    CodeData *mCodeHead;
    U32 mCodePos;
    /// }
+
+   KorkApi::Vector<S32> mReturnTypeStack;
+   KorkApi::Vector<U32> mBreakLines; ///< Line numbers
    
    /// @name Code fixing stacks
    /// {
    KorkApi::Vector<U32> mFixList;
    KorkApi::Vector<U32> mFixStack;
    KorkApi::Vector<bool> mFixLoopStack;
-   U32 mSwitchScopeDepth;
    KorkApi::Vector<PatchEntry> mPatchList;
+   U32 mSwitchScopeDepth;
    /// }
 
-
-   KorkApi::Vector<S32> mReturnTypeStack;
-   
-   KorkApi::Vector<U32> mBreakLines; ///< Line numbers
    
    const char* mFilename;
-
    U32 mCurrentReturnType;
-   
    U32 mNumFuncCalls;
    
 public:
@@ -360,7 +358,7 @@ public:
    
 public:
 
-   CodeStream(Compiler::Resources* res) : mCode(0), mCodeHead(nullptr), mCodePos(0), mFilename(nullptr), mResources(res), mSwitchScopeDepth(0)
+   CodeStream(Compiler::Resources* res) : mCode(0), mCodeHead(nullptr), mCodePos(0), mSwitchScopeDepth(0), mFilename(nullptr), mCurrentReturnType(0), mNumFuncCalls(0), mResources(res)
    {
    }
    

@@ -61,9 +61,10 @@ class TelnetConsole
       PasswordMaxLength = 32  ///< Maximum length of the telnet and listen passwords.
    };
 
+   S32 mAcceptPort;
+   
    bool mValid;
    bool mRemoteEchoEnabled;
-   S32 mAcceptPort;
    char mTelnetPassword[PasswordMaxLength+1];
    char mListenPassword[PasswordMaxLength+1];
 

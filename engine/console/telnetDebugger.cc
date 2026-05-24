@@ -103,22 +103,25 @@ static void debuggerConsumer(U32 level, const char *line, void* userPtr)
 
 TelnetDebugger::TelnetDebugger(KorkApi::VmInternal* vm)
 {
+   mState = NotConnected;
+   mAcceptPort = -1;
+   mLineBuffer[0] = '\0';
+   mDebuggerPassword[0] = '\0';
+   mCurPos = 0;
+   mDebugSocket = 0;
+
+
+
    mVMInternal->mConfig.extraConsumers[1].cbFunc = debuggerConsumer;
    mVMInternal->mConfig.extraConsumers[1].cbUser = this;
    mVMInternal = vm;
+   mBreakpoints = nullptr;
    mCurrentWatchFiber = nullptr;
    
-   mAcceptPort = -1;
-   
-   mState = NotConnected;
-   mCurPos = 0;
-   
-   mBreakpoints = nullptr;
-   mBreakOnNextStatement = false;
-   mProgramPaused = false;
-   mWaitForClient = false;
-
    mValid = false;
+   mWaitForClient = false;
+   mProgramPaused = false;
+   mBreakOnNextStatement = false;
    
    // Add the version number in a global so that
    // scripts can detect the presence of the

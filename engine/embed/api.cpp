@@ -1773,10 +1773,15 @@ static KorkApi::ConsoleValue performOpNumeric(void* userPtr, KorkApi::Vm* vm, U3
 VmInternal::VmInternal(Vm* vm, Config* cfg) : mGlobalVars(this)
 {
    mVM = vm;
+   mCodeBlockList = nullptr;
+   mExecCodeBlockList = nullptr;
+   mCurrentCodeBlock = nullptr;
+
+   mLastExceptionInfo = {};
+   mHeapAllocs = nullptr;
+
    mLocalIntern = nullptr;
    mConfig = *cfg;
-   mCodeBlockList = nullptr;
-   mCurrentCodeBlock = nullptr;
    mReturnBuffer.resize(2048);
    mNSState.init(this);
    
@@ -1787,17 +1792,6 @@ VmInternal::VmInternal(Vm* vm, Config* cfg) : mGlobalVars(this)
    mAllocBase.func = NewArray<void*>(cfg->maxFibers);
    mAllocBase.arg = &mReturnBuffer[0];
    memset(mAllocBase.func, 0, sizeof(void*)*cfg->maxFibers);
-
-   if (mConfig.initTelnet)
-   {
-      mTelDebugger = New<TelnetDebugger>(this);
-      mTelConsole = New<TelnetConsole>(this);
-   }
-   else
-   {
-      mTelDebugger = nullptr;
-      mTelConsole = nullptr;
-   }
    
    // Use inbuilt string interner
 
@@ -1838,10 +1832,21 @@ VmInternal::VmInternal(Vm* vm, Config* cfg) : mGlobalVars(this)
       };
       mConfig.internUser = mLocalIntern;
    }
-   mHeapAllocs = nullptr;
+
    mConvIndex = 0;
    mCVConvIndex = 0;
    mNSCounter = 0;
+
+   if (mConfig.initTelnet)
+   {
+      mTelDebugger = New<TelnetDebugger>(this);
+      mTelConsole = New<TelnetConsole>(this);
+   }
+   else
+   {
+      mTelDebugger = nullptr;
+      mTelConsole = nullptr;
+   }
 
    if (cfg->userResources)
    {
@@ -1865,7 +1870,6 @@ VmInternal::VmInternal(Vm* vm, Config* cfg) : mGlobalVars(this)
    mCompilerResources->allowStringInterpolation = cfg->enableStringInterpolation;
    mCompilerResources->allowScriptClasses = cfg->enableScriptClasses;
    mCompilerResources->allowAdvancedFields = cfg->enableAdvancedFields;
-   mLastExceptionInfo = {};
    
    TypeInfo typeInfo = {};
    
