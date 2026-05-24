@@ -186,12 +186,10 @@ struct ConsoleFrame
    LocalRefTrack curObject;
    LocalRefTrack saveObject;
    LocalRefTrack curIterObject; // current object for _ITER
-   StringTableEntry prevField;
    StringTableEntry curField;
 
    // Buffers (640 bytes)
    char curFieldArray[FieldArraySize];
-   char prevFieldArray[FieldArraySize];
 
 public:
    ConsoleFrame(KorkApi::VmInternal* vm, ExprEvalState* fiber, Dictionary::HashTableData* parentVars = nullptr)
@@ -234,11 +232,9 @@ public:
       , curObject(vm)
       , saveObject(vm)
       , curIterObject(vm)
-      , prevField(nullptr)
       , curField(nullptr)
    {
       memset(curFieldArray,   0, sizeof(curFieldArray));
-      memset(prevFieldArray,  0, sizeof(prevFieldArray));
    }
    
    inline void copyFrom(ConsoleFrame* other, bool includeScope);
@@ -696,7 +692,7 @@ ConsoleFrame& CodeBlock::setupExecFrame(
          snprintf(
             eval.traceBuffer + strlen(eval.traceBuffer),
             ExprEvalState::TraceBufferSize - strlen(eval.traceBuffer),
-            " [f=%i,ss=%i,sf=%i]", eval.vmFrames.size(), eval.mSTR.mNumFrames, eval.mSTR.mStartStackSize);
+            " [f=%i,ss=%i,sf=%i]", (U32)eval.vmFrames.size(), eval.mSTR.mNumFrames, eval.mSTR.mStartStackSize);
          mVM->printf(0, "%s", eval.traceBuffer);
       }
 
@@ -1486,7 +1482,6 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
             // If a variable is set, then these must be nullptr. It is necessary
             // to set this here so that the vector parser can appropriately
             // identify whether it's dealing with a vector.
-            frame.prevField = nullptr;
             frame.prevObject = nullptr;
             frame.curObject = nullptr;
             
@@ -1503,7 +1498,6 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
             ip += 2;
             
             // See OP_SETCURVAR
-            frame.prevField = nullptr;
             frame.prevObject = nullptr;
             frame.curObject = nullptr;
             
@@ -1517,7 +1511,6 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
             tmpVar = vmInternal->internString(evalState.mSTR.getStringValue(), false);
             
             // See OP_SETCURVAR
-            frame.prevField = nullptr;
             frame.prevObject = nullptr;
             frame.curObject = nullptr;
             
@@ -1531,7 +1524,6 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
             tmpVar = vmInternal->internString(evalState.mSTR.getStringValue(), false);
             
             // See OP_SETCURVAR
-            frame.prevField = nullptr;
             frame.prevObject = nullptr;
             frame.curObject = nullptr;
             
@@ -1627,8 +1619,6 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
             
          case OP_SETCURFIELD:
             // Save the previous field for parsing vector fields.
-            frame.prevField = frame.curField;
-            strcpy( frame.prevFieldArray, frame.curFieldArray );
             frame.curField = Compiler::CodeToSTE(nullptr, identStrings, code, ip);
             frame.curFieldArray[0] = 0;
             ip += 2;
@@ -1659,11 +1649,7 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
             }
             else
             {
-               // The field is not being retrieved from an object. Maybe it's
-               // a special accessor?
-               
-               //getFieldComponent( prevObject, prevField, prevFieldArray, curField, valBuffer, VAL_BUFFER_SIZE );
-               evalState.intStack[frame._UINT+1] = 0;//atoi( valBuffer );
+               evalState.intStack[frame._UINT+1] = 0;
             }
             frame._UINT++;
             break;
@@ -1676,10 +1662,7 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
             }
             else
             {
-               // The field is not being retrieved from an object. Maybe it's
-               // a special accessor?
-               //getFieldComponent( prevObject, prevField, prevFieldArray, curField, valBuffer, VAL_BUFFER_SIZE );
-               evalState.floatStack[frame._FLT+1] = 0.0f;//atof( valBuffer );
+               evalState.floatStack[frame._FLT+1] = 0.0f;
             }
             frame._FLT++;
             break;
@@ -1692,10 +1675,7 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
             }
             else
             {
-               // The field is not being retrieved from an object. Maybe it's
-               // a special accessor?
-               //getFieldComponent( prevObject, prevField, prevFieldArray, curField, valBuffer, VAL_BUFFER_SIZE );
-               evalState.mSTR.setStringValue( ""); //valBuffer );
+               evalState.mSTR.setStringValue("");
             }
             break;
             
@@ -1708,9 +1688,6 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
             }
             else
             {
-               // The field is not being set on an object. Maybe it's
-               // a special accessor?
-               //setFieldComponent( prevObject, prevField, prevFieldArray, curField );
                frame.prevObject = nullptr;
             }
             break;
@@ -1724,9 +1701,6 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
             }
             else
             {
-               // The field is not being set on an object. Maybe it's
-               // a special accessor?
-               //setFieldComponent( prevObject, prevField, prevFieldArray, curField );
                frame.prevObject = nullptr;
             }
             break;
@@ -1739,9 +1713,6 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
             }
             else
             {
-               // The field is not being set on an object. Maybe it's
-               // a special accessor?
-               //setFieldComponent( prevObject, prevField, prevFieldArray, curField );
                frame.prevObject = nullptr;
             }
             break;
@@ -2468,8 +2439,6 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
             break;
          
          case OP_SETCURFIELD_NONE:
-            frame.prevField = frame.curField;
-            strcpy( frame.prevFieldArray, frame.curFieldArray );
             frame.curField = vmInternal->mEmptyString;
             frame.curFieldArray[0] = 0;
             break;
@@ -2591,9 +2560,6 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
             }
             else
             {
-               // The field is not being set on an object. Maybe it's
-               // a special accessor?
-               //setFieldComponent( prevObject, prevField, prevFieldArray, curField );
                frame.prevObject = nullptr;
             }
             
@@ -2629,9 +2595,6 @@ KorkApi::FiberRunResult ExprEvalState::runVM()
             }
             else
             {
-               // The field is not being set on an object. Maybe it's
-               // a special accessor?
-               //setFieldComponent( prevObject, prevField, prevFieldArray, curField );
                frame.prevObject = nullptr;
             }
             break;
@@ -3740,7 +3703,6 @@ ConsoleFrame* ConsoleSerializer::loadFrame(ExprEvalState* state)
 
    // Buffers
    mStream->read(ConsoleFrame::FieldArraySize, frame->curFieldArray);
-   mStream->read(ConsoleFrame::FieldArraySize, frame->prevFieldArray);
 
    // Restore everything remaining
 
@@ -3828,7 +3790,6 @@ bool ConsoleSerializer::writeFrame(ConsoleFrame& frame)
 
    // Buffers
    mStream->write(ConsoleFrame::FieldArraySize, frame.curFieldArray);
-   mStream->write(ConsoleFrame::FieldArraySize, frame.prevFieldArray);
    
    return true;
 }
@@ -4316,6 +4277,7 @@ bool KorkApi::VmInternal::getCurrentFiberFileLine(StringTableEntry* outFile, U32
    
    *outFile = block->name;
    *outLine = line;
+   return true;
 }
 
 KorkApi::FiberFrameInfo KorkApi::Vm::getCurrentFiberFrameInfo(S32 frameId)
