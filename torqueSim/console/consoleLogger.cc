@@ -31,9 +31,9 @@ IMPLEMENT_CONOBJECT( ConsoleLogger );
 
 ConsoleLogger::ConsoleLogger()
 {
-   mFilename = nullptr;
    mLogging = false;
    mAppend = false;
+   mFilename = nullptr;
 
    mLevel = ConsoleLogEntry::Normal;
 }

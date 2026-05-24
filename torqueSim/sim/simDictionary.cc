@@ -30,6 +30,8 @@ extern U32 HashPointer(StringTableEntry e);
 SimNameDictionary::SimNameDictionary()
 {
    hashTable = nullptr;
+   hashTableSize = 0;
+   hashEntryCount = 0;
    mutex = Mutex::createMutex();
 }
 

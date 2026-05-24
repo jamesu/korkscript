@@ -166,26 +166,26 @@ const char *SimFieldDictionary::getFieldValue(StringTableEntry slotName, U32* ty
 SimObject::SimObject( const U8 namespaceLinkMask ) : mNSLinkMask( namespaceLinkMask )
 {
    objectName               = nullptr;
-   mInternalName            = nullptr;
    nextNameObject           = (SimObject*)-1;
    nextManagerNameObject    = (SimObject*)-1;
    nextIdObject             = nullptr;
+   vm = nullptr;
+   vmObject = nullptr;
+   mGroup                   = nullptr;
+   mPeriodicTimerID         = 0;
+   mSimFlags = 0;
+   mCanSaveFieldDictionary  = true;
+   mNotifyList              = nullptr;
    mId                      = 0;
    mIdString                = StringTable->EmptyString;
-   mGroup                   = 0;
    mVMNameSpace             = nullptr;
-   mNotifyList              = nullptr;
    mTypeMask                = 0;
    mScriptCallbackGuard     = 0;
    mFieldDictionary         = nullptr;
-   mCanSaveFieldDictionary    = true;
+   mInternalName            = nullptr;
    mClassName               = nullptr;
    mSuperClassName          = nullptr;
    mProgenitorFile          = Con::getCurrentCodeBlockFullPath();
-   mPeriodicTimerID         = 0;
-   mSimFlags = 0;
-   vmObject = nullptr;
-   vm = nullptr;
 }
 
 SimObject::SignalListenerList* SimObject::findSignalListenerList(StringTableEntry signalName)
@@ -2668,6 +2668,7 @@ S32 SimDataBlock::sNextModifiedKey = 0;
 
 SimDataBlock::SimDataBlock()
 {
+   modifiedKey = -1;
    setModDynamicFields(true);
    setModStaticFields(true);
 }

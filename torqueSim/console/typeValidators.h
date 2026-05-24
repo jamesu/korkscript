@@ -29,7 +29,7 @@ class TypeValidator
 {
    public:
    
-   TypeValidator() {}
+   TypeValidator() : fieldIndex(-1) {}
    virtual ~TypeValidator() {}
    
    S32 fieldIndex;

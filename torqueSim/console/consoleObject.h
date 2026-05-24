@@ -193,7 +193,7 @@ public:
    static void registerWithVM(KorkApi::Vm* vm);
 
 protected:
-const char *       mClassName;
+   const char *       mClassName;
    AbstractClassRep * nextClass;
    AbstractClassRep * parentClass;
 
@@ -221,6 +221,11 @@ public:
 
    bool mDynamicGroupExpand;
 
+   S32 mClassGroupMask;                ///< Mask indicating in which NetGroups this object belongs.
+   S32 mClassType;                     ///< Stores the NetClass of this class.
+   S32 mNetEventDir;                   ///< Stores the NetDirection of this class.
+   S32 mClassId[NetClassGroupsCount];  ///< Stores the IDs assigned to this class for each group.
+
    static U32  NetClassCount [NetClassGroupsCount][NetClassTypesCount];
    static U32  NetClassBitSize[NetClassGroupsCount][NetClassTypesCount];
 
@@ -229,16 +234,13 @@ public:
    static void initialize(); // Called from Con::init once on startup
 
 public:
-   AbstractClassRep() 
+   AbstractClassRep() : mClassName(nullptr), nextClass(nullptr), parentClass(nullptr), mDynamicGroupExpand(false)
    {
-      parentClass  = nullptr;
+      mClassGroupMask = 0;
+      mClassType = 0;
+      mNetEventDir = 0;
    }
    virtual ~AbstractClassRep() { }
-
-   S32 mClassGroupMask;                ///< Mask indicating in which NetGroups this object belongs.
-   S32 mClassType;                     ///< Stores the NetClass of this class.
-   S32 mNetEventDir;                   ///< Stores the NetDirection of this class.
-   S32 mClassId[NetClassGroupsCount];  ///< Stores the IDs assigned to this class for each group.
 
    S32                          getClassId  (U32 netClassGroup)   const;
    static U32                   getClassCRC (U32 netClassGroup);
@@ -249,7 +251,7 @@ public:
    virtual AbstractClassRep*    getContainerChildClass( const bool recurse ) = 0;
 
    /// Helper class to see if we are a given class, or a subclass thereof.
-   bool                       isClass(AbstractClassRep  *acr)
+   bool isClass(AbstractClassRep  *acr)
    {
       AbstractClassRep  *walk = this;
 

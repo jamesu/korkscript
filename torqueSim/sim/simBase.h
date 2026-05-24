@@ -76,12 +76,7 @@ enum SimObjectsConstants
    DataBlockObjectIdFirst = 3,
    DataBlockObjectIdBitSize = 10,
    DataBlockObjectIdLast = DataBlockObjectIdFirst + (1 << DataBlockObjectIdBitSize) - 1,
-
-   /* T2DJUNK
-   MessageObjectIdFirst = DataBlockObjectIdLast + 1,
-   MessageObjectIdBitSize = 6,
-   MessageObjectIdLast = MessageObjectIdFirst + (1 << MessageObjectIdBitSize) - 1,
-*/
+   
    DynamicObjectIdFirst = DataBlockObjectIdLast + 1,
    InvalidEventId = 0,
    RootGroupId = 0xFFFFFFFF,
@@ -591,7 +586,7 @@ private:
     S32 mPeriodicTimerID;
 
     U8 mSimFlags;
-
+    bool mCanSaveFieldDictionary; ///< true if dynamic fields (added at runtime) should be saved, defaults to true
 
     /// @name Notification
     /// @{
@@ -624,7 +619,6 @@ protected:
     SimFieldDictionary *mFieldDictionary;    ///< Storage for dynamic fields.
     
 protected:
-    bool mCanSaveFieldDictionary; ///< true if dynamic fields (added at runtime) should be saved, defaults to true
     StringTableEntry mInternalName; ///< Stores object Internal Name
 
     // Namespace linking
@@ -1472,11 +1466,6 @@ public:
 
    virtual SimObject *findObject(const char *name);
    SimObject*  findObjectByInternalName(const char* internalName, bool searchChildren = false);
-
-/* T2DJUNK
-   virtual bool writeObject(Stream *stream);
-   virtual bool readObject(Stream *stream);
-   */
 
    inline void lock()
    {

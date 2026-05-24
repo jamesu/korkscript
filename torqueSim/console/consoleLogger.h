@@ -35,9 +35,10 @@ class ConsoleLogger : public SimObject
 
    private:
       bool mLogging;                   ///< True if it is currently consuming and logging
+      bool mAppend;                    ///< If false, it will clear the file before logging to it.
+      
       FileStream mStream;              ///< File stream this object writes to
       static bool smInitialized;                ///< This is for use with the default constructor
-      bool mAppend;                    ///< If false, it will clear the file before logging to it.
       StringTableEntry mFilename;      ///< The file name to log to.
 
       /// List of active ConsoleLoggers to send log messages to

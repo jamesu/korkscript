@@ -30,6 +30,10 @@ class SimObject;
 
 void TypeValidator::printWarning(SimObject *object)
 {
+   if (fieldIndex < 0)
+   {
+      return;
+   }
    AbstractClassRep *rep = object->getClassRep();
    AbstractClassRep::Field &fld = rep->mFieldList[fieldIndex];
    const char *objectName = object->getName();
