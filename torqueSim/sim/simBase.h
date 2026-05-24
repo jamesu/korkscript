@@ -76,7 +76,7 @@ enum SimObjectsConstants
    DataBlockObjectIdFirst = 3,
    DataBlockObjectIdBitSize = 10,
    DataBlockObjectIdLast = DataBlockObjectIdFirst + (1 << DataBlockObjectIdBitSize) - 1,
-   
+
    DynamicObjectIdFirst = DataBlockObjectIdLast + 1,
    InvalidEventId = 0,
    RootGroupId = 0xFFFFFFFF,
@@ -1234,10 +1234,9 @@ public:
    /// Get the modified key for this particular datablock.
    S32 getModifiedKey() const { return modifiedKey; }
 
-   bool onAdd();
-   //virtual void onRemove(); T2DJUNK not in T3D or impl in T2D
+   bool onAdd() override;
    
-   virtual void onStaticModified(const char* slotName, const char*newValue = nullptr);
+   virtual void onStaticModified(const char* slotName, const char*newValue = nullptr) override;
    //void setLastError(const char*);
    void assignId();
 
@@ -1270,7 +1269,7 @@ public:
    /// @param   flags   If SelectedOnly is passed here, then
    ///                  only objects marked as selected (using setSelected)
    ///                  will output themselves.
-   virtual void write(Stream &stream, U32 tabStop, U32 flags = 0);
+   void write(Stream &stream, U32 tabStop, U32 flags = 0) override;
 
    /// Used by the console system to automatically tell datablock classes apart
    /// from non-datablock classes.
@@ -1439,8 +1438,8 @@ public:
    void clear();
    /// @}
 
-   virtual void onRemove();
-   virtual void onDeleteNotify(SimObject *object);
+   void onRemove() override;
+   void onDeleteNotify(SimObject *object) override;
 
    /// @name Set Management
    /// @{
@@ -1462,9 +1461,9 @@ public:
 
    void callOnChildren( const char * method, S32 argc, KorkApi::ConsoleValue argv[], bool executeOnChildGroups = true );
 
-   virtual void write(Stream &stream, U32 tabStop, U32 flags = 0);
+   void write(Stream &stream, U32 tabStop, U32 flags = 0) override;
 
-   virtual SimObject *findObject(const char *name);
+   SimObject *findObject(const char *name) override;
    SimObject*  findObjectByInternalName(const char* internalName, bool searchChildren = false);
 
    inline void lock()
@@ -1550,19 +1549,19 @@ public:
    ~SimGroup();
 
    /// Add an object to the group.
-   virtual void addObject(SimObject*);
+   void addObject(SimObject*) override;
    void addObject(SimObject*, SimObjectId);
    void addObject(SimObject*, const char *name);
 
    /// Remove an object from the group.
-   virtual void removeObject(SimObject*);
+   void removeObject(SimObject*) override;
 
-   virtual void onRemove();
+   void onRemove() override;
 
    /// Find an object in the group.
-   virtual SimObject* findObject(const char* name);
+   SimObject* findObject(const char* name) override;
 
-   bool processArguments(S32 argc, const char **argv);
+   bool processArguments(S32 argc, const char **argv) override;
 
    DECLARE_CONOBJECT(SimGroup);
 };

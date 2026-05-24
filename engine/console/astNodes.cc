@@ -613,6 +613,9 @@ void IntBinaryExprNode::getSubTypeOperand()
       case SimpleLexer::TokenType::opSHL:
       operand = OP_SHL;
       break;
+   default:
+      operand = OP_INVALID;
+      break;
    }
 }
 
@@ -1355,6 +1358,9 @@ static void getAssignOpTypeOp(SimpleLexer::TokenType op, TypeReq &type, U32 &ope
       case SimpleLexer::TokenType::opSHR:
       type = TypeReqUInt;
       operand = OP_SHR;
+      break;
+   default:
+      operand = OP_INVALID;
       break;
    }   
 }

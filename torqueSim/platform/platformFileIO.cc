@@ -514,7 +514,7 @@ File::Status File::setPosition(S32 position, bool absolutePos)
       return currentStatus;
    
    U32 finalPos = 0;
-   switch (absolutePos)
+   switch ((U8)absolutePos)
    {
       case true:                                                    // absolute position
          AssertFatal(0 <= position, "File::setPosition: negative absolute position");

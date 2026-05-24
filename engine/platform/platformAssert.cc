@@ -112,7 +112,7 @@ bool PlatformAssert::processAssert(Type        assertType,
    if (platformAssert)
       return platformAssert->process(assertType, filename, lineNumber, message);
    else // when platAssert nullptr (during _start/_exit) try direct output...
-      printf("\n%s: (%s @ %ld) %s\n", typeName[assertType], filename, lineNumber, message);
+      printf("\n%s: (%s @ %u) %s\n", typeName[assertType], filename, lineNumber, message);
 
    // this could also be platform-specific: OutputDebugString on PC, DebugStr on Mac.
    // Will raw printfs do the job?  In the worst case, it's a break-pointable line of code.

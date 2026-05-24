@@ -36,7 +36,7 @@ class ConsoleLogger : public SimObject
    private:
       bool mLogging;                   ///< True if it is currently consuming and logging
       bool mAppend;                    ///< If false, it will clear the file before logging to it.
-      
+
       FileStream mStream;              ///< File stream this object writes to
       static bool smInitialized;                ///< This is for use with the default constructor
       StringTableEntry mFilename;      ///< The file name to log to.
@@ -68,7 +68,7 @@ class ConsoleLogger : public SimObject
       /// // Example script constructor usage.
       /// %obj = new ConsoleLogger( objName, logFileName, [append = false] );
       /// @endcode
-      bool processArguments( S32 argc, const char **argv );
+      bool processArguments( S32 argc, const char **argv ) override;
 
       /// Default constructor, make sure to initalize
       ConsoleLogger();

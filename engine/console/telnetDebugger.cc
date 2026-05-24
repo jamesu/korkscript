@@ -522,7 +522,7 @@ void TelnetDebugger::processLineBuffer(S32 cmdLen)
          mVMInternal->mCurrentFiberState = mCurrentWatchFiber;
          removeVariableBreakpoint(varBuffer);
       }
-      else if(sscanf(mLineBuffer, "BRKSET %s %d %s %d %[^\n]", fileBuffer,&line,&clear,&passCount,evalBuffer) == 5)
+      else if(sscanf(mLineBuffer, "BRKSET %2047s %d %2047s %d %2047[^\n]", fileBuffer,&line,clear,&passCount,evalBuffer) == 5)
       {
          mVMInternal->mCurrentFiberState = mCurrentWatchFiber;
          addBreakpoint(fileBuffer, line, dAtob(clear), passCount, evalBuffer);
@@ -577,7 +577,7 @@ void TelnetDebugger::processLineBuffer(S32 cmdLen)
          mVMInternal->mCurrentFiberState = mCurrentWatchFiber;
          dumpBreakableList(fileBuffer);
       }
-      else if(sscanf(mLineBuffer, "SETFIBER %u", setFiberId) == 1)
+      else if(sscanf(mLineBuffer, "SETFIBER %u", &setFiberId) == 1)
       {
          mVMInternal->setCurrentFiber(setFiberId);
          setWatchFiberFromVm();

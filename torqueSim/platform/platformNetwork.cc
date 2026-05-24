@@ -1938,7 +1938,7 @@ void Net::enableMulticast()
          
          if (error == NoError)
          {
-            memset(&PlatformNetState::multicast6Group, '\0', sizeof(&PlatformNetState::multicast6Group));
+            memset(&PlatformNetState::multicast6Group, '\0', sizeof(PlatformNetState::multicast6Group));
             NetAddressToIPSocket6(&multicastAddress, &multicastSocketAddress);
             memcpy(&PlatformNetState::multicast6Group.ipv6mr_multiaddr, &multicastSocketAddress.sin6_addr, sizeof(PlatformNetState::multicast6Group.ipv6mr_multiaddr));
          }

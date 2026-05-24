@@ -346,7 +346,7 @@ public:
       registerClassRep(this);
    };
 
-   virtual AbstractClassRep* getContainerChildClass( const bool recurse )
+   AbstractClassRep* getContainerChildClass( const bool recurse ) override
    {
       // Fetch container children type.
       AbstractClassRep* pChildren = T::getContainerChildStaticClassRep();
@@ -365,14 +365,14 @@ public:
    /// Perform class specific initialization tasks.
    ///
    /// Link namespaces, call initPersistFields() and consoleInit().
-   void init() const
+   void init() const override
    {
       T::initPersistFields();
       T::consoleInit();
    }
 
    /// Wrap constructor.
-   ConsoleObject* create() const { return new T; }
+   ConsoleObject* create() const override { return new T; }
 };
 
 //-----------------------------------------------------------------------------
@@ -765,7 +765,7 @@ inline bool& ConsoleObject::getDynamicGroupExpand()
    static AbstractClassRep* getParentStaticClassRep();                                                             \
    static AbstractClassRep* getContainerChildStaticClassRep();                                                     \
    static AbstractClassRep* getStaticClassRep();                                                                   \
-   virtual AbstractClassRep* getClassRep() const
+   AbstractClassRep* getClassRep() const override
 
 #define IMPLEMENT_CONOBJECT(className)                                                                              \
    AbstractClassRep* className::getClassRep() const { return &className::dynClassRep; }                            \

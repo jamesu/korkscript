@@ -34,8 +34,8 @@ class ScriptObject : public SimObject
    
 public:
    ScriptObject();
-   bool onAdd();
-   void onRemove();
+   bool onAdd() override;
+   void onRemove() override;
    
    static void initPersistFields();
    
@@ -104,8 +104,8 @@ class ScriptGroup : public SimGroup
    
 public:
    ScriptGroup();
-   bool onAdd();
-   void onRemove();
+   bool onAdd() override;
+   void onRemove() override;
    
    static void initPersistFields();
    

@@ -15,6 +15,17 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 add_definitions(-DUNICODE -D_UNICODE -DINITGUIDE)
 
+function(ks_warning_sanitizer target_name)
+  target_compile_options(${target_name} PRIVATE
+    $<$<CXX_COMPILER_ID:GNU,Clang,AppleClang>:-Wno-invalid-offsetof>
+    $<$<CXX_COMPILER_ID:GNU,Clang,AppleClang>:-Wno-unused-value>
+    $<$<CXX_COMPILER_ID:MSVC>:/wd4644>
+    $<$<CXX_COMPILER_ID:MSVC>:/wd4749>
+    $<$<CXX_COMPILER_ID:MSVC>:/wd4841>
+    $<$<CXX_COMPILER_ID:MSVC>:/wd4842>
+  )
+endfunction()
+
 set(KS_BUILD_MODE "exe" CACHE STRING "Build mode for KS_SRCS: exe|static|shared")
 set_property(CACHE KS_BUILD_MODE PROPERTY STRINGS exe static shared)
 
@@ -98,16 +109,19 @@ if (KS_BUILD_MODE STREQUAL "static")
   add_library(korkscript_ks STATIC ${KS_SRCS})
   set(KS_LINK_LIBS korkscript_ks)
   set(KS_OBJ_SRCS)
+  ks_warning_sanitizer(korkscript_ks)
 
 elseif (KS_BUILD_MODE STREQUAL "shared")
   add_library(korkscript_ks SHARED ${KS_SRCS})
   set(KS_LINK_LIBS korkscript_ks)
   set(KS_OBJ_SRCS)
+  ks_warning_sanitizer(korkscript_ks)
 
 elseif (KS_BUILD_MODE STREQUAL "exe")
   add_library(korkscript_ks OBJECT ${KS_SRCS})
   set(KS_LINK_LIBS)
   set(KS_OBJ_SRCS $<TARGET_OBJECTS:korkscript_ks>)
+  ks_warning_sanitizer(korkscript_ks)
 
 else()
   message(FATAL_ERROR "Invalid KS_BUILD_MODE='${KS_BUILD_MODE}' (use exe|static|shared)")
@@ -216,6 +230,7 @@ if (EMSCRIPTEN)
 
 add_definitions(-DTORQUE_NO_SOCKETS)
 add_executable(korkscript ${KS_WASM_SRCS})
+ks_warning_sanitizer(korkscript)
 
 target_link_options(korkscript PRIVATE
     "-g"
@@ -243,13 +258,17 @@ endif()
 #add_executable(cstest ${KS_TEST_SRCS})
 #target_link_libraries(cstest PRIVATE ${KS_LINK_LIBS})
 add_executable(csprintast ${KS_AST_PRINT_SRCS})
+ks_warning_sanitizer(csprintast)
 target_link_libraries(csprintast PRIVATE ${KS_LINK_LIBS})
 add_executable(csapitest ${KS_API_TEST_SRCS})
+ks_warning_sanitizer(csapitest)
 target_link_libraries(csapitest PRIVATE ${KS_LINK_LIBS})
 add_executable(torquetest ${KS_TORQUE_TEST_SRCS})
+ks_warning_sanitizer(torquetest)
 target_compile_definitions(torquetest PRIVATE HAVE_TORQUE_CONFIG_H)
 target_link_libraries(torquetest PRIVATE ${KS_LINK_LIBS})
 add_executable(testrunner ${TEST_RUNNER_SRCS})
+ks_warning_sanitizer(testrunner)
 target_compile_definitions(testrunner PRIVATE HAVE_TORQUE_CONFIG_H)
 target_compile_definitions(testrunner PRIVATE TORQUE_USE_STD_FILESYSTEM)
 target_link_libraries(testrunner PRIVATE ${KS_LINK_LIBS})
