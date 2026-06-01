@@ -78,6 +78,68 @@ function test_advancedFieldGlobalAccess()
    testString("advancedFields.globalVec.dynamicIndex", $globalVec, "9 42 99");
 }
 
+function test_advancedFieldChainOps()
+{
+   %point : TypeMyPoint3F = 10,20,30;
+   %point.x += 2;
+   %point.x -= 1;
+   %point.x *= 3;
+   %point.x /= 2;
+   %point.x++;
+   %point.x--;
+   testNumber("advancedFields.chain.x", %point.x, 16.5);
+
+   %vec : TypeS32Vector = 5,6,7;
+   %vec{0} %= 2;
+   %vec{1} &= 10;
+   %vec{2} |= 4;
+   %vec{0} ^= 3;
+   %vec{1} <<= 1;
+   %vec{2} >>= 1;
+   testString("advancedFields.chain.vec", %vec, "2 4 3");
+}
+
+function test_advancedFieldOpResults()
+{
+   %point : TypeMyPoint3F = 1,2,3;
+   %value = (%point.x += 4);
+   testNumber("advancedFields.opResult.plusAssign", %value, 5);
+
+   %value = (%point.y -= 1);
+   testNumber("advancedFields.opResult.minusAssign", %value, 1);
+
+   %value = (%point.z *= 2);
+   testNumber("advancedFields.opResult.mulAssign", %value, 6);
+
+   %value = (%point.x /= 3);
+   testNumber("advancedFields.opResult.divAssign", %value, 1.6666666667);
+
+   %value = (%point.x++);
+   testNumber("advancedFields.opResult.postInc", %value, 2.6666666667);
+
+   %value = (%point.x--);
+   testNumber("advancedFields.opResult.postDec", %value, 1.6666666667);
+
+   %vec : TypeS32Vector = 8,9,10;
+   %value = (%vec{0} %= 3);
+   testInt("advancedFields.opResult.modAssign", %value, 2);
+
+   %value = (%vec{1} &= 12);
+   testInt("advancedFields.opResult.andAssign", %value, 8);
+
+   %value = (%vec{2} |= 5);
+   testInt("advancedFields.opResult.orAssign", %value, 15);
+
+   %value = (%vec{0} ^= 7);
+   testInt("advancedFields.opResult.xorAssign", %value, 5);
+
+   %value = (%vec{1} <<= 1);
+   testInt("advancedFields.opResult.shlAssign", %value, 16);
+
+   %value = (%vec{2} >>= 1);
+   testInt("advancedFields.opResult.shrAssign", %value, 7);
+}
+
 function test_advancedFieldTupleRhs()
 {
    %probe : TypeTupleProbe = "";
@@ -93,4 +155,6 @@ test_advancedFieldPointComponents();
 test_advancedFieldVectorIndexing();
 test_advancedFieldConstructedExpressionIndexing();
 test_advancedFieldGlobalAccess();
+test_advancedFieldChainOps();
+test_advancedFieldOpResults();
 test_advancedFieldTupleRhs();

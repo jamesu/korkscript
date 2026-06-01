@@ -1563,6 +1563,27 @@ private:
    // NOTE: to keep things simple, this DOES NOT factor in types; 
    // they are not allowed within expressions 
    // (besides the start which is handled in parseStmtNode).
+   ExprNode* makeAdvancedFieldAssignOp(S32 lineNo, AdvancedFieldAccessNode* a, ExprNode* r, TT op)
+   {
+      ExprNode* lhs = a;
+      ExprNode* rhs = r;
+
+      switch (op)
+      {
+         case TT::opPCHAR_PLUS:
+         case TT::opPCHAR_MINUS:
+         case TT::opPCHAR_ASTERISK:
+         case TT::opPCHAR_SLASH:
+            rhs = FloatBinaryExprNode::alloc(mResources, lineNo, op, lhs, rhs);
+            break;
+         default:
+            rhs = IntBinaryExprNode::alloc(mResources, lineNo, op, lhs, rhs);
+            break;
+      }
+
+      return AdvancedFieldAssignNode::alloc(mResources, lineNo, a->baseExpr, a->arrayExpr, a->fieldName, rhs);
+   }
+
    ExprNode* makeAssign(const TOK& tok, ExprNode* l, ExprNode* r)
    {
       if (VarNode* v = dynamic_cast<VarNode*>(l))
@@ -1588,8 +1609,7 @@ private:
          {
             return AdvancedFieldAssignNode::alloc(mResources, tok.pos.line, a->baseExpr, a->arrayExpr, a->fieldName, r);
          }
-         errorHere(tok, "compound assignment is not supported for advanced fields");
-         return nullptr;
+         return makeAdvancedFieldAssignOp(tok.pos.line, a, r, processCharOp(tok));
       }
       errorHere(tok, "left-hand side of assignment must be a variable");
       return nullptr;
@@ -1750,6 +1770,12 @@ private:
                ExprNode* one = FloatNode::alloc(mResources, op.pos.line, 1);
                TT asn = (op.kind == TT::opPLUSPLUS) ? TT::opPCHAR_PLUS : TT::opPCHAR_MINUS;
                return SlotAssignOpNode::alloc(mResources, op.pos.line, s->objectExpr, s->slotName, s->arrayExpr, asn, one);
+            }
+            else if (AdvancedFieldAccessNode* a = dynamic_cast<AdvancedFieldAccessNode*>(left))
+            {
+               ExprNode* one = FloatNode::alloc(mResources, op.pos.line, 1);
+               TT asn = (op.kind == TT::opPLUSPLUS) ? TT::opPCHAR_PLUS : TT::opPCHAR_MINUS;
+               return makeAdvancedFieldAssignOp(op.pos.line, a, one, asn);
             }
             errorHere(op, "postfix ++/-- requires a variable");
             return nullptr;
